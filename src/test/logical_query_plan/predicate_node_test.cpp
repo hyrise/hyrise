@@ -19,8 +19,8 @@ class PredicateNodeTest : public ::testing::Test {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
-    _i = {_table_node, ColumnID{0}};
-    _f = {_table_node, ColumnID{1}};
+    _i = {_table_node, CxlumnID{0}};
+    _f = {_table_node, CxlumnID{1}};
 
     _predicate_node = PredicateNode::make(equals_(_i, 5), _table_node);
   }

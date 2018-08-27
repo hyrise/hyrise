@@ -45,13 +45,13 @@ class ColumnMaterializer {
    * Returns the materialized columns and a list of null row ids if materialize_null is enabled.
    **/
   std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<PosList>> materialize(
-      std::shared_ptr<const Table> input, ColumnID column_id) {
+      std::shared_ptr<const Table> input, CxlumnID cxlumn_id) {
     auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
     auto null_rows = std::make_unique<PosList>();
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
-      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id));
+      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, cxlumn_id));
       jobs.back()->schedule();
     }
 
@@ -67,9 +67,9 @@ class ColumnMaterializer {
   std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
                                                                   std::unique_ptr<PosList>& null_rows_output,
                                                                   ChunkID chunk_id, std::shared_ptr<const Table> input,
-                                                                  ColumnID column_id) {
-    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id] {
-      auto column = input->get_chunk(chunk_id)->get_column(column_id);
+                                                                  CxlumnID cxlumn_id) {
+    return std::make_shared<JobTask>([this, &output, &null_rows_output, input, cxlumn_id, chunk_id] {
+      auto column = input->get_chunk(chunk_id)->get_column(cxlumn_id);
       resolve_column_type<T>(*column, [&](auto& typed_column) {
         (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output);
       });

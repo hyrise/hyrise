@@ -26,10 +26,10 @@
 namespace opossum {
 
 class BaseIndex;
-class BaseColumn;
+class BaseSegment;
 class ChunkStatistics;
 
-using ChunkColumns = pmr_vector<std::shared_ptr<BaseColumn>>;
+using ChunkSegments = pmr_vector<std::shared_ptr<BaseSegment>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -40,10 +40,10 @@ using ChunkColumns = pmr_vector<std::shared_ptr<BaseColumn>>;
  */
 class Chunk : private Noncopyable {
  public:
-  // The last chunk offset is reserved for NULL as used in ReferenceColumns.
+  // The last chunk offset is reserved for NULL as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-  Chunk(const ChunkColumns& columns, const std::shared_ptr<MvccColumns>& mvcc_columns = nullptr,
+  Chunk(const ChunkSegments& columns, const std::shared_ptr<MvccColumns>& mvcc_columns = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
@@ -52,11 +52,11 @@ class Chunk : private Noncopyable {
 
   void mark_immutable();
 
-  // Atomically replaces the current column at column_id with the passed column
-  void replace_column(size_t column_id, const std::shared_ptr<BaseColumn>& column);
+  // Atomically replaces the current column at cxlumn_id with the passed column
+  void replace_column(size_t cxlumn_id, const std::shared_ptr<BaseSegment>& column);
 
-  // returns the number of columns (cannot exceed ColumnID (uint16_t))
-  uint16_t column_count() const;
+  // returns the number of columns (cannot exceed CxlumnID (uint16_t))
+  uint16_t cxlumn_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;
@@ -69,15 +69,15 @@ class Chunk : private Noncopyable {
    * Atomically accesses and returns the column at a given position
    *
    * Note: Concurrently with the execution of operators,
-   *       ValueColumns might be exchanged with DictionaryColumns.
+   *       ValueSegments might be exchanged with DictionaryColumns.
    *       Therefore, if you hold a pointer to a column, you can
    *       continue to use it without any inconsistencies.
    *       However, if you call get_column again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
+  std::shared_ptr<BaseSegment> get_column(CxlumnID cxlumn_id) const;
 
-  const ChunkColumns& columns() const;
+  const ChunkSegments& columns() const;
 
   bool has_mvcc_columns() const;
   bool has_access_counter() const;
@@ -98,15 +98,15 @@ class Chunk : private Noncopyable {
   void set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
-      const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID>& column_ids) const;
+      const std::vector<std::shared_ptr<const BaseSegment>>& columns) const;
+  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<CxlumnID>& cxlumn_ids) const;
 
   std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type,
-                                       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type, const std::vector<ColumnID>& column_ids) const;
+                                       const std::vector<std::shared_ptr<const BaseSegment>>& columns) const;
+  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type, const std::vector<CxlumnID>& cxlumn_ids) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseSegment>>& index_columns) {
     DebugAssert(([&]() {
                   for (auto column : index_columns) {
                     const auto column_it = std::find(_columns.cbegin(), _columns.cend(), column);
@@ -122,8 +122,8 @@ class Chunk : private Noncopyable {
   }
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
-    const auto columns = _get_columns_for_ids(column_ids);
+  std::shared_ptr<BaseIndex> create_index(const std::vector<CxlumnID>& cxlumn_ids) {
+    const auto columns = _get_columns_for_ids(cxlumn_ids);
     return create_index<Index>(columns);
   }
 
@@ -147,11 +147,11 @@ class Chunk : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  private:
-  std::vector<std::shared_ptr<const BaseColumn>> _get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_columns_for_ids(const std::vector<CxlumnID>& cxlumn_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;
-  ChunkColumns _columns;
+  ChunkSegments _columns;
   std::shared_ptr<MvccColumns> _mvcc_columns;
   std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;

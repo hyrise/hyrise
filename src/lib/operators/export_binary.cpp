@@ -8,7 +8,7 @@
 
 #include "import_export/binary.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
@@ -143,21 +143,21 @@ void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
-  export_value(ofstream, static_cast<ColumnID>(table->column_count()));
+  export_value(ofstream, static_cast<CxlumnID>(table->cxlumn_count()));
 
-  std::vector<std::string> column_types(table->column_count());
-  std::vector<std::string> column_names(table->column_count());
-  std::vector<bool> columns_are_nullable(table->column_count());
+  std::vector<std::string> column_types(table->cxlumn_count());
+  std::vector<std::string> cxlumn_names(table->cxlumn_count());
+  std::vector<bool> columns_are_nullable(table->cxlumn_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table->column_data_type(column_id));
-    column_names[column_id] = table->column_name(column_id);
-    columns_are_nullable[column_id] = table->column_is_nullable(column_id);
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+    column_types[cxlumn_id] = data_type_to_string.left.at(table->column_data_type(cxlumn_id));
+    cxlumn_names[cxlumn_id] = table->cxlumn_name(cxlumn_id);
+    columns_are_nullable[cxlumn_id] = table->column_is_nullable(cxlumn_id);
   }
   export_values(ofstream, column_types);
   export_values(ofstream, columns_are_nullable);
-  export_string_values(ofstream, column_names);
+  export_string_values(ofstream, cxlumn_names);
 }
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
@@ -168,20 +168,20 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Iterating over all columns of this chunk and exporting them
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); cxlumn_id++) {
     auto visitor =
-        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
+        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->column_data_type(cxlumn_id));
     resolve_data_and_column_type(
-        *chunk->get_column(column_id),
+        *chunk->get_column(cxlumn_id),
         [&](const auto data_type_t, const auto& resolved_column) { visitor->handle_column(resolved_column, context); });
   }
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& base_column,
+void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueSegment& base_column,
                                                          std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<const ValueColumn<T>&>(base_column);
+  const auto& column = static_cast<const ValueSegment<T>&>(base_column);
 
   export_value(context->ofstream, BinaryColumnType::value_column);
 
@@ -193,7 +193,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& 
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& ref_column,
+void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceSegment& ref_column,
                                                          std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
@@ -209,7 +209,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& 
 
 // handle_column implementation for string columns
 template <>
-void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const ReferenceColumn& ref_column,
+void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const ReferenceSegment& ref_column,
                                                                    std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 

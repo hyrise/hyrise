@@ -49,7 +49,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   // we create a copy of the original table and don't include the excluded chunks
-  const auto pruned_table = std::make_shared<Table>(original_table->column_definitions(), TableType::Data,
+  const auto pruned_table = std::make_shared<Table>(original_table->cxlumn_definitions(), TableType::Data,
                                                     original_table->max_chunk_size(), original_table->has_mvcc());
   const auto excluded_chunks_set =
       std::unordered_set<ChunkID>(_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend());

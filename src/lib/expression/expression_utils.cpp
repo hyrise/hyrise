@@ -5,7 +5,7 @@
 #include <sstream>
 
 #include "logical_expression.hpp"
-#include "lqp_column_expression.hpp"
+#include "lqp_cxlumn_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "pqp_select_expression.hpp"
@@ -97,17 +97,17 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
          "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
 
   LQPColumnReference adapted_column_reference{node_mapping_iter->second,
-                                              lqp_column_expression.column_reference.original_column_id()};
+                                              lqp_column_expression.column_reference.original_cxlumn_id()};
 
   return std::make_shared<LQPColumnExpression>(adapted_column_reference);
 }
 
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+std::string expression_cxlumn_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::stringstream stream;
 
-  if (!expressions.empty()) stream << expressions.front()->as_column_name();
+  if (!expressions.empty()) stream << expressions.front()->as_cxlumn_name();
   for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
-    stream << ", " << expressions[expression_idx]->as_column_name();
+    stream << ", " << expressions[expression_idx]->as_cxlumn_name();
   }
 
   return stream.str();
@@ -139,7 +139,7 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
   auto evaluable = true;
 
   visit_expression(expression, [&](const auto& sub_expression) {
-    if (lqp.find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
+    if (lqp.find_cxlumn_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
     if (sub_expression->type == ExpressionType::LQPColumn) evaluable = false;
     return ExpressionVisitation::VisitArguments;
   });

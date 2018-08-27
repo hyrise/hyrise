@@ -53,7 +53,7 @@ size_t FixedStringDictionaryColumn<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> FixedStringDictionaryColumn<T>::copy_using_allocator(
+std::shared_ptr<BaseSegment> FixedStringDictionaryColumn<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));

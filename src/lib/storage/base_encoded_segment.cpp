@@ -1,4 +1,4 @@
-#include "base_encoded_column.hpp"
+#include "base_encoded_segment.hpp"
 
 #include "storage/abstract_column_visitor.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"

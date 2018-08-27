@@ -12,9 +12,9 @@ namespace opossum {
 BENCHMARK_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
   _clear_cache();
 
-  std::vector<AggregateColumnDefinition> aggregates = {{ColumnID{1} /* "b" */, AggregateFunction::Min}};
+  std::vector<AggregateCxlumnDefinition> aggregates = {{CxlumnID{1} /* "b" */, AggregateFunction::Min}};
 
-  std::vector<ColumnID> groupby = {ColumnID{0} /* "a" */};
+  std::vector<CxlumnID> groupby = {CxlumnID{0} /* "a" */};
 
   auto warm_up = std::make_shared<Aggregate>(_table_wrapper_a, aggregates, groupby);
   warm_up->execute();

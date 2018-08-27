@@ -30,18 +30,18 @@ std::shared_ptr<AbstractOperator> ShowColumns::_on_deep_copy(
 void ShowColumns::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
-  TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("column_name", DataType::String);
-  column_definitions.emplace_back("column_type", DataType::String);
-  column_definitions.emplace_back("is_nullable", DataType::Int);
-  auto out_table = std::make_shared<Table>(column_definitions, TableType::Data);
+  TableCxlumnDefinitions cxlumn_definitions;
+  cxlumn_definitions.emplace_back("cxlumn_name", DataType::String);
+  cxlumn_definitions.emplace_back("column_type", DataType::String);
+  cxlumn_definitions.emplace_back("is_nullable", DataType::Int);
+  auto out_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);
-  ChunkColumns columns;
+  ChunkSegments columns;
 
-  const auto& column_names = table->column_names();
-  const auto vc_names = std::make_shared<ValueColumn<std::string>>(
-      tbb::concurrent_vector<std::string>(column_names.begin(), column_names.end()));
+  const auto& cxlumn_names = table->cxlumn_names();
+  const auto vc_names = std::make_shared<ValueSegment<std::string>>(
+      tbb::concurrent_vector<std::string>(cxlumn_names.begin(), cxlumn_names.end()));
   columns.push_back(vc_names);
 
   const auto& column_types = table->column_data_types();
@@ -51,11 +51,11 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
     data_types.push_back(data_type_to_string.left.at(column_type));
   }
 
-  const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(data_types));
+  const auto vc_types = std::make_shared<ValueSegment<std::string>>(std::move(data_types));
   columns.push_back(vc_types);
 
   const auto& column_nullables = table->columns_are_nullable();
-  const auto vc_nullables = std::make_shared<ValueColumn<int32_t>>(
+  const auto vc_nullables = std::make_shared<ValueSegment<int32_t>>(
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
   columns.push_back(vc_nullables);
 

@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
-#include "storage/base_encoded_column.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -20,29 +20,29 @@ class ChunkEncoderTest : public BaseTest {
   void SetUp() override {
     static const auto max_chunk_size = 5u;
 
-    static const auto column_count = 3u;
-    TableColumnDefinitions column_definitions;
-    for (auto column_id = 0u; column_id < column_count; ++column_id) {
-      const auto column_name = std::to_string(column_id);
-      column_definitions.emplace_back(column_name, DataType::Int);
+    static const auto cxlumn_count = 3u;
+    TableCxlumnDefinitions cxlumn_definitions;
+    for (auto cxlumn_id = 0u; cxlumn_id < cxlumn_count; ++cxlumn_id) {
+      const auto cxlumn_name = std::to_string(cxlumn_id);
+      cxlumn_definitions.emplace_back(cxlumn_name, DataType::Int);
     }
-    _table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
+    _table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, max_chunk_size);
 
     static const auto row_count = max_chunk_size * 3u;
     for (auto row_id = 0u; row_id < row_count; ++row_id) {
-      const auto row = std::vector<AllTypeVariant>(column_count, AllTypeVariant{static_cast<int32_t>(row_id)});
+      const auto row = std::vector<AllTypeVariant>(cxlumn_count, AllTypeVariant{static_cast<int32_t>(row_id)});
       _table->append(row);
     }
   }
 
  protected:
   void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
-    for (auto column_id = ColumnID{0u}; column_id < chunk->column_count(); ++column_id) {
-      const auto column = chunk->get_column(column_id);
-      const auto column_spec = spec.at(column_id);
+    for (auto cxlumn_id = CxlumnID{0u}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
+      const auto column = chunk->get_column(cxlumn_id);
+      const auto column_spec = spec.at(cxlumn_id);
 
       if (column_spec.encoding_type == EncodingType::Unencoded) {
-        const auto value_column = std::dynamic_pointer_cast<const BaseValueColumn>(column);
+        const auto value_column = std::dynamic_pointer_cast<const BaseValueSegment>(column);
         EXPECT_NE(value_column, nullptr);
       } else {
         const auto encoded_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(column);

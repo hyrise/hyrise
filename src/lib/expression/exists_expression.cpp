@@ -19,9 +19,9 @@ std::shared_ptr<AbstractExpression> ExistsExpression::select() const {
   return arguments[0];
 }
 
-std::string ExistsExpression::as_column_name() const {
+std::string ExistsExpression::as_cxlumn_name() const {
   std::stringstream stream;
-  stream << "EXISTS(" << select()->as_column_name() << ")";
+  stream << "EXISTS(" << select()->as_cxlumn_name() << ")";
   return stream.str();
 }
 

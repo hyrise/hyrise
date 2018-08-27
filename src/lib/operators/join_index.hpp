@@ -22,7 +22,7 @@ namespace opossum {
 class JoinIndex : public AbstractJoinOperator {
  public:
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids,
+            const JoinMode mode, const std::pair<CxlumnID, CxlumnID>& cxlumn_ids,
             const PredicateCondition predicate_condition);
 
   const std::string name() const override;
@@ -58,7 +58,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<const Table>& input_table,
                              std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;
@@ -66,8 +66,8 @@ class JoinIndex : public AbstractJoinOperator {
   std::shared_ptr<Table> _output_table;
   std::shared_ptr<const Table> _left_in_table;
   std::shared_ptr<const Table> _right_in_table;
-  ColumnID _left_column_id;
-  ColumnID _right_column_id;
+  CxlumnID _left_cxlumn_id;
+  CxlumnID _right_cxlumn_id;
 
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;

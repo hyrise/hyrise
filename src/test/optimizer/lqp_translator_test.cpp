@@ -10,8 +10,8 @@
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/pqp_cxlumn_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -139,13 +139,13 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   ASSERT_TRUE(a_plus_b_pqp);
   EXPECT_EQ(a_plus_b_pqp->arithmetic_operator, ArithmeticOperator::Addition);
 
-  const auto a_pqp = std::dynamic_pointer_cast<PQPColumnExpression>(a_plus_b_pqp->left_operand());
+  const auto a_pqp = std::dynamic_pointer_cast<PQPCxlumnExpression>(a_plus_b_pqp->left_operand());
   ASSERT_TRUE(a_pqp);
-  EXPECT_EQ(a_pqp->column_id, ColumnID{0});
+  EXPECT_EQ(a_pqp->cxlumn_id, CxlumnID{0});
 
-  const auto b_pqp = std::dynamic_pointer_cast<PQPColumnExpression>(a_plus_b_pqp->right_operand());
+  const auto b_pqp = std::dynamic_pointer_cast<PQPCxlumnExpression>(a_plus_b_pqp->right_operand());
   ASSERT_TRUE(b_pqp);
-  EXPECT_EQ(b_pqp->column_id, ColumnID{1});
+  EXPECT_EQ(b_pqp->cxlumn_id, CxlumnID{1});
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
@@ -167,7 +167,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{1});
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThan);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(5));
 
@@ -191,7 +191,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeLike) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{1});
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Like);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant("hello%"));
 
@@ -215,7 +215,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{1});
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::IsNotNull);
   EXPECT_TRUE(is_variant(table_scan_op->right_parameter()));
 
@@ -239,13 +239,13 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
    */
   const auto upper_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp);
   ASSERT_TRUE(upper_bound_scan_op);
-  EXPECT_EQ(upper_bound_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(upper_bound_scan_op->left_cxlumn_id(), CxlumnID{1});
   EXPECT_EQ(upper_bound_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(upper_bound_scan_op->right_parameter(), AllParameterVariant(5));
 
   const auto lower_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp->input_left());
   ASSERT_TRUE(lower_bound_scan_op);
-  EXPECT_EQ(lower_bound_scan_op->left_column_id(), ColumnID{0});
+  EXPECT_EQ(lower_bound_scan_op->left_cxlumn_id(), CxlumnID{0});
   EXPECT_EQ(lower_bound_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
   EXPECT_EQ(lower_bound_scan_op->right_parameter(), AllParameterVariant(5));
 
@@ -292,13 +292,13 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
   ASSERT_TRUE(expression_a);
   ASSERT_EQ(expression_a->parameters.size(), 2u);
   ASSERT_EQ(expression_a->parameters.at(0).first, ParameterID{0});
-  ASSERT_EQ(expression_a->parameters.at(0).second, ColumnID{0});
+  ASSERT_EQ(expression_a->parameters.at(0).second, CxlumnID{0});
   ASSERT_EQ(expression_a->parameters.at(1).first, ParameterID{1});
-  ASSERT_EQ(expression_a->parameters.at(1).second, ColumnID{1});
+  ASSERT_EQ(expression_a->parameters.at(1).second, CxlumnID{1});
 
   ASSERT_EQ(expression_a->pqp->type(), OperatorType::Aggregate);
 
-  const auto expression_b = std::dynamic_pointer_cast<PQPColumnExpression>(projection->expressions.at(1));
+  const auto expression_b = std::dynamic_pointer_cast<PQPCxlumnExpression>(projection->expressions.at(1));
   ASSERT_TRUE(expression_b);
 }
 
@@ -331,17 +331,17 @@ TEST_F(LQPTranslatorTest, Sort) {
 
   const auto sort_a = std::dynamic_pointer_cast<const Sort>(pqp->input_left());
   ASSERT_TRUE(sort_a);
-  EXPECT_EQ(sort_a->column_id(), ColumnID{1});
+  EXPECT_EQ(sort_a->cxlumn_id(), CxlumnID{1});
   EXPECT_EQ(sort_a->order_by_mode(), OrderByMode::Ascending);
 
   const auto sort_a_plus_b = std::dynamic_pointer_cast<const Sort>(sort_a->input_left());
   ASSERT_TRUE(sort_a_plus_b);
-  EXPECT_EQ(sort_a_plus_b->column_id(), ColumnID{0});
+  EXPECT_EQ(sort_a_plus_b->cxlumn_id(), CxlumnID{0});
   EXPECT_EQ(sort_a_plus_b->order_by_mode(), OrderByMode::Descending);
 
   const auto sort_b = std::dynamic_pointer_cast<const Sort>(sort_a_plus_b->input_left());
   ASSERT_TRUE(sort_b);
-  EXPECT_EQ(sort_b->column_id(), ColumnID{2});
+  EXPECT_EQ(sort_b->cxlumn_id(), CxlumnID{2});
   EXPECT_EQ(sort_b->order_by_mode(), OrderByMode::AscendingNullsLast);
 
   const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort_b->input_left());
@@ -370,8 +370,8 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
    */
   const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
   ASSERT_TRUE(join_sort_merge);
-  EXPECT_EQ(join_sort_merge->column_ids().first, ColumnID{1});
-  EXPECT_EQ(join_sort_merge->column_ids().second, ColumnID{0});
+  EXPECT_EQ(join_sort_merge->cxlumn_ids().first, CxlumnID{1});
+  EXPECT_EQ(join_sort_merge->cxlumn_ids().second, CxlumnID{0});
   EXPECT_EQ(join_sort_merge->predicate_condition(), PredicateCondition::GreaterThan);
 
   const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_left());
@@ -419,7 +419,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "b" */);
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{1} /* "b" */);
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
 }
@@ -436,13 +436,13 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
    */
   const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op2);
-  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op2->left_cxlumn_id(), CxlumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::LessThanEquals);
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(1337));
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
 }
@@ -454,10 +454,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = StorageManager::get().get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<CxlumnID> index_cxlumn_ids = {CxlumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_cxlumn_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_cxlumn_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);
@@ -477,7 +477,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
 }
@@ -489,10 +489,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = StorageManager::get().get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<CxlumnID> index_cxlumn_ids = {CxlumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_cxlumn_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_cxlumn_ids);
 
   auto predicate_node = PredicateNode::make(between(stored_table_node->get_column("b"), 42, 1337));
   predicate_node->set_left_input(stored_table_node);
@@ -513,14 +513,14 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->left_cxlumn_id(), CxlumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(1337));
 
   const auto table_scan_op2 = std::dynamic_pointer_cast<const TableScan>(table_scan_op->input_left());
   ASSERT_TRUE(table_scan_op2);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
-  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op2->left_cxlumn_id(), CxlumnID{1} /* "a" */);
   EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
 }
@@ -533,10 +533,10 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = StorageManager::get().get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
+  std::vector<CxlumnID> index_cxlumn_ids = {CxlumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_cxlumn_ids);
+  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_cxlumn_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);
@@ -561,7 +561,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
   EXPECT_EQ(projection_op->expressions.size(), 1u);
-  EXPECT_EQ(*projection_op->expressions[0], *PQPColumnExpression::from_table(*table_int_float, "a"));
+  EXPECT_EQ(*projection_op->expressions[0], *PQPCxlumnExpression::from_table(*table_int_float, "a"));
 }
 
 TEST_F(LQPTranslatorTest, JoinNode) {
@@ -576,7 +576,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
    */
   const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->column_ids(), ColumnIDPair(ColumnID{1}, ColumnID{0}));
+  EXPECT_EQ(join_op->cxlumn_ids(), CxlumnIDPair(CxlumnID{1}, CxlumnID{0}));
   EXPECT_EQ(join_op->predicate_condition(), PredicateCondition::Equals);
   EXPECT_EQ(join_op->mode(), JoinMode::Outer);
 }
@@ -629,11 +629,11 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
-  ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
-  EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
+  ASSERT_EQ(aggregate_op->groupby_cxlumn_ids().size(), 1u);
+  EXPECT_EQ(aggregate_op->groupby_cxlumn_ids().at(0), CxlumnID{1});
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column, ColumnID{2});
+  EXPECT_EQ(aggregate_definition.column, CxlumnID{2});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
 }
 

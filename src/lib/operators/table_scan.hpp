@@ -19,7 +19,7 @@ class TableScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator>& in, ColumnID left_column_id,
+  TableScan(const std::shared_ptr<const AbstractOperator>& in, CxlumnID left_cxlumn_id,
             const PredicateCondition predicate_condition, const AllParameterVariant& right_parameter);
 
   ~TableScan();
@@ -40,7 +40,7 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
-  ColumnID left_column_id() const;
+  CxlumnID left_cxlumn_id() const;
   PredicateCondition predicate_condition() const;
   const AllParameterVariant& right_parameter() const;
 
@@ -61,7 +61,7 @@ class TableScan : public AbstractReadOnlyOperator {
   void _init_scan();
 
  private:
-  const ColumnID _left_column_id;
+  const CxlumnID _left_cxlumn_id;
   const PredicateCondition _predicate_condition;
   AllParameterVariant _right_parameter;
 

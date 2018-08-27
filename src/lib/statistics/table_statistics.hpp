@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class BaseColumnStatistics;
+class BaseCxlumnStatistics;
 
 /**
  * Statistics about a table, with algorithms to perform cardinality estimations.
@@ -24,7 +24,7 @@ class TableStatistics final {
   static constexpr auto DEFAULT_DISJUNCTION_SELECTIVITY = 0.2f;
 
   TableStatistics(const TableType table_type, const float row_count,
-                  const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics);
+                  const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>& cxlumn_statistics);
   TableStatistics(const TableStatistics& table_statistics) = default;
 
   /**
@@ -33,21 +33,21 @@ class TableStatistics final {
    */
   TableType table_type() const;
   float row_count() const;
-  const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics() const;
+  const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>& cxlumn_statistics() const;
   /** @} */
 
   /**
    * @defgroup Cardinality Estimations
    * @{
    */
-  TableStatistics estimate_predicate(const ColumnID column_id, const PredicateCondition predicate_condition,
+  TableStatistics estimate_predicate(const CxlumnID cxlumn_id, const PredicateCondition predicate_condition,
                                      const AllParameterVariant& value,
                                      const std::optional<AllTypeVariant>& value2 = std::nullopt) const;
 
   TableStatistics estimate_cross_join(const TableStatistics& right_table_statistics) const;
 
   TableStatistics estimate_predicated_join(const TableStatistics& right_table_statistics, const JoinMode mode,
-                                           const ColumnIDPair column_ids,
+                                           const CxlumnIDPair cxlumn_ids,
                                            const PredicateCondition predicate_condition) const;
   TableStatistics estimate_disjunction(const TableStatistics& right_table_statistics) const;
   /** @} */
@@ -57,7 +57,7 @@ class TableStatistics final {
  private:
   TableType _table_type;
   float _row_count;
-  std::vector<std::shared_ptr<const BaseColumnStatistics>> _column_statistics;
+  std::vector<std::shared_ptr<const BaseCxlumnStatistics>> _cxlumn_statistics;
 };
 
 }  // namespace opossum

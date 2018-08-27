@@ -39,7 +39,7 @@ namespace opossum {
  *
  * Example Usage
  *
- * auto iterable = ValueColumnIterable<int>{value_column};
+ * auto iterable = ValueSegmentIterable<int>{value_column};
  * iterable.with_iterators([&](auto it, auto end) {
  *   for (; it != end; ++it) {
  *     auto value = *it;

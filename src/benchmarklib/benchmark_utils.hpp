@@ -27,7 +27,7 @@ using NamedQueries = std::vector<NamedQuery>;
 
 using DataTypeEncodingMapping = std::unordered_map<DataType, ColumnEncodingSpec>;
 
-// Map<TABLE_NAME, Map<COLUMN_NAME, ColumnEncoding>>
+// Map<TABLE_NAME, Map<cxlumn_name, ColumnEncoding>>
 using TableColumnEncodingMapping = std::unordered_map<std::string, std::unordered_map<std::string, ColumnEncodingSpec>>;
 
 /**

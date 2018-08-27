@@ -16,14 +16,14 @@ AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& exp
 std::string AliasNode::description() const {
   std::stringstream stream;
   stream << "Alias [";
-  for (auto column_id = ColumnID{0}; column_id < _expressions.size(); ++column_id) {
-    if (_expressions[column_id]->as_column_name() == aliases[column_id]) {
-      stream << aliases[column_id];
+  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < _expressions.size(); ++cxlumn_id) {
+    if (_expressions[cxlumn_id]->as_cxlumn_name() == aliases[cxlumn_id]) {
+      stream << aliases[cxlumn_id];
     } else {
-      stream << _expressions[column_id]->as_column_name() << " AS " << aliases[column_id];
+      stream << _expressions[cxlumn_id]->as_cxlumn_name() << " AS " << aliases[cxlumn_id];
     }
 
-    if (column_id + 1u < _expressions.size()) stream << ", ";
+    if (cxlumn_id + 1u < _expressions.size()) stream << ", ";
   }
   stream << "]";
   return stream.str();

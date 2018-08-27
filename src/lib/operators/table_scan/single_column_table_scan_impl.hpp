@@ -23,12 +23,12 @@ namespace opossum {
  */
 class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  SingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+  SingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
                             const PredicateCondition& predicate_condition, const AllTypeVariant& right_value);
 
   std::shared_ptr<PosList> scan_chunk(ChunkID) override;
 
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitorContext> base_context) override;

@@ -3,7 +3,7 @@
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_cxlumn_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -32,12 +32,12 @@ class ExpressionTest : public ::testing::Test {
     StorageManager::get().add_table("int_float_with_null", table_int_float_with_null);
 
     int_float_node = StoredTableNode::make("int_float");
-    a = {int_float_node, ColumnID{0}};
-    b = {int_float_node, ColumnID{1}};
+    a = {int_float_node, CxlumnID{0}};
+    b = {int_float_node, CxlumnID{1}};
 
     int_float_node_nullable = StoredTableNode::make("int_float_with_null");
-    a_nullable = {int_float_node_nullable, ColumnID{0}};
-    b_nullable = {int_float_node_nullable, ColumnID{1}};
+    a_nullable = {int_float_node_nullable, CxlumnID{0}};
+    b_nullable = {int_float_node_nullable, CxlumnID{1}};
   }
 
   void TearDown() { StorageManager::reset(); }
@@ -113,7 +113,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_FALSE(parameter_(ParameterID{5})->requires_computation());
   EXPECT_FALSE(parameter_(ParameterID{5}, a)->requires_computation());
   EXPECT_FALSE(column_(a)->requires_computation());
-  EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
+  EXPECT_FALSE(PQPCxlumnExpression::from_table(*table_int_float, "a")->requires_computation());
   EXPECT_FALSE(value_(5)->requires_computation());
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
   EXPECT_TRUE(cast_(5.5, DataType::Int)->requires_computation());
@@ -131,34 +131,34 @@ TEST_F(ExpressionTest, RequiresCalculation) {
 }
 
 TEST_F(ExpressionTest, AsColumnName) {
-  EXPECT_EQ(sub_(5, 3)->as_column_name(), "5 - 3");
-  EXPECT_EQ(add_(5, 3)->as_column_name(), "5 + 3");
-  EXPECT_EQ(mul_(5, 3)->as_column_name(), "5 * 3");
-  EXPECT_EQ(mod_(5, 3)->as_column_name(), "5 % 3");
-  EXPECT_EQ(div_(5, 3)->as_column_name(), "5 / 3");
-  EXPECT_EQ(less_than_(5, 3)->as_column_name(), "5 < 3");
-  EXPECT_EQ(less_than_equals_(5, 3)->as_column_name(), "5 <= 3");
-  EXPECT_EQ(greater_than_equals_(5, 3)->as_column_name(), "5 >= 3");
-  EXPECT_EQ(greater_than_(5, 3)->as_column_name(), "5 > 3");
-  EXPECT_EQ(equals_(5, 3)->as_column_name(), "5 = 3");
-  EXPECT_EQ(not_equals_(5, 3)->as_column_name(), "5 != 3");
-  EXPECT_EQ(between(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
-  EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
-  EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM '1993-03-04')");
-  EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello', 1, 2)");
-  EXPECT_EQ(concat_("Hello", "World")->as_column_name(), "CONCAT('Hello', 'World')");
-  EXPECT_EQ(and_(1, 0)->as_column_name(), "1 AND 0");
-  EXPECT_EQ(or_(1, 0)->as_column_name(), "1 OR 0");
-  EXPECT_EQ(is_null_(1)->as_column_name(), "1 IS NULL");
-  EXPECT_EQ(is_not_null_(1)->as_column_name(), "1 IS NOT NULL");
-  EXPECT_EQ(list_(1)->as_column_name(), "(1)");
-  EXPECT_EQ(list_(1)->as_column_name(), "(1)");
-  EXPECT_EQ(unary_minus_(3)->as_column_name(), "-(3)");
-  EXPECT_EQ(value_(3.25)->as_column_name(), "3.25");
-  EXPECT_EQ(null_()->as_column_name(), "NULL");
-  EXPECT_EQ(cast_("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
-  EXPECT_EQ(parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
-  EXPECT_EQ(parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
+  EXPECT_EQ(sub_(5, 3)->as_cxlumn_name(), "5 - 3");
+  EXPECT_EQ(add_(5, 3)->as_cxlumn_name(), "5 + 3");
+  EXPECT_EQ(mul_(5, 3)->as_cxlumn_name(), "5 * 3");
+  EXPECT_EQ(mod_(5, 3)->as_cxlumn_name(), "5 % 3");
+  EXPECT_EQ(div_(5, 3)->as_cxlumn_name(), "5 / 3");
+  EXPECT_EQ(less_than_(5, 3)->as_cxlumn_name(), "5 < 3");
+  EXPECT_EQ(less_than_equals_(5, 3)->as_cxlumn_name(), "5 <= 3");
+  EXPECT_EQ(greater_than_equals_(5, 3)->as_cxlumn_name(), "5 >= 3");
+  EXPECT_EQ(greater_than_(5, 3)->as_cxlumn_name(), "5 > 3");
+  EXPECT_EQ(equals_(5, 3)->as_cxlumn_name(), "5 = 3");
+  EXPECT_EQ(not_equals_(5, 3)->as_cxlumn_name(), "5 != 3");
+  EXPECT_EQ(between(5, 3, 4)->as_cxlumn_name(), "5 BETWEEN 3 AND 4");
+  EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_cxlumn_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
+  EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_cxlumn_name(), "EXTRACT(MONTH FROM '1993-03-04')");
+  EXPECT_EQ(substr_("Hello", 1, 2)->as_cxlumn_name(), "SUBSTR('Hello', 1, 2)");
+  EXPECT_EQ(concat_("Hello", "World")->as_cxlumn_name(), "CONCAT('Hello', 'World')");
+  EXPECT_EQ(and_(1, 0)->as_cxlumn_name(), "1 AND 0");
+  EXPECT_EQ(or_(1, 0)->as_cxlumn_name(), "1 OR 0");
+  EXPECT_EQ(is_null_(1)->as_cxlumn_name(), "1 IS NULL");
+  EXPECT_EQ(is_not_null_(1)->as_cxlumn_name(), "1 IS NOT NULL");
+  EXPECT_EQ(list_(1)->as_cxlumn_name(), "(1)");
+  EXPECT_EQ(list_(1)->as_cxlumn_name(), "(1)");
+  EXPECT_EQ(unary_minus_(3)->as_cxlumn_name(), "-(3)");
+  EXPECT_EQ(value_(3.25)->as_cxlumn_name(), "3.25");
+  EXPECT_EQ(null_()->as_cxlumn_name(), "NULL");
+  EXPECT_EQ(cast_("36", DataType::Float)->as_cxlumn_name(), "CAST('36' AS float)");
+  EXPECT_EQ(parameter_(ParameterID{0})->as_cxlumn_name(), "Parameter[id=0]");
+  EXPECT_EQ(parameter_(ParameterID{0}, a)->as_cxlumn_name(), "Parameter[name=a;id=0]");
 }
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
@@ -166,34 +166,34 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
    * Test that parentheses are placed correctly when generating column names of nested expressions
    */
 
-  EXPECT_EQ(add_(5, mul_(2, 3))->as_column_name(), "5 + 2 * 3");
-  EXPECT_EQ(mul_(5, add_(2, 3))->as_column_name(), "5 * (2 + 3)");
-  EXPECT_EQ(div_(5, mul_(2, 3))->as_column_name(), "5 / (2 * 3)");
-  EXPECT_EQ(case_(greater_than_(3, 2), mul_(2, 3), 2)->as_column_name(), "CASE WHEN 3 > 2 THEN 2 * 3 ELSE 2 END");
-  EXPECT_EQ(case_(1, mul_(2, 3), div_(5, mul_(2, 3)))->as_column_name(), "CASE WHEN 1 THEN 2 * 3 ELSE 5 / (2 * 3) END");
-  EXPECT_EQ(list_(1, sum_(a))->as_column_name(), "(1, SUM(a))");
-  EXPECT_EQ(and_(1, 1)->as_column_name(), "1 AND 1");
-  EXPECT_EQ(and_(1, greater_than_(add_(2, 3), 4))->as_column_name(), "1 AND 2 + 3 > 4");
-  EXPECT_EQ(and_(1, or_(greater_than_(add_(2, 3), 4), 0))->as_column_name(), "1 AND (2 + 3 > 4 OR 0)");
-  EXPECT_EQ(or_(1, and_(greater_than_(add_(2, 3), 4), 0))->as_column_name(), "1 OR (2 + 3 > 4 AND 0)");
-  EXPECT_EQ(is_null_(1)->as_column_name(), "1 IS NULL");
-  EXPECT_EQ(is_null_(and_(1, 1))->as_column_name(), "(1 AND 1) IS NULL");
-  EXPECT_EQ(is_null_(sum_(add_(a, 2)))->as_column_name(), "SUM(a + 2) IS NULL");
-  EXPECT_EQ(less_than_(a, b)->as_column_name(), "a < b");
-  EXPECT_EQ(less_than_(add_(a, 5), b)->as_column_name(), "a + 5 < b");
-  EXPECT_EQ(between(a, 2, 3)->as_column_name(), "a BETWEEN 2 AND 3");
-  EXPECT_EQ(and_(greater_than_equals_(b, 5), between(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN 2 AND 3");
-  EXPECT_EQ(not_equals_(between(a, 2, 3), 0)->as_column_name(), "(a BETWEEN 2 AND 3) != 0");
+  EXPECT_EQ(add_(5, mul_(2, 3))->as_cxlumn_name(), "5 + 2 * 3");
+  EXPECT_EQ(mul_(5, add_(2, 3))->as_cxlumn_name(), "5 * (2 + 3)");
+  EXPECT_EQ(div_(5, mul_(2, 3))->as_cxlumn_name(), "5 / (2 * 3)");
+  EXPECT_EQ(case_(greater_than_(3, 2), mul_(2, 3), 2)->as_cxlumn_name(), "CASE WHEN 3 > 2 THEN 2 * 3 ELSE 2 END");
+  EXPECT_EQ(case_(1, mul_(2, 3), div_(5, mul_(2, 3)))->as_cxlumn_name(), "CASE WHEN 1 THEN 2 * 3 ELSE 5 / (2 * 3) END");
+  EXPECT_EQ(list_(1, sum_(a))->as_cxlumn_name(), "(1, SUM(a))");
+  EXPECT_EQ(and_(1, 1)->as_cxlumn_name(), "1 AND 1");
+  EXPECT_EQ(and_(1, greater_than_(add_(2, 3), 4))->as_cxlumn_name(), "1 AND 2 + 3 > 4");
+  EXPECT_EQ(and_(1, or_(greater_than_(add_(2, 3), 4), 0))->as_cxlumn_name(), "1 AND (2 + 3 > 4 OR 0)");
+  EXPECT_EQ(or_(1, and_(greater_than_(add_(2, 3), 4), 0))->as_cxlumn_name(), "1 OR (2 + 3 > 4 AND 0)");
+  EXPECT_EQ(is_null_(1)->as_cxlumn_name(), "1 IS NULL");
+  EXPECT_EQ(is_null_(and_(1, 1))->as_cxlumn_name(), "(1 AND 1) IS NULL");
+  EXPECT_EQ(is_null_(sum_(add_(a, 2)))->as_cxlumn_name(), "SUM(a + 2) IS NULL");
+  EXPECT_EQ(less_than_(a, b)->as_cxlumn_name(), "a < b");
+  EXPECT_EQ(less_than_(add_(a, 5), b)->as_cxlumn_name(), "a + 5 < b");
+  EXPECT_EQ(between(a, 2, 3)->as_cxlumn_name(), "a BETWEEN 2 AND 3");
+  EXPECT_EQ(and_(greater_than_equals_(b, 5), between(a, 2, 3))->as_cxlumn_name(), "b >= 5 AND a BETWEEN 2 AND 3");
+  EXPECT_EQ(not_equals_(between(a, 2, 3), 0)->as_cxlumn_name(), "(a BETWEEN 2 AND 3) != 0");
 
-  EXPECT_EQ(mul_(less_than_(add_(a, 5), b), 3)->as_column_name(), "(a + 5 < b) * 3");
-  EXPECT_EQ(add_(1, between(a, 2, 3))->as_column_name(), "1 + (a BETWEEN 2 AND 3)");
+  EXPECT_EQ(mul_(less_than_(add_(a, 5), b), 3)->as_cxlumn_name(), "(a + 5 < b) * 3");
+  EXPECT_EQ(add_(1, between(a, 2, 3))->as_cxlumn_name(), "1 + (a BETWEEN 2 AND 3)");
 
   // TODO(anybody) Omit redundant parentheses
-  EXPECT_EQ(add_(5, add_(1, 3))->as_column_name(), "5 + (1 + 3)");
-  EXPECT_EQ(add_(add_(2, 5), add_(1, 3))->as_column_name(), "(2 + 5) + (1 + 3)");
-  EXPECT_EQ(mul_(mul_(2, 5), mul_(1, 3))->as_column_name(), "(2 * 5) * (1 * 3)");
-  EXPECT_EQ(and_(and_(1, 0), and_(0, 1))->as_column_name(), "(1 AND 0) AND (0 AND 1)");
-  EXPECT_EQ(and_(1, and_(1, or_(0, 1)))->as_column_name(), "1 AND (1 AND (0 OR 1))");
+  EXPECT_EQ(add_(5, add_(1, 3))->as_cxlumn_name(), "5 + (1 + 3)");
+  EXPECT_EQ(add_(add_(2, 5), add_(1, 3))->as_cxlumn_name(), "(2 + 5) + (1 + 3)");
+  EXPECT_EQ(mul_(mul_(2, 5), mul_(1, 3))->as_cxlumn_name(), "(2 * 5) * (1 * 3)");
+  EXPECT_EQ(and_(and_(1, 0), and_(0, 1))->as_cxlumn_name(), "(1 AND 0) AND (0 AND 1)");
+  EXPECT_EQ(and_(1, and_(1, or_(0, 1)))->as_cxlumn_name(), "1 AND (1 AND (0 OR 1))");
 }
 
 TEST_F(ExpressionTest, DataType) {

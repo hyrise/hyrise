@@ -9,20 +9,20 @@
 
 namespace opossum {
 
-class StorageValueColumnTest : public BaseTest {
+class StorageValueSegmentTest : public BaseTest {
  protected:
-  ValueColumn<int> vc_int;
-  ValueColumn<std::string> vc_str;
-  ValueColumn<double> vc_double;
+  ValueSegment<int> vc_int;
+  ValueSegment<std::string> vc_str;
+  ValueSegment<double> vc_double;
 };
 
-TEST_F(StorageValueColumnTest, GetSize) {
+TEST_F(StorageValueSegmentTest, GetSize) {
   EXPECT_EQ(vc_int.size(), 0u);
   EXPECT_EQ(vc_str.size(), 0u);
   EXPECT_EQ(vc_double.size(), 0u);
 }
 
-TEST_F(StorageValueColumnTest, AddValueOfSameType) {
+TEST_F(StorageValueSegmentTest, AddValueOfSameType) {
   vc_int.append(3);
   EXPECT_EQ(vc_int.size(), 1u);
 
@@ -33,7 +33,7 @@ TEST_F(StorageValueColumnTest, AddValueOfSameType) {
   EXPECT_EQ(vc_double.size(), 1u);
 }
 
-TEST_F(StorageValueColumnTest, AddValueOfDifferentType) {
+TEST_F(StorageValueSegmentTest, AddValueOfDifferentType) {
   vc_int.append(3.14);
   EXPECT_EQ(vc_int.size(), 1u);
   EXPECT_THROW(vc_int.append("Hi"), std::exception);
@@ -47,7 +47,7 @@ TEST_F(StorageValueColumnTest, AddValueOfDifferentType) {
   EXPECT_THROW(vc_double.append("Hi"), std::exception);
 }
 
-TEST_F(StorageValueColumnTest, RetrieveValue) {
+TEST_F(StorageValueSegmentTest, RetrieveValue) {
   vc_int.append(3);
   EXPECT_EQ(vc_int.values()[0], 3);
 
@@ -58,7 +58,7 @@ TEST_F(StorageValueColumnTest, RetrieveValue) {
   EXPECT_EQ(vc_double.values()[0], 3.14);
 }
 
-TEST_F(StorageValueColumnTest, AppendNullValueWhenNotNullable) {
+TEST_F(StorageValueSegmentTest, AppendNullValueWhenNotNullable) {
   EXPECT_TRUE(!vc_int.is_nullable());
   EXPECT_TRUE(!vc_str.is_nullable());
   EXPECT_TRUE(!vc_double.is_nullable());
@@ -68,10 +68,10 @@ TEST_F(StorageValueColumnTest, AppendNullValueWhenNotNullable) {
   EXPECT_THROW(vc_double.append(NULL_VALUE), std::exception);
 }
 
-TEST_F(StorageValueColumnTest, AppendNullValueWhenNullable) {
-  auto vc_int = ValueColumn<int>{true};
-  auto vc_str = ValueColumn<std::string>{true};
-  auto vc_double = ValueColumn<double>{true};
+TEST_F(StorageValueSegmentTest, AppendNullValueWhenNullable) {
+  auto vc_int = ValueSegment<int>{true};
+  auto vc_str = ValueSegment<std::string>{true};
+  auto vc_double = ValueSegment<double>{true};
 
   EXPECT_TRUE(vc_int.is_nullable());
   EXPECT_TRUE(vc_str.is_nullable());
@@ -82,10 +82,10 @@ TEST_F(StorageValueColumnTest, AppendNullValueWhenNullable) {
   EXPECT_NO_THROW(vc_double.append(NULL_VALUE));
 }
 
-TEST_F(StorageValueColumnTest, ArraySubscriptOperatorReturnsNullValue) {
-  auto vc_int = ValueColumn<int>{true};
-  auto vc_str = ValueColumn<std::string>{true};
-  auto vc_double = ValueColumn<double>{true};
+TEST_F(StorageValueSegmentTest, ArraySubscriptOperatorReturnsNullValue) {
+  auto vc_int = ValueSegment<int>{true};
+  auto vc_str = ValueSegment<std::string>{true};
+  auto vc_double = ValueSegment<double>{true};
 
   vc_int.append(NULL_VALUE);
   vc_str.append(NULL_VALUE);
@@ -96,7 +96,7 @@ TEST_F(StorageValueColumnTest, ArraySubscriptOperatorReturnsNullValue) {
   EXPECT_TRUE(variant_is_null(vc_double[0]));
 }
 
-TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
+TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   /**
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations

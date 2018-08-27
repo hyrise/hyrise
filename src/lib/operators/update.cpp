@@ -8,7 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
 #include "insert.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
@@ -31,14 +31,14 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
-  // 1. Create insert_table with ReferenceColumns that contain all rows that should be updated
-  TableColumnDefinitions insert_table_column_definitions;
-  for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-    insert_table_column_definitions.emplace_back(table_to_update->column_name(column_id),
-                                                 table_to_update->column_data_type(column_id));
+  // 1. Create insert_table with ReferenceSegments that contain all rows that should be updated
+  TableCxlumnDefinitions insert_table_cxlumn_definitions;
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < table_to_update->cxlumn_count(); ++cxlumn_id) {
+    insert_table_cxlumn_definitions.emplace_back(table_to_update->cxlumn_name(cxlumn_id),
+                                                 table_to_update->column_data_type(cxlumn_id));
   }
 
-  auto insert_table = std::make_shared<Table>(insert_table_column_definitions, TableType::References);
+  auto insert_table = std::make_shared<Table>(insert_table_cxlumn_definitions, TableType::References);
 
   auto current_row_in_left_chunk = 0u;
   auto current_pos_list = std::shared_ptr<const PosList>();
@@ -50,8 +50,8 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     for (auto i = 0u; i < input_table_right()->get_chunk(chunk_id)->size(); ++i) {
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
         current_row_in_left_chunk = 0u;
-        current_pos_list = std::static_pointer_cast<const ReferenceColumn>(
-                               input_table_left()->get_chunk(current_left_chunk_id)->get_column(ColumnID{0}))
+        current_pos_list = std::static_pointer_cast<const ReferenceSegment>(
+                               input_table_left()->get_chunk(current_left_chunk_id)->get_column(CxlumnID{0}))
                                ->pos_list();
         current_left_chunk_id++;
       }
@@ -60,10 +60,10 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       current_row_in_left_chunk++;
     }
 
-    // Add ReferenceColumns with built poslist.
-    ChunkColumns insert_table_columns;
-    for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-      insert_table_columns.push_back(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
+    // Add ReferenceSegments with built poslist.
+    ChunkSegments insert_table_columns;
+    for (CxlumnID cxlumn_id{0}; cxlumn_id < table_to_update->cxlumn_count(); ++cxlumn_id) {
+      insert_table_columns.push_back(std::make_shared<ReferenceSegment>(table_to_update, cxlumn_id, pos_list));
     }
 
     insert_table->append_chunk(insert_table_columns);
@@ -75,12 +75,12 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto insert_chunk = insert_table->get_chunk(chunk_id);
     auto right_chunk = input_table_right()->get_chunk(chunk_id);
 
-    for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-      auto right_col = right_chunk->get_column(column_id);
+    for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
+      auto right_col = right_chunk->get_column(cxlumn_id);
 
-      auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk->get_column(column_id));
+      auto left_col = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_column(cxlumn_id));
 
-      insert_chunk->replace_column(left_col->referenced_column_id(), right_col);
+      insert_chunk->replace_column(left_col->referenced_cxlumn_id(), right_col);
     }
   }
 
@@ -109,14 +109,14 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 }
 
 /**
- * input_table_left must be a table with at least one chunk, containing at least one ReferenceColumn
+ * input_table_left must be a table with at least one chunk, containing at least one ReferenceSegment
  * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
  * must match the count and types in input_table_right.
  */
 bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
-  if (input_table_left()->column_count() != input_table_right()->column_count()) return false;
+  if (input_table_left()->cxlumn_count() != input_table_right()->cxlumn_count()) return false;
 
   if (input_table_left()->chunk_count() == 0) return false;
 
@@ -127,7 +127,7 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk->references_exactly_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk->get_column(ColumnID{0}));
+    const auto first_column = std::static_pointer_cast<const ReferenceSegment>(chunk->get_column(CxlumnID{0}));
     if (table_to_update != first_column->referenced_table()) return false;
   }
 

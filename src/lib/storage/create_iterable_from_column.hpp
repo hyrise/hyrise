@@ -5,14 +5,14 @@
 #include "storage/encoding_type.hpp"
 
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ReferenceColumnIterable;
+class ReferenceSegmentIterable;
 
 /**
  * @defgroup Uniform interface to create an iterable from a column
@@ -30,8 +30,8 @@ class ReferenceColumnIterable;
  */
 
 template <typename T>
-auto create_iterable_from_column(const ValueColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(ValueColumnIterable<T>{column});
+auto create_iterable_from_column(const ValueSegment<T>& column) {
+  return erase_type_from_iterable_if_debug(ValueSegmentIterable<T>{column});
 }
 
 template <typename T>
@@ -50,16 +50,16 @@ auto create_iterable_from_column(const FixedStringDictionaryColumn<T>& column) {
 }
 
 template <typename T>
-auto create_iterable_from_column(const FrameOfReferenceColumn<T>& column) {
+auto create_iterable_from_column(const FrameOfReferenceSegment<T>& column) {
   return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{column});
 }
 
 /**
- * This function must be forward-declared because ReferenceColumnIterable
+ * This function must be forward-declared because ReferenceSegmentIterable
  * includes this file leading to a circular dependency
  */
 template <typename T>
-auto create_iterable_from_column(const ReferenceColumn& column);
+auto create_iterable_from_column(const ReferenceSegment& column);
 
 /**@}*/
 

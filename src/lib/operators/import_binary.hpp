@@ -58,7 +58,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
-   * Column count          | ColumnID                              |   2
+   * Column count          | CxlumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
    * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
    * Column name lengths   | size_t array                          |   Column Count * 1
@@ -81,16 +81,16 @@ class ImportBinary : public AbstractReadOnlyOperator {
    */
   static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
-  // Calls the right _import_column<ColumnDataType> depending on the given data_type.
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+  // Calls the right _import_column<CxlumnDataType> depending on the given data_type.
+  static std::shared_ptr<BaseSegment> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
                                                     bool is_nullable);
 
   // Reads the column type from the given file and chooses a column import function from it.
-  template <typename ColumnDataType>
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  template <typename CxlumnDataType>
+  static std::shared_ptr<BaseSegment> _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
   /*
-   * Imports a serialized ValueColumn from the given file.
+   * Imports a serialized ValueSegment from the given file.
    * In case T is std::string the file contains:
    *
    * Description           | Type                                  | Size in byte
@@ -115,7 +115,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    */
   template <typename T>
-  static std::shared_ptr<ValueColumn<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count,
+  static std::shared_ptr<ValueSegment<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count,
                                                               bool is_nullable);
 
   /*

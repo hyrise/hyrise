@@ -16,16 +16,16 @@
 namespace opossum {
 
 ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table,
-                                                             const ColumnID left_column_id,
+                                                             const CxlumnID left_cxlumn_id,
                                                              const PredicateCondition& predicate_condition,
-                                                             const ColumnID right_column_id)
-    : BaseTableScanImpl{in_table, left_column_id, predicate_condition}, _right_column_id{right_column_id} {}
+                                                             const CxlumnID right_cxlumn_id)
+    : BaseTableScanImpl{in_table, left_cxlumn_id, predicate_condition}, _right_cxlumn_id{right_cxlumn_id} {}
 
 std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
-  const auto left_column = chunk->get_column(_left_column_id);
-  const auto right_column = chunk->get_column(_right_column_id);
+  const auto left_column = chunk->get_column(_left_cxlumn_id);
+  const auto right_column = chunk->get_column(_right_cxlumn_id);
 
   auto matches_out = std::make_shared<PosList>();
 
@@ -47,11 +47,11 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
        * reduces the number of combinations to 85.
        */
 
-      constexpr auto LEFT_IS_REFERENCE_COLUMN = (std::is_same<LeftColumnType, ReferenceColumn>{});
-      constexpr auto RIGHT_IS_REFERENCE_COLUMN = (std::is_same<RightColumnType, ReferenceColumn>{});
+      constexpr auto LEFT_IS_reference_segment = (std::is_same<LeftColumnType, ReferenceSegment>{});
+      constexpr auto RIGHT_IS_reference_segment = (std::is_same<RightColumnType, ReferenceSegment>{});
 
-      constexpr auto NEITHER_IS_REFERENCE_COLUMN = !LEFT_IS_REFERENCE_COLUMN && !RIGHT_IS_REFERENCE_COLUMN;
-      constexpr auto BOTH_ARE_REFERENCE_COLUMNS = LEFT_IS_REFERENCE_COLUMN && RIGHT_IS_REFERENCE_COLUMN;
+      constexpr auto NEITHER_IS_reference_segment = !LEFT_IS_reference_segment && !RIGHT_IS_reference_segment;
+      constexpr auto BOTH_ARE_reference_segmentS = LEFT_IS_reference_segment && RIGHT_IS_reference_segment;
 
       constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
       constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
@@ -60,7 +60,7 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
       constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
       // clang-format off
-      if constexpr((NEITHER_IS_REFERENCE_COLUMN || BOTH_ARE_REFERENCE_COLUMNS) &&
+      if constexpr((NEITHER_IS_reference_segment || BOTH_ARE_reference_segmentS) &&
                    (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
         auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
         auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);

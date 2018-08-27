@@ -54,7 +54,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
  private:
   template <typename ZsIteratorType>
-  class Iterator : public BaseColumnIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
    public:
     explicit Iterator(const Dictionary& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
                       ChunkOffset chunk_offset)

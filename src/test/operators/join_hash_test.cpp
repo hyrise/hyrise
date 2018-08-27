@@ -119,7 +119,7 @@ TEST_F(JoinHashTest, MixedStringTraits) {
 
 TEST_F(JoinHashTest, OperatorName) {
   auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
-                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+                                         CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals);
 
   EXPECT_EQ(join->name(), "JoinHash");
 }

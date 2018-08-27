@@ -20,7 +20,7 @@
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/logical_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_cxlumn_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
@@ -41,7 +41,7 @@ namespace opossum {
 ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id)
     : _table(table), _chunk(_table->get_chunk(chunk_id)) {
   _output_row_count = _chunk->size();
-  _column_materializations.resize(_chunk->column_count());
+  _column_materializations.resize(_chunk->cxlumn_count());
 }
 
 template <typename Result>
@@ -61,7 +61,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       return _evaluate_select_expression<Result>(*static_cast<const PQPSelectExpression*>(&expression));
 
     case ExpressionType::PQPColumn:
-      return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
+      return _evaluate_column_expression<Result>(*static_cast<const PQPCxlumnExpression*>(&expression));
 
     // ValueExpression and ParameterExpression both need to unpack an AllTypeVariant, so one functions handles both
     case ExpressionType::Parameter:
@@ -406,14 +406,14 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predica
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_column_expression(
-    const PQPColumnExpression& column_expression) {
+    const PQPCxlumnExpression& column_expression) {
   Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
 
-  const auto& column = *_chunk->get_column(column_expression.column_id);
+  const auto& column = *_chunk->get_column(column_expression.cxlumn_id);
   Assert(column.data_type() == data_type_from_type<Result>(), "Can't evaluate column to different type");
 
-  _materialize_column_if_not_yet_materialized(column_expression.column_id);
-  return std::static_pointer_cast<ExpressionResult<Result>>(_column_materializations[column_expression.column_id]);
+  _materialize_column_if_not_yet_materialized(column_expression.cxlumn_id);
+  return std::static_pointer_cast<ExpressionResult<Result>>(_column_materializations[column_expression.cxlumn_id]);
 }
 
 template <typename Result>
@@ -706,16 +706,16 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   std::unordered_map<ParameterID, AllTypeVariant> parameters;
 
   for (auto parameter_idx = size_t{0}; parameter_idx < expression.parameters.size(); ++parameter_idx) {
-    const auto& parameter_id_column_id = expression.parameters[parameter_idx];
-    const auto parameter_id = parameter_id_column_id.first;
-    const auto column_id = parameter_id_column_id.second;
-    const auto& column = *_chunk->get_column(column_id);
+    const auto& parameter_id_cxlumn_id = expression.parameters[parameter_idx];
+    const auto parameter_id = parameter_id_cxlumn_id.first;
+    const auto cxlumn_id = parameter_id_cxlumn_id.second;
+    const auto& column = *_chunk->get_column(cxlumn_id);
 
     resolve_data_type(column.data_type(), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
+      using CxlumnDataType = typename decltype(data_type_t)::type;
 
       const auto column_materialization =
-          std::dynamic_pointer_cast<ExpressionResult<ColumnDataType>>(_column_materializations[column_id]);
+          std::dynamic_pointer_cast<ExpressionResult<CxlumnDataType>>(_column_materializations[cxlumn_id]);
 
       if (column_materialization->is_null(chunk_offset)) {
         parameters.emplace(parameter_id, NullValue{});
@@ -737,17 +737,17 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   return row_pqp->get_output();
 }
 
-std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
-  std::shared_ptr<BaseColumn> column;
+std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
+  std::shared_ptr<BaseSegment> column;
 
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
-    using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
+    using CxlumnDataType = typename std::decay_t<decltype(view)>::Type;
 
     // clang-format off
-    if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
+    if constexpr (std::is_same_v<CxlumnDataType, NullValue>) {
       Fail("Can't create a Column from a NULL");
     } else {
-      pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
+      pmr_concurrent_vector<CxlumnDataType> values(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
         values[chunk_offset] = view.value(chunk_offset);
@@ -758,9 +758,9 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           nulls[chunk_offset] = view.is_null(chunk_offset);
         }
-        column = std::make_shared<ValueColumn<ColumnDataType>>(std::move(values), std::move(nulls));
+        column = std::make_shared<ValueSegment<CxlumnDataType>>(std::move(values), std::move(nulls));
       } else {
-        column = std::make_shared<ValueColumn<ColumnDataType>>(std::move(values));
+        column = std::make_shared<ValueSegment<CxlumnDataType>>(std::move(values));
       }
     }
     // clang-format on
@@ -953,27 +953,27 @@ std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::v
   }
 }
 
-void ExpressionEvaluator::_materialize_column_if_not_yet_materialized(const ColumnID column_id) {
+void ExpressionEvaluator::_materialize_column_if_not_yet_materialized(const CxlumnID cxlumn_id) {
   Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
 
-  if (_column_materializations[column_id]) return;
+  if (_column_materializations[cxlumn_id]) return;
 
-  const auto& column = *_chunk->get_column(column_id);
+  const auto& column = *_chunk->get_column(cxlumn_id);
 
   resolve_data_type(column.data_type(), [&](const auto column_data_type_t) {
-    using ColumnDataType = typename decltype(column_data_type_t)::type;
+    using CxlumnDataType = typename decltype(column_data_type_t)::type;
 
-    std::vector<ColumnDataType> values;
+    std::vector<CxlumnDataType> values;
     materialize_values(column, values);
 
-    if (_table->column_is_nullable(column_id)) {
+    if (_table->column_is_nullable(cxlumn_id)) {
       std::vector<bool> nulls;
-      materialize_nulls<ColumnDataType>(column, nulls);
-      _column_materializations[column_id] =
-          std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
+      materialize_nulls<CxlumnDataType>(column, nulls);
+      _column_materializations[cxlumn_id] =
+          std::make_shared<ExpressionResult<CxlumnDataType>>(std::move(values), std::move(nulls));
 
     } else {
-      _column_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values));
+      _column_materializations[cxlumn_id] = std::make_shared<ExpressionResult<CxlumnDataType>>(std::move(values));
     }
   });
 }
@@ -1121,8 +1121,8 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {
     const auto& table = tables[table_idx];
 
-    Assert(table->column_count() == 1, "Expected precisely one column from SubSelect");
-    Assert(table->column_data_type(ColumnID{0}) == data_type_from_type<Result>(),
+    Assert(table->cxlumn_count() == 1, "Expected precisely one column from SubSelect");
+    Assert(table->column_data_type(CxlumnID{0}) == data_type_from_type<Result>(),
            "Expected different DataType from SubSelect");
 
     std::vector<bool> result_nulls;
@@ -1130,15 +1130,15 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     result_values.reserve(table->row_count());
 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& result_column = *table->get_chunk(chunk_id)->get_column(ColumnID{0});
+      const auto& result_column = *table->get_chunk(chunk_id)->get_column(CxlumnID{0});
       materialize_values(result_column, result_values);
     }
 
-    if (table->column_is_nullable(ColumnID{0})) {
+    if (table->column_is_nullable(CxlumnID{0})) {
       result_nulls.reserve(table->row_count());
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& result_column = *table->get_chunk(chunk_id)->get_column(ColumnID{0});
+        const auto& result_column = *table->get_chunk(chunk_id)->get_column(CxlumnID{0});
         materialize_nulls<Result>(result_column, result_nulls);
       }
     }

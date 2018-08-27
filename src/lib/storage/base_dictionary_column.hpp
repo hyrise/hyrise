@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "base_encoded_column.hpp"
+#include "base_encoded_segment.hpp"
 
 namespace opossum {
 

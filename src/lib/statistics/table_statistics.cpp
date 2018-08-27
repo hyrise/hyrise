@@ -4,23 +4,23 @@
 
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "base_column_statistics.hpp"
+#include "base_cxlumn_statistics.hpp"
 
 namespace opossum {
 
 TableStatistics::TableStatistics(const TableType table_type, const float row_count,
-                                 const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics)
-    : _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {}
+                                 const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>& cxlumn_statistics)
+    : _table_type(table_type), _row_count(row_count), _cxlumn_statistics(cxlumn_statistics) {}
 
 TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
-const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics::column_statistics() const {
-  return _column_statistics;
+const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>& TableStatistics::cxlumn_statistics() const {
+  return _cxlumn_statistics;
 }
 
-TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
+TableStatistics TableStatistics::estimate_predicate(const CxlumnID cxlumn_id,
                                                     const PredicateCondition predicate_condition,
                                                     const AllParameterVariant& value,
                                                     const std::optional<AllTypeVariant>& value2) const {
@@ -28,81 +28,81 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
   if (_row_count == 0) return {*this};
 
   /**
-   * This function mostly dispatches the matching ColumnStatistics::estimate_*() function
+   * This function mostly dispatches the matching CxlumnStatistics::estimate_*() function
    */
 
   // Estimate "a BETWEEN 5 and 6" by combining "a >= 5" with "a <= 6"
   if (predicate_condition == PredicateCondition::Between) {
-    auto table_statistics = estimate_predicate(column_id, PredicateCondition::GreaterThanEquals, value);
-    return table_statistics.estimate_predicate(column_id, PredicateCondition::LessThanEquals, *value2);
+    auto table_statistics = estimate_predicate(cxlumn_id, PredicateCondition::GreaterThanEquals, value);
+    return table_statistics.estimate_predicate(cxlumn_id, PredicateCondition::LessThanEquals, *value2);
   }
 
   // TODO(anybody) we don't do (Not)Like estimations yet, thus resort to magic numbers
   if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
     const auto selectivity =
         predicate_condition == PredicateCondition::Like ? DEFAULT_LIKE_SELECTIVITY : 1.0f - DEFAULT_LIKE_SELECTIVITY;
-    return {TableType::References, _row_count * selectivity, _column_statistics};
+    return {TableType::References, _row_count * selectivity, _cxlumn_statistics};
   }
 
   // Create copies to modify below and insert into result
   auto predicated_row_count = _row_count;
-  auto predicated_column_statistics = _column_statistics;
+  auto predicated_cxlumn_statistics = _cxlumn_statistics;
 
-  const auto left_operand_column_statistics = _column_statistics[column_id];
+  const auto left_operand_cxlumn_statistics = _cxlumn_statistics[cxlumn_id];
 
-  if (is_column_id(value)) {
-    const auto value_column_id = boost::get<ColumnID>(value);
+  if (is_cxlumn_id(value)) {
+    const auto value_cxlumn_id = boost::get<CxlumnID>(value);
 
-    const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(
-        predicate_condition, *_column_statistics[value_column_id]);
+    const auto estimation = left_operand_cxlumn_statistics->estimate_predicate_with_column(
+        predicate_condition, *_cxlumn_statistics[value_cxlumn_id]);
 
-    predicated_column_statistics[column_id] = estimation.left_column_statistics;
-    predicated_column_statistics[value_column_id] = estimation.right_column_statistics;
+    predicated_cxlumn_statistics[cxlumn_id] = estimation.left_cxlumn_statistics;
+    predicated_cxlumn_statistics[value_cxlumn_id] = estimation.right_cxlumn_statistics;
     predicated_row_count *= estimation.selectivity;
   } else if (is_variant(value)) {
     const auto variant_value = boost::get<AllTypeVariant>(value);
 
     const auto estimate =
-        left_operand_column_statistics->estimate_predicate_with_value(predicate_condition, variant_value);
+        left_operand_cxlumn_statistics->estimate_predicate_with_value(predicate_condition, variant_value);
 
-    predicated_column_statistics[column_id] = estimate.column_statistics;
+    predicated_cxlumn_statistics[cxlumn_id] = estimate.cxlumn_statistics;
     predicated_row_count *= estimate.selectivity;
   } else {
     Assert(is_parameter_id(value), "AllParameterVariant type is not implemented in statistics component.");
     const auto estimate =
-        left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition);
+        left_operand_cxlumn_statistics->estimate_predicate_with_value_placeholder(predicate_condition);
 
-    predicated_column_statistics[column_id] = estimate.column_statistics;
+    predicated_cxlumn_statistics[cxlumn_id] = estimate.cxlumn_statistics;
     predicated_row_count *= estimate.selectivity;
   }
 
-  return {TableType::References, predicated_row_count, predicated_column_statistics};
+  return {TableType::References, predicated_row_count, predicated_cxlumn_statistics};
 }
 
 TableStatistics TableStatistics::estimate_cross_join(const TableStatistics& right_table_statistics) const {
   /**
    * Cross Join Estimation is simple:
    *    cross_joined_row_count:             The product of both input row counts
-   *    cross_joined_column_statistics:     The concatenated list of column statistics
+   *    cross_joined_cxlumn_statistics:     The concatenated list of column statistics
    */
 
   // Create copies to manipulate and to use for result
   auto cross_joined_table_statistics = *this;
 
-  auto cross_joined_column_statistics = _column_statistics;
-  cross_joined_column_statistics.reserve(_column_statistics.size() + right_table_statistics._column_statistics.size());
+  auto cross_joined_cxlumn_statistics = _cxlumn_statistics;
+  cross_joined_cxlumn_statistics.reserve(_cxlumn_statistics.size() + right_table_statistics._cxlumn_statistics.size());
 
-  for (const auto& column_statistics : right_table_statistics._column_statistics) {
-    cross_joined_column_statistics.emplace_back(column_statistics);
+  for (const auto& cxlumn_statistics : right_table_statistics._cxlumn_statistics) {
+    cross_joined_cxlumn_statistics.emplace_back(cxlumn_statistics);
   }
 
   auto cross_joined_row_count = _row_count * right_table_statistics._row_count;
 
-  return {TableType::References, cross_joined_row_count, cross_joined_column_statistics};
+  return {TableType::References, cross_joined_row_count, cross_joined_cxlumn_statistics};
 }
 
 TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics& right_table_statistics,
-                                                          const JoinMode mode, const ColumnIDPair column_ids,
+                                                          const JoinMode mode, const CxlumnIDPair cxlumn_ids,
                                                           const PredicateCondition predicate_condition) const {
   Assert(mode != JoinMode::Cross, "Use function estimate_cross_join for cross joins.");
 
@@ -167,18 +167,18 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   auto join_table_stats = estimate_cross_join(right_table_statistics);
 
   // retrieve the two column statistics which are used by the join predicate
-  auto& left_col_stats = _column_statistics[column_ids.first];
-  auto& right_col_stats = right_table_statistics._column_statistics[column_ids.second];
+  auto& left_col_stats = _cxlumn_statistics[cxlumn_ids.first];
+  auto& right_col_stats = right_table_statistics._cxlumn_statistics[cxlumn_ids.second];
 
   auto stats_container = left_col_stats->estimate_predicate_with_column(predicate_condition, *right_col_stats);
 
   // apply predicate selectivity to cross join
   join_table_stats._row_count *= stats_container.selectivity;
 
-  ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
+  CxlumnID new_right_cxlumn_id{static_cast<CxlumnID::base_type>(_cxlumn_statistics.size() + cxlumn_ids.second)};
 
   auto calculate_added_null_values_for_outer_join = [&](const float row_count,
-                                                        const std::shared_ptr<const BaseColumnStatistics> col_stats,
+                                                        const std::shared_ptr<const BaseCxlumnStatistics> col_stats,
                                                         const float predicate_column_distinct_count) {
     float null_value_no = col_stats->null_value_ratio() * row_count;
     if (col_stats->distinct_count() != 0.f) {
@@ -188,8 +188,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   auto adjust_null_value_ratio_for_outer_join =
-      [&](const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
-          const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
+      [&](const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>::iterator col_begin,
+          const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>::iterator col_end, const float row_count,
           const float null_value_no, const float new_row_count) {
         if (null_value_no == 0) {
           return;
@@ -202,47 +202,47 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
           float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
 
           // We just created these column statistics and are therefore qualified to modify them
-          std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
+          std::const_pointer_cast<BaseCxlumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
         }
       };
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
   auto left_null_value_no = calculate_added_null_values_for_outer_join(
-      right_table_statistics.row_count(), right_col_stats, stats_container.right_column_statistics->distinct_count());
+      right_table_statistics.row_count(), right_col_stats, stats_container.right_cxlumn_statistics->distinct_count());
   // calculate how many null values need to be added to columns from the right table for left/outer joins
   auto right_null_value_no = calculate_added_null_values_for_outer_join(
-      row_count(), left_col_stats, stats_container.left_column_statistics->distinct_count());
+      row_count(), left_col_stats, stats_container.left_cxlumn_statistics->distinct_count());
 
   // prepare two _adjust_null_value_ratio_for_outer_join calls, executed in the switch statement below
 
   // a) add null values to columns from the right table for left outer join
   auto apply_left_outer_join = [&]() {
-    adjust_null_value_ratio_for_outer_join(join_table_stats._column_statistics.begin() + _column_statistics.size(),
-                                           join_table_stats._column_statistics.end(),
+    adjust_null_value_ratio_for_outer_join(join_table_stats._cxlumn_statistics.begin() + _cxlumn_statistics.size(),
+                                           join_table_stats._cxlumn_statistics.end(),
                                            right_table_statistics.row_count(), right_null_value_no,
                                            join_table_stats.row_count());
   };
   // b) add null values to columns from the left table for right outer
   auto apply_right_outer_join = [&]() {
-    adjust_null_value_ratio_for_outer_join(join_table_stats._column_statistics.begin(),
-                                           join_table_stats._column_statistics.begin() + _column_statistics.size(),
+    adjust_null_value_ratio_for_outer_join(join_table_stats._cxlumn_statistics.begin(),
+                                           join_table_stats._cxlumn_statistics.begin() + _cxlumn_statistics.size(),
                                            row_count(), left_null_value_no, join_table_stats.row_count());
   };
 
   switch (mode) {
     case JoinMode::Inner: {
-      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
-      join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;
+      join_table_stats._cxlumn_statistics[cxlumn_ids.first] = stats_container.left_cxlumn_statistics;
+      join_table_stats._cxlumn_statistics[new_right_cxlumn_id] = stats_container.right_cxlumn_statistics;
       break;
     }
     case JoinMode::Left: {
-      join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;
+      join_table_stats._cxlumn_statistics[new_right_cxlumn_id] = stats_container.right_cxlumn_statistics;
       join_table_stats._row_count += right_null_value_no;
       apply_left_outer_join();
       break;
     }
     case JoinMode::Right: {
-      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+      join_table_stats._cxlumn_statistics[cxlumn_ids.first] = stats_container.left_cxlumn_statistics;
       join_table_stats._row_count += left_null_value_no;
       apply_right_outer_join();
       break;
@@ -263,7 +263,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
 TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
   // TODO(anybody) this is just a dummy implementation
   return {TableType::References, row_count() + right_table_statistics.row_count() * DEFAULT_DISJUNCTION_SELECTIVITY,
-          column_statistics()};
+          cxlumn_statistics()};
 }
 
 std::string TableStatistics::description() const {
@@ -271,7 +271,7 @@ std::string TableStatistics::description() const {
 
   stream << "Table Stats " << std::endl;
   stream << " row count: " << _row_count;
-  for (const auto& statistics : _column_statistics) {
+  for (const auto& statistics : _cxlumn_statistics) {
     stream << std::endl << " " << statistics->description();
   }
   return stream.str();

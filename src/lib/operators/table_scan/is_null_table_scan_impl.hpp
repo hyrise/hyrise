@@ -11,16 +11,16 @@
 namespace opossum {
 
 class Table;
-class BaseValueColumn;
+class BaseValueSegment;
 
 class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
+  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
                       const PredicateCondition& predicate_condition);
 
-  void handle_column(const ReferenceColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_column(const ReferenceSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitorContext> base_context) override;
@@ -35,9 +35,9 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  bool _matches_all(const BaseValueColumn& column);
+  bool _matches_all(const BaseValueSegment& column);
 
-  bool _matches_none(const BaseValueColumn& column);
+  bool _matches_none(const BaseValueSegment& column);
 
   void _add_all(Context& context, size_t column_size);
 

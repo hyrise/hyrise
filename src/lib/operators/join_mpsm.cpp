@@ -17,7 +17,7 @@
 #include "storage/abstract_column_visitor.hpp"
 #include "storage/dictionary_column.hpp"
 
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/value_column.hpp"
 
 // A cluster is a chunk of values which agree on their last bits
@@ -39,8 +39,8 @@ STRONG_TYPEDEF(size_t, ClusterID);
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op)
-    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, column_ids, op) {
+                   const std::pair<CxlumnID, CxlumnID>& cxlumn_ids, const PredicateCondition op)
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, cxlumn_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
@@ -50,13 +50,13 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_cxlumn_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_cxlumn_ids.second),
               "Left and right column types do not match. The mpsm join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
-      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
+      left_column_type, *this, _cxlumn_ids.first, _cxlumn_ids.second, _predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -66,7 +66,7 @@ void JoinMPSM::_on_cleanup() { _impl.reset(); }
 std::shared_ptr<AbstractOperator> JoinMPSM::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
+  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _cxlumn_ids, _predicate_condition);
 }
 
 void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -76,11 +76,11 @@ const std::string JoinMPSM::name() const { return "Join MPSM"; }
 template <typename T>
 class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinMPSMImpl<T>(JoinMPSM& mpsm_join, ColumnID left_column_id, ColumnID right_column_id, const PredicateCondition op,
+  JoinMPSMImpl<T>(JoinMPSM& mpsm_join, CxlumnID left_cxlumn_id, CxlumnID right_cxlumn_id, const PredicateCondition op,
                   JoinMode mode)
       : _mpsm_join{mpsm_join},
-        _left_column_id{left_column_id},
-        _right_column_id{right_column_id},
+        _left_cxlumn_id{left_cxlumn_id},
+        _right_cxlumn_id{right_cxlumn_id},
         _op{op},
         _mode{mode} {
     _cluster_count = _determine_number_of_clusters();
@@ -103,8 +103,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<PosList> _null_rows_left;
   std::unique_ptr<PosList> _null_rows_right;
 
-  const ColumnID _left_column_id;
-  const ColumnID _right_column_id;
+  const CxlumnID _left_cxlumn_id;
+  const CxlumnID _right_cxlumn_id;
 
   const PredicateCondition _op;
   const JoinMode _mode;
@@ -422,32 +422,32 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(ChunkColumns& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_columns(ChunkSegments& output_columns, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
-    auto column_count = input_table->column_count();
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    auto cxlumn_count = input_table->cxlumn_count();
+    for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
       // Add the column data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
         // Create a pos_list referencing the original column instead of the reference column
-        auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
+        auto new_pos_list = _dereference_pos_list(input_table, cxlumn_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
-          const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(column_id);
-          const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(base_column);
+          const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id);
+          const auto ref_column = std::dynamic_pointer_cast<const ReferenceSegment>(base_column);
 
-          auto new_ref_column = std::make_shared<ReferenceColumn>(ref_column->referenced_table(),
-                                                                  ref_column->referenced_column_id(), new_pos_list);
+          auto new_ref_column = std::make_shared<ReferenceSegment>(ref_column->referenced_table(),
+                                                                  ref_column->referenced_cxlumn_id(), new_pos_list);
           output_columns.push_back(new_ref_column);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
-          // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
-          // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
+          // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
+          // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
           // it.
-          const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
-          output_columns.push_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
+          const auto dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
+          output_columns.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
         }
       } else {
-        auto new_ref_column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
+        auto new_ref_column = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
         output_columns.push_back(new_ref_column);
       }
     }
@@ -457,13 +457,13 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
   * This is done because there should not be any reference columns referencing reference columns.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table>& input_table, ColumnID column_id,
+  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table>& input_table, CxlumnID cxlumn_id,
                                                  std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto b_column = input_table->get_chunk(chunk_id)->get_column(column_id);
-      auto r_column = std::dynamic_pointer_cast<const ReferenceColumn>(b_column);
+      auto b_column = input_table->get_chunk(chunk_id)->get_column(cxlumn_id);
+      auto r_column = std::dynamic_pointer_cast<const ReferenceSegment>(b_column);
       input_pos_lists.push_back(r_column->pos_list());
     }
 
@@ -488,7 +488,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer =
-        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
+        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._cxlumn_ids,
                                 include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
@@ -519,14 +519,14 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     }
 
     // Add the columns from both input tables to the output
-    ChunkColumns output_columns;
+    ChunkSegments output_columns;
     _add_output_columns(output_columns, _mpsm_join.input_table_left(), output_left);
     _add_output_columns(output_columns, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_column_definitions = concatenated(_mpsm_join.input_table_left()->column_definitions(),
-                                                  _mpsm_join.input_table_right()->column_definitions());
-    auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
+    auto output_cxlumn_definitions = concatenated(_mpsm_join.input_table_left()->cxlumn_definitions(),
+                                                  _mpsm_join.input_table_right()->cxlumn_definitions());
+    auto output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
 
     output_table->append_chunk(output_columns);
 

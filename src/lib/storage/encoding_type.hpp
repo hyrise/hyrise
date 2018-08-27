@@ -42,8 +42,8 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
  * Hint: Use hana::value() if you want to use the result
  *       in a constant expression such as constexpr-if.
  */
-template <typename ColumnEncodingType, typename ColumnDataType>
-constexpr auto encoding_supports_data_type(ColumnEncodingType encoding_type, ColumnDataType data_type) {
+template <typename ColumnEncodingType, typename CxlumnDataType>
+constexpr auto encoding_supports_data_type(ColumnEncodingType encoding_type, CxlumnDataType data_type) {
   return hana::contains(hana::at_key(supported_data_types_for_encoding_type, encoding_type), data_type);
 }
 

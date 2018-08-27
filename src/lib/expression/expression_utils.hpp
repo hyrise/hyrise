@@ -66,9 +66,9 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
                                                                        const LQPNodeMapping& node_mapping);
 
 /**
- * Create a comma separated string with the AbstractExpression::as_column_name() of each expression
+ * Create a comma separated string with the AbstractExpression::as_cxlumn_name() of each expression
  */
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+std::string expression_cxlumn_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
 enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 

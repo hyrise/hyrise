@@ -85,7 +85,7 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
-    statistics/column_statistics_test.cpp
+    statistics/cxlumn_statistics_test.cpp
     statistics/table_statistics_join_test.cpp
     statistics/table_statistics_test.cpp
     optimizer/lqp_translator_test.cpp
@@ -114,7 +114,7 @@ set(
     sql/sql_query_plan_test.cpp
     sql/sql_translator_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
-    statistics/column_statistics_test.cpp
+    statistics/cxlumn_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
     statistics/statistics_test_utils.hpp
@@ -136,7 +136,7 @@ set(
     storage/multi_column_index_test.cpp
     storage/compressed_vector_test.cpp
     storage/numa_placement_test.cpp
-    storage/reference_column_test.cpp
+    storage/reference_segment_test.cpp
     storage/simd_bp128_test.cpp
     storage/single_column_index_test.cpp
     storage/storage_manager_test.cpp

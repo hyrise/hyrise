@@ -23,15 +23,15 @@ class SingleColumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_col_int = BaseTest::create_dict_column_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
-    index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col_int}));
+    index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_col_int}));
 
     dict_col_str = BaseTest::create_dict_column_by_type<std::string>(DataType::String,
                                                                      {"hello", "world", "test", "foo", "bar", "foo"});
-    index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col_str}));
+    index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_col_str}));
   }
 
   template <class Iterator>
-  static std::vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseColumn> col, Iterator begin, Iterator end) {
+  static std::vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseSegment> col, Iterator begin, Iterator end) {
     std::vector<AllTypeVariant> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       result.emplace_back((*col)[*iter]);
@@ -40,9 +40,9 @@ class SingleColumnIndexTest : public BaseTest {
   }
 
   std::shared_ptr<BaseIndex> index_int = nullptr;
-  std::shared_ptr<BaseColumn> dict_col_int = nullptr;
+  std::shared_ptr<BaseSegment> dict_col_int = nullptr;
   std::shared_ptr<BaseIndex> index_str = nullptr;
-  std::shared_ptr<BaseColumn> dict_col_str = nullptr;
+  std::shared_ptr<BaseSegment> dict_col_str = nullptr;
 };
 
 // List of indices to test
@@ -172,10 +172,10 @@ TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
 
 TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
   if (!IS_DEBUG) return;
-  auto vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  auto vc_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
   vc_int->append(4);
 
-  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseColumn>>({vc_int})), std::logic_error);
+  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseSegment>>({vc_int})), std::logic_error);
 }
 
 }  // namespace opossum

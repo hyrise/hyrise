@@ -8,11 +8,11 @@ namespace opossum {
 class AbstractOperator;
 
 /**
- * Each ParameterID is assigned a ColumnID that contains the values for this parameter.
+ * Each ParameterID is assigned a CxlumnID that contains the values for this parameter.
  */
 class PQPSelectExpression : public AbstractExpression {
  public:
-  using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
+  using Parameters = std::vector<std::pair<ParameterID, CxlumnID>>;
 
   // Constructor for single-column PQPSelectExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
   PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
@@ -22,7 +22,7 @@ class PQPSelectExpression : public AbstractExpression {
   explicit PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string as_cxlumn_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
 

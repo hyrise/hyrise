@@ -32,19 +32,19 @@ class JitAggregateTest : public BaseTest {
 
 // Make sure, that groupby columns are properly added to the output table
 TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
-  const auto column_definitions = TableColumnDefinitions({{"a", DataType::Int, false},
+  const auto cxlumn_definitions = TableCxlumnDefinitions({{"a", DataType::Int, false},
                                                           {"b", DataType::Long, true},
                                                           {"c", DataType::Float, false},
                                                           {"d", DataType::Double, false},
                                                           {"e", DataType::String, true}});
 
-  for (const auto& column_definition : column_definitions) {
+  for (const auto& column_definition : cxlumn_definitions) {
     _aggregate->add_groupby_column(column_definition.name,
                                    JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
   }
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
-  EXPECT_EQ(output_table->column_definitions(), column_definitions);
+  EXPECT_EQ(output_table->cxlumn_definitions(), cxlumn_definitions);
 }
 
 // Make sure, that aggregates are added to the output table with correct data type and nullability (e.g., count
@@ -63,7 +63,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 
   const auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
 
-  const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
+  const auto expected_cxlumn_definitions = TableCxlumnDefinitions({{"count", DataType::Long, false},
                                                                    {"count_nullable", DataType::Long, false},
                                                                    {"max", DataType::Float, true},
                                                                    {"max_nullable", DataType::Double, true},
@@ -74,7 +74,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
                                                                    {"sum", DataType::Long, true},
                                                                    {"sum_nullable", DataType::Int, true}});
 
-  EXPECT_EQ(output_table->column_definitions(), expected_column_definitions);
+  EXPECT_EQ(output_table->cxlumn_definitions(), expected_cxlumn_definitions);
 }
 
 // Check, that aggregates on invalid data types are rejected.
@@ -104,8 +104,8 @@ TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
   _aggregate->add_groupby_column("d", JitTupleValue(DataType::Int, true, 0));
 
   const auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
-  const auto expected_column_names = std::vector<std::string>({"a", "b", "c", "d"});
-  EXPECT_EQ(output_table->column_names(), expected_column_names);
+  const auto expected_cxlumn_names = std::vector<std::string>({"a", "b", "c", "d"});
+  EXPECT_EQ(output_table->cxlumn_names(), expected_cxlumn_names);
 }
 
 // Check, that the aggregate operator combines multiple columns when grouping tuples.
@@ -228,14 +228,14 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
 
   _aggregate->after_query(*output_table, context);
 
-  const auto expected_column_definitions = TableColumnDefinitions({{"groupby", DataType::Int, false},
+  const auto expected_cxlumn_definitions = TableCxlumnDefinitions({{"groupby", DataType::Int, false},
                                                                    {"count", DataType::Long, false},
                                                                    {"sum", DataType::Int, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
 
-  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  auto expected_output_table = std::make_shared<Table>(expected_cxlumn_definitions, TableType::Data);
   expected_output_table->append({1, 10, 45, 9, 0, 4.5});
   expected_output_table->append({2, 10, 155, 20, 11, 15.5});
 
@@ -267,13 +267,13 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
 
   _aggregate->after_query(*output_table, context);
 
-  const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
+  const auto expected_cxlumn_definitions = TableCxlumnDefinitions({{"count", DataType::Long, false},
                                                                    {"sum", DataType::Int, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
 
-  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  auto expected_output_table = std::make_shared<Table>(expected_cxlumn_definitions, TableType::Data);
   expected_output_table->append({2, 6, 5, 1, 3});
 
   EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
@@ -300,14 +300,14 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
   _aggregate->before_query(*output_table, context);
   _aggregate->after_query(*output_table, context);
 
-  const auto expected_column_definitions = TableColumnDefinitions({{"groupby", DataType::Int, false},
+  const auto expected_cxlumn_definitions = TableCxlumnDefinitions({{"groupby", DataType::Int, false},
                                                                    {"count", DataType::Long, false},
                                                                    {"sum", DataType::Int, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
 
-  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  auto expected_output_table = std::make_shared<Table>(expected_cxlumn_definitions, TableType::Data);
   EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
                                 FloatComparisonMode::AbsoluteDifference));
 }
@@ -330,13 +330,13 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   _aggregate->before_query(*output_table, context);
   _aggregate->after_query(*output_table, context);
 
-  const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
+  const auto expected_cxlumn_definitions = TableCxlumnDefinitions({{"count", DataType::Long, false},
                                                                    {"sum", DataType::Int, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
 
-  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  auto expected_output_table = std::make_shared<Table>(expected_cxlumn_definitions, TableType::Data);
   expected_output_table->append({0, NullValue{}, NullValue{}, NullValue{}, NullValue{}});
   EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
                                 FloatComparisonMode::AbsoluteDifference));

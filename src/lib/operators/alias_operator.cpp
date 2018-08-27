@@ -10,9 +10,9 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& input,
-                             const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases)
-    : AbstractReadOnlyOperator(OperatorType::Alias, input, nullptr), _column_ids(column_ids), _aliases(aliases) {
-  Assert(_column_ids.size() == _aliases.size(), "Expected as many aliases as columns");
+                             const std::vector<CxlumnID>& cxlumn_ids, const std::vector<std::string>& aliases)
+    : AbstractReadOnlyOperator(OperatorType::Alias, input, nullptr), _cxlumn_ids(cxlumn_ids), _aliases(aliases) {
+  Assert(_cxlumn_ids.size() == _aliases.size(), "Expected as many aliases as columns");
 }
 
 const std::string AliasOperator::name() const { return "Alias"; }
@@ -28,40 +28,40 @@ const std::string AliasOperator::description(DescriptionMode description_mode) c
 std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<AliasOperator>(copied_input_left, _column_ids, _aliases);
+  return std::make_shared<AliasOperator>(copied_input_left, _cxlumn_ids, _aliases);
 }
 
 void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
   /**
-   * Generate the new TableColumnDefinitions, that is, setting the new names for the columns
+   * Generate the new TableCxlumnDefinitions, that is, setting the new names for the columns
    */
-  auto output_column_definitions = std::vector<TableColumnDefinition>{};
-  output_column_definitions.reserve(input_table_left()->column_count());
+  auto output_cxlumn_definitions = std::vector<TableColumnDefinition>{};
+  output_cxlumn_definitions.reserve(input_table_left()->cxlumn_count());
 
-  for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto& input_column_definition = input_table_left()->column_definitions()[_column_ids[column_id]];
+  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
+    const auto& input_column_definition = input_table_left()->cxlumn_definitions()[_cxlumn_ids[cxlumn_id]];
 
-    output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type,
+    output_cxlumn_definitions.emplace_back(_aliases[cxlumn_id], input_column_definition.data_type,
                                            input_column_definition.nullable);
   }
 
   /**
-   * Generate the output table, forwarding columns from the input chunks and ordering them according to _column_ids
+   * Generate the output table, forwarding columns from the input chunks and ordering them according to _cxlumn_ids
    */
   const auto output_table =
-      std::make_shared<Table>(output_column_definitions, input_table_left()->type(),
+      std::make_shared<Table>(output_cxlumn_definitions, input_table_left()->type(),
                               input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    auto output_columns = ChunkColumns{};
-    output_columns.reserve(input_table_left()->column_count());
+    auto output_columns = ChunkSegments{};
+    output_columns.reserve(input_table_left()->cxlumn_count());
 
-    for (const auto& column_id : _column_ids) {
-      output_columns.emplace_back(input_chunk->get_column(column_id));
+    for (const auto& cxlumn_id : _cxlumn_ids) {
+      output_columns.emplace_back(input_chunk->get_column(cxlumn_id));
     }
 
     output_table->append_chunk(output_columns, input_chunk->get_allocator(), input_chunk->access_counter());

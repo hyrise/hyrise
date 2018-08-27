@@ -54,7 +54,7 @@ size_t RunLengthColumn<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> RunLengthColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseSegment> RunLengthColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_values = pmr_vector<T>{*_values, alloc};
   auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
   auto new_end_positions = pmr_vector<ChunkOffset>{*_end_positions, alloc};

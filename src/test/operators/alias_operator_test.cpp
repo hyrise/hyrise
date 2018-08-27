@@ -13,10 +13,10 @@ class AliasOperatorTest : public ::testing::Test {
     const auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_float.tbl", 1));
     table_wrapper->execute();
 
-    auto column_ids = std::vector<ColumnID>({ColumnID{2}, ColumnID{0}, ColumnID{1}});
+    auto cxlumn_ids = std::vector<CxlumnID>({CxlumnID{2}, CxlumnID{0}, CxlumnID{1}});
     auto aliases = std::vector<std::string>({"z", "x", "y"});
 
-    alias_operator = std::make_shared<AliasOperator>(table_wrapper, column_ids, aliases);
+    alias_operator = std::make_shared<AliasOperator>(table_wrapper, cxlumn_ids, aliases);
   }
 
   std::shared_ptr<AliasOperator> alias_operator;

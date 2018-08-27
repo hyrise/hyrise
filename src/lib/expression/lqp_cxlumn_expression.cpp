@@ -1,4 +1,4 @@
-#include "lqp_column_expression.hpp"
+#include "lqp_cxlumn_expression.hpp"
 
 #include "boost/functional/hash.hpp"
 
@@ -17,7 +17,7 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
-std::string LQPColumnExpression::as_column_name() const {
+std::string LQPColumnExpression::as_cxlumn_name() const {
   Assert(column_reference.original_node(), "Node referenced by LQPColumnReference has expired");
 
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
@@ -27,8 +27,8 @@ std::string LQPColumnExpression::as_column_name() const {
 
   } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
     const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
-    Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
-    return mock_node->column_definitions()[column_reference.original_column_id()].second;
+    Assert(column_reference.original_cxlumn_id() < mock_node->cxlumn_definitions().size(), "CxlumnID out of range");
+    return mock_node->cxlumn_definitions()[column_reference.original_cxlumn_id()].second;
 
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
@@ -39,12 +39,12 @@ DataType LQPColumnExpression::data_type() const {
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
     const auto table = StorageManager::get().get_table(stored_table_node->table_name);
-    return table->column_data_type(column_reference.original_column_id());
+    return table->column_data_type(column_reference.original_cxlumn_id());
 
   } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
     const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
-    Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
-    return mock_node->column_definitions()[column_reference.original_column_id()].first;
+    Assert(column_reference.original_cxlumn_id() < mock_node->cxlumn_definitions().size(), "CxlumnID out of range");
+    return mock_node->cxlumn_definitions()[column_reference.original_cxlumn_id()].first;
 
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
@@ -55,7 +55,7 @@ bool LQPColumnExpression::is_nullable() const {
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
     const auto table = StorageManager::get().get_table(stored_table_node->table_name);
-    return table->column_is_nullable(column_reference.original_column_id());
+    return table->column_is_nullable(column_reference.original_cxlumn_id());
 
   } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
     return false;  // MockNodes do not support NULLs

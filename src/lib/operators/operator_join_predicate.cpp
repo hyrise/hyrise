@@ -25,10 +25,10 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
 
   Assert(abstract_predicate_expression->arguments.size() == 2u, "Expected two arguments");
 
-  const auto left_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[0]);
-  const auto left_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[0]);
-  const auto right_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[1]);
-  const auto right_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[1]);
+  const auto left_in_left = left_input.find_cxlumn_id(*abstract_predicate_expression->arguments[0]);
+  const auto left_in_right = right_input.find_cxlumn_id(*abstract_predicate_expression->arguments[0]);
+  const auto right_in_left = left_input.find_cxlumn_id(*abstract_predicate_expression->arguments[1]);
+  const auto right_in_right = right_input.find_cxlumn_id(*abstract_predicate_expression->arguments[1]);
 
   auto predicate_condition = abstract_predicate_expression->predicate_condition;
 
@@ -44,8 +44,8 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   return std::nullopt;
 }
 
-OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids,
+OperatorJoinPredicate::OperatorJoinPredicate(const CxlumnIDPair& cxlumn_ids,
                                              const PredicateCondition predicate_condition)
-    : column_ids(column_ids), predicate_condition(predicate_condition) {}
+    : cxlumn_ids(cxlumn_ids), predicate_condition(predicate_condition) {}
 
 }  // namespace opossum

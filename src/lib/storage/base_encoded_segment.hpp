@@ -13,9 +13,9 @@ enum class CompressedVectorType : uint8_t;
  * Since encoded columns are immutable, all member variables
  * of sub-classes should be declared const.
  */
-class BaseEncodedColumn : public BaseColumn {
+class BaseEncodedColumn : public BaseSegment {
  public:
-  using BaseColumn::BaseColumn;
+  using BaseSegment::BaseSegment;
 
   // Encoded columns are immutable
   void append(const AllTypeVariant&) final;

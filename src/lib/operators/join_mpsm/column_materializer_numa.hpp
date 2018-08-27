@@ -66,7 +66,7 @@ class ColumnMaterializerNUMA {
    * Returns the materialized columns and a list of null row ids if materialize_null is enabled.
    **/
   std::pair<std::unique_ptr<MaterializedNUMAPartitionList<T>>, std::unique_ptr<PosList>> materialize(
-      std::shared_ptr<const Table> input, ColumnID column_id) {
+      std::shared_ptr<const Table> input, CxlumnID cxlumn_id) {
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
     const auto node_count = Topology::get().nodes().size();
 
@@ -93,7 +93,7 @@ class ColumnMaterializerNUMA {
         numa_node_id = NodeID{static_cast<uint32_t>(numa_res->get_node_id())};
       }
 
-      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, numa_node_id));
+      jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, cxlumn_id, numa_node_id));
       // we schedule each job on the same node as the chunk it operates on
       // this drastically minimizes reads to foreign numa nodes
       jobs.back()->schedule(numa_node_id);
@@ -115,11 +115,11 @@ class ColumnMaterializerNUMA {
    **/
   std::shared_ptr<AbstractTask> _create_chunk_materialization_job(
       std::unique_ptr<MaterializedNUMAPartitionList<T>>& output, std::unique_ptr<PosList>& null_rows_output,
-      ChunkID chunk_id, std::shared_ptr<const Table> input, ColumnID column_id, NodeID numa_node_id) {
+      ChunkID chunk_id, std::shared_ptr<const Table> input, CxlumnID cxlumn_id, NodeID numa_node_id) {
     // This allocator ensures that materialized values are colocated with the actual values.
     auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
-    const auto column = input->get_chunk(chunk_id)->get_column(column_id);
+    const auto column = input->get_chunk(chunk_id)->get_column(cxlumn_id);
 
     return std::make_shared<JobTask>(
         [this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {

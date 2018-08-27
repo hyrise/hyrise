@@ -4,7 +4,7 @@
 
 #include "expression/expression_utils.hpp"
 #include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/cxlumn_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -16,7 +16,7 @@ ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpress
 std::string ProjectionNode::description() const {
   std::stringstream stream;
 
-  stream << "[Projection] " << expression_column_names(expressions);
+  stream << "[Projection] " << expression_cxlumn_names(expressions);
 
   return stream.str();
 }
@@ -35,26 +35,26 @@ std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
   auto table_type = input_statistics->table_type();
   const auto row_count = input_statistics->row_count();
 
-  std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
-  column_statistics.reserve(expressions.size());
+  std::vector<std::shared_ptr<const BaseCxlumnStatistics>> cxlumn_statistics;
+  cxlumn_statistics.reserve(expressions.size());
 
   for (const auto& expression : expressions) {
-    const auto column_id = left_input->find_column_id(*expression);
-    if (column_id) {
-      column_statistics.emplace_back(input_statistics->column_statistics()[*column_id]);
+    const auto cxlumn_id = left_input->find_cxlumn_id(*expression);
+    if (cxlumn_id) {
+      cxlumn_statistics.emplace_back(input_statistics->cxlumn_statistics()[*cxlumn_id]);
     } else {
       // TODO(anybody) Statistics for expressions not yet supported
       resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
         using ExpressionDataType = typename decltype(data_type_t)::type;
-        column_statistics.emplace_back(
-            std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
+        cxlumn_statistics.emplace_back(
+            std::make_shared<CxlumnStatistics<ExpressionDataType>>(CxlumnStatistics<ExpressionDataType>::dummy()));
       });
 
       table_type = TableType::Data;
     }
   }
 
-  return std::make_shared<TableStatistics>(table_type, row_count, column_statistics);
+  return std::make_shared<TableStatistics>(table_type, row_count, cxlumn_statistics);
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

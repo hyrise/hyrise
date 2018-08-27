@@ -44,7 +44,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = std::make_shared<TableScan>(_gt, ColumnID{0}, PredicateCondition::GreaterThan, "456.7");
+  auto table_scan = std::make_shared<TableScan>(_gt, CxlumnID{0}, PredicateCondition::GreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -97,16 +97,16 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 = std::make_shared<TableScan>(_gt, ColumnID{1}, PredicateCondition::Equals, "123");
-  auto expected_result = std::make_shared<TableScan>(_gt, ColumnID{1}, PredicateCondition::NotEquals, "123");
-  auto table_scan2 = std::make_shared<TableScan>(_gt, ColumnID{1}, PredicateCondition::LessThan, "1234");
+  auto table_scan1 = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::Equals, "123");
+  auto expected_result = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::NotEquals, "123");
+  auto table_scan2 = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
   table_scan2->execute();
 
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
-  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0})->column_count(), 2u);
+  EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0})->cxlumn_count(), 2u);
 
   auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
   delete_op1->set_transaction_context(t1_context);

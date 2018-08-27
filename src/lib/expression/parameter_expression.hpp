@@ -31,13 +31,13 @@ class ParameterExpression : public AbstractExpression {
  public:
   // If this ParameterExpression is
   struct ReferencedExpressionInfo {
-    ReferencedExpressionInfo(const DataType data_type, const bool nullable, const std::string& column_name);
+    ReferencedExpressionInfo(const DataType data_type, const bool nullable, const std::string& cxlumn_name);
 
     bool operator==(const ReferencedExpressionInfo& rhs) const;
 
     DataType data_type;
     bool nullable;
-    std::string column_name;
+    std::string cxlumn_name;
   };
 
   // Constructs a value placeholder
@@ -49,7 +49,7 @@ class ParameterExpression : public AbstractExpression {
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string as_cxlumn_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
 

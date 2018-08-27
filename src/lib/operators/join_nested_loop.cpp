@@ -26,15 +26,15 @@ namespace opossum {
 
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, column_ids, predicate_condition) {}
+                               const CxlumnIDPair& cxlumn_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, cxlumn_ids, predicate_condition) {}
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _column_ids,
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _cxlumn_ids,
                                           _predicate_condition);
 }
 
@@ -54,29 +54,29 @@ void JoinNestedLoop::_create_table_structure() {
   _left_in_table = _input_left->get_output();
   _right_in_table = _input_right->get_output();
 
-  _left_column_id = _column_ids.first;
-  _right_column_id = _column_ids.second;
+  _left_cxlumn_id = _cxlumn_ids.first;
+  _right_cxlumn_id = _cxlumn_ids.second;
 
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
 
-  TableColumnDefinitions output_column_definitions;
+  TableCxlumnDefinitions output_cxlumn_definitions;
 
   // Preparing output table by adding columns from left table
-  for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
-    const auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
-    output_column_definitions.emplace_back(_left_in_table->column_name(column_id),
-                                           _left_in_table->column_data_type(column_id), nullable);
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < _left_in_table->cxlumn_count(); ++cxlumn_id) {
+    const auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(cxlumn_id));
+    output_cxlumn_definitions.emplace_back(_left_in_table->cxlumn_name(cxlumn_id),
+                                           _left_in_table->column_data_type(cxlumn_id), nullable);
   }
 
   // Preparing output table by adding columns from right table
-  for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
-    const auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
-    output_column_definitions.emplace_back(_right_in_table->column_name(column_id),
-                                           _right_in_table->column_data_type(column_id), nullable);
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < _right_in_table->cxlumn_count(); ++cxlumn_id) {
+    const auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(cxlumn_id));
+    output_cxlumn_definitions.emplace_back(_right_in_table->cxlumn_name(cxlumn_id),
+                                           _right_in_table->column_data_type(cxlumn_id), nullable);
   }
 
-  _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
+  _output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
 }
 
 void JoinNestedLoop::_process_match(RowID left_row_id, RowID right_row_id, JoinNestedLoop::JoinParams& params) {
@@ -114,8 +114,8 @@ void JoinNestedLoop::_join_two_typed_columns(const BinaryFunctor& func, LeftIter
   }
 }
 
-void JoinNestedLoop::_join_two_untyped_columns(const std::shared_ptr<const BaseColumn>& column_left,
-                                               const std::shared_ptr<const BaseColumn>& column_right,
+void JoinNestedLoop::_join_two_untyped_columns(const std::shared_ptr<const BaseSegment>& column_left,
+                                               const std::shared_ptr<const BaseSegment>& column_right,
                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                JoinNestedLoop::JoinParams& params) {
   resolve_data_and_column_type(*column_left, [&](auto left_type, auto& typed_left_column) {
@@ -153,16 +153,16 @@ void JoinNestedLoop::_perform_join() {
   auto left_table = _left_in_table;
   auto right_table = _right_in_table;
 
-  auto left_column_id = _left_column_id;
-  auto right_column_id = _right_column_id;
+  auto left_cxlumn_id = _left_cxlumn_id;
+  auto right_cxlumn_id = _right_cxlumn_id;
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
     left_table = _right_in_table;
     right_table = _left_in_table;
 
-    left_column_id = _right_column_id;
-    right_column_id = _left_column_id;
+    left_cxlumn_id = _right_cxlumn_id;
+    right_cxlumn_id = _left_cxlumn_id;
   }
 
   _pos_list_left = std::make_shared<PosList>();
@@ -173,7 +173,7 @@ void JoinNestedLoop::_perform_join() {
   // Scan all chunks from left input
   _right_matches.resize(right_table->chunk_count());
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto column_left = left_table->get_chunk(chunk_id_left)->get_column(left_column_id);
+    auto column_left = left_table->get_chunk(chunk_id_left)->get_column(left_cxlumn_id);
 
     // for Outer joins, remember matches on the left side
     std::vector<bool> left_matches;
@@ -184,7 +184,7 @@ void JoinNestedLoop::_perform_join() {
 
     // Scan all chunks for right input
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
+      const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_cxlumn_id);
       _right_matches[chunk_id_right].resize(column_right->size());
 
       const auto track_right_matches = (_mode == JoinMode::Outer);
@@ -208,7 +208,7 @@ void JoinNestedLoop::_perform_join() {
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::Outer) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
+      const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_cxlumn_id);
 
       resolve_data_and_column_type(*column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;
@@ -227,7 +227,7 @@ void JoinNestedLoop::_perform_join() {
   }
 
   // write output chunks
-  ChunkColumns columns;
+  ChunkSegments columns;
 
   if (_mode == JoinMode::Right) {
     _write_output_chunks(columns, right_table, _pos_list_right);
@@ -240,11 +240,11 @@ void JoinNestedLoop::_perform_join() {
   _output_table->append_chunk(columns);
 }
 
-void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table>& input_table,
+void JoinNestedLoop::_write_output_chunks(ChunkSegments& columns, const std::shared_ptr<const Table>& input_table,
                                           const std::shared_ptr<PosList>& pos_list) {
   // Add columns from table to output chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    std::shared_ptr<BaseColumn> column;
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {
+    std::shared_ptr<BaseSegment> column;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
@@ -255,27 +255,27 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const std::shar
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
           } else {
-            auto reference_column = std::static_pointer_cast<const ReferenceColumn>(
-                input_table->get_chunk(row.chunk_id)->get_column(column_id));
-            new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
+            auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
+                input_table->get_chunk(row.chunk_id)->get_column(cxlumn_id));
+            new_pos_list->push_back(reference_segment->pos_list()->at(row.chunk_offset));
           }
         }
 
-        auto reference_column =
-            std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
+        auto reference_segment =
+            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id));
 
-        column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
-                                                   reference_column->referenced_column_id(), new_pos_list);
+        column = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
+                                                   reference_segment->referenced_cxlumn_id(), new_pos_list);
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
-        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
-        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
+        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
+        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
-        const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
-        column = std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list);
+        const auto dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
+        column = std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list);
       }
     } else {
-      column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
+      column = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
     }
 
     columns.push_back(column);

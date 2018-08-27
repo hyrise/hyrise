@@ -20,7 +20,7 @@ std::string UpdateNode::description() const {
   std::ostringstream desc;
 
   desc << "[Update] Table: '" << table_name << "'";
-  desc << " Columns: " << expression_column_names(update_column_expressions);
+  desc << " Columns: " << expression_cxlumn_names(update_column_expressions);
 
   return desc.str();
 }

@@ -77,7 +77,7 @@ class AnyColumnIterable;
  * The base class specifies a virtual interface which is
  * implemented by the templated sub-class.
  *
- * AnyColumnIterator inherits from BaseColumnIterator and
+ * AnyColumnIterator inherits from BaseSegmentIterator and
  * thus has the same interface as all other column iterators.
  *
  * AnyColumnIterator exists only to improve compile times and should
@@ -86,7 +86,7 @@ class AnyColumnIterable;
  * For another example for type erasure see: https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure
  */
 template <typename T>
-class AnyColumnIterator : public BaseColumnIterator<AnyColumnIterator<T>, ColumnIteratorValue<T>> {
+class AnyColumnIterator : public BaseSegmentIterator<AnyColumnIterator<T>, ColumnIteratorValue<T>> {
  private:
   /**
    * Prevents AnyColumnIterator from being created

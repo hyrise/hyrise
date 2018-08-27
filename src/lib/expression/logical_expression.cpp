@@ -33,10 +33,10 @@ std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {
                                              right_operand()->deep_copy());
 }
 
-std::string LogicalExpression::as_column_name() const {
+std::string LogicalExpression::as_cxlumn_name() const {
   std::stringstream stream;
-  stream << _enclose_argument_as_column_name(*left_operand()) << " " << logical_operator << " "
-         << _enclose_argument_as_column_name(*right_operand());
+  stream << _enclose_argument_as_cxlumn_name(*left_operand()) << " " << logical_operator << " "
+         << _enclose_argument_as_cxlumn_name(*right_operand());
   return stream.str();
 }
 

@@ -6,15 +6,15 @@
 namespace opossum {
 
 LQPView::LQPView(const std::shared_ptr<AbstractLQPNode>& lqp,
-                 const std::unordered_map<ColumnID, std::string>& column_names)
-    : lqp(lqp), column_names(column_names) {}
+                 const std::unordered_map<CxlumnID, std::string>& cxlumn_names)
+    : lqp(lqp), cxlumn_names(cxlumn_names) {}
 
 std::shared_ptr<LQPView> LQPView::deep_copy() const {
-  return std::make_shared<LQPView>(lqp->deep_copy(), column_names);
+  return std::make_shared<LQPView>(lqp->deep_copy(), cxlumn_names);
 }
 
 bool LQPView::deep_equals(const LQPView& other) const {
-  return *lqp == *other.lqp && column_names == other.column_names;
+  return *lqp == *other.lqp && cxlumn_names == other.cxlumn_names;
 }
 
 }  // namespace opossum

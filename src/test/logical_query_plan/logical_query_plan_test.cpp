@@ -3,7 +3,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -41,10 +41,10 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
     _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
 
-    _t_a_a = LQPColumnReference{_mock_node_a, ColumnID{0}};
-    _t_a_b = LQPColumnReference{_mock_node_a, ColumnID{1}};
-    _t_b_a = LQPColumnReference{_mock_node_b, ColumnID{0}};
-    _t_b_b = LQPColumnReference{_mock_node_b, ColumnID{1}};
+    _t_a_a = LQPColumnReference{_mock_node_a, CxlumnID{0}};
+    _t_a_b = LQPColumnReference{_mock_node_a, CxlumnID{1}};
+    _t_b_a = LQPColumnReference{_mock_node_b, CxlumnID{0}};
+    _t_b_b = LQPColumnReference{_mock_node_b, CxlumnID{1}};
 
     _predicate_node_a = PredicateNode::make(equals_(_t_a_a, 42));
     _predicate_node_b = PredicateNode::make(equals_(_t_a_b, 1337));
@@ -70,7 +70,7 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _nodes[7] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
     _nodes[0] = JoinNode::make(JoinMode::Cross);
     _nodes[1] = JoinNode::make(JoinMode::Cross);
-    _nodes[2] = PredicateNode::make(equals_(LQPColumnReference{_nodes[6], ColumnID{0}}, 42));
+    _nodes[2] = PredicateNode::make(equals_(LQPColumnReference{_nodes[6], CxlumnID{0}}, 42));
     _nodes[3] = JoinNode::make(JoinMode::Cross);
     _nodes[4] = JoinNode::make(JoinMode::Cross);
     _nodes[5] = JoinNode::make(JoinMode::Cross);
@@ -299,8 +299,8 @@ TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
-  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{0}});
-  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{1}});
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, CxlumnID{0}});
+  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, CxlumnID{1}});
 
   const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
   const auto lqp = projection_node;

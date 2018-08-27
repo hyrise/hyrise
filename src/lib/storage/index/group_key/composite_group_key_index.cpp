@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns)
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& indexed_columns)
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
@@ -165,8 +165,8 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const
   return position_it;
 }
 
-std::vector<std::shared_ptr<const BaseColumn>> CompositeGroupKeyIndex::_get_index_columns() const {
-  auto result = std::vector<std::shared_ptr<const BaseColumn>>();
+std::vector<std::shared_ptr<const BaseSegment>> CompositeGroupKeyIndex::_get_index_columns() const {
+  auto result = std::vector<std::shared_ptr<const BaseSegment>>();
   result.reserve(_indexed_columns.size());
   for (auto&& indexed_column : _indexed_columns) {
     result.emplace_back(indexed_column);

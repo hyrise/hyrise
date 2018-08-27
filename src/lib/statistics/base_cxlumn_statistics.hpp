@@ -7,25 +7,25 @@
 
 namespace opossum {
 
-class BaseColumnStatistics;
+class BaseCxlumnStatistics;
 
 // Result of a cardinality estimation of filtering by value
 struct FilterByValueEstimate final {
   float selectivity{0.0f};
-  std::shared_ptr<BaseColumnStatistics> column_statistics;
+  std::shared_ptr<BaseCxlumnStatistics> cxlumn_statistics;
 };
 
 // Result of a cardinality estimation of filtering by comparing two columns
 struct FilterByColumnComparisonEstimate {
   float selectivity{0.0f};
-  std::shared_ptr<BaseColumnStatistics> left_column_statistics;
-  std::shared_ptr<BaseColumnStatistics> right_column_statistics;
+  std::shared_ptr<BaseCxlumnStatistics> left_cxlumn_statistics;
+  std::shared_ptr<BaseCxlumnStatistics> right_cxlumn_statistics;
 };
 
-class BaseColumnStatistics {
+class BaseCxlumnStatistics {
  public:
-  BaseColumnStatistics(const DataType data_type, const float null_value_ratio, const float distinct_count);
-  virtual ~BaseColumnStatistics() = default;
+  BaseCxlumnStatistics(const DataType data_type, const float null_value_ratio, const float distinct_count);
+  virtual ~BaseCxlumnStatistics() = default;
 
   /**
    * @defgroup Member access
@@ -40,14 +40,14 @@ class BaseColumnStatistics {
   /** @} */
 
   /**
-   * @return a clone of the concrete ColumnStatistics object
+   * @return a clone of the concrete CxlumnStatistics object
    */
-  virtual std::shared_ptr<BaseColumnStatistics> clone() const = 0;
+  virtual std::shared_ptr<BaseCxlumnStatistics> clone() const = 0;
 
   /**
    * @return a clone() of this, with the null_value_ratio set to 0
    */
-  std::shared_ptr<BaseColumnStatistics> without_null_values() const;
+  std::shared_ptr<BaseCxlumnStatistics> without_null_values() const;
 
   /**
    * @defgroup Cardinality estimation
@@ -72,7 +72,7 @@ class BaseColumnStatistics {
    * Estimate a Column-Column Predicate, e.g. "a > b"
    */
   virtual FilterByColumnComparisonEstimate estimate_predicate_with_column(
-      const PredicateCondition predicate_condition, const BaseColumnStatistics& base_right_column_statistics) const = 0;
+      const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const = 0;
   /** @} */
 
   virtual std::string description() const = 0;

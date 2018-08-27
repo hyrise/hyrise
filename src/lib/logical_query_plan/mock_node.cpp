@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -12,23 +12,23 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
-    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(column_definitions) {}
+MockNode::MockNode(const ColumnDefinitions& cxlumn_definitions, const std::optional<std::string>& name)
+    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(cxlumn_definitions) {}
 
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
     : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {}
 
 LQPColumnReference MockNode::get_column(const std::string& name) const {
-  const auto& column_definitions = this->column_definitions();
+  const auto& cxlumn_definitions = this->cxlumn_definitions();
 
-  for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
-    if (column_definitions[column_id].second == name) return LQPColumnReference{shared_from_this(), column_id};
+  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_definitions.size(); ++cxlumn_id) {
+    if (cxlumn_definitions[cxlumn_id].second == name) return LQPColumnReference{shared_from_this(), cxlumn_id};
   }
 
   Fail("Couldn't find column named '"s + name + "' in MockNode");
 }
 
-const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
+const MockNode::ColumnDefinitions& MockNode::cxlumn_definitions() const {
   Assert(_constructor_arguments.type() == typeid(ColumnDefinitions), "Unexpected type");
   return boost::get<ColumnDefinitions>(_constructor_arguments);
 }
@@ -42,15 +42,15 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
   if (!_column_expressions) {
     _column_expressions.emplace();
 
-    auto column_count = size_t{0};
+    auto cxlumn_count = size_t{0};
     if (_constructor_arguments.type() == typeid(ColumnDefinitions)) {
-      column_count = boost::get<ColumnDefinitions>(_constructor_arguments).size();
+      cxlumn_count = boost::get<ColumnDefinitions>(_constructor_arguments).size();
     } else {
-      column_count = boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments)->column_statistics().size();
+      cxlumn_count = boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments)->cxlumn_statistics().size();
     }
 
-    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-      const auto column_reference = LQPColumnReference(shared_from_this(), column_id);
+    for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
+      const auto column_reference = LQPColumnReference(shared_from_this(), cxlumn_id);
       _column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(column_reference));
     }
   }

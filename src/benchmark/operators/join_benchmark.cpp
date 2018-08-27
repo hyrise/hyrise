@@ -36,20 +36,18 @@ void clear_cache() {
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<TableGenerator>();
 
-  ColumnDataDistribution config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
+  CxlumnDataDistribution config = CxlumnDataDistribution::make_uniform_config(0.0, 10000);
   const auto chunk_size = static_cast<ChunkID>(number_of_rows / NUMBER_OF_CHUNKS);
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
 
-  auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size,
+  auto table = table_generator->generate_table(std::vector<CxlumnDataDistribution>{config}, number_of_rows, chunk_size,
                                                EncodingType::Dictionary);
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
 
-    std::vector<ColumnID> columns{1};
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      columns[0] = column_id;
-      chunk->create_index<AdaptiveRadixTreeIndex>(columns);
+    for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
+      chunk->create_index<AdaptiveRadixTreeIndex>({cxlumn_id});
     }
   }
 
@@ -66,12 +64,12 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
 
   auto warm_up =
       std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                          std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+                          std::pair<CxlumnID, CxlumnID>{CxlumnID{0}, CxlumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
   while (state.KeepRunning()) {
     auto join =
         std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                            std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+                            std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals);
     join->execute();
   }
 

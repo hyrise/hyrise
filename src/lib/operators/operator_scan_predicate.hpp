@@ -24,10 +24,10 @@ struct OperatorScanPredicate {
                                                                            const AbstractLQPNode& node);
 
   OperatorScanPredicate() = default;
-  OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
+  OperatorScanPredicate(const CxlumnID cxlumn_id, const PredicateCondition predicate_condition,
                         const AllParameterVariant& value = NullValue{});
 
-  ColumnID column_id{INVALID_COLUMN_ID};
+  CxlumnID cxlumn_id{INVALID_cxlumn_id};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
 };

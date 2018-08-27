@@ -51,14 +51,14 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
-                  opossum::TableColumnDefinitions& column_definitions, std::string name,
+  void add_column(std::vector<opossum::ChunkSegments>& columns_by_chunk,
+                  opossum::TableCxlumnDefinitions& cxlumn_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
-    bool is_first_column = column_definitions.size() == 0;
+    bool is_first_column = cxlumn_definitions.size() == 0;
 
     auto data_type = opossum::data_type_from_type<T>();
-    column_definitions.emplace_back(name, data_type);
+    cxlumn_definitions.emplace_back(name, data_type);
 
     /**
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
@@ -108,7 +108,7 @@ class AbstractBenchmarkTableGenerator {
 
         // write output chunks if column size has reached chunk_size
         if (row_index % _chunk_size == _chunk_size - 1) {
-          auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
+          auto value_column = std::make_shared<opossum::ValueSegment<T>>(std::move(column));
 
           if (is_first_column) {
             columns_by_chunk.emplace_back();
@@ -128,7 +128,7 @@ class AbstractBenchmarkTableGenerator {
 
     // write partially filled last chunk
     if (row_index % _chunk_size != 0) {
-      auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
+      auto value_column = std::make_shared<opossum::ValueSegment<T>>(std::move(column));
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
@@ -153,13 +153,13 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
-                  opossum::TableColumnDefinitions& column_definitions, std::string name,
+  void add_column(std::vector<opossum::ChunkSegments>& columns_by_chunk,
+                  opossum::TableCxlumnDefinitions& cxlumn_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
-    add_column(columns_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+    add_column(columns_by_chunk, cxlumn_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
 }  // namespace opossum

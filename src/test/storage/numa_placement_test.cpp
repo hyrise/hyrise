@@ -50,14 +50,14 @@ class NUMAPlacementTest : public BaseTest {
 
   // Creates a table with a single column and increasing integers modulo 1000.
   std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
-    auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
+    auto table = std::make_shared<Table>(TableCxlumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                          num_rows_per_chunk, UseMvcc::Yes);
 
     for (size_t i = 0; i < num_chunks; i++) {
-      ChunkColumns columns;
+      ChunkSegments columns;
 
       const auto alloc = PolymorphicAllocator<Chunk>(Topology::get().get_memory_resource(0));
-      auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
+      auto value_column = std::allocate_shared<ValueSegment<int>>(alloc, alloc);
       auto& values = value_column->values();
       values.reserve(num_rows_per_chunk);
       for (size_t row = 0; row < num_rows_per_chunk; row++) {

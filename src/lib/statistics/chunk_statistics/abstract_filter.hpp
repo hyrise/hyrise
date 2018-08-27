@@ -8,7 +8,7 @@
 namespace opossum {
 
 /**
- * Base class for all Filters. A Filter is part of ChunkColumnStatistics and holds
+ * Base class for all Filters. A Filter is part of SegmentStatistics and holds
  * some kind of statistical information about the contents of a column within a chunk.
  * This information can be used to optimize queries.
 */

@@ -59,16 +59,16 @@ set(
     expression/is_null_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
-    expression/lqp_column_expression.cpp
-    expression/lqp_column_expression.hpp
+    expression/lqp_cxlumn_expression.cpp
+    expression/lqp_cxlumn_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
     expression/unary_minus_expression.cpp
     expression/unary_minus_expression.hpp
     expression/parameter_expression.cpp
     expression/parameter_expression.hpp
-    expression/pqp_column_expression.cpp
-    expression/pqp_column_expression.hpp
+    expression/pqp_cxlumn_expression.cpp
+    expression/pqp_cxlumn_expression.hpp
     expression/pqp_select_expression.cpp
     expression/pqp_select_expression.hpp
     expression/value_expression.cpp
@@ -244,8 +244,8 @@ set(
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
     statistics/chunk_statistics/abstract_filter.hpp
-    statistics/chunk_statistics/chunk_column_statistics.cpp
-    statistics/chunk_statistics/chunk_column_statistics.hpp
+    statistics/chunk_statistics/segment_statistics.cpp
+    statistics/chunk_statistics/segment_statistics.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/min_max_filter.hpp
@@ -310,14 +310,14 @@ set(
     server/types.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    statistics/base_column_statistics.cpp
-    statistics/base_column_statistics.hpp
-    statistics/column_statistics.cpp
-    statistics/column_statistics.cpp
+    statistics/base_cxlumn_statistics.cpp
+    statistics/base_cxlumn_statistics.hpp
+    statistics/cxlumn_statistics.cpp
+    statistics/cxlumn_statistics.cpp
     statistics/generate_table_statistics.cpp
     statistics/generate_table_statistics.hpp
-    statistics/generate_column_statistics.cpp
-    statistics/generate_column_statistics.hpp
+    statistics/generate_cxlumn_statistics.cpp
+    statistics/generate_cxlumn_statistics.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     sql/abstract_cache.hpp
@@ -351,8 +351,8 @@ set(
     storage/base_column_encoder.hpp
     storage/base_column.hpp
     storage/base_dictionary_column.hpp
-    storage/base_encoded_column.cpp
-    storage/base_encoded_column.hpp
+    storage/base_encoded_segment.cpp
+    storage/base_encoded_segment.hpp
     storage/base_value_column.hpp
     storage/chunk_access_counter.cpp
     storage/chunk_access_counter.hpp
@@ -385,8 +385,8 @@ set(
     storage/fixed_string_dictionary_column/fixed_string_vector.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector.hpp
     storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
-    storage/frame_of_reference_column.cpp
-    storage/frame_of_reference_column.hpp
+    storage/frame_of_reference_segment.cpp
+    storage/frame_of_reference_segment.hpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp
     storage/frame_of_reference/frame_of_reference_iterable.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
@@ -420,9 +420,9 @@ set(
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
     storage/proxy_chunk.hpp
-    storage/reference_column.cpp
-    storage/reference_column.hpp
-    storage/reference_column/reference_column_iterable.hpp
+    storage/reference_segment.cpp
+    storage/reference_segment.hpp
+    storage/reference_segment/reference_segment_iterable.hpp
     storage/resolve_encoded_column_type.hpp
     storage/run_length_column.cpp
     storage/run_length_column.hpp

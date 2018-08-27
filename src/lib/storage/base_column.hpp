@@ -12,12 +12,12 @@ namespace opossum {
 class AbstractColumnVisitor;
 class ColumnVisitorContext;
 
-// BaseColumn is the abstract super class for all column types,
-// e.g., ValueColumn, ReferenceColumn
-class BaseColumn : private Noncopyable {
+// BaseSegment is the abstract super class for all column types,
+// e.g., ValueSegment, ReferenceSegment
+class BaseSegment : private Noncopyable {
  public:
-  explicit BaseColumn(const DataType data_type);
-  virtual ~BaseColumn() = default;
+  explicit BaseSegment(const DataType data_type);
+  virtual ~BaseSegment() = default;
 
   // the type of the data contained in this column
   DataType data_type() const;
@@ -32,7 +32,7 @@ class BaseColumn : private Noncopyable {
   virtual size_t size() const = 0;
 
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
-  virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+  virtual std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 
   // Estimate how much memory the Column is using. Might be inaccurate, especially if the column contains non-primitive
   // data, such as strings who memory usage is implementation defined

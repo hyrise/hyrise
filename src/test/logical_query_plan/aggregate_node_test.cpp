@@ -21,9 +21,9 @@ class AggregateNodeTest : public ::testing::Test {
     _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-    _a = {_mock_node, ColumnID{0}};
-    _b = {_mock_node, ColumnID{1}};
-    _c = {_mock_node, ColumnID{2}};
+    _a = {_mock_node, CxlumnID{0}};
+    _b = {_mock_node, CxlumnID{1}};
+    _c = {_mock_node, CxlumnID{2}};
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list

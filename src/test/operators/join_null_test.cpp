@@ -54,86 +54,86 @@ TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a, this->_table_wrapper_a_null, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_a, this->_table_wrapper_a_null, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNullDict) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_dict, this->_table_wrapper_a_null_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_a_dict, this->_table_wrapper_a_null_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Inner, "src/test/tables/joinoperators/int_float_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull2) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_m, this->_table_wrapper_n, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_m, this->_table_wrapper_n, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_m_dict, this->_table_wrapper_n_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_m_dict, this->_table_wrapper_n_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
   auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_m, ColumnID{1}, PredicateCondition::GreaterThanEquals, 0);
+      std::make_shared<TableScan>(this->_table_wrapper_m, CxlumnID{1}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
   auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_n, ColumnID{1}, PredicateCondition::GreaterThanEquals, 0);
+      std::make_shared<TableScan>(this->_table_wrapper_n, CxlumnID{1}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+  this->template test_join_output<TypeParam>(scan_a, scan_b, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
                                              "src/test/tables/joinoperators/int_inner_join_null_ref.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuter) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_null, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals,
                                              JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsOuterDict) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                                             CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals,
                                              JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInner) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_b, this->_table_wrapper_a_null, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_b, this->_table_wrapper_a_null, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInnerDict) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuter) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_b, this->_table_wrapper_a_null, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_b, this->_table_wrapper_a_null, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuterDict) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_b_dict, this->_table_wrapper_a_null_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsInner) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_null, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_a_null, this->_table_wrapper_b, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsInnerDict) {
   this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::Equals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null_inner.tbl", 1);
 }
 

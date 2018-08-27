@@ -64,9 +64,9 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
   const auto& operator_predicate = (*operator_predicates)[0];
 
   // Currently, we do not support two-column predicates
-  if (is_column_id(operator_predicate.value)) return false;
+  if (is_cxlumn_id(operator_predicate.value)) return false;
 
-  if (index_info.column_ids[0] != operator_predicate.column_id) return false;
+  if (index_info.cxlumn_ids[0] != operator_predicate.cxlumn_id) return false;
 
   const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
@@ -79,7 +79,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 }
 
 inline bool IndexScanRule::_is_single_column_index(const IndexInfo& index_info) const {
-  return index_info.column_ids.size() == 1;
+  return index_info.cxlumn_ids.size() == 1;
 }
 
 }  // namespace opossum

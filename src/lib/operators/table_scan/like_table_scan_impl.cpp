@@ -18,20 +18,20 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
                                      const PredicateCondition predicate_condition, const std::string& pattern)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
+    : BaseSingleColumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
-void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
+void LikeTableScanImpl::handle_column(const BaseValueSegment& base_column,
                                       std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
-  auto& left_column = static_cast<const ValueColumn<std::string>&>(base_column);
-  auto left_iterable = ValueColumnIterable<std::string>{left_column};
+  auto& left_column = static_cast<const ValueSegment<std::string>&>(base_column);
+  auto left_iterable = ValueSegmentIterable<std::string>{left_column};
 
   _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
 }

@@ -27,8 +27,8 @@ namespace opossum {
 
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition,
+                     const std::pair<CxlumnID, CxlumnID>& cxlumn_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, cxlumn_ids, predicate_condition,
                            std::make_unique<JoinIndex::PerformanceData>()) {
   DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
 }
@@ -38,7 +38,7 @@ const std::string JoinIndex::name() const { return "JoinIndex"; }
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
+  return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _cxlumn_ids, _predicate_condition);
 }
 
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -55,26 +55,26 @@ void JoinIndex::_create_table_structure() {
   _left_in_table = _input_left->get_output();
   _right_in_table = _input_right->get_output();
 
-  _left_column_id = _column_ids.first;
-  _right_column_id = _column_ids.second;
+  _left_cxlumn_id = _cxlumn_ids.first;
+  _right_cxlumn_id = _cxlumn_ids.second;
 
   const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
   const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
 
   // Preparing output table by adding columns from left and right table
-  TableColumnDefinitions column_definitions;
-  auto add_column_definitions = [&](auto from_table, bool from_may_produce_null) {
-    for (ColumnID column_id{0}; column_id < from_table->column_count(); ++column_id) {
-      auto nullable = (from_may_produce_null || from_table->column_is_nullable(column_id));
-      column_definitions.emplace_back(from_table->column_name(column_id), from_table->column_data_type(column_id),
+  TableCxlumnDefinitions cxlumn_definitions;
+  auto add_cxlumn_definitions = [&](auto from_table, bool from_may_produce_null) {
+    for (CxlumnID cxlumn_id{0}; cxlumn_id < from_table->cxlumn_count(); ++cxlumn_id) {
+      auto nullable = (from_may_produce_null || from_table->column_is_nullable(cxlumn_id));
+      cxlumn_definitions.emplace_back(from_table->cxlumn_name(cxlumn_id), from_table->column_data_type(cxlumn_id),
                                       nullable);
     }
   };
 
-  add_column_definitions(_left_in_table, left_may_produce_null);
-  add_column_definitions(_right_in_table, right_may_produce_null);
+  add_cxlumn_definitions(_left_in_table, left_may_produce_null);
+  add_cxlumn_definitions(_right_in_table, right_may_produce_null);
 
-  _output_table = std::make_shared<Table>(column_definitions, TableType::References);
+  _output_table = std::make_shared<Table>(cxlumn_definitions, TableType::References);
 }
 
 void JoinIndex::_perform_join() {
@@ -104,8 +104,8 @@ void JoinIndex::_perform_join() {
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = _right_in_table->get_chunk(chunk_id_right);
-    const auto column_right = chunk_right->get_column(_right_column_id);
-    const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_right_column_id});
+    const auto column_right = chunk_right->get_column(_right_cxlumn_id);
+    const auto indices = chunk_right->get_indices(std::vector<CxlumnID>{_right_cxlumn_id});
     if (track_right_matches) _right_matches[chunk_id_right].resize(chunk_right->size());
 
     std::shared_ptr<BaseIndex> index = nullptr;
@@ -119,7 +119,7 @@ void JoinIndex::_perform_join() {
     // Scan all chunks from left input
     if (index != nullptr) {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
+        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_cxlumn_id);
 
         resolve_data_and_column_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
           using LeftType = typename decltype(left_type)::type;
@@ -135,9 +135,9 @@ void JoinIndex::_perform_join() {
       performance_data.chunks_scanned_with_index++;
     } else {
       // Fall back to NestedLoopJoin
-      const auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_column(_right_column_id);
+      const auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_column(_right_cxlumn_id);
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
+        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_cxlumn_id);
         JoinNestedLoop::JoinParams params{*_pos_list_left,
                                           *_pos_list_right,
                                           _left_matches[chunk_id_left],
@@ -181,7 +181,7 @@ void JoinIndex::_perform_join() {
   _pos_list_right->shrink_to_fit();
 
   // write output chunks
-  ChunkColumns output_columns;
+  ChunkSegments output_columns;
 
   _write_output_columns(output_columns, _left_in_table, _pos_list_left);
   _write_output_columns(output_columns, _right_in_table, _pos_list_right);
@@ -315,11 +315,11 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 }
 
-void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
+void JoinIndex::_write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<const Table>& input_table,
                                       std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    std::shared_ptr<BaseColumn> column;
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {
+    std::shared_ptr<BaseSegment> column;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
@@ -327,8 +327,8 @@ void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::s
 
         ChunkID current_chunk_id{0};
 
-        auto reference_column =
-            std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
+        auto reference_segment =
+            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto row : *pos_list) {
@@ -339,24 +339,24 @@ void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::s
           if (row.chunk_id != current_chunk_id) {
             current_chunk_id = row.chunk_id;
 
-            reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
-                input_table->get_chunk(current_chunk_id)->get_column(column_id));
+            reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
+                input_table->get_chunk(current_chunk_id)->get_column(cxlumn_id));
           }
-          new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
+          new_pos_list->push_back(reference_segment->pos_list()->at(row.chunk_offset));
         }
 
-        column = std::make_shared<ReferenceColumn>(reference_column->referenced_table(),
-                                                   reference_column->referenced_column_id(), new_pos_list);
+        column = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
+                                                   reference_segment->referenced_cxlumn_id(), new_pos_list);
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
-        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
-        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
+        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
+        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
-        const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
-        column = std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list);
+        const auto dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
+        column = std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list);
       }
     } else {
-      column = std::make_shared<ReferenceColumn>(input_table, column_id, pos_list);
+      column = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
     }
 
     output_columns.push_back(column);

@@ -7,19 +7,19 @@
 #include <vector>
 
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const CxlumnID cxlumn_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
-      _column_id(column_id),
+      _cxlumn_id(cxlumn_id),
       _order_by_mode(order_by_mode),
       _output_chunk_size(output_chunk_size) {}
 
-ColumnID Sort::column_id() const { return _column_id; }
+CxlumnID Sort::cxlumn_id() const { return _cxlumn_id; }
 
 OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
@@ -28,14 +28,14 @@ const std::string Sort::name() const { return "Sort"; }
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
+  return std::make_shared<Sort>(copied_input_left, _cxlumn_id, _order_by_mode, _output_chunk_size);
 }
 
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->column_data_type(_column_id), input_table_left(), _column_id, _order_by_mode,
+      input_table_left()->column_data_type(_cxlumn_id), input_table_left(), _cxlumn_id, _order_by_mode,
       _output_chunk_size);
   return _impl->_on_execute();
 }
@@ -54,7 +54,7 @@ class Sort::SortImplMaterializeOutput {
 
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
-    auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
+    auto output = std::make_shared<Table>(_table_in->cxlumn_definitions(), TableType::Data, _output_chunk_size);
 
     // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
 
@@ -71,19 +71,19 @@ class Sort::SortImplMaterializeOutput {
     const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
 
     // Vector of columns for each chunk
-    std::vector<ChunkColumns> output_columns_by_chunk(chunk_count_out);
+    std::vector<ChunkSegments> output_columns_by_chunk(chunk_count_out);
 
     // Materialize column-wise
-    for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
-      const auto column_data_type = output->column_data_type(column_id);
+    for (CxlumnID cxlumn_id{0u}; cxlumn_id < output->cxlumn_count(); ++cxlumn_id) {
+      const auto column_data_type = output->column_data_type(cxlumn_id);
 
       resolve_data_type(column_data_type, [&](auto type) {
-        using ColumnDataType = typename decltype(type)::type;
+        using CxlumnDataType = typename decltype(type)::type;
 
         // Initialize value columns
-        auto columns_out = std::vector<std::shared_ptr<ValueColumn<ColumnDataType>>>(chunk_count_out);
+        auto columns_out = std::vector<std::shared_ptr<ValueSegment<CxlumnDataType>>>(chunk_count_out);
         std::generate(columns_out.begin(), columns_out.end(),
-                      []() { return std::make_shared<ValueColumn<ColumnDataType>>(true); });
+                      []() { return std::make_shared<ValueSegment<CxlumnDataType>>(true); });
 
         auto column_it = columns_out.begin();
         auto chunk_it = output_columns_by_chunk.begin();
@@ -91,7 +91,7 @@ class Sort::SortImplMaterializeOutput {
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
-          const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
+          const auto column = _table_in->get_chunk(chunk_id)->get_column(cxlumn_id);
 
           // Previously the value was retrieved by calling a virtual method,
           // which was just as slow as using the subscript operator.
@@ -135,10 +135,10 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
+  SortImpl(const std::shared_ptr<const Table>& table_in, const CxlumnID cxlumn_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
-        _column_id(column_id),
+        _cxlumn_id(cxlumn_id),
         _order_by_mode(order_by_mode),
         _output_chunk_size(output_chunk_size) {
     // initialize a structure which can be sorted by std::sort
@@ -186,7 +186,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
       auto chunk = _table_in->get_chunk(chunk_id);
 
-      auto base_column = chunk->get_column(_column_id);
+      auto base_column = chunk->get_column(_cxlumn_id);
 
       resolve_column_type<SortColumnType>(*base_column, [&](auto& typed_column) {
         auto iterable = create_iterable_from_column<SortColumnType>(typed_column);
@@ -212,7 +212,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
   const std::shared_ptr<const Table> _table_in;
 
   // column to sort by
-  const ColumnID _column_id;
+  const CxlumnID _cxlumn_id;
   const OrderByMode _order_by_mode;
   // chunk size of the materialized output
   const size_t _output_chunk_size;

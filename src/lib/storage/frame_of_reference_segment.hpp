@@ -9,7 +9,7 @@
 #include <array>
 #include <memory>
 
-#include "base_encoded_column.hpp"
+#include "base_encoded_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -30,7 +30,7 @@ class BaseCompressedVector;
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
-class FrameOfReferenceColumn : public BaseEncodedColumn {
+class FrameOfReferenceSegment : public BaseEncodedColumn {
  public:
   /**
    * The column is divided into fixed-size blocks.
@@ -42,7 +42,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
    */
   static constexpr auto block_size = 2048u;
 
-  explicit FrameOfReferenceColumn(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
+  explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
                                   std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
@@ -50,7 +50,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
   const BaseCompressedVector& offset_values() const;
 
   /**
-   * @defgroup BaseColumn interface
+   * @defgroup BaseSegment interface
    * @{
    */
 
@@ -58,7 +58,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
 
   size_t size() const final;
 
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t estimate_memory_usage() const final;
 

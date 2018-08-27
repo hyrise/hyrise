@@ -32,7 +32,7 @@ class FixedStringDictionaryColumn : public BaseDictionaryColumn {
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 
   /**
-   * @defgroup BaseColumn interface
+   * @defgroup BaseSegment interface
    * @{
    */
 
@@ -40,7 +40,7 @@ class FixedStringDictionaryColumn : public BaseDictionaryColumn {
 
   size_t size() const final;
 
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t estimate_memory_usage() const final;
   /**@}*/

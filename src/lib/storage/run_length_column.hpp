@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "base_encoded_column.hpp"
+#include "base_encoded_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -37,7 +37,7 @@ class RunLengthColumn : public BaseEncodedColumn {
   std::shared_ptr<const pmr_vector<ChunkOffset>> end_positions() const;
 
   /**
-   * @defgroup BaseColumn interface
+   * @defgroup BaseSegment interface
    * @{
    */
 
@@ -45,7 +45,7 @@ class RunLengthColumn : public BaseEncodedColumn {
 
   size_t size() const final;
 
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t estimate_memory_usage() const final;
 

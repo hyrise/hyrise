@@ -18,7 +18,7 @@ class AnyColumnIterableTest : public BaseTest {
 
   void SetUp() override { _column = create_int_w_null_value_column(); }
 
-  std::shared_ptr<ValueColumn<int32_t>> create_int_w_null_value_column() {
+  std::shared_ptr<ValueSegment<int32_t>> create_int_w_null_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count);
     auto null_values = pmr_concurrent_vector<bool>(row_count);
 
@@ -31,7 +31,7 @@ class AnyColumnIterableTest : public BaseTest {
       null_values[i] = bernoulli_dist(engine);
     }
 
-    return std::make_shared<ValueColumn<int32_t>>(std::move(values), std::move(null_values));
+    return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
   ChunkOffsetsList create_sequential_chunk_offsets_list() {
@@ -50,11 +50,11 @@ class AnyColumnIterableTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<ValueColumn<int32_t>> _column;
+  std::shared_ptr<ValueSegment<int32_t>> _column;
 };
 
 TEST_F(AnyColumnIterableTest, SequentiallyIterateOverColumn) {
-  auto iterable = ValueColumnIterable<int32_t>{*_column};
+  auto iterable = ValueSegmentIterable<int32_t>{*_column};
   auto any_iterable = AnyColumnIterable{iterable};
 
   iterable.with_iterators([&](auto it, auto end) {
@@ -71,7 +71,7 @@ TEST_F(AnyColumnIterableTest, SequentiallyIterateOverColumn) {
 }
 
 TEST_F(AnyColumnIterableTest, RandomlyIterateOverColumn) {
-  auto iterable = ValueColumnIterable<int32_t>{*_column};
+  auto iterable = ValueSegmentIterable<int32_t>{*_column};
   auto any_iterable = AnyColumnIterable{iterable};
 
   const auto chunk_offsets_list = create_sequential_chunk_offsets_list();

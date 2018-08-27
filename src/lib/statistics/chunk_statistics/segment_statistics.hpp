@@ -10,16 +10,16 @@
 
 namespace opossum {
 
-class BaseColumn;
+class BaseSegment;
 
 /**
  * Container class that holds a set of filters with statistical information about a
  * certain chunks column. Is part of ChunkStatistics.
  */
-class ChunkColumnStatistics final {
+class SegmentStatistics final {
  public:
-  static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
-                                                                 const std::shared_ptr<const BaseColumn>& column);
+  static std::shared_ptr<SegmentStatistics> build_statistics(DataType data_type,
+                                                                 const std::shared_ptr<const BaseSegment>& column);
 
   void add_filter(std::shared_ptr<AbstractFilter> filter);
 

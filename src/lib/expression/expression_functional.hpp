@@ -16,7 +16,7 @@
 #include "is_null_expression.hpp"
 #include "list_expression.hpp"
 #include "logical_expression.hpp"
-#include "lqp_column_expression.hpp"
+#include "lqp_cxlumn_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "parameter_expression.hpp"
 #include "pqp_select_expression.hpp"
@@ -156,13 +156,13 @@ std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNo
 
 template <typename... Args>
 std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                             const bool nullable, Args&&... parameter_id_column_id_pairs) {
+                                             const bool nullable, Args&&... parameter_id_cxlumn_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<PQPSelectExpression>(
         pqp, data_type, nullable,
-        std::vector<std::pair<ParameterID, ColumnID>>{
-            {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
+        std::vector<std::pair<ParameterID, CxlumnID>>{
+            {std::make_pair(parameter_id_cxlumn_id_pairs.first, parameter_id_cxlumn_id_pairs.second)...}});
   } else {
     // Not correlated
     return std::make_shared<PQPSelectExpression>(pqp, data_type, nullable);

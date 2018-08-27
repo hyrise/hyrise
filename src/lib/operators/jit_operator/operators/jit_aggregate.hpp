@@ -13,7 +13,7 @@ namespace opossum {
 // Each aggregate and groupby column stores its position in the output table. This allows the operator to maintain
 // arbitrary orders of groupby and aggregate columns.
 struct JitAggregateColumn {
-  std::string column_name;
+  std::string cxlumn_name;
   uint64_t position_in_table;
   AggregateFunction function;
   JitTupleValue tuple_value;
@@ -27,7 +27,7 @@ struct JitAggregateColumn {
 // Each aggregate and groupby column stores its position in the output table. This allows the operator to maintain
 // arbitrary orders of groupby and aggregate columns.
 struct JitGroupByColumn {
-  std::string column_name;
+  std::string cxlumn_name;
   uint64_t position_in_table;
   JitTupleValue tuple_value;
   JitHashmapValue hashmap_value;
@@ -71,11 +71,11 @@ class JitAggregate : public AbstractJittableSink {
   void after_query(Table& out_table, JitRuntimeContext& context) const final;
 
   // Adds an aggregate to the operator that is to be computed on tuple groups.
-  void add_aggregate_column(const std::string& column_name, const JitTupleValue& value,
+  void add_aggregate_column(const std::string& cxlumn_name, const JitTupleValue& value,
                             const AggregateFunction function);
 
   // Adds a column to the operator that is to be considered when grouping tuples.
-  void add_groupby_column(const std::string& column_name, const JitTupleValue& value);
+  void add_groupby_column(const std::string& cxlumn_name, const JitTupleValue& value);
 
   const std::vector<JitAggregateColumn> aggregate_columns() const;
   const std::vector<JitGroupByColumn> groupby_columns() const;

@@ -107,18 +107,18 @@ void ImportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstream& file) {
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
-  const auto column_count = _read_value<ColumnID>(file);
-  const auto data_types = _read_values<std::string>(file, column_count);
-  const auto column_nullables = _read_values<bool>(file, column_count);
-  const auto column_names = _read_string_values(file, column_count);
+  const auto cxlumn_count = _read_value<CxlumnID>(file);
+  const auto data_types = _read_values<std::string>(file, cxlumn_count);
+  const auto column_nullables = _read_values<bool>(file, cxlumn_count);
+  const auto cxlumn_names = _read_string_values(file, cxlumn_count);
 
-  TableColumnDefinitions output_column_definitions;
-  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto data_type = data_type_to_string.right.at(data_types[column_id]);
-    output_column_definitions.emplace_back(column_names[column_id], data_type, column_nullables[column_id]);
+  TableCxlumnDefinitions output_cxlumn_definitions;
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
+    const auto data_type = data_type_to_string.right.at(data_types[cxlumn_id]);
+    output_cxlumn_definitions.emplace_back(cxlumn_names[cxlumn_id], data_type, column_nullables[cxlumn_id]);
   }
 
-  auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(output_cxlumn_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   return std::make_pair(table, chunk_count);
 }
@@ -126,34 +126,34 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
-  ChunkColumns output_columns;
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+  ChunkSegments output_columns;
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     output_columns.push_back(
-        _import_column(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
+        _import_column(file, row_count, table->column_data_type(cxlumn_id), table->column_is_nullable(cxlumn_id)));
   }
   table->append_chunk(output_columns);
 }
 
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+std::shared_ptr<BaseSegment> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
                                                          bool is_nullable) {
-  std::shared_ptr<BaseColumn> result;
+  std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
-    result = _import_column<ColumnDataType>(file, row_count, is_nullable);
+    using CxlumnDataType = typename decltype(type)::type;
+    result = _import_column<CxlumnDataType>(file, row_count, is_nullable);
   });
 
   return result;
 }
 
-template <typename ColumnDataType>
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
+template <typename CxlumnDataType>
+std::shared_ptr<BaseSegment> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
   const auto column_type = _read_value<BinaryColumnType>(file);
 
   switch (column_type) {
     case BinaryColumnType::value_column:
-      return _import_value_column<ColumnDataType>(file, row_count, is_nullable);
+      return _import_value_column<CxlumnDataType>(file, row_count, is_nullable);
     case BinaryColumnType::dictionary_column:
-      return _import_dictionary_column<ColumnDataType>(file, row_count);
+      return _import_dictionary_column<CxlumnDataType>(file, row_count);
     default:
       // This case happens if the read column type is not a valid BinaryColumnType.
       Fail("Cannot import column: invalid column type");
@@ -175,18 +175,18 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 }
 
 template <typename T>
-std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count,
+std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count,
                                                                    bool is_nullable) {
   // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
   // needed
   if (is_nullable) {
     const auto nullables = _read_values<bool>(file, row_count);
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
+    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
                                             tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
   } else {
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
   }
 }
 

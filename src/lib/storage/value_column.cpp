@@ -16,40 +16,40 @@
 namespace opossum {
 
 template <typename T>
-ValueColumn<T>::ValueColumn(bool nullable) : BaseValueColumn(data_type_from_type<T>()) {
+ValueSegment<T>::ValueSegment(bool nullable) : BaseValueSegment(data_type_from_type<T>()) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>
-ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable)
-    : BaseValueColumn(data_type_from_type<T>()), _values(alloc) {
+ValueSegment<T>::ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable)
+    : BaseValueSegment(data_type_from_type<T>()), _values(alloc) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>
-ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()), _values(std::move(values), alloc) {}
+ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc)
+    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values), alloc) {}
 
 template <typename T>
-ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
+ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                             const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()),
+    : BaseValueSegment(data_type_from_type<T>()),
       _values(std::move(values), alloc),
       _null_values({std::move(null_values), alloc}) {}
 
 template <typename T>
-ValueColumn<T>::ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()), _values(values, alloc) {}
+ValueSegment<T>::ValueSegment(std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
+    : BaseValueSegment(data_type_from_type<T>()), _values(values, alloc) {}
 
 template <typename T>
-ValueColumn<T>::ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
+ValueSegment<T>::ValueSegment(std::vector<T>& values, std::vector<bool>& null_values,
                             const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()),
+    : BaseValueSegment(data_type_from_type<T>()),
       _values(values, alloc),
       _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {}
 
 template <typename T>
-const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) const {
+const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
 
@@ -62,12 +62,12 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
 }
 
 template <typename T>
-bool ValueColumn<T>::is_null(const ChunkOffset chunk_offset) const {
+bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
   return is_nullable() && (*_null_values)[chunk_offset];
 }
 
 template <typename T>
-const T ValueColumn<T>::get(const ChunkOffset chunk_offset) const {
+const T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of column type because it is null.");
@@ -75,7 +75,7 @@ const T ValueColumn<T>::get(const ChunkOffset chunk_offset) const {
 }
 
 template <typename T>
-void ValueColumn<T>::append(const AllTypeVariant& val) {
+void ValueSegment<T>::append(const AllTypeVariant& val) {
   bool is_null = variant_is_null(val);
 
   if (is_nullable()) {
@@ -84,62 +84,62 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+  Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
 
   _values.push_back(type_cast<T>(val));
 }
 
 template <typename T>
-const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
+const pmr_concurrent_vector<T>& ValueSegment<T>::values() const {
   return _values;
 }
 
 template <typename T>
-pmr_concurrent_vector<T>& ValueColumn<T>::values() {
+pmr_concurrent_vector<T>& ValueSegment<T>::values() {
   return _values;
 }
 
 template <typename T>
-bool ValueColumn<T>::is_nullable() const {
+bool ValueSegment<T>::is_nullable() const {
   return static_cast<bool>(_null_values);
 }
 
 template <typename T>
-const pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() const {
-  DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
+const pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() const {
+  DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
-pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() {
-  DebugAssert(is_nullable(), "This ValueColumn does not support null values.");
+pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() {
+  DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
-size_t ValueColumn<T>::size() const {
+size_t ValueSegment<T>::size() const {
   return _values.size();
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
                                                         // (clang-tidy reports slicing that comes from tbb)
   if (is_nullable()) {
     pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
-    return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), std::move(new_null_values));
+    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values), std::move(new_null_values));
   } else {
-    return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));
+    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values));
   }
 }
 
 template <typename T>
-size_t ValueColumn<T>::estimate_memory_usage() const {
+size_t ValueSegment<T>::estimate_memory_usage() const {
   return sizeof(*this) + _values.size() * sizeof(T) + (_null_values ? _null_values->size() * sizeof(bool) : 0u);
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
 
 }  // namespace opossum

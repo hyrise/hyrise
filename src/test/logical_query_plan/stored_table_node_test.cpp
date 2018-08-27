@@ -18,8 +18,8 @@ class StoredTableNodeTest : public BaseTest {
     StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node = StoredTableNode::make("t_a");
-    _a = LQPColumnReference(_stored_table_node, ColumnID{0});
-    _b = LQPColumnReference(_stored_table_node, ColumnID{1});
+    _a = LQPColumnReference(_stored_table_node, CxlumnID{0});
+    _b = LQPColumnReference(_stored_table_node, CxlumnID{1});
 
     _stored_table_node->set_excluded_chunk_ids({ChunkID{2}});
   }

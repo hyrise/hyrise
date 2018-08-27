@@ -13,14 +13,14 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * AllParameterVariant holds either an AllTypeVariant, a ColumnID or a Placeholder.
+ * AllParameterVariant holds either an AllTypeVariant, a CxlumnID or a Placeholder.
  * It should be used to generalize Opossum operator calls.
  */
 
 // This holds pairs of all types and their respective string representation
 static constexpr auto parameter_types =
     hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
-                     hana::make_pair("ColumnID", hana::type_c<ColumnID>),                      // NOLINT
+                     hana::make_pair("CxlumnID", hana::type_c<CxlumnID>),                      // NOLINT
                      hana::make_pair("LQPColumnReference", hana::type_c<LQPColumnReference>),  // NOLINT
                      hana::make_pair("Parameter", hana::type_c<ParameterID>));                 // NOLINT
 
@@ -38,7 +38,7 @@ using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMp
 inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
 
 // Function to check if AllParameterVariant is a column id
-inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
+inline bool is_cxlumn_id(const AllParameterVariant& variant) { return (variant.type() == typeid(CxlumnID)); }
 
 // Function to check if AllParameterVariant is a column origin
 inline bool is_lqp_column_reference(const AllParameterVariant& variant) {

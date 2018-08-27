@@ -36,24 +36,24 @@ CostFeatureVariant CostFeatureOperatorProxy::_extract_feature_impl(const CostFea
       if (const auto join_op = std::dynamic_pointer_cast<AbstractJoinOperator>(_op); join_op) {
         if (cost_feature == CostFeature::LeftDataType) {
           Assert(_op->input_table_left(), "Input operator must be executed");
-          return join_op->input_table_left()->column_data_type(join_op->column_ids().first);
+          return join_op->input_table_left()->column_data_type(join_op->cxlumn_ids().first);
         } else {
           Assert(_op->input_table_right(), "Input operator must be executed");
-          return join_op->input_table_right()->column_data_type(join_op->column_ids().second);
+          return join_op->input_table_right()->column_data_type(join_op->cxlumn_ids().second);
         }
       } else if (_op->type() == OperatorType::TableScan) {
         Assert(_op->input_table_left(), "Input operator must be executed");
 
         const auto table_scan = std::dynamic_pointer_cast<TableScan>(_op);
         if (cost_feature == CostFeature::LeftDataType) {
-          return table_scan->input_table_left()->column_data_type(table_scan->left_column_id());
+          return table_scan->input_table_left()->column_data_type(table_scan->left_cxlumn_id());
         } else {
           if (table_scan->right_parameter().type() == typeid(AllTypeVariant)) {
             return data_type_from_all_type_variant(boost::get<AllTypeVariant>(table_scan->right_parameter()));
           } else {
-            Assert(is_column_id(table_scan->right_parameter()), "Expected LQPColumnReference");
-            const auto column_id = boost::get<ColumnID>(table_scan->right_parameter());
-            return table_scan->input_table_left()->column_data_type(column_id);
+            Assert(is_cxlumn_id(table_scan->right_parameter()), "Expected LQPColumnReference");
+            const auto cxlumn_id = boost::get<CxlumnID>(table_scan->right_parameter());
+            return table_scan->input_table_left()->column_data_type(cxlumn_id);
           }
         }
       } else {
@@ -72,7 +72,7 @@ CostFeatureVariant CostFeatureOperatorProxy::_extract_feature_impl(const CostFea
 
     case CostFeature::RightOperandIsColumn:
       if (_op->type() == OperatorType::TableScan) {
-        return is_column_id(std::static_pointer_cast<TableScan>(_op)->right_parameter());
+        return is_cxlumn_id(std::static_pointer_cast<TableScan>(_op)->right_parameter());
       } else {
         Fail("CostFeature not defined for LQPNodeType");
       }

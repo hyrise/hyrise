@@ -14,7 +14,7 @@ namespace opossum {
  * The class allows the JitOperatorWrapper to keep pointers to differently specialized versions
  * of the iterators in a common data structure.
  */
-class JitBaseColumnIterator {};
+class JitBaseSegmentIterator {};
 
 /**
  * @brief base class of all iterators used by iterables
@@ -36,7 +36,7 @@ class JitBaseColumnIterator {};
  *
  * Example Usage
  *
- * class Iterator : public BaseColumnIterator<Iterator, Value> {
+ * class Iterator : public BaseSegmentIterator<Iterator, Value> {
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
  *
@@ -46,8 +46,8 @@ class JitBaseColumnIterator {};
  * };
  */
 template <typename Derived, typename Value>
-class BaseColumnIterator : public boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>,
-                           public JitBaseColumnIterator {};
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>,
+                           public JitBaseSegmentIterator {};
 
 /**
  * @brief base class of all point-access iterators used by iterables
@@ -72,7 +72,7 @@ class BaseColumnIterator : public boost::iterator_facade<Derived, Value, boost::
  * };
  */
 template <typename Derived, typename Value>
-class BasePointAccessColumnIterator : public BaseColumnIterator<Derived, Value> {
+class BasePointAccessColumnIterator : public BaseSegmentIterator<Derived, Value> {
  public:
   explicit BasePointAccessColumnIterator(const ChunkOffsetsIterator& chunk_offsets_it)
       : _chunk_offsets_it{chunk_offsets_it} {}

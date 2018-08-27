@@ -9,9 +9,9 @@ namespace opossum {
  *
  * Exposes all methods of value columns that do not rely on its specific data type.
  */
-class BaseValueColumn : public BaseColumn {
+class BaseValueSegment : public BaseSegment {
  public:
-  using BaseColumn::BaseColumn;
+  using BaseSegment::BaseSegment;
 
   // returns true if column supports null values
   virtual bool is_nullable() const = 0;

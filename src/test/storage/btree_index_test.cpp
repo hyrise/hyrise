@@ -19,9 +19,9 @@ class BTreeIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
-    column = std::make_shared<ValueColumn<std::string>>(values);
+    column = std::make_shared<ValueSegment<std::string>>(values);
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
-    index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+    index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({column}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
@@ -29,7 +29,7 @@ class BTreeIndexTest : public BaseTest {
   std::vector<std::string> values;
   std::vector<std::string> sorted;
   std::shared_ptr<BTreeIndex> index = nullptr;
-  std::shared_ptr<ValueColumn<std::string>> column = nullptr;
+  std::shared_ptr<ValueSegment<std::string>> column = nullptr;
 
   /**
    * Use pointers to inner data structures of BTreeIndex in order to bypass the

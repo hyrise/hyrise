@@ -84,7 +84,7 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 void SQLiteWrapper::create_table(const Table& table, const std::string& table_name) {
   std::vector<std::string> col_types;
 
-  for (const auto& column_definition : table.column_definitions()) {
+  for (const auto& column_definition : table.cxlumn_definitions()) {
     switch (column_definition.data_type) {
       case DataType::Int:
       case DataType::Long:
@@ -106,10 +106,10 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
   std::stringstream create_table_query;
   create_table_query << "CREATE TABLE " << table_name << "(";
-  for (auto column_id = ColumnID{0}; column_id < table.column_definitions().size(); column_id++) {
-    create_table_query << table.column_definitions()[column_id].name << " " << col_types[column_id];
+  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table.cxlumn_definitions().size(); cxlumn_id++) {
+    create_table_query << table.cxlumn_definitions()[cxlumn_id].name << " " << col_types[cxlumn_id];
 
-    if (column_id + 1u < table.column_definitions().size()) {
+    if (cxlumn_id + 1u < table.cxlumn_definitions().size()) {
       create_table_query << ", ";
     }
   }
@@ -123,17 +123,17 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
       std::stringstream insert_query;
 
       insert_query << "INSERT INTO " << table_name << " VALUES (";
-      for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
-        const auto column = chunk->get_column(column_id);
+      for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table.cxlumn_count(); cxlumn_id++) {
+        const auto column = chunk->get_column(cxlumn_id);
         const auto value = (*column)[chunk_offset];
 
-        if (col_types[column_id] == "TEXT" && !variant_is_null(value)) {
+        if (col_types[cxlumn_id] == "TEXT" && !variant_is_null(value)) {
           insert_query << "'" << value << "'";
         } else {
           insert_query << value;
         }
 
-        if ((column_id + 1u) < table.column_count()) {
+        if ((cxlumn_id + 1u) < table.cxlumn_count()) {
           insert_query << ", ";
         }
       }
@@ -188,15 +188,15 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   return result_table;
 }
 
-std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, int column_count) {
-  std::vector<bool> col_nullable(column_count, false);
-  std::vector<std::string> col_types(column_count, "");
-  std::vector<std::string> col_names(column_count, "");
+std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, int cxlumn_count) {
+  std::vector<bool> col_nullable(cxlumn_count, false);
+  std::vector<std::string> col_types(cxlumn_count, "");
+  std::vector<std::string> col_names(cxlumn_count, "");
 
   bool no_result = true;
   int rc;
   while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
-    for (int i = 0; i < column_count; ++i) {
+    for (int i = 0; i < cxlumn_count; ++i) {
       if (no_result) {
         col_names[i] = sqlite3_column_name(result_row, i);
       }
@@ -234,27 +234,27 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
   }
 
   if (!no_result) {
-    TableColumnDefinitions column_definitions;
-    for (int i = 0; i < column_count; ++i) {
+    TableCxlumnDefinitions cxlumn_definitions;
+    for (int i = 0; i < cxlumn_count; ++i) {
       if (col_types[i].empty()) {
         // Hyrise does not have explicit NULL columns
         col_types[i] = "int";
       }
 
       const auto data_type = data_type_to_string.right.at(col_types[i]);
-      column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
+      cxlumn_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
     }
 
-    return std::make_shared<Table>(column_definitions, TableType::Data);
+    return std::make_shared<Table>(cxlumn_definitions, TableType::Data);
   }
 
   return nullptr;
 }
 
-void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int cxlumn_count) {
   std::vector<AllTypeVariant> row;
 
-  for (int i = 0; i < column_count; ++i) {
+  for (int i = 0; i < cxlumn_count; ++i) {
     switch (sqlite3_column_type(result_row, i)) {
       case SQLITE_INTEGER: {
         row.push_back(AllTypeVariant{sqlite3_column_int(result_row, i)});

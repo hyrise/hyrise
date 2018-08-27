@@ -17,7 +17,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
  public:
   JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                 const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+                 const CxlumnIDPair& cxlumn_ids, const PredicateCondition predicate_condition);
 
   const std::string name() const override;
 
@@ -49,8 +49,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time from twelve minutes to less than three.
 
   static void __attribute__((noinline))
-  _join_two_untyped_columns(const std::shared_ptr<const BaseColumn>& column_left,
-                            const std::shared_ptr<const BaseColumn>& column_right, const ChunkID chunk_id_left,
+  _join_two_untyped_columns(const std::shared_ptr<const BaseSegment>& column_left,
+                            const std::shared_ptr<const BaseSegment>& column_right, const ChunkID chunk_id_left,
                             const ChunkID chunk_id_right, JoinParams& params);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
@@ -63,7 +63,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_chunks(ChunkSegments& columns, const std::shared_ptr<const Table>& input_table,
                             const std::shared_ptr<PosList>& pos_list);
 
   void _on_cleanup() override;
@@ -71,8 +71,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
   std::shared_ptr<Table> _output_table;
   std::shared_ptr<const Table> _left_in_table;
   std::shared_ptr<const Table> _right_in_table;
-  ColumnID _left_column_id;
-  ColumnID _right_column_id;
+  CxlumnID _left_cxlumn_id;
+  CxlumnID _right_cxlumn_id;
 
   bool _is_outer_join{false};
   std::shared_ptr<PosList> _pos_list_left;

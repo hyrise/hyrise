@@ -15,10 +15,10 @@
 namespace opossum {
 
 SingleColumnTableScanImpl::SingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
-                                                     const ColumnID left_column_id,
+                                                     const CxlumnID left_cxlumn_id,
                                                      const PredicateCondition& predicate_condition,
                                                      const AllTypeVariant& right_value)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition}, _right_value{right_value} {}
+    : BaseSingleColumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition}, _right_value{right_value} {}
 
 std::shared_ptr<PosList> SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   // early outs for specific NULL semantics
@@ -35,25 +35,25 @@ std::shared_ptr<PosList> SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id)
   return BaseSingleColumnTableScanImpl::scan_chunk(chunk_id);
 }
 
-void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column,
+void SingleColumnTableScanImpl::handle_column(const BaseValueSegment& base_column,
                                               std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto left_column_type = _in_table->column_data_type(_left_column_id);
+  const auto left_column_type = _in_table->column_data_type(_left_cxlumn_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
+    using CxlumnDataType = typename decltype(type)::type;
 
-    auto& left_column = static_cast<const ValueColumn<ColumnDataType>&>(base_column);
+    auto& left_column = static_cast<const ValueSegment<CxlumnDataType>&>(base_column);
 
     auto left_column_iterable = create_iterable_from_column(left_column);
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       with_comparator(_predicate_condition, [&](auto comparator) {
-        _unary_scan_with_value(comparator, left_it, left_end, type_cast<ColumnDataType>(_right_value), chunk_id,
+        _unary_scan_with_value(comparator, left_it, left_end, type_cast<CxlumnDataType>(_right_value), chunk_id,
                                matches_out);
       });
     });
@@ -67,7 +67,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto left_column_type = _in_table->column_data_type(_left_column_id);
+  const auto left_column_type = _in_table->column_data_type(_left_cxlumn_id);
 
   resolve_data_type(left_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;

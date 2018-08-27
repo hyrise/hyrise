@@ -129,14 +129,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const;
 
   /**
-   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
+   * @return The CxlumnID of the @param expression, or std::nullopt if it can't be found
    */
-  std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
+  std::optional<CxlumnID> find_cxlumn_id(const AbstractExpression& expression) const;
 
   /**
-   * @return The ColumnID of the @param expression. Assert()s that it can be found
+   * @return The CxlumnID of the @param expression. Assert()s that it can be found
    */
-  ColumnID get_column_id(const AbstractExpression& expression) const;
+  CxlumnID get_cxlumn_id(const AbstractExpression& expression) const;
 
   // @{
   /**

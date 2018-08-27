@@ -9,9 +9,9 @@
 namespace opossum {
 
 template <typename T>
-class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIterable<T>> {
+class ValueSegmentIterable : public PointAccessibleColumnIterable<ValueSegmentIterable<T>> {
  public:
-  explicit ValueColumnIterable(const ValueColumn<T>& column) : _column{column} {}
+  explicit ValueSegmentIterable(const ValueSegment<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -43,10 +43,10 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
   size_t _on_size() const { return _column.size(); }
 
  private:
-  const ValueColumn<T>& _column;
+  const ValueSegment<T>& _column;
 
  private:
-  class NonNullIterator : public BaseColumnIterator<NonNullIterator, NonNullColumnIteratorValue<T>> {
+  class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullColumnIteratorValue<T>> {
    public:
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
 
@@ -72,7 +72,7 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     ChunkOffset _chunk_offset;
   };
 
-  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;

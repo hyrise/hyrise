@@ -14,9 +14,9 @@ class ExpressionUtilsTest : public ::testing::Test {
   void SetUp() override {
     node_a =
         MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
-    a_a = LQPColumnReference{node_a, ColumnID{0}};
-    a_b = LQPColumnReference{node_a, ColumnID{1}};
-    a_c = LQPColumnReference{node_a, ColumnID{2}};
+    a_a = LQPColumnReference{node_a, CxlumnID{0}};
+    a_b = LQPColumnReference{node_a, CxlumnID{1}};
+    a_c = LQPColumnReference{node_a, CxlumnID{2}};
   }
 
   std::shared_ptr<MockNode> node_a;

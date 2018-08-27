@@ -14,7 +14,7 @@
 #include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/list_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_cxlumn_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/aggregate.hpp"
@@ -36,17 +36,17 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   void SetUp() override {
     // Load table_a
     table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl");
-    a = PQPColumnExpression::from_table(*table_a, "a");
-    b = PQPColumnExpression::from_table(*table_a, "b");
-    c = PQPColumnExpression::from_table(*table_a, "c");
-    d = PQPColumnExpression::from_table(*table_a, "d");
-    e = PQPColumnExpression::from_table(*table_a, "e");
-    f = PQPColumnExpression::from_table(*table_a, "f");
-    s1 = PQPColumnExpression::from_table(*table_a, "s1");
-    s2 = PQPColumnExpression::from_table(*table_a, "s2");
-    s3 = PQPColumnExpression::from_table(*table_a, "s3");
-    dates = PQPColumnExpression::from_table(*table_a, "dates");
-    dates2 = PQPColumnExpression::from_table(*table_a, "dates2");
+    a = PQPCxlumnExpression::from_table(*table_a, "a");
+    b = PQPCxlumnExpression::from_table(*table_a, "b");
+    c = PQPCxlumnExpression::from_table(*table_a, "c");
+    d = PQPCxlumnExpression::from_table(*table_a, "d");
+    e = PQPCxlumnExpression::from_table(*table_a, "e");
+    f = PQPCxlumnExpression::from_table(*table_a, "f");
+    s1 = PQPCxlumnExpression::from_table(*table_a, "s1");
+    s2 = PQPCxlumnExpression::from_table(*table_a, "s2");
+    s3 = PQPCxlumnExpression::from_table(*table_a, "s3");
+    dates = PQPCxlumnExpression::from_table(*table_a, "dates");
+    dates2 = PQPCxlumnExpression::from_table(*table_a, "dates2");
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
@@ -56,31 +56,31 @@ class ExpressionEvaluatorTest : public ::testing::Test {
 
     // Load table_b
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl");
-    x = PQPColumnExpression::from_table(*table_b, "x");
+    x = PQPCxlumnExpression::from_table(*table_b, "x");
 
     // Load table_bools
     table_bools = load_table("src/test/tables/expression_evaluator/input_bools.tbl");
-    bool_a = PQPColumnExpression::from_table(*table_bools, "a");
-    bool_b = PQPColumnExpression::from_table(*table_bools, "b");
-    bool_c = PQPColumnExpression::from_table(*table_bools, "c");
+    bool_a = PQPCxlumnExpression::from_table(*table_bools, "a");
+    bool_b = PQPCxlumnExpression::from_table(*table_bools, "b");
+    bool_c = PQPCxlumnExpression::from_table(*table_bools, "c");
 
     // Create table_empty
-    TableColumnDefinitions empty_table_columns;
+    TableCxlumnDefinitions empty_table_columns;
     empty_table_columns.emplace_back("a", DataType::Int, false);
     empty_table_columns.emplace_back("b", DataType::Float, true);
     empty_table_columns.emplace_back("s", DataType::String, false);
     table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
 
-    ChunkColumns columns;
-    columns.emplace_back(std::make_shared<ValueColumn<int32_t>>(pmr_concurrent_vector<int32_t>{}));
+    ChunkSegments columns;
+    columns.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
     columns.emplace_back(
-        std::make_shared<ValueColumn<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
-    columns.emplace_back(std::make_shared<ValueColumn<std::string>>(pmr_concurrent_vector<std::string>{}));
+        std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
+    columns.emplace_back(std::make_shared<ValueSegment<std::string>>(pmr_concurrent_vector<std::string>{}));
     table_empty->append_chunk(columns);
 
-    empty_a = PQPColumnExpression::from_table(*table_empty, "a");
-    empty_b = PQPColumnExpression::from_table(*table_empty, "b");
-    empty_s = PQPColumnExpression::from_table(*table_empty, "s");
+    empty_a = PQPCxlumnExpression::from_table(*table_empty, "a");
+    empty_b = PQPCxlumnExpression::from_table(*table_empty, "b");
+    empty_s = PQPCxlumnExpression::from_table(*table_empty, "s");
   }
 
   /**
@@ -146,8 +146,8 @@ class ExpressionEvaluatorTest : public ::testing::Test {
 
   std::shared_ptr<Table> table_empty, table_a, table_b, table_bools;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, s3, dates, dates2, x, bool_a, bool_b, bool_c;
-  std::shared_ptr<PQPColumnExpression> empty_a, empty_b, empty_s;
+  std::shared_ptr<PQPCxlumnExpression> a, b, c, d, e, f, s1, s2, s3, dates, dates2, x, bool_a, bool_b, bool_c;
+  std::shared_ptr<PQPCxlumnExpression> empty_a, empty_b, empty_s;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -457,13 +457,13 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
-      std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
+      std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPCxlumnExpression::from_table(*table_a, "a")));
   const auto select_a = select_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
-      std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
+      std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPCxlumnExpression::from_table(*table_a, "c")));
   const auto select_b = select_(pqp_b, DataType::Int, true);
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}));
@@ -486,9 +486,9 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   //  2      (3, 6, 9, 12)
   //  3      (4, 8, 12, 16)
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
-  const auto mul_a = mul_(parameter_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "a"));
+  const auto mul_a = mul_(parameter_(ParameterID{0}), PQPCxlumnExpression::from_table(*table_a, "a"));
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
-  const auto select_a = select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto select_a = select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, CxlumnID{0}));
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_a), {1, 1, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0, 1, 1, 0}));
@@ -505,9 +505,9 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   //  2      (36, NULL, 37, NULL)
   //  3      (37, NULL, 38, NULL)
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
-  const auto add_b = add_(parameter_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "c"));
+  const auto add_b = add_(parameter_(ParameterID{0}), PQPCxlumnExpression::from_table(*table_a, "c"));
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
-  const auto select_b = select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto select_b = select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, CxlumnID{0}));
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, select_b), {1, 1, std::nullopt, std::nullopt}));
@@ -533,9 +533,9 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
   const auto a_plus_x_projection =
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
   const auto a_plus_x_eq_13_scan =
-      std::make_shared<TableScan>(a_plus_x_projection, ColumnID{0}, PredicateCondition::Equals, 13);
+      std::make_shared<TableScan>(a_plus_x_projection, CxlumnID{0}, PredicateCondition::Equals, 13);
   const auto pqp_select_expression =
-      select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+      select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, CxlumnID{0}));
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));

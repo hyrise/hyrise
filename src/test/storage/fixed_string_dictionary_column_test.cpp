@@ -15,7 +15,7 @@ namespace opossum {
 
 class StorageFixedStringDictionaryColumnTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>();
+  std::shared_ptr<ValueSegment<std::string>> vc_str = std::make_shared<ValueSegment<std::string>>();
 };
 
 TEST_F(StorageFixedStringDictionaryColumnTest, CompressColumnString) {
@@ -119,7 +119,7 @@ TEST_F(StorageFixedStringDictionaryColumnTest, LowerUpperBound) {
 }
 
 TEST_F(StorageFixedStringDictionaryColumnTest, NullValues) {
-  std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>(true);
+  std::shared_ptr<ValueSegment<std::string>> vc_str = std::make_shared<ValueSegment<std::string>>(true);
 
   vc_str->append("A");
   vc_str->append(NULL_VALUE);

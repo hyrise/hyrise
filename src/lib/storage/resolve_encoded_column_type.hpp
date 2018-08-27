@@ -10,7 +10,7 @@
 // Include your encoded column file here!
 #include "storage/dictionary_column.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
-#include "storage/frame_of_reference_column.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/run_length_column.hpp"
 
 #include "storage/encoding_type.hpp"
@@ -31,7 +31,7 @@ constexpr auto encoded_column_for_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, template_c<FixedStringDictionaryColumn>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceColumn>));
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>));
 
 /**
  * @brief Resolves the type of an encoded column.
@@ -40,7 +40,7 @@ constexpr auto encoded_column_for_type = hana::make_map(
  *
  * @see resolve_column_type in resolve_type.hpp for info on usage
  */
-template <typename ColumnDataType, typename Functor>
+template <typename CxlumnDataType, typename Functor>
 void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor& functor) {
   // Iterate over all pairs in the map
   hana::fold(encoded_column_for_type, false, [&](auto match_found, auto encoded_column_pair) {
@@ -51,15 +51,15 @@ void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor&
 
     // If the column’s encoding type matches that of the pair, we have found the column’s type
     if (!match_found && (encoding_type == column.encoding_type())) {
-      // Check if ColumnDataType is supported by encoding
-      const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
+      // Check if CxlumnDataType is supported by encoding
+      const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<CxlumnDataType>);
 
       // clang-format off
 
-      // Compile only if ColumnDataType is supported
+      // Compile only if CxlumnDataType is supported
       if constexpr(hana::value(data_type_supported)) {
         using ColumnTemplateType = typename decltype(column_template_c)::type;
-        using ColumnType = typename ColumnTemplateType::template _template<ColumnDataType>;
+        using ColumnType = typename ColumnTemplateType::template _template<CxlumnDataType>;
         functor(static_cast<const ColumnType&>(column));
       }
 

@@ -48,21 +48,21 @@ class SQLPipelineStatementTest : public BaseTest {
     _table_int = load_table("src/test/tables/int_int_int.tbl", 2);
     StorageManager::get().add_table("table_int", _table_int);
 
-    TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
-    column_definitions.emplace_back("b", DataType::Float);
-    column_definitions.emplace_back("bb", DataType::Float);
-    _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
+    TableCxlumnDefinitions cxlumn_definitions;
+    cxlumn_definitions.emplace_back("a", DataType::Int);
+    cxlumn_definitions.emplace_back("b", DataType::Float);
+    cxlumn_definitions.emplace_back("bb", DataType::Float);
+    _join_result = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
 
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
-    _int_float_column_definitions.emplace_back("a", DataType::Int);
-    _int_float_column_definitions.emplace_back("b", DataType::Float);
+    _int_float_cxlumn_definitions.emplace_back("a", DataType::Int);
+    _int_float_cxlumn_definitions.emplace_back("b", DataType::Float);
 
-    _int_int_int_column_definitions.emplace_back("a", DataType::Int);
-    _int_int_int_column_definitions.emplace_back("b", DataType::Int);
-    _int_int_int_column_definitions.emplace_back("c", DataType::Int);
+    _int_int_int_cxlumn_definitions.emplace_back("a", DataType::Int);
+    _int_int_int_cxlumn_definitions.emplace_back("b", DataType::Int);
+    _int_int_int_cxlumn_definitions.emplace_back("c", DataType::Int);
 
     _select_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_select_query_a, _select_parse_result.get());
@@ -78,8 +78,8 @@ class SQLPipelineStatementTest : public BaseTest {
   std::shared_ptr<Table> _table_int;
   std::shared_ptr<Table> _join_result;
 
-  TableColumnDefinitions _int_float_column_definitions;
-  TableColumnDefinitions _int_int_int_column_definitions;
+  TableCxlumnDefinitions _int_float_cxlumn_definitions;
+  TableCxlumnDefinitions _int_int_int_cxlumn_definitions;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -89,7 +89,7 @@ class SQLPipelineStatementTest : public BaseTest {
   const std::string _multi_statement_query = "INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a";
   const std::string _multi_statement_dependant = "CREATE VIEW foo AS SELECT * FROM table_a; SELECT * FROM foo;";
 
-  const std::vector<std::string> _join_column_names{"a", "b", "bb"};
+  const std::vector<std::string> _join_cxlumn_names{"a", "b", "bb"};
 
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
@@ -546,7 +546,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
                                   .create_pipeline_statement();
   const auto& table = execute_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected->append({123, 456.7f});
 
   EXPECT_TABLE_EQ_UNORDERED(table, expected);
@@ -569,7 +569,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementMultiPlaceholderExecute) {
                                   .create_pipeline_statement();
   const auto& table = execute_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected->append({123, 456.7f});
   expected->append({12345, 458.7f});
 
@@ -635,15 +635,15 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   const auto& table_multi = execute_sql_pipeline_multi.get_result_table();
 
   // x1 result
-  auto expected1 = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected1 = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected1->append({123, 456.7f});
 
   // x2 result
-  auto expected2 = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected2 = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected2->append({12345, 458.7f});
 
   // x_multi result
-  auto expected_multi = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected_multi = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected_multi->append({123, 456.7f});
   expected_multi->append({12345, 458.7f});
 
@@ -695,7 +695,7 @@ TEST_F(SQLPipelineStatementTest, PreparedUpdateStatementExecute) {
   auto select_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
   const auto table = select_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected->append({1, 456.7f});
   expected->append({1234, 457.7f});
   expected->append({12345, 458.7f});
@@ -723,7 +723,7 @@ TEST_F(SQLPipelineStatementTest, PreparedDeleteStatementExecute) {
   auto select_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
   const auto table = select_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
+  auto expected = std::make_shared<Table>(_int_float_cxlumn_definitions, TableType::Data);
   expected->append({1234, 457.7f});
   expected->append({12345, 458.7f});
 
@@ -745,7 +745,7 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
   const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
 
-  auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
+  auto expected_first_result = std::make_shared<Table>(_int_int_int_cxlumn_definitions, TableType::Data);
   expected_first_result->append({10, 10, 10});
 
   EXPECT_TABLE_EQ_UNORDERED(first_subselect_result, expected_first_result);
@@ -755,7 +755,7 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   auto second_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
   const auto second_subselect_result = second_subselect_sql_pipeline.get_result_table();
 
-  auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
+  auto expected_second_result = std::make_shared<Table>(_int_int_int_cxlumn_definitions, TableType::Data);
   expected_second_result->append({11, 10, 11});
   expected_second_result->append({11, 11, 11});
 

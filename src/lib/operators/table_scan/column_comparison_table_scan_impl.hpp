@@ -24,13 +24,13 @@ class Table;
  */
 class ColumnComparisonTableScanImpl : public BaseTableScanImpl {
  public:
-  ColumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
-                                const PredicateCondition& predicate_condition, const ColumnID right_column_id);
+  ColumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
+                                const PredicateCondition& predicate_condition, const CxlumnID right_cxlumn_id);
 
   std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) override;
 
  private:
-  const ColumnID _right_column_id;
+  const CxlumnID _right_cxlumn_id;
 };
 
 }  // namespace opossum

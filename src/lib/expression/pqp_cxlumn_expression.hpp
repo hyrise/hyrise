@@ -8,22 +8,22 @@
 namespace opossum {
 
 /**
- * Wraps a ColumnID and its associated data_type/nullability/column_name
+ * Wraps a CxlumnID and its associated data_type/nullability/cxlumn_name
  */
-class PQPColumnExpression : public AbstractExpression {
+class PQPCxlumnExpression : public AbstractExpression {
  public:
-  static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const std::string& column_name);
+  static std::shared_ptr<PQPCxlumnExpression> from_table(const Table& table, const std::string& cxlumn_name);
 
-  PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
-                      const std::string& column_name);
+  PQPCxlumnExpression(const CxlumnID cxlumn_id, const DataType data_type, const bool nullable,
+                      const std::string& cxlumn_name);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string as_cxlumn_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
   bool requires_computation() const override;
 
-  const ColumnID column_id;
+  const CxlumnID cxlumn_id;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
@@ -32,7 +32,7 @@ class PQPColumnExpression : public AbstractExpression {
  private:
   const DataType _data_type;
   const bool _nullable;
-  const std::string _column_name;
+  const std::string _cxlumn_name;
 };
 
 }  // namespace opossum

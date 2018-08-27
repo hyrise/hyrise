@@ -93,15 +93,15 @@ std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join
        * More precisely, we have to determine which columns of the cross joins input tables correspond to the columns
        * used in the predicate.
        */
-      const auto left_in_left = cross_join->left_input()->find_column_id(*left_operand);
-      const auto right_in_right = cross_join->right_input()->find_column_id(*right_operand);
+      const auto left_in_left = cross_join->left_input()->find_cxlumn_id(*left_operand);
+      const auto right_in_right = cross_join->right_input()->find_cxlumn_id(*right_operand);
 
       if (left_in_left && right_in_right) {
         return predicate_node;
       }
 
-      const auto left_in_right = cross_join->right_input()->find_column_id(*left_operand);
-      const auto right_in_left = cross_join->left_input()->find_column_id(*right_operand);
+      const auto left_in_right = cross_join->right_input()->find_cxlumn_id(*left_operand);
+      const auto right_in_left = cross_join->left_input()->find_cxlumn_id(*right_operand);
 
       if (right_in_left && left_in_right) {
         return predicate_node;

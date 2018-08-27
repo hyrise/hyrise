@@ -9,10 +9,10 @@ bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
   return name == rhs.name && data_type == rhs.data_type && nullable == rhs.nullable;
 }
 
-TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs) {
-  auto column_definitions = lhs;
-  column_definitions.insert(column_definitions.end(), rhs.begin(), rhs.end());
-  return column_definitions;
+TableCxlumnDefinitions concatenated(const TableCxlumnDefinitions& lhs, const TableCxlumnDefinitions& rhs) {
+  auto cxlumn_definitions = lhs;
+  cxlumn_definitions.insert(cxlumn_definitions.end(), rhs.begin(), rhs.end());
+  return cxlumn_definitions;
 }
 
 }  // namespace opossum

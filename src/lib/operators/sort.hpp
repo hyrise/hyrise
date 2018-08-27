@@ -22,10 +22,10 @@ namespace opossum {
 class Sort : public AbstractReadOnlyOperator {
  public:
   // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
+  Sort(const std::shared_ptr<const AbstractOperator>& in, const CxlumnID cxlumn_id,
        const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = Chunk::MAX_SIZE);
 
-  ColumnID column_id() const;
+  CxlumnID cxlumn_id() const;
   OrderByMode order_by_mode() const;
 
   const std::string name() const override;
@@ -47,7 +47,7 @@ class Sort : public AbstractReadOnlyOperator {
   class SortImplMaterializeOutput;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  const ColumnID _column_id;
+  const CxlumnID _cxlumn_id;
   const OrderByMode _order_by_mode;
   const size_t _output_chunk_size;
 };

@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-class ReferenceColumn;
+class ReferenceSegment;
 
 /**
  * With the ExportCsv operator, selected tables of a database

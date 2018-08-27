@@ -10,14 +10,14 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "index/base_index.hpp"
-#include "reference_column.hpp"
+#include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-Chunk::Chunk(const ChunkColumns& columns, const std::shared_ptr<MvccColumns>& mvcc_columns,
+Chunk::Chunk(const ChunkSegments& columns, const std::shared_ptr<MvccColumns>& mvcc_columns,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter>& access_counter)
     : _columns(columns), _mvcc_columns(mvcc_columns), _access_counter(access_counter) {
@@ -36,8 +36,8 @@ bool Chunk::is_mutable() const { return _is_mutable; }
 
 void Chunk::mark_immutable() { _is_mutable = false; }
 
-void Chunk::replace_column(size_t column_id, const std::shared_ptr<BaseColumn>& column) {
-  std::atomic_store(&_columns.at(column_id), column);
+void Chunk::replace_column(size_t cxlumn_id, const std::shared_ptr<BaseSegment>& column) {
+  std::atomic_store(&_columns.at(cxlumn_id), column);
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
@@ -58,17 +58,17 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const {
-  return std::atomic_load(&_columns.at(column_id));
+std::shared_ptr<BaseSegment> Chunk::get_column(CxlumnID cxlumn_id) const {
+  return std::atomic_load(&_columns.at(cxlumn_id));
 }
 
-const ChunkColumns& Chunk::columns() const { return _columns; }
+const ChunkSegments& Chunk::columns() const { return _columns; }
 
-uint16_t Chunk::column_count() const { return _columns.size(); }
+uint16_t Chunk::cxlumn_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
   if (_columns.empty()) return 0;
-  auto first_column = get_column(ColumnID{0});
+  auto first_column = get_column(CxlumnID{0});
   return first_column->size();
 }
 
@@ -92,20 +92,20 @@ std::shared_ptr<MvccColumns> Chunk::mvcc_columns() const { return _mvcc_columns;
 void Chunk::set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns) { _mvcc_columns = mvcc_columns; }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
-    const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
+    const std::vector<std::shared_ptr<const BaseSegment>>& columns) const {
   auto result = std::vector<std::shared_ptr<BaseIndex>>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(columns); });
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID>& column_ids) const {
-  auto columns = _get_columns_for_ids(column_ids);
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<CxlumnID>& cxlumn_ids) const {
+  auto columns = _get_columns_for_ids(cxlumn_ids);
   return get_indices(columns);
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
-                                            const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
+                                            const std::vector<std::shared_ptr<const BaseSegment>>& columns) const {
   auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
     return index->is_index_for(columns) && index->type() == index_type;
   });
@@ -114,8 +114,8 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
-                                            const std::vector<ColumnID>& column_ids) const {
-  auto columns = _get_columns_for_ids(column_ids);
+                                            const std::vector<CxlumnID>& cxlumn_ids) const {
+  auto columns = _get_columns_for_ids(cxlumn_ids);
   return get_index(index_type, columns);
 }
 
@@ -126,15 +126,15 @@ void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
 }
 
 bool Chunk::references_exactly_one_table() const {
-  if (column_count() == 0) return false;
+  if (cxlumn_count() == 0) return false;
 
-  auto first_column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(ColumnID{0}));
+  auto first_column = std::dynamic_pointer_cast<const ReferenceSegment>(get_column(CxlumnID{0}));
   if (first_column == nullptr) return false;
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
-  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
-    const auto column = std::dynamic_pointer_cast<const ReferenceColumn>(get_column(column_id));
+  for (CxlumnID cxlumn_id{1}; cxlumn_id < cxlumn_count(); ++cxlumn_id) {
+    const auto column = std::dynamic_pointer_cast<const ReferenceSegment>(get_column(cxlumn_id));
     if (column == nullptr) return false;
 
     if (first_referenced_table != column->referenced_table()) return false;
@@ -152,7 +152,7 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   }
 
   _alloc = PolymorphicAllocator<size_t>(memory_source);
-  ChunkColumns new_columns(_alloc);
+  ChunkSegments new_columns(_alloc);
   for (const auto& column : _columns) {
     new_columns.push_back(column->copy_using_allocator(_alloc));
   }
@@ -181,19 +181,19 @@ size_t Chunk::estimate_memory_usage() const {
   return bytes;
 }
 
-std::vector<std::shared_ptr<const BaseColumn>> Chunk::_get_columns_for_ids(
-    const std::vector<ColumnID>& column_ids) const {
+std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_columns_for_ids(
+    const std::vector<CxlumnID>& cxlumn_ids) const {
   DebugAssert(([&]() {
-                for (auto column_id : column_ids)
-                  if (column_id >= column_count()) return false;
+                for (auto cxlumn_id : cxlumn_ids)
+                  if (cxlumn_id >= cxlumn_count()) return false;
                 return true;
               }()),
-              "Column IDs not within range [0, column_count()).");
+              "Column IDs not within range [0, cxlumn_count()).");
 
-  auto columns = std::vector<std::shared_ptr<const BaseColumn>>{};
-  columns.reserve(column_ids.size());
-  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(columns),
-                 [&](const auto& column_id) { return get_column(column_id); });
+  auto columns = std::vector<std::shared_ptr<const BaseSegment>>{};
+  columns.reserve(cxlumn_ids.size());
+  std::transform(cxlumn_ids.cbegin(), cxlumn_ids.cend(), std::back_inserter(columns),
+                 [&](const auto& cxlumn_id) { return get_column(cxlumn_id); });
   return columns;
 }
 
@@ -201,7 +201,7 @@ std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics;
 
 void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics) {
   Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
-  DebugAssert(chunk_statistics->statistics().size() == column_count(),
+  DebugAssert(chunk_statistics->statistics().size() == cxlumn_count(),
               "ChunkStatistics must have same column amount as Chunk");
   _statistics = chunk_statistics;
 }

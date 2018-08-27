@@ -17,10 +17,10 @@ namespace opossum {
 class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
-    TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("col_1", DataType::Int);
-    column_definitions.emplace_back("col_2", DataType::String);
-    t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+    TableCxlumnDefinitions cxlumn_definitions;
+    cxlumn_definitions.emplace_back("col_1", DataType::Int);
+    cxlumn_definitions.emplace_back("col_2", DataType::String);
+    t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, chunk_size);
     StorageManager::get().add_table(table_name, t);
 
     gt = std::make_shared<GetTable>(table_name);
@@ -62,7 +62,7 @@ class PrintWrapper : public Print {
   bool is_printing_mvcc_information() { return _flags & PrintMvcc; }
 };
 
-TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
+TEST_F(OperatorsPrintTest, TableCxlumnDefinitions) {
   auto pr = std::make_shared<Print>(gt, output);
   pr->execute();
 

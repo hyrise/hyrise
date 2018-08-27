@@ -10,7 +10,7 @@
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "storage/materialize.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -42,11 +42,11 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   meta.chunk_size = table->max_chunk_size();
 
   // Column Types
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     ColumnMeta column_meta;
-    column_meta.name = table->column_name(column_id);
-    column_meta.type = data_type_to_string.left.at(table->column_data_type(column_id));
-    column_meta.nullable = table->column_is_nullable(column_id);
+    column_meta.name = table->cxlumn_name(cxlumn_id);
+    column_meta.type = data_type_to_string.left.at(table->column_data_type(cxlumn_id));
+    column_meta.nullable = table->column_is_nullable(cxlumn_id);
 
     meta.columns.push_back(column_meta);
   }
@@ -83,8 +83,8 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
     const auto chunk = table->get_chunk(chunk_id);
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
-      for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-        const auto column = chunk->get_column(column_id);
+      for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+        const auto column = chunk->get_column(cxlumn_id);
 
         // The previous implementation did a double dispatch (at least two virtual method calls)
         // So the subscript operator cannot be much slower.

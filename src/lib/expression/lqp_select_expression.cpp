@@ -32,12 +32,12 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   return std::make_shared<LQPSelectExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
-std::string LQPSelectExpression::as_column_name() const {
+std::string LQPSelectExpression::as_cxlumn_name() const {
   std::stringstream stream;
   stream << "SUBSELECT (LQP, " << lqp.get();
 
   if (!arguments.empty()) {
-    stream << ", Parameters: " << expression_column_names(arguments);
+    stream << ", Parameters: " << expression_cxlumn_names(arguments);
   }
 
   stream << ")";

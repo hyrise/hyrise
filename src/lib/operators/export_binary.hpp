@@ -7,7 +7,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
 #include "storage/abstract_column_visitor.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
@@ -51,7 +51,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
-   * Column count          | ColumnID                              |   2
+   * Column count          | CxlumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
    * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
    * Column name lengths   | size_t array                          |   Column Count * 1
@@ -71,7 +71,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the columns in the respective format (depending on the type
-   * of the column, such as ReferenceColumn, DictionaryColumn, ValueColumn).
+   * of the column, such as ReferenceSegment, DictionaryColumn, ValueSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -113,7 +113,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) final;
+  void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) final;
 
   /**
    * Reference Columns are dumped with the following layout, which is similar to value columns:
@@ -134,7 +134,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_column(const ReferenceSegment& ref_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   /**
    * Dictionary Columns are dumped with the following layout:

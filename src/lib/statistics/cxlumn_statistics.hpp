@@ -6,35 +6,35 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "base_column_statistics.hpp"
+#include "base_cxlumn_statistics.hpp"
 
 namespace opossum {
 
 /**
- * @tparam ColumnDataType   the DataType of the values in the Column that these statistics represent
+ * @tparam CxlumnDataType   the DataType of the values in the Column that these statistics represent
  */
-template <typename ColumnDataType>
-class ColumnStatistics : public BaseColumnStatistics {
+template <typename CxlumnDataType>
+class CxlumnStatistics : public BaseCxlumnStatistics {
  public:
-  // To be used for columns for which ColumnStatistics can't be computed
-  static ColumnStatistics dummy();
+  // To be used for columns for which CxlumnStatistics can't be computed
+  static CxlumnStatistics dummy();
 
-  ColumnStatistics(const float null_value_ratio, const float distinct_count, const ColumnDataType min,
-                   const ColumnDataType max);
+  CxlumnStatistics(const float null_value_ratio, const float distinct_count, const CxlumnDataType min,
+                   const CxlumnDataType max);
 
   /**
    * @defgroup Member access
    * @{
    */
-  ColumnDataType min() const;
-  ColumnDataType max() const;
+  CxlumnDataType min() const;
+  CxlumnDataType max() const;
   /** @} */
 
   /**
-   * @defgroup Implementations for BaseColumnStatistics
+   * @defgroup Implementations for BaseCxlumnStatistics
    * @{
    */
-  std::shared_ptr<BaseColumnStatistics> clone() const override;
+  std::shared_ptr<BaseCxlumnStatistics> clone() const override;
   FilterByValueEstimate estimate_predicate_with_value(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
@@ -45,7 +45,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 
   FilterByColumnComparisonEstimate estimate_predicate_with_column(
       const PredicateCondition predicate_condition,
-      const BaseColumnStatistics& base_right_column_statistics) const override;
+      const BaseCxlumnStatistics& base_right_cxlumn_statistics) const override;
 
   std::string description() const override;
   /** @} */
@@ -58,27 +58,27 @@ class ColumnStatistics : public BaseColumnStatistics {
   /**
    * @return the ratio of rows of this Column that are in the range [minimum, maximum]
    */
-  float estimate_range_selectivity(const ColumnDataType minimum, const ColumnDataType maximum) const;
+  float estimate_range_selectivity(const CxlumnDataType minimum, const CxlumnDataType maximum) const;
 
   /**
    * @return estimate the predicate `column BETWEEN minimum AND maximum`
    */
-  FilterByValueEstimate estimate_range(const ColumnDataType minimum, const ColumnDataType maximum) const;
+  FilterByValueEstimate estimate_range(const CxlumnDataType minimum, const CxlumnDataType maximum) const;
 
   /**
    * @return estimate the predicate `column = value`
    */
-  FilterByValueEstimate estimate_equals_with_value(const ColumnDataType value) const;
+  FilterByValueEstimate estimate_equals_with_value(const CxlumnDataType value) const;
 
   /**
    * @return estimate the predicate `column != value`
    */
-  FilterByValueEstimate estimate_not_equals_with_value(const ColumnDataType value) const;
+  FilterByValueEstimate estimate_not_equals_with_value(const CxlumnDataType value) const;
   /** @} */
 
  private:
-  ColumnDataType _min;
-  ColumnDataType _max;
+  CxlumnDataType _min;
+  CxlumnDataType _max;
 };
 
 }  // namespace opossum

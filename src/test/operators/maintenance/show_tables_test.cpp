@@ -30,18 +30,18 @@ TEST_F(ShowTablesTest, CanBeCopied) {
 TEST_F(ShowTablesTest, CanShowTables) {
   auto& sm = StorageManager::get();
 
-  sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
-  sm.add_table("second_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
+  sm.add_table("first_table", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data));
+  sm.add_table("second_table", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data));
 
   auto st = std::make_shared<ShowTables>();
   st->execute();
 
   auto out = st->get_output();
   EXPECT_EQ(out->row_count(), 2u) << "ShowTables returned wrong number of tables";
-  EXPECT_EQ(out->column_count(), 1u) << "ShowTables returned wrong number of columns";
+  EXPECT_EQ(out->cxlumn_count(), 1u) << "ShowTables returned wrong number of columns";
 
   auto column =
-      std::static_pointer_cast<const ValueColumn<std::string>>(out->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
+      std::static_pointer_cast<const ValueSegment<std::string>>(out->get_chunk(ChunkID{0})->get_column(CxlumnID{0}));
   EXPECT_EQ(column->values()[0], "first_table");
   EXPECT_EQ(column->values()[1], "second_table");
 }
@@ -52,7 +52,7 @@ TEST_F(ShowTablesTest, NoTables) {
 
   auto out = st->get_output();
   EXPECT_EQ(out->row_count(), 0u) << "ShowTables returned wrong number of tables";
-  EXPECT_EQ(out->column_count(), 1u) << "ShowTables returned wrong number of columns";
+  EXPECT_EQ(out->cxlumn_count(), 1u) << "ShowTables returned wrong number of columns";
 }
 
 }  // namespace opossum

@@ -8,20 +8,20 @@
 #include "storage/chunk.hpp"
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {
 
 BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
-                                                             const ColumnID column_id,
+                                                             const CxlumnID cxlumn_id,
                                                              const PredicateCondition predicate_condition)
-    : BaseTableScanImpl{in_table, column_id, predicate_condition} {}
+    : BaseTableScanImpl{in_table, cxlumn_id, predicate_condition} {}
 
 std::shared_ptr<PosList> BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
-  const auto column = chunk->get_column(_left_column_id);
+  const auto column = chunk->get_column(_left_cxlumn_id);
 
   auto matches_out = std::make_shared<PosList>();
   auto context = std::make_shared<Context>(chunk_id, *matches_out);
@@ -33,7 +33,7 @@ std::shared_ptr<PosList> BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk
   return matches_out;
 }
 
-void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& column,
+void BaseSingleColumnTableScanImpl::handle_column(const ReferenceSegment& column,
                                                   std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const ChunkID chunk_id = context->_chunk_id;
@@ -47,7 +47,7 @@ void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& column,
     auto& mapped_chunk_offsets = pair.second;
 
     const auto chunk = column.referenced_table()->get_chunk(referenced_chunk_id);
-    auto referenced_column = chunk->get_column(column.referenced_column_id());
+    auto referenced_column = chunk->get_column(column.referenced_cxlumn_id());
 
     auto mapped_chunk_offsets_ptr = std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));
 

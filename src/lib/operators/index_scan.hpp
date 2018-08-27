@@ -23,7 +23,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnIndexType index_type,
-            const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
+            const std::vector<CxlumnID>& left_cxlumn_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 
   const std::string name() const final;
@@ -49,7 +49,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
  private:
   const ColumnIndexType _index_type;
-  const std::vector<ColumnID> _left_column_ids;
+  const std::vector<CxlumnID> _left_cxlumn_ids;
   const PredicateCondition _predicate_condition;
   const std::vector<AllTypeVariant> _right_values;
   const std::vector<AllTypeVariant> _right_values2;

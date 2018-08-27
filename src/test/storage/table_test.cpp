@@ -15,13 +15,13 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    column_definitions.emplace_back("col_1", DataType::Int);
-    column_definitions.emplace_back("col_2", DataType::String);
-    t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    cxlumn_definitions.emplace_back("col_1", DataType::Int);
+    cxlumn_definitions.emplace_back("col_2", DataType::String);
+    t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
   }
 
   std::shared_ptr<Table> t;
-  TableColumnDefinitions column_definitions;
+  TableCxlumnDefinitions cxlumn_definitions;
 };
 
 TEST_F(StorageTableTest, ChunkCount) {
@@ -41,7 +41,7 @@ TEST_F(StorageTableTest, GetChunk) {
   EXPECT_NE(t->get_chunk(ChunkID{1}), nullptr);
 }
 
-TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t->column_count(), 2u); }
+TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t->cxlumn_count(), 2u); }
 
 TEST_F(StorageTableTest, RowCount) {
   EXPECT_EQ(t->row_count(), 0u);
@@ -52,22 +52,22 @@ TEST_F(StorageTableTest, RowCount) {
 }
 
 TEST_F(StorageTableTest, GetColumnName) {
-  EXPECT_EQ(t->column_name(ColumnID{0}), "col_1");
-  EXPECT_EQ(t->column_name(ColumnID{1}), "col_2");
+  EXPECT_EQ(t->cxlumn_name(CxlumnID{0}), "col_1");
+  EXPECT_EQ(t->cxlumn_name(CxlumnID{1}), "col_2");
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t->column_name(ColumnID{2}), std::exception);
+  // EXPECT_THROW(t->cxlumn_name(CxlumnID{2}), std::exception);
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
-  EXPECT_EQ(t->column_data_type(ColumnID{0}), DataType::Int);
-  EXPECT_EQ(t->column_data_type(ColumnID{1}), DataType::String);
+  EXPECT_EQ(t->column_data_type(CxlumnID{0}), DataType::Int);
+  EXPECT_EQ(t->column_data_type(CxlumnID{1}), DataType::String);
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t->column_data_type(ColumnID{2}), std::exception);
+  // EXPECT_THROW(t->column_data_type(CxlumnID{2}), std::exception);
 }
 
-TEST_F(StorageTableTest, GetColumnIdByName) {
-  EXPECT_EQ(t->column_id_by_name("col_2"), 1u);
-  EXPECT_THROW(t->column_id_by_name("no_column_name"), std::exception);
+TEST_F(StorageTableTest, GetCxlumnIDByName) {
+  EXPECT_EQ(t->cxlumn_id_by_name("col_2"), 1u);
+  EXPECT_THROW(t->cxlumn_id_by_name("no_cxlumn_name"), std::exception);
 }
 
 TEST_F(StorageTableTest, GetChunkSize) { EXPECT_EQ(t->max_chunk_size(), 2u); }
@@ -76,15 +76,15 @@ TEST_F(StorageTableTest, GetValue) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
   t->append({3, "!"});
-  ASSERT_EQ(t->get_value<int>(ColumnID{0}, 0u), 4);
-  EXPECT_EQ(t->get_value<int>(ColumnID{0}, 2u), 3);
-  ASSERT_FALSE(t->get_value<std::string>(ColumnID{1}, 0u).compare("Hello,"));
-  ASSERT_FALSE(t->get_value<std::string>(ColumnID{1}, 2u).compare("!"));
-  EXPECT_THROW(t->get_value<int>(ColumnID{3}, 0u), std::exception);
+  ASSERT_EQ(t->get_value<int>(CxlumnID{0}, 0u), 4);
+  EXPECT_EQ(t->get_value<int>(CxlumnID{0}, 2u), 3);
+  ASSERT_FALSE(t->get_value<std::string>(CxlumnID{1}, 0u).compare("Hello,"));
+  ASSERT_FALSE(t->get_value<std::string>(CxlumnID{1}, 2u).compare("!"));
+  EXPECT_THROW(t->get_value<int>(CxlumnID{3}, 0u), std::exception);
 }
 
 TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
-  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2, UseMvcc::Yes);
 
   t->append({4, "Hello,"});
   t->append({6, "world"});
@@ -124,8 +124,8 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  std::shared_ptr<BaseSegment> vc_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vc_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
 
   t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 1u);
@@ -136,9 +136,9 @@ TEST_F(StorageTableTest, EmplaceChunkAndAppend) {
 
   t->append({4, "Hello,"});
   EXPECT_EQ(t->chunk_count(), 1u);
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->append_chunk(ChunkColumns{{vc_int, vc_str}});
+  std::shared_ptr<BaseSegment> vc_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vc_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
+  t->append_chunk(ChunkSegments{{vc_int, vc_str}});
   EXPECT_EQ(t->chunk_count(), 2u);
 }
 
@@ -146,20 +146,20 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
   t->append({4, "Hello,"});
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  std::shared_ptr<BaseSegment> vc_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vc_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
   t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 2u);
 
-  std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  std::shared_ptr<BaseSegment> vc_int2 = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vc_str2 = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
   t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 3u);
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
-  TableColumnDefinitions column_definitions{};
-  EXPECT_THROW(Table(column_definitions, TableType::Data, 0), std::logic_error);
+  TableCxlumnDefinitions cxlumn_definitions{};
+  EXPECT_THROW(Table(cxlumn_definitions, TableType::Data, 0), std::logic_error);
 }
 
 TEST_F(StorageTableTest, MemoryUsageEstimation) {
@@ -168,7 +168,7 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  auto mvcc_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  auto mvcc_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
 
   const auto empty_memory_usage = mvcc_table->estimate_memory_usage();
 

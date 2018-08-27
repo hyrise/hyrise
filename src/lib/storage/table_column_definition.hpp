@@ -16,8 +16,8 @@ struct TableColumnDefinition final {
   bool nullable{false};
 };
 
-using TableColumnDefinitions = std::vector<TableColumnDefinition>;
+using TableCxlumnDefinitions = std::vector<TableColumnDefinition>;
 
-TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs);
+TableCxlumnDefinitions concatenated(const TableCxlumnDefinitions& lhs, const TableCxlumnDefinitions& rhs);
 
 }  // namespace opossum

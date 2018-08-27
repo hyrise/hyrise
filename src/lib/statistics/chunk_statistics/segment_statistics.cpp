@@ -1,4 +1,4 @@
-#include "chunk_column_statistics.hpp"
+#include "segment_statistics.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -10,10 +10,10 @@
 #include "abstract_filter.hpp"
 #include "min_max_filter.hpp"
 #include "range_filter.hpp"
-#include "storage/base_encoded_column.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/run_length_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -21,8 +21,8 @@
 namespace opossum {
 
 template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
-  auto statistics = std::make_shared<ChunkColumnStatistics>();
+static std::shared_ptr<SegmentStatistics> build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
+  auto statistics = std::make_shared<SegmentStatistics>();
   // only create statistics when the compressed dictionary is not empty
   if (!dictionary.empty()) {
     // no range filter for strings
@@ -40,9 +40,9 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(c
   return statistics;
 }
 
-std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(
-    DataType data_type, const std::shared_ptr<const BaseColumn>& column) {
-  std::shared_ptr<ChunkColumnStatistics> statistics;
+std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
+    DataType data_type, const std::shared_ptr<const BaseSegment>& column) {
+  std::shared_ptr<SegmentStatistics> statistics;
   resolve_data_and_column_type(*column, [&statistics](auto type, auto& typed_column) {
     using ColumnType = typename std::decay<decltype(typed_column)>::type;
     using DataTypeT = typename decltype(type)::type;
@@ -70,9 +70,9 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(
   });
   return statistics;
 }
-void ChunkColumnStatistics::add_filter(std::shared_ptr<AbstractFilter> filter) { _filters.emplace_back(filter); }
+void SegmentStatistics::add_filter(std::shared_ptr<AbstractFilter> filter) { _filters.emplace_back(filter); }
 
-bool ChunkColumnStatistics::can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const {
+bool SegmentStatistics::can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const {
   for (const auto& filter : _filters) {
     if (filter->can_prune(value, predicate_type)) {
       return true;

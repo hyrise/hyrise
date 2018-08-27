@@ -18,14 +18,14 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
   static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_column) {
     const auto alloc = value_column->values().get_allocator();
 
     auto values = pmr_vector<T>{alloc};
     auto null_values = pmr_vector<bool>{alloc};
     auto end_positions = pmr_vector<ChunkOffset>{alloc};
 
-    auto iterable = ValueColumnIterable<T>{*value_column};
+    auto iterable = ValueSegmentIterable<T>{*value_column};
 
     iterable.with_iterators([&](auto it, auto end) {
       // Init is_current_null such that it does not equal the first entry

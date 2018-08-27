@@ -10,7 +10,7 @@ namespace opossum {
 
 PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
                                          const bool nullable,
-                                         const std::vector<std::pair<ParameterID, ColumnID>>& parameters)
+                                         const std::vector<std::pair<ParameterID, CxlumnID>>& parameters)
     : AbstractExpression(ExpressionType::PQPSelect, {}),
       pqp(pqp),
       parameters(parameters),
@@ -40,7 +40,7 @@ bool PQPSelectExpression::is_nullable() const {
   return _data_type_info->nullable;
 }
 
-std::string PQPSelectExpression::as_column_name() const {
+std::string PQPSelectExpression::as_cxlumn_name() const {
   std::stringstream stream;
   stream << "SUBSELECT (PQP, " << pqp.get() << ")";
   return stream.str();

@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
 #include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/cxlumn_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -37,8 +37,8 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 std::string AggregateNode::description() const {
   std::stringstream stream;
 
-  stream << "[Aggregate] GroupBy: [" << expression_column_names(group_by_expressions);
-  stream << "] Aggregates: [" << expression_column_names(aggregate_expressions) << "]";
+  stream << "[Aggregate] GroupBy: [" << expression_cxlumn_names(group_by_expressions);
+  stream << "] Aggregates: [" << expression_cxlumn_names(aggregate_expressions) << "]";
 
   return stream.str();
 }
@@ -50,24 +50,24 @@ std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
   const auto input_statistics = left_input->get_statistics();
   const auto row_count = input_statistics->row_count();
 
-  std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
-  column_statistics.reserve(_column_expressions.size());
+  std::vector<std::shared_ptr<const BaseCxlumnStatistics>> cxlumn_statistics;
+  cxlumn_statistics.reserve(_column_expressions.size());
 
   for (const auto& expression : _column_expressions) {
-    const auto column_id = left_input->find_column_id(*expression);
-    if (column_id) {
-      column_statistics.emplace_back(input_statistics->column_statistics()[*column_id]);
+    const auto cxlumn_id = left_input->find_cxlumn_id(*expression);
+    if (cxlumn_id) {
+      cxlumn_statistics.emplace_back(input_statistics->cxlumn_statistics()[*cxlumn_id]);
     } else {
       // TODO(anybody) Statistics for expressions not yet supported
       resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
         using ExpressionDataType = typename decltype(data_type_t)::type;
-        column_statistics.emplace_back(
-            std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
+        cxlumn_statistics.emplace_back(
+            std::make_shared<CxlumnStatistics<ExpressionDataType>>(CxlumnStatistics<ExpressionDataType>::dummy()));
       });
     }
   }
 
-  return std::make_shared<TableStatistics>(TableType::Data, row_count, column_statistics);
+  return std::make_shared<TableStatistics>(TableType::Data, row_count, cxlumn_statistics);
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {

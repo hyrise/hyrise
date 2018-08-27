@@ -5,7 +5,7 @@
 #include <memory>
 #include <type_traits>
 
-#include "storage/base_encoded_column.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -24,9 +24,9 @@ namespace hana = boost::hana;
  *
  * Use the column_encoder.template.hpp to add new implementations!
  */
-class BaseColumnEncoder {
+class BaseSegmentEncoder {
  public:
-  virtual ~BaseColumnEncoder() = default;
+  virtual ~BaseSegmentEncoder() = default;
 
   /**
    * @brief Returns true if the encoder supports the given data type.
@@ -38,10 +38,10 @@ class BaseColumnEncoder {
    *
    * @return encoded column if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& column,
+  virtual std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueSegment>& column,
                                                     DataType data_type) = 0;
 
-  virtual std::unique_ptr<BaseColumnEncoder> create_new() const = 0;
+  virtual std::unique_ptr<BaseSegmentEncoder> create_new() const = 0;
 
   /**
    * @defgroup Interface for selecting the used vector compression type
@@ -60,7 +60,7 @@ class BaseColumnEncoder {
 };
 
 template <typename Derived>
-class ColumnEncoder : public BaseColumnEncoder {
+class ColumnEncoder : public BaseSegmentEncoder {
  public:
   /**
    * @defgroup Virtual interface implementation
@@ -73,7 +73,7 @@ class ColumnEncoder : public BaseColumnEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& column,
+  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueSegment>& column,
                                             DataType data_type) final {
     auto encoded_column = std::shared_ptr<BaseEncodedColumn>{};
     resolve_data_type(data_type, [&](auto data_type_c) {
@@ -94,7 +94,7 @@ class ColumnEncoder : public BaseColumnEncoder {
     return encoded_column;
   }
 
-  std::unique_ptr<BaseColumnEncoder> create_new() const final { return std::make_unique<Derived>(); }
+  std::unique_ptr<BaseSegmentEncoder> create_new() const final { return std::make_unique<Derived>(); }
 
   bool uses_vector_compression() const final { return Derived::_uses_vector_compression; };
 
@@ -120,8 +120,8 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Hint: Use hana::value() if you want to use the result
    *       in a constant expression such as constexpr-if.
    */
-  template <typename ColumnDataType>
-  auto supports(hana::basic_type<ColumnDataType> data_type) const {
+  template <typename CxlumnDataType>
+  auto supports(hana::basic_type<CxlumnDataType> data_type) const {
     return encoding_supports_data_type(Derived::_encoding_type, data_type);
   }
 
@@ -130,12 +130,12 @@ class ColumnEncoder : public BaseColumnEncoder {
    *
    * Compiles only for supported data types.
    */
-  template <typename ColumnDataType>
-  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& base_value_column,
-                                            hana::basic_type<ColumnDataType> data_type_c) {
+  template <typename CxlumnDataType>
+  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueSegment>& base_value_column,
+                                            hana::basic_type<CxlumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
 
-    const auto value_column = std::dynamic_pointer_cast<const ValueColumn<ColumnDataType>>(base_value_column);
+    const auto value_column = std::dynamic_pointer_cast<const ValueSegment<CxlumnDataType>>(base_value_column);
     Assert(value_column != nullptr, "Value column must have passed data type.");
 
     return _self()._on_encode(value_column);

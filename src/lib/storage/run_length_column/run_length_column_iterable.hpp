@@ -39,7 +39,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
   const RunLengthColumn<T>& _column;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;

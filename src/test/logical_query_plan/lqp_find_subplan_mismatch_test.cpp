@@ -22,7 +22,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/cxlumn_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -70,10 +70,10 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     query_nodes.mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
     query_nodes.mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});
 
-    query_nodes.table_a_a = LQPColumnReference{query_nodes.stored_table_node_a, ColumnID{0}};
-    query_nodes.table_b_a = LQPColumnReference{query_nodes.mock_node_a, ColumnID{0}};
-    query_nodes.table_c_a = LQPColumnReference{query_nodes.mock_node_b, ColumnID{0}};
-    query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, ColumnID{1}};
+    query_nodes.table_a_a = LQPColumnReference{query_nodes.stored_table_node_a, CxlumnID{0}};
+    query_nodes.table_b_a = LQPColumnReference{query_nodes.mock_node_a, CxlumnID{0}};
+    query_nodes.table_c_a = LQPColumnReference{query_nodes.mock_node_b, CxlumnID{0}};
+    query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, CxlumnID{1}};
 
     query_nodes.predicate_node_a = PredicateNode::make(less_than_(query_nodes.table_a_a, 41));
     query_nodes.predicate_node_b = PredicateNode::make(between(query_nodes.table_a_a, 42, 45));

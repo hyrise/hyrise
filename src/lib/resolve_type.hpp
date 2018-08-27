@@ -10,7 +10,7 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
@@ -55,8 +55,8 @@ std::unique_ptr<Base> make_unique_by_data_type(DataType data_type, ConstructorAr
     if (hana::first(x) == data_type) {
       // The + before hana::second - which returns a reference - converts its return value
       // into a value so that we can access ::type
-      using ColumnDataType = typename decltype(+hana::second(x))::type;
-      ret = std::make_unique<Impl<ColumnDataType, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
+      using CxlumnDataType = typename decltype(+hana::second(x))::type;
+      ret = std::make_unique<Impl<CxlumnDataType, TemplateArgs...>>(std::forward<ConstructorArgs>(args)...);
       return;
     }
   });
@@ -85,9 +85,9 @@ std::unique_ptr<Base> make_unique_by_data_types(DataType data_type1, DataType da
     if (hana::first(x) == data_type1) {
       hana::for_each(data_type_pairs, [&ret, &data_type2, &args...](auto y) {
         if (hana::first(y) == data_type2) {
-          using ColumnDataType1 = typename decltype(+hana::second(x))::type;
-          using ColumnDataType2 = typename decltype(+hana::second(y))::type;
-          ret = std::make_unique<Impl<ColumnDataType1, ColumnDataType2, TemplateArgs...>>(
+          using CxlumnDataType1 = typename decltype(+hana::second(x))::type;
+          using CxlumnDataType2 = typename decltype(+hana::second(y))::type;
+          ret = std::make_unique<Impl<CxlumnDataType1, CxlumnDataType2, TemplateArgs...>>(
               std::forward<ConstructorArgs>(args)...);
           return;
         }
@@ -148,8 +148,8 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
  *   process_type(hana::basic_type<T> type);  // note: parameter type needs to be hana::basic_type not hana::type!
  *
  *   resolve_data_type(data_type, [&](auto type) {
- *     using ColumnDataType = typename decltype(type)::type;
- *     const auto var = type_cast<ColumnDataType>(variant_from_elsewhere);
+ *     using CxlumnDataType = typename decltype(type)::type;
+ *     const auto var = type_cast<CxlumnDataType>(variant_from_elsewhere);
  *     process_variant(var);
  *
  *     process_type(type);
@@ -169,7 +169,7 @@ void resolve_data_type(DataType data_type, const Functor& func) {
 }
 
 /**
- * Given a BaseColumn and its known column type, resolve the column implementation and call the lambda
+ * Given a BaseSegment and its known column type, resolve the column implementation and call the lambda
  *
  * @param func is a generic lambda or similar accepting a reference to a specialized column (value, dictionary,
  * reference)
@@ -178,12 +178,12 @@ void resolve_data_type(DataType data_type, const Functor& func) {
  * Example:
  *
  *   template <typename T>
- *   void process_column(ValueColumn<T>& column);
+ *   void process_column(ValueSegment<T>& column);
  *
  *   template <typename T>
  *   void process_column(DictionaryColumn<T>& column);
  *
- *   void process_column(ReferenceColumn& column);
+ *   void process_column(ReferenceSegment& column);
  *
  *   resolve_column_type<T>(base_column, [&](auto& typed_column) {
  *     process_column(typed_column);
@@ -192,20 +192,20 @@ void resolve_data_type(DataType data_type, const Functor& func) {
 template <typename In, typename Out>
 using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out, Out>;
 
-template <typename ColumnDataType, typename BaseColumnType, typename Functor>
-// BaseColumnType allows column to be const and non-const
-std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-/*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
-  using ValueColumnPtr = ConstOutIfConstIn<BaseColumnType, ValueColumn<ColumnDataType>>*;
-  using ReferenceColumnPtr = ConstOutIfConstIn<BaseColumnType, ReferenceColumn>*;
-  using EncodedColumnPtr = ConstOutIfConstIn<BaseColumnType, BaseEncodedColumn>*;
+template <typename CxlumnDataType, typename BaseSegmentType, typename Functor>
+// BaseSegmentType allows column to be const and non-const
+std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
+/*void*/ resolve_column_type(BaseSegmentType& column, const Functor& func) {
+  using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<CxlumnDataType>>*;
+  using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
+  using EncodedColumnPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedColumn>*;
 
-  if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
+  if (auto value_column = dynamic_cast<ValueSegmentPtr>(&column)) {
     func(*value_column);
-  } else if (auto ref_column = dynamic_cast<ReferenceColumnPtr>(&column)) {
+  } else if (auto ref_column = dynamic_cast<ReferenceSegmentPtr>(&column)) {
     func(*ref_column);
   } else if (auto encoded_column = dynamic_cast<EncodedColumnPtr>(&column)) {
-    resolve_encoded_column_type<ColumnDataType>(*encoded_column, func);
+    resolve_encoded_column_type<CxlumnDataType>(*encoded_column, func);
   } else {
     Fail("Unrecognized column type encountered.");
   }
@@ -222,25 +222,25 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
  * Example:
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, ValueColumn<T>& column);
+ *   void process_column(hana::basic_type<T> type, ValueSegment<T>& column);
  *
  *   template <typename T>
  *   void process_column(hana::basic_type<T> type, DictionaryColumn<T>& column);
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, ReferenceColumn& column);
+ *   void process_column(hana::basic_type<T> type, ReferenceSegment& column);
  *
  *   resolve_data_and_column_type(base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
-template <typename Functor, typename BaseColumnType>  // BaseColumnType allows column to be const and non-const
-std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-/*void*/ resolve_data_and_column_type(BaseColumnType& column, const Functor& func) {
+template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows column to be const and non-const
+std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
+/*void*/ resolve_data_and_column_type(BaseSegmentType& column, const Functor& func) {
   resolve_data_type(column.data_type(), [&](auto type) {
-    using ColumnDataType = typename decltype(type)::type;
+    using CxlumnDataType = typename decltype(type)::type;
 
-    resolve_column_type<ColumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
+    resolve_column_type<CxlumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
   });
 }
 

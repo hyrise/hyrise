@@ -22,7 +22,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     // we want to custom-build the index, but we have to create an index with a non-empty column.
     // Therefore we build an index and reset the root.
     dict_col1 = create_dict_column_by_type<std::string>(DataType::String, {"test"});
-    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col1}));
+    index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_col1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();
     /* root   childx    childxx  childxxx  leaf->chunk offsets
@@ -46,7 +46,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   }
 
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
-  std::shared_ptr<BaseColumn> dict_col1 = nullptr;
+  std::shared_ptr<BaseSegment> dict_col1 = nullptr;
   std::shared_ptr<ARTNode> root = nullptr;
   std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
   std::vector<ValueID> keys1;
@@ -126,7 +126,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   std::shuffle(ints.begin(), ints.end(), random_generator);
 
   auto column = create_dict_column_by_type<int>(DataType::Int, ints);
-  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({column}));
 
   for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
     EXPECT_EQ((*column)[*index->lower_bound({i})], AllTypeVariant{i});

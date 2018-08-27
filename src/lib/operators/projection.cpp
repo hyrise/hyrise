@@ -10,7 +10,7 @@
 
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_cxlumn_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "utils/assert.hpp"
 
@@ -38,15 +38,15 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   /**
-   * Determine the TableColumnDefinitions
+   * Determine the TableCxlumnDefinitions
    */
-  TableColumnDefinitions column_definitions;
+  TableCxlumnDefinitions cxlumn_definitions;
   for (const auto& expression : expressions) {
-    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
+    cxlumn_definitions.emplace_back(expression->as_cxlumn_name(), expression->data_type(), expression->is_nullable());
   }
 
   /**
-   * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
+   * If an expression is a PQPCxlumnExpression then it might be possible to forward the input column, if the
    * input TableType (References or Data) matches the output column type.
    */
   const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
@@ -57,13 +57,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto forward_columns = input_table_left()->type() == output_table_type;
 
   const auto output_table =
-      std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
+      std::make_shared<Table>(cxlumn_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection
    */
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    ChunkColumns output_columns;
+    ChunkSegments output_columns;
     output_columns.reserve(expressions.size());
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
@@ -72,8 +72,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (const auto& expression : expressions) {
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
-        const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
-        output_columns.emplace_back(input_chunk->get_column(pqp_column_expression->column_id));
+        const auto pqp_column_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(expression);
+        output_columns.emplace_back(input_chunk->get_column(pqp_column_expression->cxlumn_id));
       } else {
         output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
       }

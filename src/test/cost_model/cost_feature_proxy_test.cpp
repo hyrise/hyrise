@@ -56,11 +56,11 @@ class CostFeatureProxyTest : public ::testing::Test {
       nation->execute();
 
       auto join = std::make_shared<JoinHash>(customer, nation, JoinMode::Inner,
-                                 ColumnIDPair{3, 0},
+                                 CxlumnIDPair{3, 0},
                                  PredicateCondition::Equals);
       join->execute();
 
-      auto predicate = std::make_shared<TableScan>(join, ColumnID{1},
+      auto predicate = std::make_shared<TableScan>(join, CxlumnID{1},
                                            PredicateCondition::NotEquals,
                                            "ALGERIA");
       predicate->execute();

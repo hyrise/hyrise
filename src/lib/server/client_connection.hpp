@@ -16,7 +16,7 @@ struct BindPacket;
 enum class NetworkMessageType : unsigned char;
 
 struct ColumnDescription {
-  std::string column_name;
+  std::string cxlumn_name;
   uint64_t object_id;
   int64_t type_width;
 };

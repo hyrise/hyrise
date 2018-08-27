@@ -40,7 +40,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto ts = std::make_shared<TableScan>(gt, ColumnID{0}, PredicateCondition::Equals, 1234);
+  auto ts = std::make_shared<TableScan>(gt, CxlumnID{0}, PredicateCondition::Equals, 1234);
 
   auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
@@ -58,7 +58,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto gt_a = std::make_shared<GetTable>("table_a");
   auto gt_b = std::make_shared<GetTable>("table_b");
-  auto join = std::make_shared<JoinHash>(gt_a, gt_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+  auto join = std::make_shared<JoinHash>(gt_a, gt_b, JoinMode::Inner, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
                                          PredicateCondition::Equals);
 
   auto tasks = OperatorTask::make_tasks_from_operator(join, CleanupTemporaries::Yes);
@@ -77,9 +77,9 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto gt_a = std::make_shared<GetTable>("table_a");
-  auto scan_a = std::make_shared<TableScan>(gt_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-  auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
-  auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto scan_a = std::make_shared<TableScan>(gt_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan_b = std::make_shared<TableScan>(scan_a, CxlumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = std::make_shared<TableScan>(scan_a, CxlumnID{1}, PredicateCondition::GreaterThan, 2000);
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
   auto tasks = OperatorTask::make_tasks_from_operator(union_positions, CleanupTemporaries::Yes);

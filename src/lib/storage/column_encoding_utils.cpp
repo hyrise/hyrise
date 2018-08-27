@@ -20,7 +20,7 @@ namespace {
  *
  * Add your column encoder here!
  */
-const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
+const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegmentEncoder>>{
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
     {EncodingType::FixedStringDictionary, std::make_shared<DictionaryEncoder<EncodingType::FixedStringDictionary>>()},
@@ -28,7 +28,7 @@ const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnE
 
 }  // namespace
 
-std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
+std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded`.");
 
   auto it = encoder_for_type.find(encoding_type);
@@ -39,7 +39,7 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
 }
 
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
-                                                 const std::shared_ptr<const BaseValueColumn>& column,
+                                                 const std::shared_ptr<const BaseValueSegment>& column,
                                                  std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
 

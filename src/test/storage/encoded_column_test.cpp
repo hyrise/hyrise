@@ -34,13 +34,13 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     switch (encoding_spec.encoding_type) {
       case EncodingType::FrameOfReference:
         // fill three blocks and a bit more
-        return FrameOfReferenceColumn<int32_t>::block_size * (3.3);
+        return FrameOfReferenceSegment<int32_t>::block_size * (3.3);
       default:
         return default_row_count;
     }
   }
 
-  std::shared_ptr<ValueColumn<int32_t>> create_int_value_column() {
+  std::shared_ptr<ValueSegment<int32_t>> create_int_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count());
 
     std::default_random_engine engine{};
@@ -50,10 +50,10 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
       elem = dist(engine);
     }
 
-    return std::make_shared<ValueColumn<int32_t>>(std::move(values));
+    return std::make_shared<ValueSegment<int32_t>>(std::move(values));
   }
 
-  std::shared_ptr<ValueColumn<int32_t>> create_int_w_null_value_column() {
+  std::shared_ptr<ValueSegment<int32_t>> create_int_w_null_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count());
     auto null_values = pmr_concurrent_vector<bool>(row_count());
 
@@ -66,7 +66,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
       null_values[i] = bernoulli_dist(engine);
     }
 
-    return std::make_shared<ValueColumn<int32_t>>(std::move(values), std::move(null_values));
+    return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
   ChunkOffsetsList create_sequential_chunk_offsets_list() {
@@ -96,7 +96,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> encode_value_column(DataType data_type,
-                                                         const std::shared_ptr<ValueColumn<T>>& value_column) {
+                                                         const std::shared_ptr<ValueSegment<T>>& value_column) {
     const auto column_encoding_spec = GetParam();
     return encode_column(column_encoding_spec.encoding_type, data_type, value_column,
                          column_encoding_spec.vector_compression_type);
@@ -129,11 +129,11 @@ INSTANTIATE_TEST_CASE_P(
 
 TEST_P(EncodedColumnTest, SequentiallyReadNotNullableIntColumn) {
   auto value_column = this->create_int_value_column();
-  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_segment = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), base_encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_segment->size());
 
-  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+  resolve_encoded_column_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_column_iterable = create_iterable_from_column(*value_column);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -149,11 +149,11 @@ TEST_P(EncodedColumnTest, SequentiallyReadNotNullableIntColumn) {
 
 TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
   auto value_column = this->create_int_w_null_value_column();
-  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_segment = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), base_encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_segment->size());
 
-  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+  resolve_encoded_column_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_column_iterable = create_iterable_from_column(*value_column);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -182,13 +182,13 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
 
 TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
-  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_segment = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), base_encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_segment->size());
 
   auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
 
-  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+  resolve_encoded_column_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_column_iterable = create_iterable_from_column(*value_column);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -208,13 +208,13 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList)
 
 TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
-  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_segment = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_EQ(value_column->size(), base_encoded_column->size());
+  EXPECT_EQ(value_column->size(), base_encoded_segment->size());
 
   auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
 
-  resolve_encoded_column_type<int32_t>(*base_encoded_column, [&](const auto& encoded_column) {
+  resolve_encoded_column_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_column_iterable = create_iterable_from_column(*value_column);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -234,9 +234,9 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffs
 
 TEST_P(EncodedColumnTest, IsImmutable) {
   auto value_column = this->create_int_w_null_value_column();
-  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
+  auto base_encoded_segment = this->encode_value_column(DataType::Int, value_column);
 
-  EXPECT_THROW(base_encoded_column->append(AllTypeVariant{}), std::logic_error);
+  EXPECT_THROW(base_encoded_segment->append(AllTypeVariant{}), std::logic_error);
 }
 
 }  // namespace opossum

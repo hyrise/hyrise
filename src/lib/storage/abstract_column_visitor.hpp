@@ -4,11 +4,11 @@
 
 namespace opossum {
 
-class BaseColumn;
+class BaseSegment;
 class BaseDictionaryColumn;
 class BaseEncodedColumn;
-class BaseValueColumn;
-class ReferenceColumn;
+class BaseValueSegment;
+class ReferenceSegment;
 
 class ColumnVisitorContext {};
 
@@ -18,9 +18,9 @@ class ColumnVisitorContext {};
 class AbstractColumnVisitor {
  public:
   virtual ~AbstractColumnVisitor() = default;
-  virtual void handle_column(const BaseValueColumn& column, std::shared_ptr<ColumnVisitorContext> context) = 0;
+  virtual void handle_column(const BaseValueSegment& column, std::shared_ptr<ColumnVisitorContext> context) = 0;
   virtual void handle_column(const BaseDictionaryColumn& column, std::shared_ptr<ColumnVisitorContext> context) = 0;
-  virtual void handle_column(const ReferenceColumn& column, std::shared_ptr<ColumnVisitorContext> context) = 0;
+  virtual void handle_column(const ReferenceSegment& column, std::shared_ptr<ColumnVisitorContext> context) = 0;
   virtual void handle_column(const BaseEncodedColumn& column, std::shared_ptr<ColumnVisitorContext> context) = 0;
 };
 

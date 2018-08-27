@@ -42,7 +42,7 @@ class ChunkEncoder {
    *
    * Encodes a chunk using the passed encoding specifications.
    * Reduces also the fragmentation of the chunk’s MVCC columns.
-   * All columns of the chunk need to be of type ValueColumn<T>,
+   * All columns of the chunk need to be of type ValueSegment<T>,
    * i.e., recompression is not yet supported.
    *
    * Note: In some cases, it might be benificial to

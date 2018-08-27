@@ -26,7 +26,7 @@ The actual test cases are split into EquiOnly and FullJoin tests.
 class JoinTest : public BaseTest {
  protected:
   void SetUp() override {
-    // load and create regular ValueColumn tables
+    // load and create regular ValueSegment tables
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
     _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 4));
@@ -96,7 +96,7 @@ class JoinTest : public BaseTest {
   // builds and executes the given Join and checks correctness of the output
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
-                        const std::shared_ptr<const AbstractOperator>& right, const ColumnIDPair& column_ids,
+                        const std::shared_ptr<const AbstractOperator>& right, const CxlumnIDPair& cxlumn_ids,
                         const PredicateCondition predicate_condition, const JoinMode mode, const std::string& file_name,
                         size_t chunk_size) {
     // load expected results from file
@@ -104,7 +104,7 @@ class JoinTest : public BaseTest {
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinType>(left, right, mode, column_ids, predicate_condition);
+    auto join = std::make_shared<JoinType>(left, right, mode, cxlumn_ids, predicate_condition);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 

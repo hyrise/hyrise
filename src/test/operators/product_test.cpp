@@ -30,7 +30,7 @@ class OperatorsProductTest : public BaseTest {
   }
 };
 
-TEST_F(OperatorsProductTest, ValueColumns) {
+TEST_F(OperatorsProductTest, ValueSegments) {
   auto product = std::make_shared<Product>(_table_wrapper_a, _table_wrapper_b);
   product->execute();
 
@@ -38,9 +38,9 @@ TEST_F(OperatorsProductTest, ValueColumns) {
   EXPECT_TABLE_EQ_UNORDERED(product->get_output(), expected_result);
 }
 
-TEST_F(OperatorsProductTest, ReferenceAndValueColumns) {
+TEST_F(OperatorsProductTest, ReferenceAndValueSegments) {
   auto table_scan =
-      std::make_shared<opossum::TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+      std::make_shared<opossum::TableScan>(_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   table_scan->execute();
 
   auto product = std::make_shared<Product>(table_scan, _table_wrapper_b);

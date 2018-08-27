@@ -183,18 +183,18 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_
 
 std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressions() const { return {}; }
 
-std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
+std::optional<CxlumnID> AbstractLQPNode::find_cxlumn_id(const AbstractExpression& expression) const {
   const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
-  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-    if (*column_expressions[column_id] == expression) return column_id;
+  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < column_expressions.size(); ++cxlumn_id) {
+    if (*column_expressions[cxlumn_id] == expression) return cxlumn_id;
   }
   return std::nullopt;
 }
 
-ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
-  const auto column_id = find_column_id(expression);
-  Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
-  return *column_id;
+CxlumnID AbstractLQPNode::get_cxlumn_id(const AbstractExpression& expression) const {
+  const auto cxlumn_id = find_cxlumn_id(expression);
+  Assert(cxlumn_id, "This node has no column '"s + expression.as_cxlumn_name() + "'");
+  return *cxlumn_id;
 }
 
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {

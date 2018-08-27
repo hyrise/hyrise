@@ -14,7 +14,7 @@ class ValueExpression : public AbstractExpression {
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_column_name() const override;
+  std::string as_cxlumn_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
 

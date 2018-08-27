@@ -7,7 +7,7 @@
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -1310,10 +1310,10 @@ TEST_F(SQLTranslatorTest, CreateView) {
       PredicateNode::make(equals_(int_float_a, "b"),
          stored_table_node_int_float)));
 
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "b"},
-                                                                      {ColumnID{3}, "t"},
+  const auto view_columns = std::unordered_map<CxlumnID, std::string>({
+                                                                      {CxlumnID{0}, "a"},
+                                                                      {CxlumnID{1}, "b"},
+                                                                      {CxlumnID{3}, "t"},
                                                                       });
   // clang-format on
 
@@ -1328,9 +1328,9 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "c"},
-                                                                      {ColumnID{1}, "d"}
+  const auto view_columns = std::unordered_map<CxlumnID, std::string>({
+                                                                      {CxlumnID{0}, "c"},
+                                                                      {CxlumnID{1}, "d"}
                                                                       });
 
   const auto view_lqp = PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float);

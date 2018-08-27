@@ -10,7 +10,7 @@
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/cxlumn_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
 namespace opossum {
@@ -64,21 +64,21 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node
 
   switch (cost_feature) {
     case CostFeature::LeftDataType:
-      return _node->column_expressions()[operator_predicate.column_id]->data_type();
+      return _node->column_expressions()[operator_predicate.cxlumn_id]->data_type();
 
     case CostFeature::RightDataType:
       if (operator_predicate.value.type() == typeid(AllTypeVariant)) {
         return data_type_from_all_type_variant(boost::get<AllTypeVariant>(operator_predicate.value));
       } else {
-        Assert(is_column_id(operator_predicate.value), "Expected ColumnID");
-        return _node->column_expressions()[boost::get<ColumnID>(operator_predicate.value)]->data_type();
+        Assert(is_cxlumn_id(operator_predicate.value), "Expected CxlumnID");
+        return _node->column_expressions()[boost::get<CxlumnID>(operator_predicate.value)]->data_type();
       }
 
     case CostFeature::PredicateCondition:
       return operator_predicate.predicate_condition;
 
     case CostFeature::RightOperandIsColumn:
-      return is_column_id(operator_predicate.value);
+      return is_cxlumn_id(operator_predicate.value);
 
     default:
       Fail("Unexpected CostFeature");
@@ -92,10 +92,10 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_join_node(cons
 
   switch (cost_feature) {
     case CostFeature::LeftDataType:
-      return _node->left_input()->column_expressions()[operator_predicate->column_ids.first]->data_type();
+      return _node->left_input()->column_expressions()[operator_predicate->cxlumn_ids.first]->data_type();
 
     case CostFeature::RightDataType:
-      return _node->right_input()->column_expressions()[operator_predicate->column_ids.second]->data_type();
+      return _node->right_input()->column_expressions()[operator_predicate->cxlumn_ids.second]->data_type();
 
     case CostFeature::PredicateCondition:
       return operator_predicate->predicate_condition;

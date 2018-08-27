@@ -12,7 +12,7 @@
 #include "constant_mappings.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
@@ -33,7 +33,7 @@ std::string JoinNode::description() const {
   std::stringstream stream;
   stream << "[Join] Mode: " << join_mode_to_string.at(join_mode);
 
-  if (join_predicate) stream << " " << join_predicate->as_column_name();
+  if (join_predicate) stream << " " << join_predicate->as_cxlumn_name();
 
   return stream.str();
 }
@@ -89,7 +89,7 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     if (!operator_join_predicate) return cross_join_statistics;
 
     return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-        *right_input->get_statistics(), join_mode, operator_join_predicate->column_ids,
+        *right_input->get_statistics(), join_mode, operator_join_predicate->cxlumn_ids,
         operator_join_predicate->predicate_condition));
   }
 }

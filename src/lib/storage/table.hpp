@@ -25,30 +25,30 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
  public:
-  static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
+  static std::shared_ptr<Table> create_dummy_table(const TableCxlumnDefinitions& cxlumn_definitions);
 
-  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
+  explicit Table(const TableCxlumnDefinitions& cxlumn_definitions, const TableType type,
                  const uint32_t max_chunk_size = Chunk::MAX_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{
    */
 
-  const TableColumnDefinitions& column_definitions() const;
+  const TableCxlumnDefinitions& cxlumn_definitions() const;
 
-  size_t column_count() const;
+  size_t cxlumn_count() const;
 
-  const std::string& column_name(const ColumnID column_id) const;
-  std::vector<std::string> column_names() const;
+  const std::string& cxlumn_name(const CxlumnID cxlumn_id) const;
+  std::vector<std::string> cxlumn_names() const;
 
-  DataType column_data_type(const ColumnID column_id) const;
+  DataType column_data_type(const CxlumnID cxlumn_id) const;
   std::vector<DataType> column_data_types() const;
 
-  bool column_is_nullable(const ColumnID column_id) const;
+  bool column_is_nullable(const CxlumnID cxlumn_id) const;
   std::vector<bool> columns_are_nullable() const;
 
   // Fail()s, if there is no column of that name
-  ColumnID column_id_by_name(const std::string& column_name) const;
+  CxlumnID cxlumn_id_by_name(const std::string& cxlumn_name) const;
 
   /** @} */
 
@@ -87,12 +87,12 @@ class Table : private Noncopyable {
 
   /**
    * Creates a new Chunk and appends it to this table.
-   * Makes sure the @param columns match with the TableType (only ReferenceColumns or only data containing columns)
+   * Makes sure the @param columns match with the TableType (only ReferenceSegments or only data containing columns)
    * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of columns.
    * @param alloc
    */
-  void append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+  void append_chunk(const ChunkSegments& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                     const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
   /**
@@ -101,7 +101,7 @@ class Table : private Noncopyable {
    */
   void append_chunk(const std::shared_ptr<Chunk>& chunk);
 
-  // Create and append a Chunk consisting of ValueColumns.
+  // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
 
   /** @} */
@@ -120,17 +120,17 @@ class Table : private Noncopyable {
   // - table needs to be validated before by Validate operator
   // If you want to write efficient operators, back off!
   template <typename T>
-  T get_value(const ColumnID column_id, const size_t row_number) const {
+  T get_value(const CxlumnID cxlumn_id, const size_t row_number) const {
     PerformanceWarning("get_value() used");
 
-    Assert(column_id < column_count(), "column_id invalid");
+    Assert(cxlumn_id < cxlumn_count(), "cxlumn_id invalid");
 
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk->get_column(column_id))[row_number + current_size - row_counter]);
+        return get<T>((*chunk->get_column(cxlumn_id))[row_number + current_size - row_counter]);
       }
     }
     Fail("Row does not exist.");
@@ -148,13 +148,13 @@ class Table : private Noncopyable {
   std::vector<IndexInfo> get_indexes() const;
 
   template <typename Index>
-  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
+  void create_index(const std::vector<CxlumnID>& cxlumn_ids, const std::string& name = "") {
     ColumnIndexType index_type = get_index_type_of<Index>();
 
     for (auto& chunk : _chunks) {
-      chunk->create_index<Index>(column_ids);
+      chunk->create_index<Index>(cxlumn_ids);
     }
-    IndexInfo i = {column_ids, name, index_type};
+    IndexInfo i = {cxlumn_ids, name, index_type};
     _indexes.emplace_back(i);
   }
 
@@ -164,7 +164,7 @@ class Table : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  protected:
-  const TableColumnDefinitions _column_definitions;
+  const TableCxlumnDefinitions _cxlumn_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;

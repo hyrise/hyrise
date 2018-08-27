@@ -131,7 +131,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
 
   // read column a into jit tuple at index 0
   auto read_operator = std::make_shared<JitReadTuples>();
-  auto tuple_value = read_operator->add_input_column(DataType::Int, false, ColumnID(0));
+  auto tuple_value = read_operator->add_input_column(DataType::Int, false, CxlumnID(0));
 
   // compute a+a and write result to jit tuple at index 1
   auto column_expression = std::make_shared<JitExpression>(tuple_value);
@@ -152,7 +152,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
   ASSERT_NO_THROW(jit_operator_wrapper.execute());
 
   auto result = jit_operator_wrapper.get_output();
-  ASSERT_EQ(result->get_value<int>(ColumnID(0), 1), 48);
+  ASSERT_EQ(result->get_value<int>(CxlumnID(0), 1), 48);
 }
 
 }  // namespace opossum

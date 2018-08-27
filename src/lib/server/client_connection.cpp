@@ -159,7 +159,7 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
    */
 
   for (const auto& column_description : row_description) {
-    PostgresWireHandler::write_string(*output_packet, column_description.column_name);
+    PostgresWireHandler::write_string(*output_packet, column_description.cxlumn_name);
     PostgresWireHandler::write_value(*output_packet, htonl(0u));  // no object id
     PostgresWireHandler::write_value(*output_packet, htons(0u));  // no attribute number
 

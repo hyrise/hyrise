@@ -10,19 +10,19 @@
 
 namespace opossum {
 
-// ValueColumn is a specific column type that stores all its values in a vector.
+// ValueSegment is a specific column type that stores all its values in a vector.
 template <typename T>
-class ValueColumn : public BaseValueColumn {
+class ValueSegment : public BaseValueSegment {
  public:
-  explicit ValueColumn(bool nullable = false);
-  explicit ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable = false);
+  explicit ValueSegment(bool nullable = false);
+  explicit ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable = false);
 
-  // Create a ValueColumn with the given values.
-  explicit ValueColumn(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
+  // Create a ValueSegment with the given values.
+  explicit ValueSegment(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                        const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
+  explicit ValueSegment(std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueSegment(std::vector<T>& values, std::vector<bool>& null_values,
                        const PolymorphicAllocator<T>& alloc = {});
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
@@ -58,15 +58,15 @@ class ValueColumn : public BaseValueColumn {
   // Return the number of entries in the column.
   size_t size() const final;
 
-  // Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+  // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
+  std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
   size_t estimate_memory_usage() const override;
 
  protected:
   pmr_concurrent_vector<T> _values;
 
-  // While a ValueColumn knows if it is nullable or not by looking at this optional, most other column types
+  // While a ValueSegment knows if it is nullable or not by looking at this optional, most other column types
   // (e.g. DictionaryColumn) does not. For this reason, we need to store the nullable information separately
   // in the table's definition.
   std::optional<pmr_concurrent_vector<bool>> _null_values;

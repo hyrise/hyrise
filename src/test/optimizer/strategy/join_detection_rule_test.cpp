@@ -40,12 +40,12 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _table_node_b = StoredTableNode::make("b");
     _table_node_c = StoredTableNode::make("c");
 
-    _a_a = LQPColumnReference{_table_node_a, ColumnID{0}};
-    _a_b = LQPColumnReference{_table_node_a, ColumnID{1}};
-    _b_a = LQPColumnReference{_table_node_b, ColumnID{0}};
-    _b_b = LQPColumnReference{_table_node_b, ColumnID{1}};
-    _c_a = LQPColumnReference{_table_node_c, ColumnID{1}};
-    _c_b = LQPColumnReference{_table_node_c, ColumnID{1}};
+    _a_a = LQPColumnReference{_table_node_a, CxlumnID{0}};
+    _a_b = LQPColumnReference{_table_node_a, CxlumnID{1}};
+    _b_a = LQPColumnReference{_table_node_b, CxlumnID{0}};
+    _b_b = LQPColumnReference{_table_node_b, CxlumnID{1}};
+    _c_a = LQPColumnReference{_table_node_c, CxlumnID{1}};
+    _c_b = LQPColumnReference{_table_node_c, CxlumnID{1}};
 
     _rule = std::make_shared<JoinDetectionRule>();
   }

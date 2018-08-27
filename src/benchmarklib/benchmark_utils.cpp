@@ -263,10 +263,10 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, ColumnEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
-        const auto& column_name = column.key();
+        const auto& cxlumn_name = column.key();
         const auto& encoding_info = column.value();
         Assert(encoding_info.is_object(), "The custom encoding info needs to be specified as a json object.");
-        custom_encoding_mapping[table_name][column_name] = encoding_spec_from_json(encoding_info);
+        custom_encoding_mapping[table_name][cxlumn_name] = encoding_spec_from_json(encoding_info);
       }
     }
   }
@@ -363,19 +363,19 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
 
   ChunkEncodingSpec chunk_spec;
 
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     if (table_has_custom_encoding) {
-      const auto& column_name = table->column_name(column_id);
-      const auto& encoding_by_column_name = column_mapping_it->second;
-      const auto& column_encoding = encoding_by_column_name.find(column_name);
-      if (column_encoding != encoding_by_column_name.end()) {
+      const auto& cxlumn_name = table->cxlumn_name(cxlumn_id);
+      const auto& encoding_by_cxlumn_name = column_mapping_it->second;
+      const auto& column_encoding = encoding_by_cxlumn_name.find(cxlumn_name);
+      if (column_encoding != encoding_by_cxlumn_name.end()) {
         // The column has a custom encoding
         chunk_spec.push_back(column_encoding->second);
         continue;
       }
     }
 
-    const auto& column_type = table->column_data_type(column_id);
+    const auto& column_type = table->column_data_type(cxlumn_id);
     const auto& encoding_by_data_type = type_mapping.find(column_type);
     if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding
@@ -450,16 +450,16 @@ The encoding is always required, the compression is optional.
 
   "custom": {
     <TABLE_NAME>: {
-      <COLUMN_NAME>: {
+      <cxlumn_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       },
-      <COLUMN_NAME>: {
+      <cxlumn_name>: {
         "encoding": <ENCODING_TYPE_STRING>
       }
     },
     <TABLE_NAME>: {
-      <COLUMN_NAME>: {
+      <cxlumn_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       }

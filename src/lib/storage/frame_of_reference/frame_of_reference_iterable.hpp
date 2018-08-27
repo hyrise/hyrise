@@ -4,7 +4,7 @@
 
 #include "storage/column_iterables.hpp"
 
-#include "storage/frame_of_reference_column.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
@@ -12,7 +12,7 @@ namespace opossum {
 template <typename T>
 class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfReferenceIterable<T>> {
  public:
-  explicit FrameOfReferenceIterable(const FrameOfReferenceColumn<T>& column) : _column{column} {}
+  explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -46,11 +46,11 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
   size_t _on_size() const { return _column.size(); }
 
  private:
-  const FrameOfReferenceColumn<T>& _column;
+  const FrameOfReferenceSegment<T>& _column;
 
  private:
   template <typename OffsetValueIteratorT>
-  class Iterator : public BaseColumnIterator<Iterator<OffsetValueIteratorT>, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, ColumnIteratorValue<T>> {
    public:
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
@@ -77,7 +77,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       ++_index_within_frame;
       ++_chunk_offset;
 
-      if (_index_within_frame >= FrameOfReferenceColumn<T>::block_size) {
+      if (_index_within_frame >= FrameOfReferenceSegment<T>::block_size) {
         _index_within_frame = 0u;
         ++_block_minimum_it;
       }
@@ -121,7 +121,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;
+      static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
       const auto is_null = (*_null_values)[chunk_offsets.into_referenced];
       const auto block_minimum = (*_block_minima)[chunk_offsets.into_referenced / block_size];

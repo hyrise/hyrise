@@ -37,13 +37,13 @@ class TableStatisticsJoinTest : public BaseTest {
                                            const PredicateCondition predicate_condition) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
-    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
-      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
-        auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
+    for (CxlumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->cxlumn_count(); ++column_1) {
+      for (CxlumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->cxlumn_count(); ++column_2) {
+        auto cxlumn_ids = std::make_pair(CxlumnID{column_1}, CxlumnID{column_2});
         auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
-            *table_with_statistics.statistics, mode, column_ids, predicate_condition));
+            *table_with_statistics.statistics, mode, cxlumn_ids, predicate_condition));
         auto join =
-            std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, predicate_condition);
+            std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, cxlumn_ids, predicate_condition);
         join->execute();
         auto result = join->get_output();
         EXPECT_FLOAT_EQ(result->row_count(), join_stats->row_count());
@@ -58,12 +58,12 @@ class TableStatisticsJoinTest : public BaseTest {
   void predict_join_row_counts_and_compare(const TableWithStatistics& table_with_statistics, const JoinMode mode,
                                            const PredicateCondition predicate_condition,
                                            const std::vector<uint32_t> row_counts) {
-    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
-      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
-        auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
+    for (CxlumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->cxlumn_count(); ++column_1) {
+      for (CxlumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->cxlumn_count(); ++column_2) {
+        auto cxlumn_ids = std::make_pair(CxlumnID{column_1}, CxlumnID{column_2});
         auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
-            *table_with_statistics.statistics, mode, column_ids, predicate_condition));
-        auto cached_row_count = row_counts.at(table_with_statistics.table->column_count() * column_1 + column_2);
+            *table_with_statistics.statistics, mode, cxlumn_ids, predicate_condition));
+        auto cached_row_count = row_counts.at(table_with_statistics.table->cxlumn_count() * column_1 + column_2);
         EXPECT_FLOAT_EQ(cached_row_count, join_stats->row_count());
       }
     }
@@ -130,7 +130,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
 
   // Currently, the statistics component produces in some cases for a two column predicate with
   // PredicateCondition::LessThan and PredicateCondition::GreaterThan a column statistics with a too high distinct
-  // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated distinct
+  // count. (See comment cxlumn_statistics.hpp for details). Null value calculations depend on the calculated distinct
   // counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are skipped.
 
   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
@@ -186,7 +186,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
 
 //   // Currently, the statistics component produces in some cases for a two column predicate with
 //   // PredicateCondition::LessThan and PredicateCondition::GreaterThan a column statistics with a too high distinct
-//   // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated
+//   // count. (See comment cxlumn_statistics.hpp for details). Null value calculations depend on the calculated
 //   // distinct counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are
 //   // skipped.
 

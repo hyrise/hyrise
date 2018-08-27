@@ -34,7 +34,7 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
   const pmr_concurrent_vector<bool>& _null_values;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorNullValue> {
+  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorNullValue> {
    public:
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 

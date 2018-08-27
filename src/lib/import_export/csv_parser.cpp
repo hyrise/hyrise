@@ -45,7 +45,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<ChunkColumns> columns_by_chunks;
+  std::list<ChunkSegments> columns_by_chunks;
   std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
@@ -80,17 +80,17 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
-  TableColumnDefinitions colum_definitions;
+  TableCxlumnDefinitions colum_definitions;
   for (const auto& column_meta : _meta.columns) {
-    auto column_name = column_meta.name;
-    BaseCsvConverter::unescape(column_name);
+    auto cxlumn_name = column_meta.name;
+    BaseCsvConverter::unescape(cxlumn_name);
 
     auto column_type = column_meta.type;
     BaseCsvConverter::unescape(column_type);
 
     const auto data_type = data_type_to_string.right.at(column_type);
 
-    colum_definitions.emplace_back(column_name, data_type, column_meta.nullable);
+    colum_definitions.emplace_back(cxlumn_name, data_type, column_meta.nullable);
   }
 
   return std::make_shared<Table>(colum_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
@@ -130,7 +130,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _meta.config.delimiter && !in_quotes) {
-      Assert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
+      Assert(field_count == table.cxlumn_count(), "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }
@@ -148,15 +148,15 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 }
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
-                                    const Table& table, ChunkColumns& columns) {
-  // For each csv column create a CsvConverter which builds up a ValueColumn
-  const auto column_count = table.column_count();
-  const auto row_count = field_ends.size() / column_count;
+                                    const Table& table, ChunkSegments& columns) {
+  // For each csv column create a CsvConverter which builds up a ValueSegment
+  const auto cxlumn_count = table.cxlumn_count();
+  const auto row_count = field_ends.size() / cxlumn_count;
   std::vector<std::unique_ptr<BaseCsvConverter>> converters;
 
-  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto is_nullable = table.column_is_nullable(column_id);
-    const auto column_type = table.column_data_type(column_id);
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
+    const auto is_nullable = table.column_is_nullable(cxlumn_id);
+    const auto column_type = table.column_data_type(cxlumn_id);
 
     converters.emplace_back(
         make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
@@ -164,8 +164,8 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   size_t start = 0;
   for (size_t row_id = 0; row_id < row_count; ++row_id) {
-    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-      const auto end = field_ends.at(row_id * column_count + column_id);
+    for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
+      const auto end = field_ends.at(row_id * cxlumn_count + cxlumn_id);
       auto field = std::string{csv_chunk.substr(start, end - start)};
       start = end + 1;
 
@@ -175,10 +175,10 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
 
       try {
-        converters[column_id]->insert(field, row_id);
+        converters[cxlumn_id]->insert(field, row_id);
       } catch (const std::exception& exception) {
         throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
-                               std::to_string(column_id) + ":\n" + exception.what());
+                               std::to_string(cxlumn_id) + ":\n" + exception.what());
       }
     }
   }

@@ -13,14 +13,14 @@
 
 namespace opossum {
 
-IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
+IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
                                          const PredicateCondition& predicate_condition)
-    : BaseSingleColumnTableScanImpl{in_table, base_column_id, predicate_condition} {
+    : BaseSingleColumnTableScanImpl{in_table, base_cxlumn_id, predicate_condition} {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
 
-void IsNullTableScanImpl::handle_column(const ReferenceColumn& base_column,
+void IsNullTableScanImpl::handle_column(const ReferenceSegment& base_column,
                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   BaseSingleColumnTableScanImpl::handle_column(base_column, base_context);
@@ -35,7 +35,7 @@ void IsNullTableScanImpl::handle_column(const ReferenceColumn& base_column,
   }
 }
 
-void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
+void IsNullTableScanImpl::handle_column(const BaseValueSegment& base_column,
                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -74,7 +74,7 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  const auto base_column_type = _in_table->column_data_type(_left_column_id);
+  const auto base_column_type = _in_table->column_data_type(_left_cxlumn_id);
 
   resolve_data_type(base_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;
@@ -88,7 +88,7 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   });
 }
 
-bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
+bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& column) {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return false;
@@ -101,7 +101,7 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueColumn& column) {
   }
 }
 
-bool IsNullTableScanImpl::_matches_none(const BaseValueColumn& column) {
+bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& column) {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return !column.is_nullable();

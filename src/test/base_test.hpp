@@ -35,7 +35,7 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
   static std::shared_ptr<DictionaryColumn<T>> create_dict_column_by_type(DataType data_type,
                                                                          const std::vector<T>& values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
-    auto value_column = std::make_shared<ValueColumn<T>>(std::move(vector_values));
+    auto value_column = std::make_shared<ValueSegment<T>>(std::move(vector_values));
 
     auto compressed_column = encode_column(EncodingType::Dictionary, data_type, value_column);
     return std::static_pointer_cast<DictionaryColumn<T>>(compressed_column);

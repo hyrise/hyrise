@@ -53,14 +53,14 @@ TEST_F(ShowColumnsTest, CanShowColumnsWithNull) {
 }
 
 TEST_F(ShowColumnsTest, NoColumns) {
-  StorageManager::get().add_table("no_columns", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
+  StorageManager::get().add_table("no_columns", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data));
 
   auto sc = std::make_shared<ShowColumns>("no_columns");
   sc->execute();
 
   auto out = sc->get_output();
   EXPECT_EQ(out->row_count(), 0u);
-  EXPECT_EQ(out->column_count(), 3u);
+  EXPECT_EQ(out->cxlumn_count(), 3u);
 }
 
 }  // namespace opossum

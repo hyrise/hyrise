@@ -17,8 +17,8 @@ namespace opossum {
  *  tables exactly once.
  *  The input tables `left` and `right` must
  *      - have the same number of columns with the same names and types
- *      - each column must reference the same table and same column_id for all chunks.
- *          - this means: if the first column of `left` references table "a" and ColumnID 3, the first column of `right`
+ *      - each column must reference the same table and same cxlumn_id for all chunks.
+ *          - this means: if the first column of `left` references table "a" and CxlumnID 3, the first column of `right`
  *                        has to reference "a".3 as well.
  *
  *
@@ -96,7 +96,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
 
   /**
    * Validates the input AND initializes some utility data it uses (_column_segment_offsets, _referenced_tables,
-   * _referenced_column_ids).
+   * _referenced_cxlumn_ids).
    *
    * We can't really split this up into one validate and one prepare step, since some of the validation depends on
    * the utility data being initialized.
@@ -111,12 +111,12 @@ class UnionPositions : public AbstractReadOnlyOperator {
                                       const ReferenceMatrix& right_matrix, size_t right_row_idx) const;
 
   // See the "About ColumnSegments" doc in the cpp
-  std::vector<ColumnID> _column_segment_offsets;
+  std::vector<CxlumnID> _column_segment_offsets;
 
   // For each column segment, the table its pos_list references
   std::vector<std::shared_ptr<const Table>> _referenced_tables;
 
-  // For each column_idx in the input tables, specifies the referenced column in the referenced table
-  std::vector<ColumnID> _referenced_column_ids;
+  // For each cxlumn_idx in the input tables, specifies the referenced column in the referenced table
+  std::vector<CxlumnID> _referenced_cxlumn_ids;
 };
 }  // namespace opossum

@@ -21,10 +21,10 @@ struct OperatorJoinPredicate {
                                                               const AbstractLQPNode& left_input,
                                                               const AbstractLQPNode& right_input);
 
-  OperatorJoinPredicate(const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+  OperatorJoinPredicate(const CxlumnIDPair& cxlumn_ids, const PredicateCondition predicate_condition);
 
   // `.first` is the Column in the left input, `.second` is the column in the right input
-  ColumnIDPair column_ids;
+  CxlumnIDPair cxlumn_ids;
   PredicateCondition predicate_condition;
 };
 

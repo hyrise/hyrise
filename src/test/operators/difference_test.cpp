@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_cxlumn_expression.hpp"
 #include "operators/difference.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
@@ -45,8 +45,8 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
-  const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
-  const auto b = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
+  const auto a = PQPCxlumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
+  const auto b = PQPCxlumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
 
   auto projection1 = std::make_shared<Projection>(_table_wrapper_a, expression_vector(a, b));
   projection1->execute();

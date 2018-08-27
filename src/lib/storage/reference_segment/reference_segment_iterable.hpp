@@ -6,43 +6,43 @@
 #include <vector>
 
 #include "storage/column_iterables.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>> {
+class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<T>> {
  public:
-  explicit ReferenceColumnIterable(const ReferenceColumn& column) : _column{column} {}
+  explicit ReferenceSegmentIterable(const ReferenceSegment& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     const auto table = _column.referenced_table();
-    const auto column_id = _column.referenced_column_id();
+    const auto cxlumn_id = _column.referenced_cxlumn_id();
 
     const auto begin_it = _column.pos_list()->begin();
     const auto end_it = _column.pos_list()->end();
 
-    auto begin = Iterator{table, column_id, begin_it, begin_it};
-    auto end = Iterator{table, column_id, begin_it, end_it};
+    auto begin = Iterator{table, cxlumn_id, begin_it, begin_it};
+    auto end = Iterator{table, cxlumn_id, begin_it, end_it};
     functor(begin, end);
   }
 
   size_t _on_size() const { return _column.size(); }
 
  private:
-  const ReferenceColumn& _column;
+  const ReferenceSegment& _column;
 
  private:
-  class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
 
    public:
-    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
+    explicit Iterator(const std::shared_ptr<const Table> table, const CxlumnID cxlumn_id,
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _table{table},
-          _column_id{column_id},
+          _cxlumn_id{cxlumn_id},
           _cached_chunk_id{INVALID_CHUNK_ID},
           _cached_column{nullptr},
           _begin_pos_list_it{begin_pos_list_it},
@@ -65,7 +65,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       if (chunk_id != _cached_chunk_id) {
         _cached_chunk_id = chunk_id;
         const auto chunk = _table->get_chunk(chunk_id);
-        _cached_column = chunk->get_column(_column_id);
+        _cached_column = chunk->get_column(_cxlumn_id);
       }
 
       /**
@@ -76,7 +76,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     }
 
    private:
-    auto _value_from_any_column(const BaseColumn& column, const ChunkOffset& chunk_offset) const {
+    auto _value_from_any_column(const BaseSegment& column, const ChunkOffset& chunk_offset) const {
       const auto variant_value = column[chunk_offset];
 
       const auto chunk_offset_into_ref_column =
@@ -91,10 +91,10 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
    private:
     const std::shared_ptr<const Table> _table;
-    const ColumnID _column_id;
+    const CxlumnID _cxlumn_id;
 
     mutable ChunkID _cached_chunk_id;
-    mutable std::shared_ptr<const BaseColumn> _cached_column;
+    mutable std::shared_ptr<const BaseSegment> _cached_column;
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;

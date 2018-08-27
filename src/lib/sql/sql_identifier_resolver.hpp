@@ -27,7 +27,7 @@ class SQLIdentifierResolver final {
    * @{
    * Set/Update the column/table name of an expression
    */
-  void set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name);
+  void set_cxlumn_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& cxlumn_name);
   void set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name);
   /** @} */
 

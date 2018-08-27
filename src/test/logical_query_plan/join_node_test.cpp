@@ -23,11 +23,11 @@ class JoinNodeTest : public ::testing::Test {
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
 
-    _t_a_a = {_mock_node_a, ColumnID{0}};
-    _t_a_b = {_mock_node_a, ColumnID{1}};
-    _t_a_c = {_mock_node_a, ColumnID{2}};
-    _t_b_x = {_mock_node_b, ColumnID{0}};
-    _t_b_y = {_mock_node_b, ColumnID{1}};
+    _t_a_a = {_mock_node_a, CxlumnID{0}};
+    _t_a_b = {_mock_node_a, CxlumnID{1}};
+    _t_a_c = {_mock_node_a, CxlumnID{2}};
+    _t_b_x = {_mock_node_b, CxlumnID{0}};
+    _t_b_y = {_mock_node_b, CxlumnID{1}};
 
     _join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
     _join_node->set_left_input(_mock_node_a);

@@ -1,6 +1,6 @@
 #include "stored_table_node.hpp"
 
-#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_cxlumn_expression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -11,8 +11,8 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
 
 LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   const auto table = StorageManager::get().get_table(table_name);
-  const auto column_id = table->column_id_by_name(name);
-  return {shared_from_this(), column_id};
+  const auto cxlumn_id = table->cxlumn_id_by_name(name);
+  return {shared_from_this(), cxlumn_id};
 }
 
 void StoredTableNode::set_excluded_chunk_ids(const std::vector<ChunkID>& chunks) { _excluded_chunk_ids = chunks; }
@@ -27,10 +27,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
   if (!_expressions) {
     const auto table = StorageManager::get().get_table(table_name);
 
-    _expressions.emplace(table->column_count());
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      (*_expressions)[column_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), column_id});
+    _expressions.emplace(table->cxlumn_count());
+    for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+      (*_expressions)[cxlumn_id] =
+          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), cxlumn_id});
     }
   }
 
