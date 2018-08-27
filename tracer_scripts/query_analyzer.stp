@@ -3,6 +3,12 @@
 // between the SQL command entered and the single operator tasks, there are some probes storing the ids (*this*)
 // of the appropriate objects.
 
+// NOTE: We need to store some values in associative arrays. Those cannot be initialized dynamically, due to memory
+//       limitations Choosing a high threshold (`-DMAXMAPENTRIES`) may result a high memory allocation time at session
+//       startup. Script will crash if limit exceeded. Additionally, `-DMAXACTION` should be increased to at least
+//       1000000. An example command could be:
+// sudo stap tracer_scripts/query_analyzer.stp -DMAXMAPENTRIES=100000 -DMAXACTION=100000000 build/hyriseBenchmarkTPCH
+
 global pipeline_creation_time
 global parsing_time
 
