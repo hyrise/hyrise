@@ -8,7 +8,13 @@
 
 #include "utils/pausable_loop_thread.hpp"
 
-namespace boost { namespace container { namespace pmr { class memory_resource; }}}
+namespace boost {
+namespace container {
+namespace pmr {
+class memory_resource;
+}
+}  // namespace container
+}  // namespace boost
 
 namespace opossum {
 

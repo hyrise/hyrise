@@ -10,7 +10,7 @@ namespace opossum {
 class AliasOperatorTest : public ::testing::Test {
  public:
   void SetUp() override {
-    const auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_int.tbl", 1));
+    const auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_float.tbl", 1));
     table_wrapper->execute();
 
     auto column_ids = std::vector<ColumnID>({ColumnID{2}, ColumnID{0}, ColumnID{1}});
@@ -30,7 +30,7 @@ TEST_F(AliasOperatorTest, Name) {
 
 TEST_F(AliasOperatorTest, OutputColumnNames) {
   alias_operator->execute();
-  EXPECT_TABLE_EQ_ORDERED(alias_operator->get_output(), load_table("src/test/tables/int_int_int_aliased.tbl"));
+  EXPECT_TABLE_EQ_ORDERED(alias_operator->get_output(), load_table("src/test/tables/int_int_float_aliased.tbl"));
 }
 
 }  // namespace opossum

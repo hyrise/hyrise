@@ -25,6 +25,7 @@ set(
     expression/expression_evaluator_test.cpp
     logical_query_plan/alias_node_test.cpp
     lib/fixed_string_test.cpp
+    lib/null_value_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/delete_node_test.cpp
@@ -252,7 +253,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

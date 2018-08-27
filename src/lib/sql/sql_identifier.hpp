@@ -18,12 +18,3 @@ struct SQLIdentifier final {
 };
 
 }  // namespace opossum
-
-namespace std {
-
-template <>
-struct hash<opossum::SQLIdentifier> {
-  size_t operator()(const opossum::SQLIdentifier& sql_identifier) const;
-};
-
-}  // namespace std
