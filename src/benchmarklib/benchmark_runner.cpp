@@ -128,15 +128,32 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     const auto& name = named_query.first;
     _config.out << "- Benchmarking Query " << name << std::endl;
 
-    BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
-    while (state.keep_running()) {
-      _execute_query(named_query);
-    }
-
     QueryBenchmarkResult result;
-    result.num_iterations = state.num_iterations;
-    result.duration = state.benchmark_end - state.benchmark_begin;
-    result.iteration_durations = state.iteration_durations;
+    if (_config.parallel_execution) {
+      const auto benchmark_begin = std::chrono::high_resolution_clock::now();
+
+      auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+      for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
+        auto query_tasks = _schedule_query_execution(named_query);
+        tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
+      }
+      CurrentScheduler::wait_for_tasks(tasks);
+
+      const auto benchmark_end = std::chrono::high_resolution_clock::now();
+
+      result.num_iterations = _config.max_num_query_runs;
+      result.duration = benchmark_end - benchmark_begin;
+      result.iteration_durations = std::vector(_config.max_num_query_runs, Duration{});
+    } else {
+      BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
+      while (state.keep_running()) {
+        _execute_query(named_query);
+      }
+
+      result.num_iterations = state.num_iterations;
+      result.duration = state.benchmark_end - state.benchmark_begin;
+      result.iteration_durations = state.iteration_durations;
+    }
 
     _query_results_by_query_name.emplace(name, result);
   }
@@ -160,6 +177,33 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
       _query_plans.emplace(name, plans);
     }
   }
+}
+
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_execution(const NamedQuery& named_query) {
+  const auto& name = named_query.first;
+  const auto& sql = named_query.second;
+
+  auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
+
+  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
+  auto pipeline = pipeline_builder.create_pipeline();
+  auto tasks_per_statement = pipeline.get_tasks();
+
+  for (auto tasks : tasks_per_statement) {
+    CurrentScheduler::schedule_tasks(tasks);
+    query_tasks.insert(query_tasks.end(), tasks.begin(), tasks.end());
+  }
+
+  // If necessary, keep plans for visualization
+  if (_config.enable_visualization) {
+    const auto query_plans_iter = _query_plans.find(name);
+    if (query_plans_iter == _query_plans.end()) {
+      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+      _query_plans.emplace(name, plans);
+    }
+  }
+  return query_tasks;
 }
 
 void BenchmarkRunner::_create_report(std::ostream& stream) const {
