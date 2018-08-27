@@ -34,4 +34,4 @@
 - sql-parser (https://github.com/hyrise/sql-parser)
 - pgasus (https://github.com/kateyy/pgasus)
 - cpp-btree (https://github.com/algorithm-ninja/cpp-btree)
-- cqf (https://github.com/splatlab/cqf)
+- cqf (https://github.com/ArneMayer/cqf)
