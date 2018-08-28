@@ -1,7 +1,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "utils/string_functions.hpp"
+#include "utils/string_utils.hpp"
 
 namespace opossum {
 

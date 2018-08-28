@@ -515,8 +515,8 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/singleton.hpp
-    utils/string_functions.cpp
-    utils/string_functions.hpp
+    utils/string_utils.cpp
+    utils/string_utils.hpp
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
