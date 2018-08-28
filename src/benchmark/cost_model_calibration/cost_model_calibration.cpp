@@ -7,6 +7,7 @@
 #include "cost_model_feature_extractor.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_query_cache.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -49,7 +50,14 @@ void CostModelCalibration::calibrate() {
 
     for (const auto& query : queries) {
       std::cout << "Running " << query << std::endl;
+      SQLQueryCache<SQLQueryPlan>::get().clear();
+
       auto pipeline_builder = SQLPipelineBuilder{query};
+
+      if (i % 2 == 0) {
+          pipeline_builder.disable_mvcc();
+      }
+
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
 
@@ -147,6 +155,13 @@ void CostModelCalibration::_extract_features(const std::shared_ptr<const Abstrac
         if (reference_column && reference_column->referenced_table()->chunk_count() > ChunkID{0}) {
           auto underlying_column = reference_column->referenced_table()->get_chunk(ChunkID{0})->get_column(reference_column->referenced_column_id());
           auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(underlying_column);
+          if (encoded_scan_column) {
+            operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
+          } else {
+            operator_result["scan_column_encoding"] = EncodingType::Unencoded;
+          }
+        } else {
+          auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(scan_column);
           if (encoded_scan_column) {
             operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
           } else {
