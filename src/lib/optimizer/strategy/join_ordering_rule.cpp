@@ -17,16 +17,16 @@ std::string JoinOrderingRule::name() const {
 
 bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
-  
+
   const auto expected_column_order = root->column_expressions();
-  
-  auto result_lqp = _traverse(root->left_input());
+
+  auto result_lqp = _traverse_and_perform_join_ordering(root->left_input());
 
   // Join ordering might change the output column order, let's fix that
   if (!expressions_equal(expected_column_order, result_lqp->column_expressions())) {
     result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
-  
+
   root->set_left_input(result_lqp);
 
   return false;
