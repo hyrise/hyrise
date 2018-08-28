@@ -144,12 +144,19 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
   const auto available_cores = json_config.value("cores", default_config.available_cores);
-  const auto core_info = enable_scheduler ? std::string(" using " + std::string((available_cores == 0) ? "all available" : std::to_string(available_cores)) + " cores") : "";
-  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info << std::endl;
+  const auto core_info =
+      enable_scheduler
+          ? std::string(" using " +
+                        std::string((available_cores == 0) ? "all available" : std::to_string(available_cores)) +
+                        " cores")
+          : "";
+  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
+      << std::endl;
 
   const auto parallel_execution = json_config.value("parallel", default_config.parallel_execution);
   if (enable_scheduler) {
-    out << "- Queries are executed " + std::string(parallel_execution ? "in parallel" : "one after another") << std::endl;
+    out << "- Queries are executed " + std::string(parallel_execution ? "in parallel" : "one after another")
+        << std::endl;
   }
 
   // Determine benchmark and display it
@@ -195,9 +202,19 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
-  return BenchmarkConfig{
-      benchmark_mode, verbose,          chunk_size,       *encoding_config,     max_runs, timeout_duration,
-      use_mvcc,       output_file_path, enable_scheduler, available_cores, parallel_execution, enable_visualization, out};
+  return BenchmarkConfig{benchmark_mode,
+                         verbose,
+                         chunk_size,
+                         *encoding_config,
+                         max_runs,
+                         timeout_duration,
+                         use_mvcc,
+                         output_file_path,
+                         enable_scheduler,
+                         available_cores,
+                         parallel_execution,
+                         enable_visualization,
+                         out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
