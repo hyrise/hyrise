@@ -29,7 +29,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
-   * Generate table layout with enumerated cxlumn names (i.e., "col_1", "col_2", ...)
+   * Generate table layout with enumerated cxlumn names (i.e., "cxlumn_1", "cxlumn_2", ...)
    * Create a vector for each cxlumn.
    */
   TableCxlumnDefinitions cxlumn_definitions;
@@ -92,7 +92,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   // add cxlumn definitions and initialize each value vector
   TableCxlumnDefinitions cxlumn_definitions;
   for (size_t cxlumn = 1; cxlumn <= num_cxlumns; ++cxlumn) {
-    auto cxlumn_name = "col_" + std::to_string(cxlumn);
+    auto cxlumn_name = "cxlumn_" + std::to_string(cxlumn);
     cxlumn_definitions.emplace_back(cxlumn_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
   }
@@ -130,7 +130,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
     for (CxlumnID cxlumn_index{0}; cxlumn_index < num_cxlumns; ++cxlumn_index) {
       const auto& cxlumn_data_distribution = cxlumn_data_distributions[cxlumn_index];
 
-      // generate distribution from column configuration
+      // generate distribution from cxlumn configuration
       switch (cxlumn_data_distribution.distribution_type) {
         case DataDistributionType::Uniform: {
           auto uniform_dist = boost::math::uniform_distribution<double>{cxlumn_data_distribution.min_value,
@@ -172,7 +172,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         value_vectors[cxlumn_index][row_offset] = generate_value_by_distribution_type();
       }
 
-      // add values to column in chunk, reset value vector
+      // add values to segment, reset value vector
       segments.push_back(std::allocate_shared<ValueSegment<int>>(allocator_value_segment_int,
                                                                std::move(value_vectors[cxlumn_index]), allocator_int));
       value_vectors[cxlumn_index] = tbb::concurrent_vector<int>(chunk_size);

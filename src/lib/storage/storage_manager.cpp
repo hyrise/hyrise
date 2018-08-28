@@ -97,7 +97,7 @@ void StorageManager::print(std::ostream& out) const {
 
   for (auto const& table : _tables) {
     out << "==== table >> " << table.first << " <<";
-    out << " (" << table.second->cxlumn_count() << " columns, " << table.second->row_count() << " rows in "
+    out << " (" << table.second->cxlumn_count() << " cxlumns, " << table.second->row_count() << " rows in "
         << table.second->chunk_count() << " chunks)";
     out << std::endl << std::endl;
   }

@@ -59,7 +59,7 @@ class FixedStringVector {
   // Return a pointer to the underlying memory
   char* data();
 
-  // Return the number of entries in the column.
+  // Return the number of entries in the vector.
   size_t size() const;
 
   // Return the amount of allocated memory

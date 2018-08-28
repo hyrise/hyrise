@@ -30,7 +30,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     const auto base_segment = chunk->get_segment(cxlumn_id);
     const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(base_segment);
 
-    Assert(value_segment != nullptr, "All columns of the chunk need to be of type ValueSegment<T>");
+    Assert(value_segment != nullptr, "All segments of the chunk need to be of type ValueSegment<T>");
 
     if (spec.encoding_type == EncodingType::Unencoded) {
       // No need to encode, but we still want to have statistics for the now immutable value segment
@@ -99,7 +99,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const ChunkEncodingSpec& chunk_encoding_spec) {
   Assert(chunk_encoding_spec.size() == table->cxlumn_count(),
-         "Number of encoding specs must match table’s column count.");
+         "Number of encoding specs must match table’s cxlumn count.");
   const auto cxlumn_types = table->cxlumn_data_types();
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {

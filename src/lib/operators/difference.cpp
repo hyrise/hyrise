@@ -31,7 +31,7 @@ void Difference::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
 
 std::shared_ptr<const Table> Difference::_on_execute() {
   DebugAssert(input_table_left()->cxlumn_definitions() == input_table_right()->cxlumn_definitions(),
-              "Input tables must have same number of columns");
+              "Input tables must have same number of cxlumns");
 
   auto output = std::make_shared<Table>(input_table_left()->cxlumn_definitions(), TableType::References);
 
@@ -39,15 +39,15 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   auto right_input_row_set = std::unordered_set<std::string>(input_table_right()->row_count());
 
-  // Iterating over all chunks and for each chunk over all columns
+  // Iterating over all chunks and for each chunk over all segments
   for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
     auto chunk = input_table_right()->get_chunk(chunk_id);
-    // creating a temporary row representation with strings to be filled column wise
+    // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_right()->cxlumn_count(); cxlumn_id++) {
       const auto base_segment = chunk->get_segment(cxlumn_id);
 
-      // filling the row vector with all values from this column
+      // filling the row vector with all values from this segment
       auto row_string_buffer = std::stringstream{};
       for (ChunkOffset chunk_offset = 0; chunk_offset < base_segment->size(); chunk_offset++) {
         // Previously we called a virtual method of the BaseSegment interface here.
@@ -64,11 +64,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output
 
-  // Iterating over all chunks and for each chunk over all columns
+  // Iterating over all chunks and for each chunk over all segment
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
 
-    Segments output_columns;
+    Segments output_segments;
 
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
@@ -76,17 +76,17 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); cxlumn_id++) {
       const auto base_segment = in_chunk->get_segment(cxlumn_id);
       // temporary variables needed to create the reference segment
-      const auto referenced_column = std::dynamic_pointer_cast<const ReferenceSegment>(
+      const auto referenced_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
           input_table_left()->get_chunk(chunk_id)->get_segment(cxlumn_id));
       auto out_cxlumn_id = cxlumn_id;
       auto out_referenced_table = input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
 
-      if (referenced_column) {
-        // if the input column was a reference segment then the output column must reference the same values/objects
-        out_cxlumn_id = referenced_column->referenced_cxlumn_id();
-        out_referenced_table = referenced_column->referenced_table();
-        in_pos_list = referenced_column->pos_list();
+      if (referenced_segment) {
+        // if the input segment was a reference segment then the output segment must reference the same values/objects
+        out_cxlumn_id = referenced_segment->referenced_cxlumn_id();
+        out_referenced_table = referenced_segment->referenced_table();
+        in_pos_list = referenced_segment->pos_list();
       }
 
       // automatically creates the entry if it does not exist
@@ -98,7 +98,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
       // creating a ReferenceSegment for the output
       auto out_reference_segment = std::make_shared<ReferenceSegment>(out_referenced_table, out_cxlumn_id, pos_list_out);
-      output_columns.push_back(out_reference_segment);
+      output_segments.push_back(out_reference_segment);
     }
 
     // for all offsets check if the row can be added to the output
@@ -129,8 +129,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     }
 
     // Only add chunk if it would contain any tuples
-    if (!output_columns.empty() && output_columns[0]->size() > 0) {
-      output->append_chunk(output_columns);
+    if (!output_segments.empty() && output_segments[0]->size() > 0) {
+      output->append_chunk(output_segments);
     }
   }
 

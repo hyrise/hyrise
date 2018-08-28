@@ -37,12 +37,12 @@ std::shared_ptr<const Table> ShowCxlumns::_on_execute() {
   auto out_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);
-  Segments columns;
+  Segments segments;
 
   const auto& cxlumn_names = table->cxlumn_names();
   const auto vs_names = std::make_shared<ValueSegment<std::string>>(
       tbb::concurrent_vector<std::string>(cxlumn_names.begin(), cxlumn_names.end()));
-  columns.push_back(vs_names);
+  segments.push_back(vs_names);
 
   const auto& cxlumn_types = table->cxlumn_data_types();
 
@@ -52,14 +52,14 @@ std::shared_ptr<const Table> ShowCxlumns::_on_execute() {
   }
 
   const auto vs_types = std::make_shared<ValueSegment<std::string>>(std::move(data_types));
-  columns.push_back(vs_types);
+  segments.push_back(vs_types);
 
-  const auto& column_nullables = table->cxlumns_are_nullable();
+  const auto& cxlumn_nullables = table->cxlumns_are_nullable();
   const auto vs_nullables = std::make_shared<ValueSegment<int32_t>>(
-      tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
-  columns.push_back(vs_nullables);
+      tbb::concurrent_vector<int32_t>(cxlumn_nullables.begin(), cxlumn_nullables.end()));
+  segments.push_back(vs_nullables);
 
-  out_table->append_chunk(columns);
+  out_table->append_chunk(segments);
 
   return out_table;
 }

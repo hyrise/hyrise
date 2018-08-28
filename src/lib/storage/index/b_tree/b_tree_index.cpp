@@ -5,10 +5,10 @@
 
 namespace opossum {
 
-BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& index_columns)
-    : BaseIndex{get_index_type_of<BTreeIndex>()}, _index_column(index_columns[0]) {
-  Assert((index_columns.size() == 1), "BTreeIndex only works with a single column.");
-  _impl = make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_index_column->data_type(), _index_column);
+BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
+    : BaseIndex{get_index_type_of<BTreeIndex>()}, _indexed_segments(segments_to_index[0]) {
+  Assert((segments_to_index.size() == 1), "BTreeIndex only works with a single segment.");
+  _impl = make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_indexed_segments->data_type(), _indexed_segments);
 }
 
 uint64_t BTreeIndex::memory_consumption() const { return _impl->memory_consumption(); }
@@ -25,6 +25,6 @@ BTreeIndex::Iterator BTreeIndex::_cbegin() const { return _impl->cbegin(); }
 
 BTreeIndex::Iterator BTreeIndex::_cend() const { return _impl->cend(); }
 
-std::vector<std::shared_ptr<const BaseSegment>> BTreeIndex::_get_indexed_segments() const { return {_index_column}; }
+std::vector<std::shared_ptr<const BaseSegment>> BTreeIndex::_get_indexed_segments() const { return {_indexed_segments}; }
 
 }  // namespace opossum

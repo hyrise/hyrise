@@ -248,7 +248,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     }
   }
 
-  TableColumnEncodingMapping custom_encoding_mapping;
+  TableSegmentEncodingMapping custom_encoding_mapping;
   const auto has_custom_encoding = encoding_config_json.find("custom") != encoding_config_json.end();
 
   if (has_custom_encoding) {
@@ -284,7 +284,7 @@ EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec)
     : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
 
 EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
-                               TableColumnEncodingMapping encoding_mapping)
+                               TableSegmentEncodingMapping encoding_mapping)
     : default_encoding_spec{std::move(default_encoding_spec)},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}

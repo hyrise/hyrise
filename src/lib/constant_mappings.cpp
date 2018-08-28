@@ -96,7 +96,7 @@ const boost::bimap<TableType, std::string> table_type_to_string =
 
 const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string =
     make_bimap<JitExpressionType, std::string>({{JitExpressionType::Addition, "+"},
-                                                {JitExpressionType::Cxlumn, "<COLUMN>"},
+                                                {JitExpressionType::Cxlumn, "<CXLUMN>"},
                                                 {JitExpressionType::Subtraction, "-"},
                                                 {JitExpressionType::Multiplication, "*"},
                                                 {JitExpressionType::Division, "/"},

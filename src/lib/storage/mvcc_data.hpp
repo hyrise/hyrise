@@ -9,8 +9,7 @@
 namespace opossum {
 
 /**
- * Columns storing visibility information
- * for multiversion concurrency control
+ * Stores visibility information for multiversion concurrency control
  */
 struct MvccData {
   friend class Chunk;

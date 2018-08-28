@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   ChunkID chunk_id{0};
   for (size_t i = 0; i < num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
-    Segments output_columns;
+    Segments output_segments;
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
 
@@ -74,11 +74,11 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         }
       }
 
-      output_columns.push_back(std::make_shared<ReferenceSegment>(referenced_table, output_cxlumn_id, output_pos_list));
+      output_segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, output_cxlumn_id, output_pos_list));
     }
 
     i += output_chunk_row_count;
-    output_table->append_chunk(output_columns);
+    output_table->append_chunk(output_segments);
   }
 
   return output_table;

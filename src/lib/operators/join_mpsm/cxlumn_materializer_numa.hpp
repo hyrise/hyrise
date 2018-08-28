@@ -131,25 +131,25 @@ class CxlumnMaterializerNUMA {
   }
 
   /**
-   * Materialization works for all types of columns
+   * Materialization works for all types of segments
    */
-  template <typename ColumnType>
-  void _materialize_segment(const ColumnType& column, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
+  template <typename SegmentType>
+  void _materialize_segment(const SegmentType& segment, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
                            MaterializedNUMAPartition<T>& partition) {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
 
-    output->reserve(column.size());
+    output->reserve(segment.size());
 
-    auto iterable = create_iterable_from_segment<T>(column);
+    auto iterable = create_iterable_from_segment<T>(segment);
 
-    iterable.for_each([&](const auto& column_value) {
-      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-      if (column_value.is_null()) {
+    iterable.for_each([&](const auto& segment_value) {
+      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
+      if (segment_value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output->emplace_back(row_id, column_value.value());
+        output->emplace_back(row_id, segment_value.value());
       }
     });
 
@@ -157,26 +157,26 @@ class CxlumnMaterializerNUMA {
   }
 
   /**
-   * Specialization for dictionary columns
+   * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
                                                             std::unique_ptr<PosList>& null_rows_output,
                                                             MaterializedValueAllocator<T> alloc) {
     auto output = MaterializedSegment<T>{alloc};
-    output.reserve(column.size());
+    output.reserve(segment.size());
 
-    auto value_ids = column.attribute_vector();
-    auto dict = column.dictionary();
+    auto value_ids = segment.attribute_vector();
+    auto dict = segment.dictionary();
 
-    auto iterable = create_iterable_from_segment(column);
-    iterable.for_each([&](const auto& column_value) {
-      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-      if (column_value.is_null()) {
+    auto iterable = create_iterable_from_segment(segment);
+    iterable.for_each([&](const auto& segment_value) {
+      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
+      if (segment_value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, column_value.value());
+        output.emplace_back(row_id, segment_value.value());
       }
     });
 

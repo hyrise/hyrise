@@ -5,18 +5,18 @@
 
 namespace opossum {
 
-struct TableColumnDefinition final {
-  TableColumnDefinition() = default;
-  TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable = false);
+struct TableCxlumnDefinition final {
+  TableCxlumnDefinition() = default;
+  TableCxlumnDefinition(const std::string& name, const DataType data_type, const bool nullable = false);
 
-  bool operator==(const TableColumnDefinition& rhs) const;
+  bool operator==(const TableCxlumnDefinition& rhs) const;
 
   std::string name;
   DataType data_type{DataType::Int};
   bool nullable{false};
 };
 
-using TableCxlumnDefinitions = std::vector<TableColumnDefinition>;
+using TableCxlumnDefinitions = std::vector<TableCxlumnDefinition>;
 
 TableCxlumnDefinitions concatenated(const TableCxlumnDefinitions& lhs, const TableCxlumnDefinitions& rhs);
 

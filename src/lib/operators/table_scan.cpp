@@ -49,7 +49,7 @@ const AllParameterVariant& TableScan::right_parameter() const { return _right_pa
 const std::string TableScan::name() const { return "TableScan"; }
 
 const std::string TableScan::description(DescriptionMode description_mode) const {
-  std::string cxlumn_name = std::string("Col #") + std::to_string(_left_cxlumn_id);
+  std::string cxlumn_name = std::string("Cxlumn #") + std::to_string(_left_cxlumn_id);
 
   if (input_table_left()) cxlumn_name = input_table_left()->cxlumn_name(_left_cxlumn_id);
 
@@ -100,14 +100,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
       // The ChunkAccessCounter is reused to track accesses of the output chunk. Accesses of derived chunks are counted
       // towards the original chunk.
-      Segments out_columns;
+      Segments out_segments;
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
        * directly use the matches to construct the reference segments of the output. If it is a reference segment,
-       * we need to resolve the row IDs so that they reference the physical data columns (value, dictionary) instead,
+       * we need to resolve the row IDs so that they reference the physical data segments (value, dictionary) instead,
        * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
-       * between columns as much as possible. Position lists can be shared between two columns iff
+       * between segments as much as possible. Position lists can be shared between two segments iff
        * (a) they point to the same table and
        * (b) the reference segments of the input table point to the same positions in the same order
        *     (i.e. they share their position list).
@@ -118,10 +118,10 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
-          auto column_in = chunk_in->get_segment(cxlumn_id);
+          auto segment_in = chunk_in->get_segment(cxlumn_id);
 
-          auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(column_in);
-          DebugAssert(ref_segment_in != nullptr, "All columns should be of type ReferenceSegment.");
+          auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+          DebugAssert(ref_segment_in != nullptr, "All segments should be of type ReferenceSegment.");
 
           const auto pos_list_in = ref_segment_in->pos_list();
 
@@ -141,17 +141,17 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           }
 
           auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, cxlumn_id_out, filtered_pos_list);
-          out_columns.push_back(ref_segment_out);
+          out_segments.push_back(ref_segment_out);
         }
       } else {
         for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
           auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
-          out_columns.push_back(ref_segment_out);
+          out_segments.push_back(ref_segment_out);
         }
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      _output_table->append_chunk(out_columns, chunk_guard->get_allocator(), chunk_guard->access_counter());
+      _output_table->append_chunk(out_segments, chunk_guard->get_allocator(), chunk_guard->access_counter());
     });
 
     jobs.push_back(job_task);
@@ -168,7 +168,7 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 void TableScan::_init_scan() {
   if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
     const auto left_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
-    Assert((left_cxlumn_type == DataType::String), "LIKE operator only applicable on string columns.");
+    Assert((left_cxlumn_type == DataType::String), "LIKE operator only applicable on string cxlumns.");
 
     DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
 

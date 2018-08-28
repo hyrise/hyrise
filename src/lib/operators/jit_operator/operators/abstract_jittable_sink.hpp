@@ -10,7 +10,7 @@ namespace opossum {
  * AbstractJittableSink is the last jit operator in the operator chain.
  * It is responsible for transforming everything back into the data format the rest
  * of the query pipeline uses. It does this by:
- * 1) adding column definitions to the output table
+ * 1) adding cxlumn definitions to the output table
  * 2) storing the tuples in output chunks
  * 3) appending the output chunks to the output table
  */
@@ -18,7 +18,7 @@ class AbstractJittableSink : public AbstractJittable {
  public:
   virtual ~AbstractJittableSink() = default;
 
-  // This function is responsible to create the output table with appropriate column definitions.
+  // This function is responsible to create the output table with appropriate cxlumn definitions.
   virtual std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const = 0;
 
   // This function is called by the JitOperatorWrapper after all operators in the chain have been connected and just

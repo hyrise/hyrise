@@ -52,7 +52,7 @@ constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<IterableT>::v
  * called using many different iterators, which leads to a lot of code
  * being generated. This affects compile times. The AnySegmentIterator
  * alleviates the long compile times by erasing the iterators’ types and
- * thus reducing the number of instantiations to one (for each column type).
+ * thus reducing the number of instantiations to one (for each segment type).
  *
  * The iterators forwarded are of type AnySegmentIterator<T>. They wrap
  * any segment iterator with the cost of a virtual function call for each access.

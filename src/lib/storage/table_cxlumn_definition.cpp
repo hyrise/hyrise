@@ -2,10 +2,10 @@
 
 namespace opossum {
 
-TableColumnDefinition::TableColumnDefinition(const std::string& name, const DataType data_type, const bool nullable)
+TableCxlumnDefinition::TableCxlumnDefinition(const std::string& name, const DataType data_type, const bool nullable)
     : name(name), data_type(data_type), nullable(nullable) {}
 
-bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
+bool TableCxlumnDefinition::operator==(const TableCxlumnDefinition& rhs) const {
   return name == rhs.name && data_type == rhs.data_type && nullable == rhs.nullable;
 }
 

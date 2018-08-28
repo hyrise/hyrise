@@ -12,7 +12,7 @@
 
 namespace opossum {
 /**
-   * This operator joins two tables using one column of each table.
+   * This operator joins two tables using one cxlumn of each table.
    * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
    * finding the right values utilizing the index.
    *
@@ -58,7 +58,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_segments(Segments& output_columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                              std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;

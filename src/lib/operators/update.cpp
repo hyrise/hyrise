@@ -61,15 +61,15 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceSegments with built poslist.
-    Segments insert_table_columns;
+    Segments insert_table_segments;
     for (CxlumnID cxlumn_id{0}; cxlumn_id < table_to_update->cxlumn_count(); ++cxlumn_id) {
-      insert_table_columns.push_back(std::make_shared<ReferenceSegment>(table_to_update, cxlumn_id, pos_list));
+      insert_table_segments.push_back(std::make_shared<ReferenceSegment>(table_to_update, cxlumn_id, pos_list));
     }
 
-    insert_table->append_chunk(insert_table_columns);
+    insert_table->append_chunk(insert_table_segments);
   }
 
-  // 2. Replace the columns to update in insert_table with the updated data from input_table_right
+  // 2. Replace the cxlumns to update in insert_table with the updated data from input_table_right
   const auto left_chunk = input_table_left()->get_chunk(ChunkID{0});
   for (ChunkID chunk_id{0}; chunk_id < insert_table->chunk_count(); ++chunk_id) {
     auto insert_chunk = insert_table->get_chunk(chunk_id);
@@ -110,7 +110,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 
 /**
  * input_table_left must be a table with at least one chunk, containing at least one ReferenceSegment
- * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
+ * that all reference the table specified by table_to_update_name. The cxlumn count and types in input_table_left
  * must match the count and types in input_table_right.
  */
 bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
@@ -127,8 +127,8 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk->references_exactly_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(CxlumnID{0}));
-    if (table_to_update != first_column->referenced_table()) return false;
+    const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(CxlumnID{0}));
+    if (table_to_update != first_segment->referenced_table()) return false;
   }
 
   return true;

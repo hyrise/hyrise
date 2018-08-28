@@ -50,8 +50,8 @@ void SQLQueryPlanVisualizer::_build_subtree(
 
   // Visualize subselects
   if (const auto projection = std::dynamic_pointer_cast<const Projection>(op)) {
-    for (const auto& column_expression : projection->expressions) {
-      visit_expression(column_expression, [&](const auto& sub_expression) {
+    for (const auto& cxlumn_expression : projection->expressions) {
+      visit_expression(cxlumn_expression, [&](const auto& sub_expression) {
         const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
         if (!pqp_select_expression) return ExpressionVisitation::VisitArguments;
 

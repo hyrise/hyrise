@@ -12,7 +12,7 @@ namespace opossum {
 AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& input,
                              const std::vector<CxlumnID>& cxlumn_ids, const std::vector<std::string>& aliases)
     : AbstractReadOnlyOperator(OperatorType::Alias, input, nullptr), _cxlumn_ids(cxlumn_ids), _aliases(aliases) {
-  Assert(_cxlumn_ids.size() == _aliases.size(), "Expected as many aliases as columns");
+  Assert(_cxlumn_ids.size() == _aliases.size(), "Expected as many aliases as cxlumns");
 }
 
 const std::string AliasOperator::name() const { return "Alias"; }
@@ -35,9 +35,9 @@ void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, All
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
   /**
-   * Generate the new TableCxlumnDefinitions, that is, setting the new names for the columns
+   * Generate the new TableCxlumnDefinitions, that is, setting the new names for the cxlumns
    */
-  auto output_cxlumn_definitions = std::vector<TableColumnDefinition>{};
+  auto output_cxlumn_definitions = std::vector<TableCxlumnDefinition>{};
   output_cxlumn_definitions.reserve(input_table_left()->cxlumn_count());
 
   for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
@@ -48,7 +48,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   }
 
   /**
-   * Generate the output table, forwarding columns from the input chunks and ordering them according to _cxlumn_ids
+   * Generate the output table, forwarding segments from the input chunks and ordering them according to _cxlumn_ids
    */
   const auto output_table =
       std::make_shared<Table>(output_cxlumn_definitions, input_table_left()->type(),
@@ -57,14 +57,14 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    auto output_columns = Segments{};
-    output_columns.reserve(input_table_left()->cxlumn_count());
+    auto output_segments = Segments{};
+    output_segments.reserve(input_table_left()->cxlumn_count());
 
     for (const auto& cxlumn_id : _cxlumn_ids) {
-      output_columns.emplace_back(input_chunk->get_segment(cxlumn_id));
+      output_segments.emplace_back(input_chunk->get_segment(cxlumn_id));
     }
 
-    output_table->append_chunk(output_columns, input_chunk->get_allocator(), input_chunk->access_counter());
+    output_table->append_chunk(output_segments, input_chunk->get_allocator(), input_chunk->access_counter());
   }
 
   return output_table;

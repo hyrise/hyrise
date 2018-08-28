@@ -19,8 +19,8 @@ namespace opossum {
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _indexed_segment(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
-  Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary columns for now");
-  Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single column");
+  Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary segments for now");
+  Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single segment");
 
   // For each value ID in the attribute vector, create a pair consisting of a BinaryComparable of
   // this value ID and its ChunkOffset (needed for bulk-inserting).
@@ -63,7 +63,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offset
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
-  DebugAssert(!(values.empty()), "Index on empty column is not defined");
+  DebugAssert(!(values.empty()), "Index on empty segment is not defined");
   _chunk_offsets.reserve(values.size());
   auto begin = _chunk_offsets.cbegin();
   return _bulk_insert(values, static_cast<size_t>(0u), begin);

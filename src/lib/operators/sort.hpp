@@ -15,9 +15,9 @@
 namespace opossum {
 
 /**
- * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
+ * Operator to sort a table by a single cxlumn. This implements a stable sort, i.e., rows that share the same value will
  * maintain their relative order.
- * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+ * Multi-cxlumn sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
@@ -41,9 +41,9 @@ class Sort : public AbstractReadOnlyOperator {
   // The operator is separated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
   // task during the Sort process, as described later on.
-  template <typename SortColumnType>
+  template <typename SortCxlumnType>
   class SortImpl;
-  template <typename SortColumnType>
+  template <typename SortCxlumnType>
   class SortImplMaterializeOutput;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;

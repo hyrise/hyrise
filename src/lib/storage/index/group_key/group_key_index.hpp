@@ -17,12 +17,12 @@ class GroupKeyIndexTest;
 
 /**
  *
- * The GroupKeyIndex works on a single dictionary compressed column.
+ * The GroupKeyIndex works on a single dictionary compressed segment.
  * It uses two structures, one being a postings list containing record positions (ie ChunkOffsets)
  * in the attribute vector. The other structure is an index offset, mapping value-ids to offsets
  * in the postings list.
  *
- * An example structure along with the corresponding dictionary column might look like this:
+ * An example structure along with the corresponding dictionary segment might look like this:
  *    +---+-----------+------------+---------+----------------+
  *    |(i)| Attribute | Dictionary |  Index  | Index Postings |
  *    |   |  Vector   |            | Offsets |                |
@@ -51,7 +51,7 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex(GroupKeyIndex&&) = default;
   GroupKeyIndex& operator=(GroupKeyIndex&&) = default;
 
-  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& index_columns);
+  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;

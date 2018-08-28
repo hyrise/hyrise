@@ -17,7 +17,7 @@ class BTreeIndex : public BaseIndex {
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   BTreeIndex() = delete;
-  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& index_columns);
+  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
   virtual uint64_t memory_consumption() const;
 
@@ -28,7 +28,7 @@ class BTreeIndex : public BaseIndex {
   Iterator _cend() const override;
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
 
-  std::shared_ptr<const BaseSegment> _index_column;
+  std::shared_ptr<const BaseSegment> _indexed_segments;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 

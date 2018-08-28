@@ -34,7 +34,7 @@ class BaseSegment : private Noncopyable {
   // Copies a segment using a new allocator. This is useful for placing the segment on a new NUMA node.
   virtual std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 
-  // Estimate how much memory the Column is using. Might be inaccurate, especially if the segment contains non-primitive
+  // Estimate how much memory the segment is using. Might be inaccurate, especially if the segment contains non-primitive
   // data, such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
 

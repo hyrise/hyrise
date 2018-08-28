@@ -27,8 +27,8 @@ const CxlumnIDPair& AbstractJoinOperator::cxlumn_ids() const { return _cxlumn_id
 PredicateCondition AbstractJoinOperator::predicate_condition() const { return _predicate_condition; }
 
 const std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
-  std::string cxlumn_name_left = std::string("Col #") + std::to_string(_cxlumn_ids.first);
-  std::string cxlumn_name_right = std::string("Col #") + std::to_string(_cxlumn_ids.second);
+  std::string cxlumn_name_left = std::string("Cxlumn #") + std::to_string(_cxlumn_ids.first);
+  std::string cxlumn_name_right = std::string("Cxlumn #") + std::to_string(_cxlumn_ids.second);
 
   if (input_table_left()) cxlumn_name_left = input_table_left()->cxlumn_name(_cxlumn_ids.first);
   if (input_table_right()) cxlumn_name_right = input_table_right()->cxlumn_name(_cxlumn_ids.second);

@@ -49,8 +49,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time from twelve minutes to less than three.
 
   static void __attribute__((noinline))
-  _join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& column_left,
-                            const std::shared_ptr<const BaseSegment>& column_right, const ChunkID chunk_id_left,
+  _join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& segment_left,
+                            const std::shared_ptr<const BaseSegment>& segment_right, const ChunkID chunk_id_left,
                             const ChunkID chunk_id_right, JoinParams& params);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
@@ -63,7 +63,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(Segments& columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_chunks(Segments& segments, const std::shared_ptr<const Table>& input_table,
                             const std::shared_ptr<PosList>& pos_list);
 
   void _on_cleanup() override;

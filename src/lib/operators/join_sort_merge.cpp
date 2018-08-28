@@ -24,7 +24,7 @@ namespace opossum {
 **/
 
 /**
-* The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
+* The sort merge join performs a join on two input tables on specific join cxlumns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
 * -> The input tables are materialized and clustered to a specified amount of clusters.
 *    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
@@ -58,10 +58,10 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
 void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
-  // Check column types
+  // Check cxlumn types
   const auto& left_cxlumn_type = input_table_left()->cxlumn_data_type(_cxlumn_ids.first);
   DebugAssert(left_cxlumn_type == input_table_right()->cxlumn_data_type(_cxlumn_ids.second),
-              "Left and right column types do not match. The sort merge join requires matching column types");
+              "Left and right cxlumn types do not match. The sort merge join requires matching cxlumn types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
@@ -96,10 +96,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   JoinSortMerge& _sort_merge_join;
 
   // Contains the materialized sorted input tables
-  std::unique_ptr<MaterializedColumnList<T>> _sorted_left_table;
-  std::unique_ptr<MaterializedColumnList<T>> _sorted_right_table;
+  std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
+  std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
-  // Contains the null value row ids if a join column is an outer join column
+  // Contains the null value row ids if a join cxlumn is an outer join cxlumn
   std::unique_ptr<PosList> _null_rows_left;
   std::unique_ptr<PosList> _null_rows_right;
 
@@ -147,7 +147,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Executes the given action for every row id of the table in this range.
     template <typename F>
-    void for_every_row_id(std::unique_ptr<MaterializedColumnList<T>>& table, F action) {
+    void for_every_row_id(std::unique_ptr<MaterializedSegmentList<T>>& table, F action) {
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
         size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
@@ -174,7 +174,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
-  static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
+  static TablePosition _end_of_table(std::unique_ptr<MaterializedSegmentList<T>>& table) {
     DebugAssert(!table->empty(), "table has no chunks");
     auto last_cluster = table->size() - 1;
     return TablePosition(last_cluster, (*table)[last_cluster]->size());
@@ -284,7 +284,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedColumn<T>> values) {
+  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -367,7 +367,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Determines the smallest value in a sorted materialized table.
   **/
-  T& _table_min_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
+  T& _table_min_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
     DebugAssert(
         _op != PredicateCondition::Equals,
         "Complete table order is required for _table_min_value which is only " + "available in the non-equi case");
@@ -385,7 +385,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Determines the largest value in a sorted materialized table.
   **/
-  T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
+  T& _table_max_value(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table) {
     DebugAssert(_op != PredicateCondition::Equals,
                 "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
     DebugAssert(!sorted_table->empty(), "Sorted table is empty");
@@ -404,7 +404,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Returns the TablePosition of this element and whether a satisfying element has been found.
   **/
   template <typename Function>
-  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedColumnList<T>>& sorted_table,
+  std::optional<TablePosition> _first_value_that_satisfies(std::unique_ptr<MaterializedSegmentList<T>>& sorted_table,
                                                            Function condition) {
     for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
       auto partition = (*sorted_table)[partition_id];
@@ -426,7 +426,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   template <typename Function>
   std::optional<TablePosition> _first_value_that_satisfies_reverse(
-      std::unique_ptr<MaterializedColumnList<T>>& sorted_table, Function condition) {
+      std::unique_ptr<MaterializedSegmentList<T>>& sorted_table, Function condition) {
     for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
       auto partition = (*sorted_table)[partition_id];
       if (!partition->empty() && condition((*partition)[0].value)) {
@@ -579,15 +579,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Adds the columns from an input table to the output table
+  * Adds the segments from an input table to the output table
   **/
-  void _add_output_cxlumns(Segments& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_segments(Segments& output_segments, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto cxlumn_count = input_table->cxlumn_count();
     for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
-      // Add the column data (in the form of a poslist)
+      // Add the segment data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
-        // Create a pos_list referencing the original column instead of the reference segment
+        // Create a pos_list referencing the original segment instead of the reference segment
         auto new_pos_list = _dereference_pos_list(input_table, cxlumn_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
@@ -596,18 +596,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
           auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
                                                                   ref_segment->referenced_cxlumn_id(), new_pos_list);
-          output_columns.push_back(new_ref_segment);
+          output_segments.push_back(new_ref_segment);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
           // it.
           const auto dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
-          output_columns.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
+          output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
         }
       } else {
         auto new_ref_segment = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
-        output_columns.push_back(new_ref_segment);
+        output_segments.push_back(new_ref_segment);
       }
     }
   }
@@ -618,12 +618,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, CxlumnID cxlumn_id,
                                                  const std::shared_ptr<const PosList>& pos_list) {
-    // Get all the input pos lists so that we only have to pointer cast the columns once
+    // Get all the input pos lists so that we only have to pointer cast the segments once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto b_column = input_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
-      auto r_column = std::dynamic_pointer_cast<const ReferenceSegment>(b_column);
-      input_pos_lists.push_back(r_column->pos_list());
+      auto base_segment = input_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
+      auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
+      input_pos_lists.push_back(reference_segment->pos_list());
     }
 
     // Get the row ids that are referenced
@@ -664,7 +664,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
 
-    // Add the outer join rows which had a null value in their join column
+    // Add the outer join rows which had a null value in their join cxlumn
     if (include_null_left) {
       for (auto row_id_left : *_null_rows_left) {
         output_left->push_back(row_id_left);
@@ -678,17 +678,17 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    // Add the columns from both input tables to the output
-    Segments output_columns;
-    _add_output_cxlumns(output_columns, _sort_merge_join.input_table_left(), output_left);
-    _add_output_cxlumns(output_columns, _sort_merge_join.input_table_right(), output_right);
+    // Add the segments from both input tables to the output
+    Segments output_segments;
+    _add_output_segments(output_segments, _sort_merge_join.input_table_left(), output_left);
+    _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
     auto output_cxlumn_definitions = concatenated(_sort_merge_join.input_table_left()->cxlumn_definitions(),
                                                   _sort_merge_join.input_table_right()->cxlumn_definitions());
     auto output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
 
-    output_table->append_chunk(output_columns);
+    output_table->append_chunk(output_segments);
 
     return output_table;
   }

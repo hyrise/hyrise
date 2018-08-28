@@ -35,7 +35,7 @@ enum class ExpressionType {
 /**
  * AbstractExpression is the self-contained data structure describing Expressions in Hyrise.
  *
- * Expressions in Hyrise are everything down from Literals and Columns, over Arithmetics (a + b, ...),
+ * Expressions in Hyrise are everything down from Literals and Cxlumns, over Arithmetics (a + b, ...),
  * Logicals (a AND b), up to Lists (`('a', 'b')`) and Subselects. Check out the classes derived from AbstractExpression
  * for all available types.
  *
@@ -55,15 +55,15 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   bool operator!=(const AbstractExpression& other) const;
 
   /**
-   * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
-   * temporary columns with their result in them
+   * Certain expression types (Parameters, Literals, and Cxlumns) don't require computation and therefore don't require
+   * temporary cxlumns with their result in them
    */
   virtual bool requires_computation() const;
 
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
   /**
-   * @return a human readable string representing the Expression that can be used as a column name
+   * @return a human readable string representing the Expression that can be used as a cxlumn name
    */
   virtual std::string as_cxlumn_name() const = 0;
 

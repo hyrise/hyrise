@@ -18,7 +18,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string CxlumnPruningRule::name() const { return "Column Pruning Rule"; }
+std::string CxlumnPruningRule::name() const { return "Cxlumn Pruning Rule"; }
 
 bool CxlumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the cxlumns that are used in expressions somewhere in the LQP.

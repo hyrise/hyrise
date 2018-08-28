@@ -81,7 +81,7 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
     if (expression_ptr->type != ExpressionType::LQPCxlumn) return ExpressionVisitation::VisitArguments;
 
     const auto lqp_cxlumn_expression_ptr = std::dynamic_pointer_cast<LQPCxlumnExpression>(expression_ptr);
-    Assert(lqp_cxlumn_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
+    Assert(lqp_cxlumn_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP CxlumnExpression");
 
     expression_ptr = expression_adapt_to_different_lqp(*lqp_cxlumn_expression_ptr, node_mapping);
 

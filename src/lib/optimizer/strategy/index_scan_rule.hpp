@@ -19,7 +19,7 @@ class PredicateNode;
  * ScanType of the PredicateNode is set to IndexScan.
  *
  * Note:
- * For now this rule is only applicable to single-column indexes. Multi-column predicates (i.e. WHERE a < b) are also
+ * For now this rule is only applicable to single-cxlumn indexes. Multi-cxlumn predicates (i.e. WHERE a < b) are also
  * not supported. We also assume that if chunks have an index, all of them are of the same type, we do not mix GroupKey
  * and ART indexes. In addition, chains of IndexScans are not possible since an IndexScan's input must be a GetTable.
  * Currently, only GroupKeyIndexes are supported.
@@ -33,7 +33,7 @@ class IndexScanRule : public AbstractRule {
  protected:
   bool _is_index_scan_applicable(const IndexInfo& index_info,
                                  const std::shared_ptr<PredicateNode>& predicate_node) const;
-  inline bool _is_single_column_index(const IndexInfo& index_info) const;
+  inline bool _is_single_cxlumn_index(const IndexInfo& index_info) const;
 };
 
 }  // namespace opossum

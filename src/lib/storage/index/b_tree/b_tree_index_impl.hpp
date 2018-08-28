@@ -48,7 +48,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
  public:
   BTreeIndexImpl() = delete;
   ~BTreeIndexImpl() = default;
-  explicit BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& index_column);
+  explicit BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index);
 
   BTreeIndexImpl(const BTreeIndexImpl&) = delete;
   BTreeIndexImpl& operator=(const BTreeIndexImpl&) = delete;

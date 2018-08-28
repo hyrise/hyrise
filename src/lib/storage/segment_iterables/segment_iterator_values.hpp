@@ -31,7 +31,7 @@ class AbstractSegmentIteratorValue {
    * @brief Returns the chunk offset of the current value.
    *
    * The chunk offset can point either into a reference segment,
-   * if returned by a point-access iterator, or into an actual data column.
+   * if returned by a point-access iterator, or into an actual data segment.
    */
   virtual const ChunkOffset& chunk_offset() const = 0;
 };
@@ -62,7 +62,7 @@ class SegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
 /**
  * @brief Segment iterator value which is never null.
  *
- * Used when an underlying column (or data structure) cannot be null.
+ * Used when an underlying segment (or data structure) cannot be null.
  */
 template <typename T>
 class NonNullSegmentIteratorValue : public AbstractSegmentIteratorValue<T> {

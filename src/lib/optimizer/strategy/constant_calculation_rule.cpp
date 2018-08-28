@@ -24,7 +24,7 @@ std::string ConstantCalculationRule::name() const { return "Constant Calculation
 
 bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
-  // `MIN(2-1)`, since `2-1` is a column.
+  // `MIN(2-1)`, since `2-1` is a cxlumn.
   if (node->type == LQPNodeType::Aggregate) return _apply_to_inputs(node);
 
   for (auto& expression : node->node_expressions()) {

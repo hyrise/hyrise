@@ -53,7 +53,7 @@ const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset)
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
 
-  // Column supports null values and value is null
+  // Segment supports null values and value is null
   if (is_nullable() && _null_values->at(chunk_offset)) {
     return NULL_VALUE;
   }
@@ -70,7 +70,7 @@ template <typename T>
 const T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of column type because it is null.");
+  Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of segment type because it is null.");
   return _values.at(chunk_offset);
 }
 

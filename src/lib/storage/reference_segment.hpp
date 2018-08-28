@@ -15,11 +15,11 @@
 
 namespace opossum {
 
-// ReferenceSegment is a specific column type that stores all its values as position list of a referenced column
+// ReferenceSegment is a specific segment type that stores all its values as position list of a referenced segment
 class ReferenceSegment : public BaseSegment {
  public:
   // creates a reference segment
-  // the parameters specify the positions and the referenced column
+  // the parameters specify the positions and the referenced cxlumn
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const CxlumnID referenced_cxlumn_id,
                   const std::shared_ptr<const PosList>& pos);
 
@@ -45,7 +45,7 @@ class ReferenceSegment : public BaseSegment {
 
   const CxlumnID _referenced_cxlumn_id;
 
-  // The position list can be shared amongst multiple columns
+  // The position list can be shared amongst multiple segments
   const std::shared_ptr<const PosList> _pos_list;
 };
 

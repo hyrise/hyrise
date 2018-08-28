@@ -13,7 +13,7 @@ class BaseValueSegment : public BaseSegment {
  public:
   using BaseSegment::BaseSegment;
 
-  // returns true if column supports null values
+  // returns true if segment supports null values
   virtual bool is_nullable() const = 0;
 
   /**

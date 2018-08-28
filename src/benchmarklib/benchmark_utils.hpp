@@ -27,8 +27,8 @@ using NamedQueries = std::vector<NamedQuery>;
 
 using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec>;
 
-// Map<TABLE_NAME, Map<cxlumn_name, ColumnEncoding>>
-using TableColumnEncodingMapping = std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
+// Map<TABLE_NAME, Map<cxlumn_name, SegmentEncoding>>
+using TableSegmentEncodingMapping = std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -70,14 +70,14 @@ struct BenchmarkState {
 struct EncodingConfig {
   EncodingConfig();
   EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
-                 TableColumnEncodingMapping encoding_mapping);
+                 TableSegmentEncodingMapping encoding_mapping);
   explicit EncodingConfig(SegmentEncodingSpec default_encoding_spec);
 
   static EncodingConfig unencoded();
 
   const SegmentEncodingSpec default_encoding_spec;
   const DataTypeEncodingMapping type_encoding_mapping;
-  const TableColumnEncodingMapping custom_encoding_mapping;
+  const TableSegmentEncodingMapping custom_encoding_mapping;
 
   static SegmentEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
                                                        const std::string& compression_str);

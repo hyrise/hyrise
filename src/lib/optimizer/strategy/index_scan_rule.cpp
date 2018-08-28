@@ -25,7 +25,7 @@ namespace opossum {
 constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 
 // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan.
-// The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
+// The number is taken from: Fast Lookups for In-Memory Cxlumn Stores: Group-Key Indices, Lookup and Maintenance.
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
@@ -53,7 +53,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_is_single_column_index(index_info)) return false;
+  if (!_is_single_cxlumn_index(index_info)) return false;
 
   if (index_info.type != SegmentIndexType::GroupKey) return false;
 
@@ -63,7 +63,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
-  // Currently, we do not support two-column predicates
+  // Currently, we do not support two-cxlumn predicates
   if (is_cxlumn_id(operator_predicate.value)) return false;
 
   if (index_info.cxlumn_ids[0] != operator_predicate.cxlumn_id) return false;
@@ -78,7 +78,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
-inline bool IndexScanRule::_is_single_column_index(const IndexInfo& index_info) const {
+inline bool IndexScanRule::_is_single_cxlumn_index(const IndexInfo& index_info) const {
   return index_info.cxlumn_ids.size() == 1;
 }
 

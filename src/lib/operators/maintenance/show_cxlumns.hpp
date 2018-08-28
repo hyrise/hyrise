@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-// maintenance operator to get column information for a table
+// maintenance operator to get cxlumn information for a table
 class ShowCxlumns : public AbstractReadOnlyOperator {
  public:
   explicit ShowCxlumns(const std::string& table_name);

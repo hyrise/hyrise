@@ -50,7 +50,7 @@ class StorageManager : private Noncopyable {
   // returns a list of all view names
   std::vector<std::string> view_names() const;
 
-  // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
+  // prints information about all tables in the storage manager (name, #cxlumns, #rows, #chunks)
   void print(std::ostream& out = std::cout) const;
 
   // deletes the entire StorageManager and creates a new one, used especially in tests

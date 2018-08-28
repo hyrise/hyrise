@@ -41,14 +41,14 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   CsvMeta meta{};
   meta.chunk_size = table->max_chunk_size();
 
-  // Column Types
+  // Cxlumn Types
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    CxlumnMeta column_meta;
-    column_meta.name = table->cxlumn_name(cxlumn_id);
-    column_meta.type = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
-    column_meta.nullable = table->cxlumn_is_nullable(cxlumn_id);
+    CxlumnMeta cxlumn_meta;
+    cxlumn_meta.name = table->cxlumn_name(cxlumn_id);
+    cxlumn_meta.type = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
+    cxlumn_meta.nullable = table->cxlumn_is_nullable(cxlumn_id);
 
-    meta.cxlumns.push_back(column_meta);
+    meta.cxlumns.push_back(cxlumn_meta);
   }
 
   nlohmann::json meta_json = meta;
@@ -61,11 +61,11 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   /**
    * A naively exported csv file is a materialized file in row format.
    * This offers some advantages, but also disadvantages.
-   * The advantages are that it is very straight forward to implement for any column type
+   * The advantages are that it is very straight forward to implement for any segment type
    * as it does not care about representation of values. Also, probably, the main reason for this,
    * it makes is very easy to load this data into a different database.
    * The disadvantage is that it can be quite slow if the data has been compressed before.
-   * Also, it does not involve the column-oriented style used in OpossumDB.
+   * Also, it does not involve the cxlumn-oriented style used in OpossumDB.
    */
 
   // Open file for writing
@@ -74,9 +74,9 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   /**
    * Multiple rows containing the values of each respective row are written.
    * Therefore we first iterate through the chunks, then through the rows
-   * in the chunks and afterwards through the columns of the chunks.
+   * in the chunks and afterwards through the segments of the chunks.
    *
-   * This is a lot of iterating, but to convert a column-based table to
+   * This is a lot of iterating, but to convert a cxlumn-based table to
    * a row-based representation takes some effort.
    */
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -84,11 +84,11 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
       for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-        const auto column = chunk->get_segment(cxlumn_id);
+        const auto segment = chunk->get_segment(cxlumn_id);
 
         // The previous implementation did a double dispatch (at least two virtual method calls)
         // So the subscript operator cannot be much slower.
-        const auto value = (*column)[chunk_offset];
+        const auto value = (*segment)[chunk_offset];
         writer.write(value);
       }
 

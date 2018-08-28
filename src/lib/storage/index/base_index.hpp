@@ -16,9 +16,9 @@ class BaseSegment;
  * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indices.
- * I.e. the index is sorted based on the column order. To check whether a key is less than another
- * key, the comparison is performed for the first column. If and only if they are equal, a check is
- * executed for the part of the next column. If needed, this step is repeated for all column
+ * I.e. the index is sorted based on the cxlumn order. To check whether a key is less than another
+ * key, the comparison is performed for the first cxlumn. If and only if they are equal, a check is
+ * executed for the part of the next cxlumn. If needed, this step is repeated for all cxlumn
  * parts of both keys.
  * Since all indices have to support range queries, we chose to use iterators as means to get all
  * values that are requested from an index.
@@ -39,8 +39,8 @@ class BaseIndex : private Noncopyable {
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   /**
-   * Creates an index on all given columns. Since all indices are composite indices the order of
-   * the provided columns matters. Creating two indices with the same columns, but in different orders
+   * Creates an index on all given segments. Since all indices are composite indices the order of
+   * the provided segments matters. Creating two indices with the same segments, but in different orders
    * leads to very different indices.
    */
 
@@ -51,22 +51,22 @@ class BaseIndex : private Noncopyable {
   virtual ~BaseIndex() = default;
 
   /**
-   * Checks whether the given columns are covered by the index. This is the case when the order of the given columns
-   * and the columns of the index match, and the given columns are either exactly or a subset of the index columns.
+   * Checks whether the given segments are covered by the index. This is the case when the order of the given cxlumns
+   * and the cxlumns of the index match, and the given segments are either exactly or a subset of the indexed segments.
    *
    * For example:
-   * We have an index on columns DAB.
-   * The index is considered to be applicable for columns D, DA and DAB.
-   * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
-   * @return true if the given columns are covered by the index.
+   * We have an index on cxlumns DAB.
+   * The index is considered to be applicable for cxlumns D, DA and DAB.
+   * The index is NOT considered to be applicable for cxlumns A, DABC, BAD etc.
+   * @return true if the given cxlumns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& columns) const;
+  bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
-   * The number of given values has to be less or equal to number of indexed columns. Additionally
-   * the order of values and columns has to match. If less values are provided the search is performed
-   * as if all entries of the table are truncated to the columns, that got reference values.
+   * The number of given values has to be less or equal to number of indexed segments. Additionally
+   * the order of values and segments has to match. If less values are provided the search is performed
+   * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _lower_bound() of the most derived class.
    * See also upper_bound()
@@ -77,9 +77,9 @@ class BaseIndex : private Noncopyable {
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
-   * The number of given values has to be less or equal to number of indexed columns. Additionally
-   * the order of values and columns has to match. If less values are provided the search is performed
-   * as if all entries of the table are truncated to the columns, that got reference values.
+   * The number of given values has to be less or equal to number of indexed segments. Additionally
+   * the order of values and segments has to match. If less values are provided the search is performed
+   * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _upper_bound() of the most derived class.
    * See also lower_bound()

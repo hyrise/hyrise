@@ -49,10 +49,10 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
 }
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
-  // Check column types
+  // Check cxlumn types
   const auto& left_cxlumn_type = input_table_left()->cxlumn_data_type(_cxlumn_ids.first);
   DebugAssert(left_cxlumn_type == input_table_right()->cxlumn_data_type(_cxlumn_ids.second),
-              "Left and right column types do not match. The mpsm join requires matching column types");
+              "Left and right cxlumn types do not match. The mpsm join requires matching cxlumn types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
@@ -99,7 +99,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<MaterializedNUMAPartitionList<T>> _sorted_left_table;
   std::unique_ptr<MaterializedNUMAPartitionList<T>> _sorted_right_table;
 
-  // Contains the null value row ids if a join column is an outer join column
+  // Contains the null value row ids if a join cxlumn is an outer join cxlumn
   std::unique_ptr<PosList> _null_rows_left;
   std::unique_ptr<PosList> _null_rows_right;
 
@@ -420,15 +420,15 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Adds the columns from an input table to the output table
+  * Adds the cxlumns from an input table to the output table
   **/
-  void _add_output_cxlumns(Segments& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_cxlumns(Segments& output_segments, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto cxlumn_count = input_table->cxlumn_count();
     for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
-      // Add the column data (in the form of a poslist)
+      // Add the segment data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
-        // Create a pos_list referencing the original column instead of the reference segment
+        // Create a pos_list referencing the original segment instead of the reference segment
         auto new_pos_list = _dereference_pos_list(input_table, cxlumn_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
@@ -437,18 +437,18 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
           auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
                                                                   ref_segment->referenced_cxlumn_id(), new_pos_list);
-          output_columns.push_back(new_ref_segment);
+          output_segments.push_back(new_ref_segment);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
           // it.
           const auto dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
-          output_columns.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
+          output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
         }
       } else {
         auto new_ref_segment = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
-        output_columns.push_back(new_ref_segment);
+        output_segments.push_back(new_ref_segment);
       }
     }
   }
@@ -459,12 +459,12 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table>& input_table, CxlumnID cxlumn_id,
                                                  std::shared_ptr<const PosList>& pos_list) {
-    // Get all the input pos lists so that we only have to pointer cast the columns once
+    // Get all the input pos lists so that we only have to pointer cast the segments once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto b_column = input_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
-      auto r_column = std::dynamic_pointer_cast<const ReferenceSegment>(b_column);
-      input_pos_lists.push_back(r_column->pos_list());
+      auto base_segment = input_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
+      auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
+      input_pos_lists.push_back(reference_segment->pos_list());
     }
 
     // Get the row ids that are referenced
@@ -504,7 +504,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
 
-    // Add the outer join rows which had a null value in their join column
+    // Add the outer join rows which had a null value in their join cxlumn
     if (include_null_left) {
       for (auto row_id_left : *_null_rows_left) {
         output_left->push_back(row_id_left);
@@ -518,17 +518,17 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    // Add the columns from both input tables to the output
-    Segments output_columns;
-    _add_output_cxlumns(output_columns, _mpsm_join.input_table_left(), output_left);
-    _add_output_cxlumns(output_columns, _mpsm_join.input_table_right(), output_right);
+    // Add the segments from both input tables to the output
+    Segments output_segments;
+    _add_output_cxlumns(output_segments, _mpsm_join.input_table_left(), output_left);
+    _add_output_cxlumns(output_segments, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
     auto output_cxlumn_definitions = concatenated(_mpsm_join.input_table_left()->cxlumn_definitions(),
                                                   _mpsm_join.input_table_right()->cxlumn_definitions());
     auto output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
 
-    output_table->append_chunk(output_columns);
+    output_table->append_chunk(output_segments);
 
     return output_table;
   }

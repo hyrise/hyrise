@@ -528,7 +528,7 @@ const char* const tpch_query_12 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Subselect column aliases are moved into subselect
+ *  2. Subselect cxlumn aliases are moved into subselect
  */
 const char* const tpch_query_13 =
     R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count

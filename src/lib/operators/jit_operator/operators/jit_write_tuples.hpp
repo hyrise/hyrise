@@ -4,13 +4,13 @@
 
 namespace opossum {
 
-/* Base class for all column writers.
- * We need this class, so we can store a number of JitColumnWriters with different template
+/* Base class for all cxlumn writers.
+ * We need this class, so we can store a number of JitSegmentWriters with different template
  * specializations in a common data structure.
  */
-class BaseJitColumnWriter {
+class BaseJitSegmentWriter {
  public:
-  virtual ~BaseJitColumnWriter() = default;
+  virtual ~BaseJitSegmentWriter() = default;
   virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
@@ -21,41 +21,41 @@ struct JitOutputCxlumn {
 
 /* JitWriteTuples must be the last operator in any chain of jit operators.
  * It is responsible for
- * 1) adding column definitions to the output table
+ * 1) adding cxlumn definitions to the output table
  * 2) appending the current tuple to the current output chunk
  * 3) creating a new output chunks and adding output chunks to the output table
  */
 class JitWriteTuples : public AbstractJittableSink {
-  /* JitColumnWriters provide a template-free interface to store tuple values in ValueSegments in the output table.
+  /* JitSegmentWriters provide a template-free interface to store tuple values in ValueSegments in the output table.
    *
    * All ValueSegments have BaseValueSegment as their template-free super class. This allows us to store shared pointers
-   * to all output columns in vector in the runtime context.
-   * We then use JitColumnWriter instances to access these columns. JitColumnWriters are templated with the
+   * to all output segments in vector in the runtime context.
+   * We then use JitSegmentWriter instances to access these segments. JitSegmentWriters are templated with the
    * type of ValueSegment they are accessing. They are initialized with an output_index and a tuple value.
-   * When requested to store a value, they will access the column from the runtime context corresponding to their
+   * When requested to store a value, they will access the cxlumn from the runtime context corresponding to their
    * output_index and copy the value from their JitTupleValue.
    *
-   * All column writers have a common template-free base class. That allows us to store the column writers in a
-   * vector as well and access all types of columns with a single interface.
+   * All segment writers have a common template-free base class. That allows us to store the segment writers in a
+   * vector as well and access all types of segments with a single interface.
    */
   template <typename ValueSegment, typename DataType, bool Nullable>
-  class JitColumnWriter : public BaseJitColumnWriter {
+  class JitSegmentWriter : public BaseJitSegmentWriter {
    public:
-    JitColumnWriter(const std::shared_ptr<ValueSegment>& column, const JitTupleValue& tuple_value)
-        : _column{column}, _tuple_value{tuple_value} {}
+    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const JitTupleValue& tuple_value)
+        : _segment{segment}, _tuple_value{tuple_value} {}
 
     // Reads the value from the _tuple_value and appends it to the output ValueSegment.
     void write_value(JitRuntimeContext& context) const {
-      _column->values().push_back(context.tuple.get<DataType>(_tuple_value.tuple_index()));
+      _segment->values().push_back(context.tuple.get<DataType>(_tuple_value.tuple_index()));
       // clang-format off
       if constexpr (Nullable) {
-        _column->null_values().push_back(context.tuple.is_null(_tuple_value.tuple_index()));
+        _segment->null_values().push_back(context.tuple.is_null(_tuple_value.tuple_index()));
       }
       // clang-format on
     }
 
    private:
-    std::shared_ptr<ValueSegment> _column;
+    std::shared_ptr<ValueSegment> _segment;
     const JitTupleValue _tuple_value;
   };
 

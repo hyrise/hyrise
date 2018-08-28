@@ -407,10 +407,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predica
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cxlumn_expression(
     const PQPCxlumnExpression& cxlumn_expression) {
-  Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
+  Assert(_chunk, "Cannot access segments in this Expression as it doesn't operate on a Table/Chunk");
 
-  const auto& column = *_chunk->get_segment(cxlumn_expression.cxlumn_id);
-  Assert(column.data_type() == data_type_from_type<Result>(), "Can't evaluate column to different type");
+  const auto& segment = *_chunk->get_segment(cxlumn_expression.cxlumn_id);
+  Assert(segment.data_type() == data_type_from_type<Result>(), "Can't evaluate segment to different type");
 
   _materialize_segment_if_not_yet_materialized(cxlumn_expression.cxlumn_id);
   return std::static_pointer_cast<ExpressionResult<Result>>(_segment_materializations[cxlumn_expression.cxlumn_id]);
@@ -910,14 +910,14 @@ void ExpressionEvaluator::_resolve_to_expression_result(const AbstractExpression
 
 template <typename... RowCounts>
 ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
-  // If any operand is empty (that's the case IFF it is an empty column) the result of the expression has no rows
+  // If any operand is empty (that's the case IFF it is an empty segment) the result of the expression has no rows
   //
   //  _result_size() covers the following scenarios:
-  //    - Column-involving expression evaluation on an empty Chunk should give you zero rows.
+  //    - Cxlumn-involving expression evaluation on an empty Chunk should give you zero rows.
   //        So a + 5 should be empty on an empty Chunk.
-  //    - If the Chunk is NOT empty, Literal-and-Column involving expression evaluation should give you one result per
+  //    - If the Chunk is NOT empty, Literal-and-Cxlumn involving expression evaluation should give you one result per
   //        row, so a + 5 should give you one value for each element in a.
-  //    - Non-column involving expressions should give you one result value,
+  //    - Non-cxlumn involving expressions should give you one result value,
   //        no matter whether there is a (potentially) non-empty Chunk involved or not.
   //        So 5+3 always gives you one result element: 8
 
@@ -954,7 +954,7 @@ std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::v
 }
 
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const CxlumnID cxlumn_id) {
-  Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
+  Assert(_chunk, "Cannot access segments in this Expression as it doesn't operate on a Table/Chunk");
 
   if (_segment_materializations[cxlumn_id]) return;
 

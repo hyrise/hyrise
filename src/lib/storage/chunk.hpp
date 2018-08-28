@@ -142,7 +142,7 @@ class Chunk : private Noncopyable {
   void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
 
   /**
-   * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
+   * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
    */
   size_t estimate_memory_usage() const;
 

@@ -12,7 +12,7 @@ namespace opossum {
 class BaseCompressedVector;
 
 /**
- * @brief Column implementing dictionary encoding
+ * @brief Segment implementing dictionary encoding
  *
  * Uses vector compression schemes for its attribute vector.
  */

@@ -24,13 +24,13 @@ struct MaterializedValue {
 };
 
 template <typename T>
-using MaterializedColumn = std::vector<MaterializedValue<T>>;
+using MaterializedSegment = std::vector<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedColumnList = std::vector<std::shared_ptr<MaterializedColumn<T>>>;
+using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<T>>>;
 
 /**
- * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
+ * Materializes a table for a specific segment and sorts it if required. Row-Ids are kept in order to enable
  * the construction of pos lists for the algorithms that are using this class.
  **/
 template <typename T>
@@ -42,11 +42,11 @@ class CxlumnMaterializer {
   /**
    * Materializes and sorts all the chunks of an input table in parallel
    * by creating multiple jobs that materialize chunks.
-   * Returns the materialized columns and a list of null row ids if materialize_null is enabled.
+   * Returns the materialized segments and a list of null row ids if materialize_null is enabled.
    **/
-  std::pair<std::unique_ptr<MaterializedColumnList<T>>, std::unique_ptr<PosList>> materialize(
+  std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<PosList>> materialize(
       std::shared_ptr<const Table> input, CxlumnID cxlumn_id) {
-    auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
+    auto output = std::make_unique<MaterializedSegmentList<T>>(input->chunk_count());
     auto null_rows = std::make_unique<PosList>();
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -64,37 +64,37 @@ class CxlumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
                                                                   std::unique_ptr<PosList>& null_rows_output,
                                                                   ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                                   CxlumnID cxlumn_id) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, cxlumn_id, chunk_id] {
-      auto column = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
-      resolve_segment_type<T>(*column, [&](auto& typed_segment) {
+      auto segment = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
+      resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
         (*output)[chunk_id] = _materialize_segment(typed_segment, chunk_id, null_rows_output);
       });
     });
   }
 
   /**
-   * Materialization works of all types of columns
+   * Materialization works of all types of segments
    */
-  template <typename ColumnType>
-  std::shared_ptr<MaterializedColumn<T>> _materialize_segment(const ColumnType& column, ChunkID chunk_id,
+  template <typename SegmentType>
+  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const SegmentType& segment, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
-    auto output = MaterializedColumn<T>{};
-    output.reserve(column.size());
+    auto output = MaterializedSegment<T>{};
+    output.reserve(segment.size());
 
-    auto iterable = create_iterable_from_segment<T>(column);
+    auto iterable = create_iterable_from_segment<T>(segment);
 
-    iterable.for_each([&](const auto& column_value) {
-      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-      if (column_value.is_null()) {
+    iterable.for_each([&](const auto& segment_value) {
+      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
+      if (segment_value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, column_value.value());
+        output.emplace_back(row_id, segment_value.value());
       }
     });
 
@@ -103,19 +103,19 @@ class CxlumnMaterializer {
                 [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
-    return std::make_shared<MaterializedColumn<T>>(std::move(output));
+    return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
 
   /**
-   * Specialization for dictionary columns
+   * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedColumn<T>> _materialize_segment(const DictionarySegment<T>& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
-    auto output = MaterializedColumn<T>{};
-    output.reserve(column.size());
+    auto output = MaterializedSegment<T>{};
+    output.reserve(segment.size());
 
-    auto base_attribute_vector = column.attribute_vector();
-    auto dict = column.dictionary();
+    auto base_attribute_vector = segment.attribute_vector();
+    auto dict = segment.dictionary();
 
     if (_sort) {
       // Works like Bucket Sort
@@ -154,20 +154,20 @@ class CxlumnMaterializer {
         }
       }
     } else {
-      auto iterable = create_iterable_from_segment(column);
-      iterable.for_each([&](const auto& column_value) {
-        const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-        if (column_value.is_null()) {
+      auto iterable = create_iterable_from_segment(segment);
+      iterable.for_each([&](const auto& segment_value) {
+        const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
+        if (segment_value.is_null()) {
           if (_materialize_null) {
             null_rows_output->emplace_back(row_id);
           }
         } else {
-          output.emplace_back(row_id, column_value.value());
+          output.emplace_back(row_id, segment_value.value());
         }
       });
     }
 
-    return std::make_shared<MaterializedColumn<T>>(std::move(output));
+    return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
 
  private:

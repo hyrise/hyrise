@@ -6,8 +6,8 @@ namespace opossum {
 
 /* JitExpression represents a SQL expression - this includes arithmetic and logical expressions as well as comparisons.
  * Each JitExpression works on JitTupleValues and is structured as a binary tree. All leaves of that tree reference a tuple
- * value in the JitRuntimeContext and are of type JitExpressionType::Column - independent of whether these values actually
- * came from a column, are literal values or placeholders.
+ * value in the JitRuntimeContext and are of type JitExpressionType::Cxlumn - independent of whether these values actually
+ * came from a cxlumn, are literal values or placeholders.
  * Each JitExpression can compute its value and stores it in its assigned result JitTupleValue. JitExpressions are also
  * able to compute the data type of the expression they represent.
  *

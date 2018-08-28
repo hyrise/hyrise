@@ -181,15 +181,15 @@ template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment& base_segment,
                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<const ValueSegment<T>&>(base_segment);
+  const auto& segment = static_cast<const ValueSegment<T>&>(base_segment);
 
   export_value(context->ofstream, BinarySegmentType::value_segment);
 
-  if (column.is_nullable()) {
-    export_values(context->ofstream, column.null_values());
+  if (segment.is_nullable()) {
+    export_values(context->ofstream, segment.null_values());
   }
 
-  export_values(context->ofstream, column.values());
+  export_values(context->ofstream, segment.values());
 }
 
 template <typename T>
@@ -207,7 +207,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
   }
 }
 
-// handle_segment implementation for string columns
+// handle_segment implementation for string segments
 template <>
 void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(const ReferenceSegment& ref_segment,
                                                                    std::shared_ptr<SegmentVisitorContext> base_context) {
@@ -273,17 +273,17 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
   export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
 
   if (base_segment.encoding_type() == EncodingType::FixedStringDictionary) {
-    const auto& column = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
+    const auto& segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
-    export_values(context->ofstream, *column.dictionary());
+    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_values(context->ofstream, *segment.dictionary());
   } else {
-    const auto& column = static_cast<const DictionarySegment<T>&>(base_segment);
+    const auto& segment = static_cast<const DictionarySegment<T>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
-    export_values(context->ofstream, *column.dictionary());
+    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_values(context->ofstream, *segment.dictionary());
   }
 
   // Write attribute vector

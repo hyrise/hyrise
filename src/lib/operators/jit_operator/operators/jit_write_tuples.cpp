@@ -20,7 +20,7 @@ std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset inp
   TableCxlumnDefinitions cxlumn_definitions;
 
   for (const auto& output_cxlumn : _output_cxlumns) {
-    // Add a column definition for each output column
+    // Add a cxlumn definition for each output cxlumn
     const auto data_type = output_cxlumn.tuple_value.data_type();
     const auto is_nullable = output_cxlumn.tuple_value.is_nullable();
     cxlumn_definitions.emplace_back(output_cxlumn.cxlumn_name, data_type, is_nullable);
@@ -54,23 +54,23 @@ void JitWriteTuples::_create_output_chunk(JitRuntimeContext& context) const {
   context.out_chunk.clear();
   context.outputs.clear();
 
-  // Create new value segments and add them to the runtime context to make them accessible by the column writers
+  // Create new value segments and add them to the runtime context to make them accessible by the segment writers
   for (const auto& output_cxlumn : _output_cxlumns) {
     const auto data_type = output_cxlumn.tuple_value.data_type();
     const auto is_nullable = output_cxlumn.tuple_value.is_nullable();
 
-    // Create the appropriate column writer for the output column
+    // Create the appropriate segment writer for the output segment
     resolve_data_type(data_type, [&](auto type) {
       using CxlumnDataType = typename decltype(type)::type;
-      auto column = std::make_shared<ValueSegment<CxlumnDataType>>(output_cxlumn.tuple_value.is_nullable());
-      context.out_chunk.push_back(column);
+      auto segment = std::make_shared<ValueSegment<CxlumnDataType>>(output_cxlumn.tuple_value.is_nullable());
+      context.out_chunk.push_back(segment);
 
       if (is_nullable) {
-        context.outputs.push_back(std::make_shared<JitColumnWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, true>>(
-            column, output_cxlumn.tuple_value));
+        context.outputs.push_back(std::make_shared<JitSegmentWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, true>>(
+            segment, output_cxlumn.tuple_value));
       } else {
-        context.outputs.push_back(std::make_shared<JitColumnWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, false>>(
-            column, output_cxlumn.tuple_value));
+        context.outputs.push_back(std::make_shared<JitSegmentWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, false>>(
+            segment, output_cxlumn.tuple_value));
       }
     });
   }

@@ -63,7 +63,7 @@ class TableGenerator {
   // Note: numa_distribute_chunks=true only affects generated tables that use DictionaryCompression,
   // otherwise the chunks are most likely all placed on a single node. This will change in the future.
   // See the discussion here https://github.com/hyrise/hyrise/pull/402
-  std::shared_ptr<Table> generate_table(const std::vector<CxlumnDataDistribution>& column_data_distributions,
+  std::shared_ptr<Table> generate_table(const std::vector<CxlumnDataDistribution>& cxlumn_data_distributions,
                                         const size_t num_rows, const size_t chunk_size,
                                         std::optional<EncodingType> encoding_type = std::nullopt,
                                         const bool numa_distribute_chunks = false);

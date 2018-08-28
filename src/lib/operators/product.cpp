@@ -18,12 +18,12 @@ const std::string Product::name() const { return "Product"; }
 std::shared_ptr<const Table> Product::_on_execute() {
   TableCxlumnDefinitions cxlumn_definitions;
 
-  // add columns from left table to output
+  // add cxlumns from left table to output
   for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
     cxlumn_definitions.emplace_back(input_table_left()->cxlumn_definitions()[cxlumn_id]);
   }
 
-  // add columns from right table to output
+  // add cxlumns from right table to output
   for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_right()->cxlumn_count(); ++cxlumn_id) {
     cxlumn_definitions.emplace_back(input_table_right()->cxlumn_definitions()[cxlumn_id]);
   }
@@ -58,7 +58,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
-  Segments output_columns;
+  Segments output_segments;
   auto is_left_side = true;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
@@ -68,16 +68,16 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 
     for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
       std::shared_ptr<const Table> referenced_table;
-      CxlumnID referenced_column;
+      CxlumnID referenced_segment;
       std::shared_ptr<const PosList> pos_list_in;
 
-      if (auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id))) {
-        referenced_table = ref_col_in->referenced_table();
-        referenced_column = ref_col_in->referenced_cxlumn_id();
-        pos_list_in = ref_col_in->pos_list();
+      if (auto reference_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id))) {
+        referenced_table = reference_segment_in->referenced_table();
+        referenced_segment = reference_segment_in->referenced_cxlumn_id();
+        pos_list_in = reference_segment_in->pos_list();
       } else {
         referenced_table = is_left_side ? input_table_left() : input_table_right();
-        referenced_column = cxlumn_id;
+        referenced_segment = cxlumn_id;
       }
 
       // see if we can reuse a PosList that we already calculated - important to use a reference here so that the map
@@ -97,13 +97,13 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
           }
         }
       }
-      output_columns.push_back(std::make_shared<ReferenceSegment>(referenced_table, referenced_column, pos_list_out));
+      output_segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, referenced_segment, pos_list_out));
     }
 
     is_left_side = false;
   }
 
-  output->append_chunk(output_columns);
+  output->append_chunk(output_segments);
 }
 std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

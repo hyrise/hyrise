@@ -43,21 +43,21 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
 /**
- * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in
+ * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting cxlumn references in
  * LQPCxlumnExpressions according to the node_mapping
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping);
 
 /**
- * Utility to AbstractExpression::deep_copy() a single expression while adjusting column references in
+ * Utility to AbstractExpression::deep_copy() a single expression while adjusting cxlumn references in
  * LQPCxlumnExpressions according to the node_mapping
  */
 std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(const AbstractExpression& expression,
                                                                                const LQPNodeMapping& node_mapping);
 
 /**
- * Makes all ColumnExpressions points to their equivalent in a copied LQP
+ * Makes all cxlumn references points to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);

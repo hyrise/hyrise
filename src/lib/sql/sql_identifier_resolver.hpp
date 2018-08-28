@@ -19,13 +19,13 @@ struct SQLIdentifierContextEntry final {
 
 /**
  * Used during SQL translation to obtain the expression an identifier refers to.
- * Manages column/table aliases.
+ * Manages cxlumn/table aliases.
  */
 class SQLIdentifierResolver final {
  public:
   /**
    * @{
-   * Set/Update the column/table name of an expression
+   * Set/Update the cxlumn/table name of an expression
    */
   void set_cxlumn_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& cxlumn_name);
   void set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name);
@@ -46,7 +46,7 @@ class SQLIdentifierResolver final {
       const std::shared_ptr<AbstractExpression>& expression) const;
 
   /**
-   * @return   The column expressions of a table/subselect identified by @param table_name.
+   * @return   The cxlumn expressions of a table/subselect identified by @param table_name.
    */
   std::vector<std::shared_ptr<AbstractExpression>> resolve_table_name(const std::string& table_name) const;
 

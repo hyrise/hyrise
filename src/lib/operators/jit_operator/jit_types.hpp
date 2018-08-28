@@ -98,8 +98,8 @@ class JitVariantVector {
   std::vector<bool> _is_null;
 };
 
-class BaseJitColumnReader;
-class BaseJitColumnWriter;
+class BaseJitSegmentReader;
+class BaseJitSegmentWriter;
 
 // The JitAggregate operator (and possibly future hashing based operators) require an efficient way to hash tuples
 // across multiple cxlumns (i.e., the key-type of the hashmap spans multiple cxlumns).
@@ -118,8 +118,8 @@ struct JitRuntimeContext {
   uint32_t chunk_size;
   ChunkOffset chunk_offset;
   JitVariantVector tuple;
-  std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
-  std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
+  std::vector<std::shared_ptr<BaseJitSegmentReader>> inputs;
+  std::vector<std::shared_ptr<BaseJitSegmentWriter>> outputs;
   JitRuntimeHashmap hashmap;
   Segments out_chunk;
 };

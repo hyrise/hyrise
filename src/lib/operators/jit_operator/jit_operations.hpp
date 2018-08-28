@@ -33,7 +33,7 @@ namespace opossum {
  * The generic lambdas can also be passed to the "jit_compute_type" function. The function uses the same dispatching
  * mechanisms. But instead of executing a computation, it only determines the result type the computation would
  * have if it were carried out. This functionality is used to determine the type of intermediate values and
- * computed output columns.
+ * computed output cxlumns.
  *
  * Logical operators, IsNull and IsNotNull must be handled separately, since their NULL value semantics are
  * different (i.e. a NULL as either input does not result in the output being NULL as well).
@@ -195,7 +195,7 @@ __attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, co
 __attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                                           JitRuntimeContext& context);
 
-// Adds an element to a column represented by some JitHashmapValue
+// Adds an element to a cxlumn represented by some JitHashmapValue
 __attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
                                                  const JitVariantVector::InitialValue initial_value,
                                                  JitRuntimeContext& context);

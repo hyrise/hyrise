@@ -32,7 +32,7 @@
  * Each of the C column can represent 1..S columns in the input table and is called a ColumnSegmnent, see below.
  *
  *
- * ### About ColumnSegments
+ * ### About ColumnSegments                                                                                                     // Moritz: please do renaming here, because segment is ambiguous
  * For each CxlumnID in which one (or both) of the InputTables has a different PosList than in the Column left of it,
  * an entry into _column_segment_offsets is made.
  *

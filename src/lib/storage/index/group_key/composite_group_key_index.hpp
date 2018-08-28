@@ -16,14 +16,14 @@ class BaseDictionarySegment;
 
 /**
  *
- * The CompositeGroupKey-Index works on an arbitrary number of dictionary compressed column.
+ * The CompositeGroupKey-Index works on an arbitrary number of dictionary compressed segments.
  * It uses three structures:
  *      - a position list containing record positions (ie ChunkOffsets)
- *      - a sorted store containing all unique concatenated keys of the input columns
+ *      - a sorted store containing all unique concatenated keys of the input segments
  *      - an offset list storing where the positions for a certain concatenated key start at
  *        in the position list
  *
- * An example structure along with the corresponding dictionary column's attribute vectors might look like this:
+ * An example structure along with the corresponding dictionary segment's attribute vectors might look like this:
  *    +---+-----------+     +------------+---------+-----------+
  *    |(i)| AV1 | AV2 |     |Concatenated| Offsets | Positions |
  *    |   |     |     |     |    Key     |         |           |
@@ -65,7 +65,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
    *
    * We need to provide the information whether the key is used for an upper- or lower-bound
    * search to make sure the key will be mapped to the correct positions in case the last value
-   * is not present in the corresponding dictionary column. Consider the following example:
+   * is not present in the corresponding dictionary segment. Consider the following example:
    *
    *    +------------+---------+-----------+
    *    |Concatenated| Offsets | Positions |
@@ -97,7 +97,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
   Iterator _get_position_iterator_for_key(const VariableLengthKey& key) const;
 
  private:
-  // the columns the index is based on
+  // the segments the index is based on
   std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
 
   // contains concatenated value-ids

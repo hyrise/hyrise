@@ -11,7 +11,7 @@ namespace opossum {
 class BaseCompressedVector;
 
 /**
- * @brief Column implementing run-length encoding
+ * @brief Segment implementing run-length encoding
  *
  * Run-length encoding takes advantage of long sequences
  * of the same value, called runs. Each run is represented

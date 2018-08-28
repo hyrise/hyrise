@@ -23,7 +23,7 @@
  * ProjectionNode computing a subselect and a subsequent PredicateNode filtering based on it.
  * We do not WANT to optimize the LQP twice (optimization takes time after all) and we CANNOT optimize it twice, since,
  * e.g., a non-deterministic rule, could produce two different LQPs while optimizing and then the select-expression
- * in the PredicateNode couldn't be resolved to a column anymore. There are more subtle ways LQPs might break in this
+ * in the PredicateNode couldn't be resolved to a cxlumn anymore. There are more subtle ways LQPs might break in this
  * scenario, and frankly, this is one of the weak links in the expression system...
  *
  * ...long story short:

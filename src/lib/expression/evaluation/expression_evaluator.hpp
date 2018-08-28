@@ -31,22 +31,22 @@ class PQPCxlumnExpression;
 class PQPSelectExpression;
 
 /**
- * Computes a result (i.e., a Column or an ExpressionResult<Result>) from an Expression.
+ * Computes a result (i.e., a Cxlumn or an ExpressionResult<Result>) from an Expression.
  * Operates either
  *      - ...on a Chunk, thus returning a value for each row in it
- *      - ...without a Chunk, thus returning a single value (and failing if Columns are encountered in the Expression)
+ *      - ...without a Chunk, thus returning a single value (and failing if Cxlumns are encountered in the Expression)
  */
 class ExpressionEvaluator final {
  public:
-  // Hyrise doesn't have a bool column type, so we use int32_t. If at any point we get bool column types, just replace
+  // Hyrise doesn't have a bool cxlumn type, so we use int32_t. If at any point we get bool cxlumn types, just replace
   // all the occurences of Bool and DataTypeBool.
   using Bool = int32_t;
   static constexpr auto DataTypeBool = DataType::Int;
 
-  // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
+  // For Expressions that do not reference any segments (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 
-  // For Expressions that reference Columns from a single table
+  // For Expressions that reference segments from a single table
   explicit ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id);
 
   std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);

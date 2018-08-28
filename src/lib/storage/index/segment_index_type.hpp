@@ -19,7 +19,7 @@ class BTreeIndex;
 
 namespace detail {
 
-constexpr auto column_index_map =
+constexpr auto segment_index_map =
     hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey),
                    hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, SegmentIndexType::CompositeGroupKey),
                    hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, SegmentIndexType::AdaptiveRadixTree),
@@ -29,7 +29,7 @@ constexpr auto column_index_map =
 
 template <typename IndexType>
 SegmentIndexType get_index_type_of() {
-  return detail::column_index_map[hana::type_c<IndexType>];
+  return detail::segment_index_map[hana::type_c<IndexType>];
 }
 
 }  // namespace opossum

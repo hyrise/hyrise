@@ -40,7 +40,7 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 // Function to check if AllParameterVariant is a cxlumn id
 inline bool is_cxlumn_id(const AllParameterVariant& variant) { return (variant.type() == typeid(CxlumnID)); }
 
-// Function to check if AllParameterVariant is a column origin
+// Function to check if AllParameterVariant is an LQP cxlumn reference
 inline bool is_lqp_cxlumn_reference(const AllParameterVariant& variant) {
   return (variant.type() == typeid(LQPCxlumnReference));
 }

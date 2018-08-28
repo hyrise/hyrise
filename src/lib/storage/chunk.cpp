@@ -25,7 +25,7 @@ Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_dat
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
   Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
   for (const auto& segment : segments) {
-    Assert(segment->size() == chunk_size, "Columns don't have the same length");
+    Assert(segment->size() == chunk_size, "Segments don't have the same length");
   }
 #endif
 

@@ -12,7 +12,7 @@
  * A good description of MVCC which we used as basis for our implementation is given here:
  * http://15721.courses.cs.cmu.edu/spring2016/papers/schwalb-imdm2014.pdf
  *
- * Conceptually, the idea is that each row has additional columns which are used to mark rows as locked for a
+ * Conceptually, the idea is that each row has additional "cxlumns" which are used to mark rows as locked for a
  * transaction and to describe when the row was created and deleted to ensure correct visibility. These vectors are
  * written to by AbstractReadWriteOperators, i.e., Insert, Update and Delete.
  *

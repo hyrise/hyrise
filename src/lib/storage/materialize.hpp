@@ -21,7 +21,7 @@ namespace opossum {
  * ```
  */
 
-// Materialize the values in the Column
+// Materialize the values in the segment
 template <typename Container>
 void materialize_values(const BaseSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type;
@@ -31,7 +31,7 @@ void materialize_values(const BaseSegment& segment, Container& container) {
   });
 }
 
-// Materialize the values/nulls in the Column
+// Materialize the values/nulls in the segment
 template <typename Container>
 void materialize_values_and_nulls(const BaseSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type::second_type;
@@ -40,11 +40,11 @@ void materialize_values_and_nulls(const BaseSegment& segment, Container& contain
   });
 }
 
-// Materialize the nulls in the Column
-template <typename ColumnValueType, typename Container>
+// Materialize the nulls in the segment
+template <typename SegmentValueType, typename Container>
 void materialize_nulls(const BaseSegment& segment, Container& container) {
-  resolve_segment_type<ColumnValueType>(segment, [&](const auto& segment) {
-    create_iterable_from_segment<ColumnValueType>(segment).materialize_nulls(container);
+  resolve_segment_type<SegmentValueType>(segment, [&](const auto& segment) {
+    create_iterable_from_segment<SegmentValueType>(segment).materialize_nulls(container);
   });
 }
 

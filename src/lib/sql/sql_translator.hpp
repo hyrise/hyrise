@@ -53,7 +53,7 @@ class SQLTranslator final {
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_parser_result(const hsql::SQLParserResult& result);
 
   /**
-   * Translate an Expression AST into a Hyrise-expression. No columns can be referenced in expressions translated by
+   * Translate an Expression AST into a Hyrise-expression. No cxlumns can be referenced in expressions translated by
    * this call.
    */
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr);
@@ -61,8 +61,8 @@ class SQLTranslator final {
  private:
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
-  // Also ensures the correct Columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
-  // columns from input tables
+  // Also ensures the correct cxlumns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
+  // cxlumns from input tables
   struct TableSourceState final {
     TableSourceState() = default;
     TableSourceState(
@@ -78,7 +78,7 @@ class SQLTranslator final {
     // Collects the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
     std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>> elements_by_table_name;
 
-    // To establish the correct order of columns in SELECT *
+    // To establish the correct order of cxlumns in SELECT *
     std::vector<std::shared_ptr<AbstractExpression>> elements_in_order;
 
     std::shared_ptr<SQLIdentifierResolver> sql_identifier_resolver;

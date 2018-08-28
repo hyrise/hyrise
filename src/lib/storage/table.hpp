@@ -159,7 +159,7 @@ class Table : private Noncopyable {
   }
 
   /**
-   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
+   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t estimate_memory_usage() const;
 

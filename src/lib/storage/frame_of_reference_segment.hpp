@@ -18,7 +18,7 @@ namespace opossum {
 class BaseCompressedVector;
 
 /**
- * @brief Column implementing frame-of-reference encoding
+ * @brief Segment implementing frame-of-reference encoding
  *
  * Frame-of-Reference encoding divides the values of segment into
  * fixed-size blocks. The values of each block are encoded
