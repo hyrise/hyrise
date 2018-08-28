@@ -98,7 +98,7 @@ template <typename ElementType>
 bool CountingQuotientFilter<ElementType>::can_prune(const AllTypeVariant& value,
     const PredicateCondition predicate_type) const {
   DebugAssert(predicate_type == PredicateCondition::Equals, "CQF only supports equality predicates");
-  return count_all_type(value) > 0;
+  return count_all_type(value) == 0;
 }
 
 template <typename ElementType>

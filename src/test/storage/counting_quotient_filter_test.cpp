@@ -39,9 +39,15 @@ class CountingQuotientFilterTest : public BaseTest {
   std::map<std::string, uint> value_counts;
 };
 
-TEST_F(CountingQuotientFilterTest, Probes) {
+TEST_F(CountingQuotientFilterTest, NoUndercounts) {
   for (auto value_count : value_counts) {
       EXPECT_TRUE(cqf->count(value_count.first) >= value_count.second);
+  }
+}
+
+TEST_F(CountingQuotientFilterTest, CanPrune) {
+  for (auto value_count : value_counts) {
+      EXPECT_FALSE(cqf->can_prune(value_count.first, PredicateCondition::Equals));
   }
 }
 
