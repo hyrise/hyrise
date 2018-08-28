@@ -39,7 +39,7 @@ class CountingQuotientFilter : AbstractFilter {
   double load_factor() const;
   bool is_full() const;
 
-  virtual bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override;
+  bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override;
 
  private:
   std::optional<gqf2::quotient_filter> _quotient_filter2;
