@@ -1,3 +1,8 @@
+# To prevent _tkinter.TclError: https://stackoverflow.com/a/37605654
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 import os
 import argparse
 import multiprocessing
@@ -6,7 +11,6 @@ import json
 
 from datetime import datetime
 
-import matplotlib.pyplot as plt
 
 
 BENCHMARK_EXECUTABLE = 'hyriseBenchmarkTPCH'
