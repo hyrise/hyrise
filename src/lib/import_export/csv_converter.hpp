@@ -20,7 +20,7 @@ namespace opossum {
 /*
  * CsvConverter is a helper class that creates a ValueSegment by converting the given null terminated strings and placing
  * them at the given position.
- * The base class BaseCsvConverter allows us to handle different types of ColumnCreators uniformly.
+ * The base class BaseCsvConverter allows us to handle different types of cxlumns uniformly.
  */
 
 class BaseCsvConverter {
@@ -30,7 +30,7 @@ class BaseCsvConverter {
   // Converts value to the underlying data type and saves it at the given position.
   virtual void insert(std::string& value, ChunkOffset position) = 0;
 
-  // Returns the Column which contains the previously converted values.
+  // Returns the segment that contains the previously converted values.
   // After the call of finish, no other operation should be called.
   virtual std::unique_ptr<BaseSegment> finish() = 0;
 
@@ -72,7 +72,7 @@ class CsvConverter : public BaseCsvConverter {
       // clang-format on
       if (_config.reject_quoted_nonstrings) {
         Assert(value == unescape_copy(value, _config),
-               "Unexpected quoted string " + value + " encountered in non-string column");
+               "Unexpected quoted string " + value + " encountered in non-string cxlumn");
       } else {
         unescape(value, _config);
       }

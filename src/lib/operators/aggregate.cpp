@@ -211,7 +211,7 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, CxlumnID cxlumn_index, cons
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  resolve_cxlumn_type<CxlumnDataType>(
+  resolve_segment_type<CxlumnDataType>(
       base_segment, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_segment) {
         auto iterable = create_iterable_from_segment<CxlumnDataType>(typed_segment);
 
@@ -341,7 +341,7 @@ void Aggregate::_aggregate() {
           const auto chunk_in = input_table->get_chunk(chunk_id);
           const auto base_segment = chunk_in->get_segment(cxlumn_id);
 
-          resolve_cxlumn_type<CxlumnDataType>(*base_segment, [&](auto& typed_segment) {
+          resolve_segment_type<CxlumnDataType>(*base_segment, [&](auto& typed_segment) {
             auto iterable = create_iterable_from_segment<CxlumnDataType>(typed_segment);
 
             ChunkOffset chunk_offset{0};

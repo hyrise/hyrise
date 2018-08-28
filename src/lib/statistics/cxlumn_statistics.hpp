@@ -11,12 +11,12 @@
 namespace opossum {
 
 /**
- * @tparam CxlumnDataType   the DataType of the values in the Column that these statistics represent
+ * @tparam CxlumnDataType   the DataType of the values in the Cxlumn that these statistics represent
  */
 template <typename CxlumnDataType>
 class CxlumnStatistics : public BaseCxlumnStatistics {
  public:
-  // To be used for columns for which CxlumnStatistics can't be computed
+  // To be used for cxlumns for which CxlumnStatistics can't be computed
   static CxlumnStatistics dummy();
 
   CxlumnStatistics(const float null_value_ratio, const float distinct_count, const CxlumnDataType min,
@@ -43,7 +43,7 @@ class CxlumnStatistics : public BaseCxlumnStatistics {
       const PredicateCondition predicate_condition,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
-  FilterByColumnComparisonEstimate estimate_predicate_with_cxlumn(
+  FilterByCxlumnComparisonEstimate estimate_predicate_with_cxlumn(
       const PredicateCondition predicate_condition,
       const BaseCxlumnStatistics& base_right_cxlumn_statistics) const override;
 
@@ -56,22 +56,22 @@ class CxlumnStatistics : public BaseCxlumnStatistics {
    */
 
   /**
-   * @return the ratio of rows of this Column that are in the range [minimum, maximum]
+   * @return the ratio of rows of this Cxlumn that are in the range [minimum, maximum]
    */
   float estimate_range_selectivity(const CxlumnDataType minimum, const CxlumnDataType maximum) const;
 
   /**
-   * @return estimate the predicate `column BETWEEN minimum AND maximum`
+   * @return estimate the predicate `cxlumn BETWEEN minimum AND maximum`
    */
   FilterByValueEstimate estimate_range(const CxlumnDataType minimum, const CxlumnDataType maximum) const;
 
   /**
-   * @return estimate the predicate `column = value`
+   * @return estimate the predicate `cxlumn = value`
    */
   FilterByValueEstimate estimate_equals_with_value(const CxlumnDataType value) const;
 
   /**
-   * @return estimate the predicate `column != value`
+   * @return estimate the predicate `cxlumn != value`
    */
   FilterByValueEstimate estimate_not_equals_with_value(const CxlumnDataType value) const;
   /** @} */

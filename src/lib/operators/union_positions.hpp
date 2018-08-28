@@ -16,9 +16,9 @@ namespace opossum {
  *  Takes two reference tables and computes the Set Union of their pos lists. The output contains all rows of both input
  *  tables exactly once.
  *  The input tables `left` and `right` must
- *      - have the same number of columns with the same names and types
- *      - each column must reference the same table and same cxlumn_id for all chunks.
- *          - this means: if the first column of `left` references table "a" and CxlumnID 3, the first column of `right`
+ *      - have the same number of cxlumns with the same names and types
+ *      - each cxlumn must reference the same table and same cxlumn_id for all chunks.
+ *          - this means: if the first cxlumn of `left` references table "a" and CxlumnID 3, the first cxlumn of `right`
  *                        has to reference "a".3 as well.
  *
  *

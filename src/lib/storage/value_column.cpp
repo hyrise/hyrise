@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_column_visitor.hpp"
+#include "abstract_segment_visitor.hpp"
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"

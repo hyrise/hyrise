@@ -16,7 +16,7 @@ class TableStatistics;
 /**
  * Node that represents a table that has no data backing it, but may provide
  *  - (mocked) statistics
- *  - or just a column layout. It will pretend it created the columns.
+ *  - or just a cxlumn layout. It will pretend it created the cxlumns.
  * It is useful in tests (e.g. general LQP tests, optimizer tests that just rely on statistics and not actual data) and
  * the playground
  */

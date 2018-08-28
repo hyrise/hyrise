@@ -43,12 +43,12 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 void Sort::_on_cleanup() { _impl.reset(); }
 
 // This class fulfills only the materialization task for a sorted row_id_value_vector.
-template <typename SortColumnType>
+template <typename SortCxlumnType>
 class Sort::SortImplMaterializeOutput {
  public:
   // creates a new table with reference segments
   SortImplMaterializeOutput(const std::shared_ptr<const Table>& in,
-                            const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>>& id_value_map,
+                            const std::shared_ptr<std::vector<std::pair<RowID, SortCxlumnType>>>& id_value_map,
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
@@ -58,10 +58,10 @@ class Sort::SortImplMaterializeOutput {
 
     // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
 
-    // After we created the output table and initialized the column structure, we can start adding values. Because the
+    // After we created the output table and initialized the cxlumn structure, we can start adding values. Because the
     // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are
-    // copied column by column for each output row. For each column in a row we visit the input column with a reference
-    // to the output column. This enables for the SortImplMaterializeOutput class to ignore the column types during the
+    // copied cxlumn by cxlumn for each output row. For each cxlumn in a row we visit the input segment with a reference
+    // to the output segment. This enables for the SortImplMaterializeOutput class to ignore the cxlumn types during the
     // copying of the values.
     const auto row_count_out = _row_id_value_vector->size();
 
@@ -70,10 +70,10 @@ class Sort::SortImplMaterializeOutput {
 
     const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
 
-    // Vector of columns for each chunk
-    std::vector<Segments> output_columns_by_chunk(chunk_count_out);
+    // Vector of segments for each chunk
+    std::vector<Segments> output_segments_by_chunk(chunk_count_out);
 
-    // Materialize column-wise
+    // Materialize segment-wise
     for (CxlumnID cxlumn_id{0u}; cxlumn_id < output->cxlumn_count(); ++cxlumn_id) {
       const auto cxlumn_data_type = output->cxlumn_data_type(cxlumn_id);
 
@@ -81,43 +81,43 @@ class Sort::SortImplMaterializeOutput {
         using CxlumnDataType = typename decltype(type)::type;
 
         // Initialize value segments
-        auto columns_out = std::vector<std::shared_ptr<ValueSegment<CxlumnDataType>>>(chunk_count_out);
-        std::generate(columns_out.begin(), columns_out.end(),
+        auto segments_out = std::vector<std::shared_ptr<ValueSegment<CxlumnDataType>>>(chunk_count_out);
+        std::generate(segments_out.begin(), segments_out.end(),
                       []() { return std::make_shared<ValueSegment<CxlumnDataType>>(true); });
 
-        auto column_it = columns_out.begin();
-        auto chunk_it = output_columns_by_chunk.begin();
+        auto segment_it = segments_out.begin();
+        auto chunk_it = output_segments_by_chunk.begin();
         auto chunk_offset_out = 0u;
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
-          const auto column = _table_in->get_chunk(chunk_id)->get_segment(cxlumn_id);
+          const auto segment = _table_in->get_chunk(chunk_id)->get_segment(cxlumn_id);
 
           // Previously the value was retrieved by calling a virtual method,
           // which was just as slow as using the subscript operator.
-          const auto value = (*column)[chunk_offset];
-          (*column_it)->append(value);
+          const auto value = (*segment)[chunk_offset];
+          (*segment_it)->append(value);
 
           ++chunk_offset_out;
 
           // Check if value segment is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            chunk_it->push_back(*column_it);
-            ++column_it;
+            chunk_it->push_back(*segment_it);
+            ++segment_it;
             ++chunk_it;
           }
         }
 
-        // Last column has not been added
+        // Last segment has not been added
         if (chunk_offset_out > 0u) {
-          chunk_it->push_back(*column_it);
+          chunk_it->push_back(*segment_it);
         }
       });
     }
 
-    for (auto& columns : output_columns_by_chunk) {
-      output->append_chunk(columns);
+    for (auto& segments : output_segments_by_chunk) {
+      output->append_chunk(segments);
     }
 
     return output;
@@ -126,14 +126,14 @@ class Sort::SortImplMaterializeOutput {
  protected:
   const std::shared_ptr<const Table> _table_in;
   const size_t _output_chunk_size;
-  const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
+  const std::shared_ptr<std::vector<std::pair<RowID, SortCxlumnType>>> _row_id_value_vector;
 };
 
-// we need to use the impl pattern because the scan operator of the sort depends on the type of the column
-template <typename SortColumnType>
+// we need to use the impl pattern because the scan operator of the sort depends on the type of the cxlumn
+template <typename SortCxlumnType>
 class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  using RowIDValuePair = std::pair<RowID, SortColumnType>;
+  using RowIDValuePair = std::pair<RowID, SortCxlumnType>;
 
   SortImpl(const std::shared_ptr<const Table>& table_in, const CxlumnID cxlumn_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
@@ -149,7 +149,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  protected:
   std::shared_ptr<const Table> _on_execute() override {
     // 1. Prepare Sort: Creating rowid-value-Structure
-    _materialize_sort_column();
+    _materialize_sort_cxlumn();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
@@ -171,13 +171,13 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
     // full and create the next one. Each chunk is filled row by row.
-    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
+    auto materialization = std::make_shared<SortImplMaterializeOutput<SortCxlumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
     return materialization->execute();
   }
 
-  // completely materializes the sort column to create a vector of RowID-Value pairs
-  void _materialize_sort_column() {
+  // completely materializes the sort cxlumn to create a vector of RowID-Value pairs
+  void _materialize_sort_cxlumn() {
     auto& row_id_value_vector = *_row_id_value_vector;
     row_id_value_vector.reserve(_table_in->row_count());
 
@@ -188,12 +188,12 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
       auto base_segment = chunk->get_segment(_cxlumn_id);
 
-      resolve_cxlumn_type<SortColumnType>(*base_segment, [&](auto& typed_segment) {
-        auto iterable = create_iterable_from_segment<SortColumnType>(typed_segment);
+      resolve_segment_type<SortCxlumnType>(*base_segment, [&](auto& typed_segment) {
+        auto iterable = create_iterable_from_segment<SortCxlumnType>(typed_segment);
 
         iterable.for_each([&](const auto& value) {
           if (value.is_null()) {
-            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
+            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortCxlumnType{});
           } else {
             row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
           }
@@ -211,7 +211,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
   const std::shared_ptr<const Table> _table_in;
 
-  // column to sort by
+  // cxlumn to sort by
   const CxlumnID _cxlumn_id;
   const OrderByMode _order_by_mode;
   // chunk size of the materialized output

@@ -107,7 +107,7 @@ TEST_F(PQPSelectExpressionTest, IsNullable) {
   EXPECT_TRUE(select_nullable->is_nullable());
 }
 
-TEST_F(PQPSelectExpressionTest, AsColumnName) {
+TEST_F(PQPSelectExpressionTest, AsCxlumnName) {
   EXPECT_TRUE(std::regex_search(select_table->as_cxlumn_name(), std::regex{"SUBSELECT \\(PQP, 0x[0-9a-f]+\\)"}));
   EXPECT_TRUE(std::regex_search(select_single_value_one_parameter->as_cxlumn_name(),
                                 std::regex{"SUBSELECT \\(PQP, 0x[0-9a-f]+\\)"}));

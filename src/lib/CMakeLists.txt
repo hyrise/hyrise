@@ -185,13 +185,13 @@ set(
     operators/join_hash.hpp
     operators/join_index.cpp
     operators/join_index.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
+    operators/join_mpsm/cxlumn_materializer_numa.hpp
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
-    operators/join_sort_merge/column_materializer.hpp
+    operators/join_sort_merge/cxlumn_materializer.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
@@ -218,19 +218,19 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
-    operators/table_scan/base_single_column_table_scan_impl.cpp
-    operators/table_scan/base_single_column_table_scan_impl.hpp
+    operators/table_scan/base_single_cxlumn_table_scan_impl.cpp
+    operators/table_scan/base_single_cxlumn_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/column_comparison_table_scan_impl.cpp
-    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/cxlumn_comparison_table_scan_impl.cpp
+    operators/table_scan/cxlumn_comparison_table_scan_impl.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
     operators/table_scan/like_table_scan_impl.hpp
-    operators/table_scan/single_column_table_scan_impl.cpp
-    operators/table_scan/single_column_table_scan_impl.hpp
+    operators/table_scan/single_cxlumn_table_scan_impl.cpp
+    operators/table_scan/single_cxlumn_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -370,7 +370,7 @@ set(
     storage/segment_iterables/segment_iterator_values.hpp
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
     storage/segment_iterables.hpp
-    storage/abstract_column_visitor.hpp
+    storage/abstract_cxlumn_visitor.hpp
     storage/create_iterable_from_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp
@@ -399,7 +399,7 @@ set(
     storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/base_index.cpp
     storage/index/base_index.hpp
-    storage/index/column_index_type.hpp
+    storage/index/segment_index_type.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp

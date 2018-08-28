@@ -29,7 +29,7 @@ class TableScan : public AbstractReadOnlyOperator {
    *
    * There are different implementations of table scans.
    * This is the standard linear scan; another one is
-   * the index scan, which scans a column using an index.
+   * the index scan, which scans a cxlumn using an index.
    * Depending on the situation, it is advantageous to use
    * the index scan for some chunks and the standard scan for
    * others. However one has to ensure that all chunks including

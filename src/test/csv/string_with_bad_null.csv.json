@@ -1,6 +1,6 @@
 {
     "chunk_size": 4,
-    "columns": [
+    "cxlumns": [
         {
             "name": "a",
             "type": "string",

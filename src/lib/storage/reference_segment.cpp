@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "abstract_column_visitor.hpp"
+#include "abstract_segment_visitor.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 

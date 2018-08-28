@@ -58,11 +58,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
-   * Column count          | CxlumnID                              |   2
-   * Column types          | TypeID array                          |   Column Count * 1
-   * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
-   * Column name lengths   | size_t array                          |   Column Count * 1
-   * Column names          | std::string array                     |   Sum of lengths of all names
+   * Cxlumn count          | CxlumnID                              |   2
+   * Cxlumn types          | TypeID array                          |   Cxlumn Count * 1
+   * Cxlumn nullable       | bool (stored as BoolAsByteType)       |   Cxlumn Count * 1
+   * Cxlumn name lengths   | size_t array                          |   Cxlumn Count * 1
+   * Cxlumn names          | std::string array                     |   Sum of lengths of all names
    *
    */
   static std::pair<std::shared_ptr<Table>, ChunkID> _read_header(std::ifstream& file);
@@ -74,20 +74,20 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * ----------------
    * |  Row count   |
    * |--------------|
-   * |   Columns¹   |
+   * |   Cxlumns¹   |
    * ----------------
    *
-   * ¹Number of columns is provided in the binary header
+   * ¹Number of cxlumns is provided in the binary header
    */
   static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
-  // Calls the right _import_column<CxlumnDataType> depending on the given data_type.
-  static std::shared_ptr<BaseSegment> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+  // Calls the right _import_cxlumn<CxlumnDataType> depending on the given data_type.
+  static std::shared_ptr<BaseSegment> _import_cxlumn(std::ifstream& file, ChunkOffset row_count, DataType data_type,
                                                     bool is_nullable);
 
-  // Reads the column type from the given file and chooses a column import function from it.
+  // Reads the cxlumn type from the given file and chooses a cxlumn import function from it.
   template <typename CxlumnDataType>
-  static std::shared_ptr<BaseSegment> _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  static std::shared_ptr<BaseSegment> _import_cxlumn(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
   /*
    * Imports a serialized ValueSegment from the given file.
@@ -99,7 +99,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Values                | std::string array                     |   Total sum of string lengths
    *
    *
-   * In case the column is nullable the file contains:
+   * In case the cxlumn is nullable the file contains:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
@@ -131,8 +131,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Dictionary Values^    | std::string                           |   Sum of all string lengths
    * Attribute v. values   | uintX                                 |   row_count * width of attribute v.
    *
-   * ^: These fields are only needed if the type of the column is a string.
-   * °: This field is needed if the type of the column is NOT a string
+   * ^: These fields are only needed if the type of the cxlumn is a string.
+   * °: This field is needed if the type of the cxlumn is NOT a string
    */
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);

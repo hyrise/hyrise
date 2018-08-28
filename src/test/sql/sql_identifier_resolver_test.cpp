@@ -57,7 +57,7 @@ TEST_F(SQLIdentifierResolverTest, ResolveIdentifier) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
 }
 
-TEST_F(SQLIdentifierResolverTest, ColumnNameChanges) {
+TEST_F(SQLIdentifierResolverTest, CxlumnNameChanges) {
   context.set_cxlumn_name(expression_a, "x");
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
@@ -82,7 +82,7 @@ TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
 }
 
-TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
+TEST_F(SQLIdentifierResolverTest, CxlumnNameRedundancy) {
   auto expression_a2 = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_c, CxlumnID{2}));
 
   context.set_cxlumn_name(expression_a2, {"a"s});

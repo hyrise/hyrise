@@ -65,18 +65,18 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     bool_c = PQPCxlumnExpression::from_table(*table_bools, "c");
 
     // Create table_empty
-    TableCxlumnDefinitions empty_table_columns;
-    empty_table_columns.emplace_back("a", DataType::Int, false);
-    empty_table_columns.emplace_back("b", DataType::Float, true);
-    empty_table_columns.emplace_back("s", DataType::String, false);
-    table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
+    TableCxlumnDefinitions empty_table_cxlumns;
+    empty_table_cxlumns.emplace_back("a", DataType::Int, false);
+    empty_table_cxlumns.emplace_back("b", DataType::Float, true);
+    empty_table_cxlumns.emplace_back("s", DataType::String, false);
+    table_empty = std::make_shared<Table>(empty_table_cxlumns, TableType::Data);
 
-    Segments columns;
-    columns.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
-    columns.emplace_back(
+    Segments segments;
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
+    segments.emplace_back(
         std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
-    columns.emplace_back(std::make_shared<ValueSegment<std::string>>(pmr_concurrent_vector<std::string>{}));
-    table_empty->append_chunk(columns);
+    segments.emplace_back(std::make_shared<ValueSegment<std::string>>(pmr_concurrent_vector<std::string>{}));
+    table_empty->append_chunk(segments);
 
     empty_a = PQPCxlumnExpression::from_table(*table_empty, "a");
     empty_b = PQPCxlumnExpression::from_table(*table_empty, "b");
@@ -454,13 +454,13 @@ TEST_F(ExpressionEvaluatorTest, InListSeries) {
 }
 
 TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
-  // PQP that returns the column "a"
+  // PQP that returns the cxlumn "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPCxlumnExpression::from_table(*table_a, "a")));
   const auto select_a = select_(pqp_a, DataType::Int, false);
 
-  // PQP that returns the column "c"
+  // PQP that returns the cxlumn "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPCxlumnExpression::from_table(*table_a, "c")));
@@ -478,7 +478,7 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
 }
 
 TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
-  // PQP that returns the column "b" multiplied with the current value in "a"
+  // PQP that returns the cxlumn "b" multiplied with the current value in "a"
   //
   // row   list returned from select
   //  0      (1, 2, 3, 4)
@@ -497,7 +497,7 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_a),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 
-  // PQP that returns the column "c" added to the current value in "a"
+  // PQP that returns the cxlumn "c" added to the current value in "a"
   //
   // row   list returned from select
   //  0      (34, NULL, 35, NULL)

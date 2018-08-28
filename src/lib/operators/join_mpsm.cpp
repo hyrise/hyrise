@@ -14,7 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/abstract_column_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp"
 #include "storage/dictionary_segment.hpp"
 
 #include "storage/reference_segment.hpp"
@@ -153,7 +153,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        const auto current_cluster = (*table)[end.partition]._chunk_columns[cluster];
+        const auto current_cluster = (*table)[end.partition]._materialized_segments[cluster];
         size_t start_index = 0;
         // For the end index we need to find out how long the cluster is on this partition
         size_t end_index = current_cluster->size();
@@ -186,9 +186,9 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     DebugAssert(table->size() > 0, "table has no chunks");
     auto end_positions = std::vector<TablePosition>{table->size()};
     for (auto& partition : (*table)) {
-      auto last_cluster = partition._chunk_columns.size() - 1;
+      auto last_cluster = partition._materialized_segments.size() - 1;
       auto node_id = partition._node_id;
-      end_positions[node_id] = TablePosition(node_id, last_cluster, partition._chunk_columns[last_cluster]->size());
+      end_positions[node_id] = TablePosition(node_id, last_cluster, partition._materialized_segments[last_cluster]->size());
     }
 
     return end_positions;
@@ -257,7 +257,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(NodeID output_partition, ClusterID output_cluster,
-                                     std::shared_ptr<MaterializedChunk<T>> left_chunk, std::vector<bool> left_joined) {
+                                     std::shared_ptr<MaterializedSegment<T>> left_chunk, std::vector<bool> left_joined) {
     for (auto entry_id = size_t{0}; entry_id < left_joined.size(); ++entry_id) {
       if (!left_joined[entry_id]) {
         _emit_combination(output_partition, output_cluster, (*left_chunk)[entry_id].row_id, NULL_ROW_ID);
@@ -278,7 +278,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedChunk<T>> values) {
+  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -318,16 +318,16 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
-    std::shared_ptr<MaterializedChunk<T>> left_cluster =
-        (*_sorted_left_table)[left_node_id]._chunk_columns[left_cluster_id];
+    std::shared_ptr<MaterializedSegment<T>> left_cluster =
+        (*_sorted_left_table)[left_node_id]._materialized_segments[left_cluster_id];
 
     auto left_joined = std::vector<bool>(left_cluster->size(), false);
 
     for (auto right_node_id = NodeID{0}; right_node_id < static_cast<NodeID>(_cluster_count); ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
-      std::shared_ptr<MaterializedChunk<T>> right_cluster =
-          (*_sorted_right_table)[right_node_id]._chunk_columns[right_cluster_id];
+      std::shared_ptr<MaterializedSegment<T>> right_cluster =
+          (*_sorted_right_table)[right_node_id]._materialized_segments[right_cluster_id];
 
       auto left_run_start = size_t{0};
       auto right_run_start = size_t{0};

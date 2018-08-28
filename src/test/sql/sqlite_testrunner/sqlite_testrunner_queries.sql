@@ -79,7 +79,7 @@ SELECT * FROM mixed_null AS t1 INNER JOIN id_int_int_int_100 AS t2 ON t1.b = t2.
 -- Make sure that name-to-id-resolving works fine.
 SELECT t1.a, t1.b, t2.b, t3.a FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a;
 
--- Make sure that t1.* is resolved only to columns from t1, not all columns from input node.
+-- Make sure that t1.* is resolved only to cxlumns from t1, not all cxlumns from input node.
 SELECT t1.*, t2.b, t3.a FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a;
 SELECT t1.*, t2.a, t2.b, t3.* FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a;
 
@@ -205,9 +205,9 @@ SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 ---- SELECT * FROM mixed_null WHERE b BETWEEN NULL AND NULL;
 
 -- CASE
-SELECT CASE WHEN id < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_column FROM mixed;
-SELECT CASE WHEN id + 3.4 < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_column FROM mixed;
-SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;
+SELECT CASE WHEN id < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_cxlumn FROM mixed;
+SELECT CASE WHEN id + 3.4 < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_cxlumn FROM mixed;
+SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_cxlumn FROM mixed;
 
 -- IN
 SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)

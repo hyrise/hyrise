@@ -130,7 +130,7 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
   EXPECT_TRUE(select_(lqp_c)->is_nullable());
 }
 
-TEST_F(LQPSelectExpressionTest, AsColumnName) {
+TEST_F(LQPSelectExpressionTest, AsCxlumnName) {
   EXPECT_TRUE(std::regex_search(select_a->as_cxlumn_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
   EXPECT_TRUE(std::regex_search(select_c->as_cxlumn_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
 

@@ -34,9 +34,9 @@ using MaterializedColumnList = std::vector<std::shared_ptr<MaterializedColumn<T>
  * the construction of pos lists for the algorithms that are using this class.
  **/
 template <typename T>
-class ColumnMaterializer {
+class CxlumnMaterializer {
  public:
-  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
+  explicit CxlumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
 
  public:
   /**
@@ -70,8 +70,8 @@ class ColumnMaterializer {
                                                                   CxlumnID cxlumn_id) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, cxlumn_id, chunk_id] {
       auto column = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
-      resolve_cxlumn_type<T>(*column, [&](auto& typed_segment) {
-        (*output)[chunk_id] = _materialize_column(typed_segment, chunk_id, null_rows_output);
+      resolve_segment_type<T>(*column, [&](auto& typed_segment) {
+        (*output)[chunk_id] = _materialize_segment(typed_segment, chunk_id, null_rows_output);
       });
     });
   }
@@ -80,7 +80,7 @@ class ColumnMaterializer {
    * Materialization works of all types of columns
    */
   template <typename ColumnType>
-  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedColumn<T>> _materialize_segment(const ColumnType& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
@@ -109,7 +109,7 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary columns
    */
-  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionarySegment<T>& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedColumn<T>> _materialize_segment(const DictionarySegment<T>& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());

@@ -1,4 +1,4 @@
-#include "single_column_table_scan_impl.hpp"
+#include "single_cxlumn_table_scan_impl.hpp"
 
 #include <memory>
 #include <utility>
@@ -14,13 +14,13 @@
 
 namespace opossum {
 
-SingleColumnTableScanImpl::SingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
+SingleCxlumnTableScanImpl::SingleCxlumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                      const CxlumnID left_cxlumn_id,
                                                      const PredicateCondition& predicate_condition,
                                                      const AllTypeVariant& right_value)
-    : BaseSingleColumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition}, _right_value{right_value} {}
+    : BaseSingleCxlumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition}, _right_value{right_value} {}
 
-std::shared_ptr<PosList> SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
+std::shared_ptr<PosList> SingleCxlumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   // early outs for specific NULL semantics
   if (variant_is_null(_right_value)) {
     /**
@@ -32,10 +32,10 @@ std::shared_ptr<PosList> SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id)
     return std::make_shared<PosList>();
   }
 
-  return BaseSingleColumnTableScanImpl::scan_chunk(chunk_id);
+  return BaseSingleCxlumnTableScanImpl::scan_chunk(chunk_id);
 }
 
-void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
+void SingleCxlumnTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
                                               std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -47,9 +47,9 @@ void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
   resolve_data_type(left_cxlumn_type, [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 
-    auto& left_column = static_cast<const ValueSegment<CxlumnDataType>&>(base_segment);
+    auto& left_segment = static_cast<const ValueSegment<CxlumnDataType>&>(base_segment);
 
-    auto left_segment_iterable = create_iterable_from_segment(left_column);
+    auto left_segment_iterable = create_iterable_from_segment(left_segment);
 
     left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       with_comparator(_predicate_condition, [&](auto comparator) {
@@ -60,7 +60,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
   });
 }
 
-void SingleColumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
+void SingleCxlumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
                                               std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -84,7 +84,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_se
   });
 }
 
-void SingleColumnTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
+void SingleCxlumnTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
                                               std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -142,31 +142,31 @@ void SingleColumnTableScanImpl::handle_segment(const BaseDictionarySegment& base
   });
 }
 
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionarySegment& column) const {
+ValueID SingleCxlumnTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
     case PredicateCondition::LessThan:
     case PredicateCondition::GreaterThanEquals:
-      return column.lower_bound(_right_value);
+      return segment.lower_bound(_right_value);
 
     case PredicateCondition::LessThanEquals:
     case PredicateCondition::GreaterThan:
-      return column.upper_bound(_right_value);
+      return segment.upper_bound(_right_value);
 
     default:
       Fail("Unsupported comparison type encountered");
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionarySegment& column,
+bool SingleCxlumnTableScanImpl::_right_value_matches_all(const BaseDictionarySegment& segment,
                                                          const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
-      return search_value_id != column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
+      return search_value_id != segment.upper_bound(_right_value) && segment.unique_values_count() == size_t{1u};
 
     case PredicateCondition::NotEquals:
-      return search_value_id == column.upper_bound(_right_value);
+      return search_value_id == segment.upper_bound(_right_value);
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
@@ -181,14 +181,14 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionarySeg
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionarySegment& column,
+bool SingleCxlumnTableScanImpl::_right_value_matches_none(const BaseDictionarySegment& segment,
                                                           const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
-      return search_value_id == column.upper_bound(_right_value);
+      return search_value_id == segment.upper_bound(_right_value);
 
     case PredicateCondition::NotEquals:
-      return search_value_id == column.upper_bound(_right_value) && column.unique_values_count() == size_t{1u};
+      return search_value_id == segment.upper_bound(_right_value) && segment.unique_values_count() == size_t{1u};
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:

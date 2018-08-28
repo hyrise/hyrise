@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * Assign column names to expressions
+ * Assign cxlumn names to expressions
  */
 class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode {
  public:

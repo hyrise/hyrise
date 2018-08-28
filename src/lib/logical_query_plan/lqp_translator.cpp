@@ -191,13 +191,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   cxlumn_id = node->left_input()->get_cxlumn_id(*predicate->arguments[0]);
   if (predicate->arguments.size() > 1) {
     const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[1]);
-    // This is necessary because we currently support single column indexes only
+    // This is necessary because we currently support single cxlumn indexes only
     Assert(value_expression, "Expected value as second argument for IndexScan");
     value_variant = value_expression->value;
   }
   if (predicate->arguments.size() > 2) {
     const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[2]);
-    // This is necessary because we currently support single column indexes only
+    // This is necessary because we currently support single cxlumn indexes only
     Assert(value_expression, "Expected value as third argument for IndexScan");
     value2_variant = value_expression->value;
   }
@@ -277,8 +277,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 
   /**
    * Go through all the order descriptions and create a sort operator for each of them.
-   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
-   * We therefore sort by the n+1-th column before sorting by the n-th column.
+   * Iterate in reverse because the sort operator does not support multiple cxlumns, and instead relies on stable sort.
+   * We therefore sort by the n+1-th cxlumn before sorting by the n-th cxlumn.
    */
 
   std::shared_ptr<AbstractOperator> current_pqp = input_operator;
@@ -294,7 +294,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_cxlumn_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(pqp_expression);
     Assert(pqp_cxlumn_expression,
-           "Sort Expression '"s + pqp_expression->as_cxlumn_name() + "' must be available as column, LQP is invalid");
+           "Sort Expression '"s + pqp_expression->as_cxlumn_name() + "' must be available as cxlumn, LQP is invalid");
 
     current_pqp = std::make_shared<Sort>(current_pqp, pqp_cxlumn_expression->cxlumn_id, *order_by_mode_iter);
   }
@@ -317,8 +317,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   Assert(join_node->join_predicate, "Need predicate for non Cross Join");
 
   /**
-   * Assert that the Join Predicate is simple, e.g. of the form <column_a> <predicate> <column_b>.
-   * We do not require <column_a> to be in the left input though.
+   * Assert that the Join Predicate is simple, e.g. of the form <cxlumn_a> <predicate> <cxlumn_b>.
+   * We do not require <cxlumn_a> to be in the left input though.
    */
   const auto operator_join_predicate =
       OperatorJoinPredicate::from_expression(*join_node->join_predicate, *node->left_input(), *node->right_input());
@@ -357,7 +357,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
     const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
 
-    // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
+    // Always resolve the aggregate to a cxlumn, even if it is a Value. The Aggregate operator only takes cxlumns as
     // arguments
     if (aggregate_expression->argument()) {
       const auto argument_cxlumn_id = node->left_input()->get_cxlumn_id(*aggregate_expression->argument());
@@ -368,14 +368,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     }
   }
 
-  // Create GroupByColumns from the GroupBy expressions
+  // Create GroupByCxlumns from the GroupBy expressions
   std::vector<CxlumnID> group_by_cxlumn_ids;
   group_by_cxlumn_ids.reserve(group_by_pqp_expressions.size());
 
   for (const auto& group_by_expression : group_by_pqp_expressions) {
-    const auto group_by_column_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(group_by_expression);
-    Assert(group_by_column_expression, "Only PQPCxlumnExpressions valid here.");
-    group_by_cxlumn_ids.emplace_back(group_by_column_expression->cxlumn_id);
+    const auto group_by_cxlumn_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(group_by_expression);
+    Assert(group_by_cxlumn_expression, "Only PQPCxlumnExpressions valid here.");
+    group_by_cxlumn_ids.emplace_back(group_by_cxlumn_expression->cxlumn_id);
   }
 
   return std::make_shared<Aggregate>(input_operator, aggregate_cxlumn_definitions, group_by_cxlumn_ids);
@@ -471,7 +471,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
 
   for (auto& pqp_expression : pqp_expressions) {
     /**
-     * Resolve Expressions to PQPCxlumnExpressions referencing columns from the input Operator. After this, no
+     * Resolve Expressions to PQPCxlumnExpressions referencing cxlumns from the input Operator. After this, no
      * LQPCxlumnExpressions remain in the pqp_expression and it is a valid PQP expression.
      */
 
@@ -493,7 +493,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
           sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_cxlumn_id);
         }
 
-        // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
+        // Only specify a type for the SubSelect if it has exactly one cxlumn. Otherwise the DataType of the Expression
         // is undefined and obtaining it will result in a runtime error.
         if (lqp_select_expression->lqp->cxlumn_expressions().size() == 1u) {
           const auto sub_select_data_type = lqp_select_expression->data_type();
@@ -507,7 +507,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         return ExpressionVisitation::DoNotVisitArguments;
       }
 
-      // Try to resolve the Expression to a column from the input node
+      // Try to resolve the Expression to a cxlumn from the input node
       const auto cxlumn_id = node->find_cxlumn_id(*expression);
       if (cxlumn_id) {
         const auto referenced_expression = node->cxlumn_expressions()[*cxlumn_id];
@@ -518,7 +518,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
       }
 
       AssertInput(expression->type != ExpressionType::LQPCxlumn,
-                  "Failed to resolve Column '"s + expression->as_cxlumn_name() + "', LQP is invalid");
+                  "Failed to resolve Cxlumn '"s + expression->as_cxlumn_name() + "', LQP is invalid");
 
       return ExpressionVisitation::VisitArguments;
     });

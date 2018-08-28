@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_single_column_table_scan_impl.hpp"
+#include "base_single_cxlumn_table_scan_impl.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -14,16 +14,16 @@
 namespace opossum {
 
 /**
- * @brief Compares one column to a constant value
+ * @brief Compares one cxlumn to a constant value
  *
- * - Value columns are scanned sequentially
- * - For dictionary columns, we basically look up the value ID of the constant value in the dictionary
+ * - Value segments are scanned sequentially
+ * - For dictionary segments, we basically look up the value ID of the constant value in the dictionary
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
- *   enables us to detect if all or none of the values in the column satisfy the expression.
+ *   enables us to detect if all or none of the values in the segment satisfy the expression.
  */
-class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
+class SingleCxlumnTableScanImpl : public BaseSingleCxlumnTableScanImpl {
  public:
-  SingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
+  SingleCxlumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
                             const PredicateCondition& predicate_condition, const AllTypeVariant& right_value);
 
   std::shared_ptr<PosList> scan_chunk(ChunkID) override;
@@ -35,19 +35,19 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleColumnTableScanImpl::handle_segment;
+  using BaseSingleCxlumnTableScanImpl::handle_segment;
 
  private:
   /**
-   * @defgroup Methods used for handling dictionary columns
+   * @defgroup Methods used for handling dictionary segments
    * @{
    */
 
-  ValueID _get_search_value_id(const BaseDictionarySegment& column) const;
+  ValueID _get_search_value_id(const BaseDictionarySegment& segment) const;
 
-  bool _right_value_matches_all(const BaseDictionarySegment& column, const ValueID search_value_id) const;
+  bool _right_value_matches_all(const BaseDictionarySegment& segment, const ValueID search_value_id) const;
 
-  bool _right_value_matches_none(const BaseDictionarySegment& column, const ValueID search_value_id) const;
+  bool _right_value_matches_none(const BaseDictionarySegment& segment, const ValueID search_value_id) const;
 
   template <typename Functor>
   void _with_operator_for_dict_segment_scan(const PredicateCondition predicate_condition, const Functor& func) const {

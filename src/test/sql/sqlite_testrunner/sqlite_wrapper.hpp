@@ -44,7 +44,7 @@ class SQLiteWrapper final {
 
  protected:
   /*
-   * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
+   * Creates cxlumns in given opossum table according to an sqlite intermediate statement (one result row).
    */
   std::shared_ptr<Table> _create_table(sqlite3_stmt* result_row, int cxlumn_count);
 

@@ -1,7 +1,7 @@
 #include "b_tree_index.hpp"
 
 #include "resolve_type.hpp"
-#include "storage/index/column_index_type.hpp"
+#include "storage/index/segment_index_type.hpp"
 
 namespace opossum {
 

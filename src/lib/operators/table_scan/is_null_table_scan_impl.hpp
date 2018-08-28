@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "base_single_column_table_scan_impl.hpp"
+#include "base_single_cxlumn_table_scan_impl.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -13,7 +13,7 @@ namespace opossum {
 class Table;
 class BaseValueSegment;
 
-class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
+class IsNullTableScanImpl : public BaseSingleCxlumnTableScanImpl {
  public:
   IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
                       const PredicateCondition& predicate_condition);
@@ -27,7 +27,7 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleColumnTableScanImpl::handle_segment;
+  using BaseSingleCxlumnTableScanImpl::handle_segment;
 
  private:
   /**
@@ -35,11 +35,11 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  bool _matches_all(const BaseValueSegment& column);
+  bool _matches_all(const BaseValueSegment& segment);
 
-  bool _matches_none(const BaseValueSegment& column);
+  bool _matches_none(const BaseValueSegment& segment);
 
-  void _add_all(Context& context, size_t column_size);
+  void _add_all(Context& context, size_t segment_size);
 
   /**@}*/
 

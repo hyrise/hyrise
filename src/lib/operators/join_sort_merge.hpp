@@ -11,8 +11,8 @@
 namespace opossum {
 
 /**
-   * This operator joins two tables using one column of each table by performing radix-partition-sort and a merge join.
-   * The output is a new table with referenced columns for all columns of the two inputs and filtered pos_lists.
+   * This operator joins two tables using one cxlumn of each table by performing radix-partition-sort and a merge join.
+   * The output is a new table with referenced cxlumns for all cxlumns of the two inputs and filtered pos_lists.
    *
    * As with most operators, we do not guarantee a stable operation with regards to positions -
    * i.e., your sorting order might be disturbed.

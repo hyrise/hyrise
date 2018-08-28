@@ -412,7 +412,7 @@ TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
-  auto sql = "SELECT a + not_a_column FROM table_a";
+  auto sql = "SELECT a + not_a_cxlumn FROM table_a";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);

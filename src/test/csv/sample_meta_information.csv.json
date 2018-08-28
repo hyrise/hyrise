@@ -1,7 +1,7 @@
 {
     "chunk_size": 2,
     "auto_compress": false,
-    "columns": [
+    "cxlumns": [
         {
             "name": "a",
             "nullable": false,

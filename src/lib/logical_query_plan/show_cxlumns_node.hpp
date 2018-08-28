@@ -7,7 +7,7 @@
 namespace opossum {
 
 /**
- * This node type represents the SHOW COLUMNS management command.
+ * This node type represents the SHOW CXLUMNS management command.
  */
 class ShowCxlumnsNode : public EnableMakeForLQPNode<ShowCxlumnsNode>, public AbstractLQPNode {
  public:

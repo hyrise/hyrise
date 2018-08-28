@@ -130,7 +130,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(pqp_select_expression->requires_computation());
 }
 
-TEST_F(ExpressionTest, AsColumnName) {
+TEST_F(ExpressionTest, AsCxlumnName) {
   EXPECT_EQ(sub_(5, 3)->as_cxlumn_name(), "5 - 3");
   EXPECT_EQ(add_(5, 3)->as_cxlumn_name(), "5 + 3");
   EXPECT_EQ(mul_(5, 3)->as_cxlumn_name(), "5 * 3");
@@ -161,9 +161,9 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(parameter_(ParameterID{0}, a)->as_cxlumn_name(), "Parameter[name=a;id=0]");
 }
 
-TEST_F(ExpressionTest, AsColumnNameNested) {
+TEST_F(ExpressionTest, AsCxlumnNameNested) {
   /**
-   * Test that parentheses are placed correctly when generating column names of nested expressions
+   * Test that parentheses are placed correctly when generating cxlumn names of nested expressions
    */
 
   EXPECT_EQ(add_(5, mul_(2, 3))->as_cxlumn_name(), "5 + 2 * 3");

@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-#include "index/column_index_type.hpp"
+#include "index/segment_index_type.hpp"
 
 #include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp"

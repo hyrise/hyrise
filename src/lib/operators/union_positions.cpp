@@ -34,7 +34,7 @@
  *
  * ### About ColumnSegments
  * For each CxlumnID in which one (or both) of the InputTables has a different PosList than in the Column left of it,
- * a entry into _column_segment_offsets is made.
+ * an entry into _column_segment_offsets is made.
  *
  * The ReferenceMatrix of a StoredTable will only contain one column, the ReferenceMatrix of the result of a 3 way Join
  * will contain 3 columns.

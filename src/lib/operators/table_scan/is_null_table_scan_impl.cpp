@@ -15,7 +15,7 @@ namespace opossum {
 
 IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
                                          const PredicateCondition& predicate_condition)
-    : BaseSingleColumnTableScanImpl{in_table, base_cxlumn_id, predicate_condition} {
+    : BaseSingleCxlumnTableScanImpl{in_table, base_cxlumn_id, predicate_condition} {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
@@ -23,11 +23,11 @@ IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_
 void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
                                         std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  BaseSingleColumnTableScanImpl::handle_segment(base_segment, base_context);
+  BaseSingleCxlumnTableScanImpl::handle_segment(base_segment, base_context);
 
   const auto pos_list = *base_segment.pos_list();
 
-  // Additionally to the null values in the referencED column, we need to find null values in the referencING column
+  // Additionally to the null values in the referencED segment, we need to find null values in the referencING segment
   if (_predicate_condition == PredicateCondition::IsNull) {
     for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list.size(); ++chunk_offset) {
       if (pos_list[chunk_offset].is_null()) context->_matches_out.emplace_back(context->_chunk_id, chunk_offset);
@@ -50,7 +50,7 @@ void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   }
 
   DebugAssert(base_segment.is_nullable(),
-              "Columns that are not nullable should have been caught by edge case handling.");
+              "Cxlumns that are not nullable should have been caught by edge case handling.");
 
   auto base_segment_iterable = NullValueVectorIterable{base_segment.null_values()};
 
@@ -88,23 +88,23 @@ void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
   });
 }
 
-bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& column) {
+bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return false;
 
     case PredicateCondition::IsNotNull:
-      return !column.is_nullable();
+      return !segment.is_nullable();
 
     default:
       Fail("Unsupported comparison type encountered");
   }
 }
 
-bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& column) {
+bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
-      return !column.is_nullable();
+      return !segment.is_nullable();
 
     case PredicateCondition::IsNotNull:
       return false;
@@ -114,7 +114,7 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& column) {
   }
 }
 
-void IsNullTableScanImpl::_add_all(Context& context, size_t column_size) {
+void IsNullTableScanImpl::_add_all(Context& context, size_t segment_size) {
   auto& matches_out = context._matches_out;
   const auto chunk_id = context._chunk_id;
   const auto& mapped_chunk_offsets = context._mapped_chunk_offsets;
@@ -124,7 +124,7 @@ void IsNullTableScanImpl::_add_all(Context& context, size_t column_size) {
       matches_out.emplace_back(RowID{chunk_id, chunk_offsets.into_referencing});
     }
   } else {
-    for (auto chunk_offset = 0u; chunk_offset < column_size; ++chunk_offset) {
+    for (auto chunk_offset = 0u; chunk_offset < segment_size; ++chunk_offset) {
       matches_out.emplace_back(RowID{chunk_id, chunk_offset});
     }
   }

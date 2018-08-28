@@ -6,7 +6,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv_writer.hpp"
-#include "storage/abstract_column_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -20,7 +20,7 @@ class ReferenceSegment;
  *
  * Additionally to the main csv file, which contains the contents of the table,
  * a meta file is generated. This meta file contains further information,
- * such as the types of the columns in the table.
+ * such as the types of the cslumns in the table.
  *
  * Note: ExportCsv does not support null values at the moment
  */
@@ -68,18 +68,18 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *
    *  "PropertyType","Key","Value"
    *  "ChunkSize",,100
-   *  "ColumnType","a","int_null"
-   *  "ColumnType","b","string"
-   *  "ColumnType","c","float"
+   *  "CxlumnType","a","int_null"
+   *  "CxlumnType","b","string"
+   *  "CxlumnType","c","float"
    *
    *  which resembles the following table of meta data:
    *
    *  PropertyType  | Key | Value
    *  ------------------------------
    *  ChunkSize     |     | 100
-   *  ColumnType    |  a  | int_null
-   *  ColumnType    |  b  | string
-   *  ColumnType    |  c  | float
+   *  CxlumnType    |  a  | int_null
+   *  CxlumnType    |  b  | string
+   *  CxlumnType    |  c  | float
    *
    *  Returns the input table
    */

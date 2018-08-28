@@ -6,7 +6,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
-#include "storage/abstract_column_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -51,11 +51,11 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
-   * Column count          | CxlumnID                              |   2
-   * Column types          | TypeID array                          |   Column Count * 1
-   * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
-   * Column name lengths   | size_t array                          |   Column Count * 1
-   * Column names          | std::string array                     |   Sum of lengths of all names
+   * Cxlumn count          | CxlumnID                              |   2
+   * Cxlumn types          | TypeID array                          |   Cxlumn Count * 1
+   * Cxlumn nullable       | bool (stored as BoolAsByteType)       |   Cxlumn Count * 1
+   * Cxlumn name lengths   | size_t array                          |   Cxlumn Count * 1
+   * Cxlumn names          | std::string array                     |   Sum of lengths of all names
    *
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
@@ -70,8 +70,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Row count             | ChunkOffset                           |  4
    *
-   * Next, it dumps the contents of the columns in the respective format (depending on the type
-   * of the column, such as ReferenceSegment, DictionarySegment, ValueSegment).
+   * Next, it dumps the contents of the segments in the respective format (depending on the type
+   * of the segment, such as ReferenceSegment, DictionarySegment, ValueSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -92,56 +92,56 @@ class ExportBinary : public AbstractReadOnlyOperator {
 template <typename T>
 class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   /**
-   * Value Columns are dumped with the following layout:
+   * Value Segments are dumped with the following layout:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Cxlumn Type           | CxlumnType                            |   1
    * Null Values'          | vector<bool> (BoolAsByteType)         |   rows * 1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
    *
    * Please note that the number of rows are written in the header of the chunk.
-   * The type of the column can be found in the global header of the file.
+   * The type of the cxlumn can be found in the global header of the file.
    *
-   * ': These fields are only written if the column is nullable.
-   * ^: These fields are only written if the type of the column IS a string.
-   * °: This field is writen if the type of the column is NOT a string
+   * ': These fields are only written if the cxlumn is nullable.
+   * ^: These fields are only written if the type of the cxlumn IS a string.
+   * °: This field is writen if the type of the cxlumn is NOT a string
    *
-   * @param base_segment The Column to export
+   * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
   void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) final;
 
   /**
-   * Reference Columns are dumped with the following layout, which is similar to value segments:
+   * Reference Segments are dumped with the following layout, which is similar to value segments:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Cxlumn Type           | CxlumnType                            |   1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
    *
    * Please note that the number of rows are written in the header of the chunk.
-   * The type of the column can be found in the global header of the file.
+   * The type of the cxlumn can be found in the global header of the file.
    *
-   * ^: These fields are only written if the type of the column IS a string.
-   * °: This field is writen if the type of the column is NOT a string
+   * ^: These fields are only written if the type of the cxlumn IS a string.
+   * °: This field is writen if the type of the cxlumn is NOT a string
    *
-   * @param base_segment The Column to export
+   * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_segment(const ReferenceSegment& ref_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   /**
-   * Dictionary Columns are dumped with the following layout:
+   * Dictionary Segments are dumped with the following layout:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type           | ColumnType                            |   1
+   * Cxlumn Type           | CxlumnType                            |   1
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
@@ -150,12 +150,12 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * Attribute v. values   | uintX                                 |   rows * width of attribute v.
    *
    * Please note that the number of rows are written in the header of the chunk.
-   * The type of the column can be found in the global header of the file.
+   * The type of the cxlumn can be found in the global header of the file.
    *
-   * ^: These fields are only written if the type of the column IS a string.
-   * °: This field is written if the type of the column is NOT a string
+   * ^: These fields are only written if the type of the cxlumn IS a string.
+   * °: This field is written if the type of the cxlumn is NOT a string
    *
-   * @param base_segment The Column to export
+   * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_segment(const BaseDictionarySegment& base_segment,

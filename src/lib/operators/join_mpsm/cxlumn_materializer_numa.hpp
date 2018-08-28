@@ -27,23 +27,23 @@ template <typename T>
 using MaterializedValueAllocator = PolymorphicAllocator<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedChunk = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
+using MaterializedSegment = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
 
 template <typename T>
 struct MaterializedNUMAPartition {
   NodeID _node_id;
   MaterializedValueAllocator<T> _alloc;
-  std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
+  std::vector<std::shared_ptr<MaterializedSegment<T>>> _materialized_segments;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
-      : _node_id{node_id}, _alloc{Topology::get().get_memory_resource(node_id)}, _chunk_columns(reserve_size) {}
+      : _node_id{node_id}, _alloc{Topology::get().get_memory_resource(node_id)}, _materialized_segments(reserve_size) {}
 
   MaterializedNUMAPartition() {}
 
   void shrink_to_fit() {
-    _chunk_columns.erase(
-        std::remove(_chunk_columns.begin(), _chunk_columns.end(), std::shared_ptr<MaterializedChunk<T>>{}),
-        _chunk_columns.end());
+    _materialized_segments.erase(
+        std::remove(_materialized_segments.begin(), _materialized_segments.end(), std::shared_ptr<MaterializedSegment<T>>{}),
+        _materialized_segments.end());
   }
 };
 
@@ -51,19 +51,19 @@ template <typename T>
 using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
 
 /**
- * Materializes a table for a specific column and sorts it if required. Row-Ids are kept in order to enable
+ * Materializes a table for a specific cxlumn and sorts it if required. Row-Ids are kept in order to enable
  * the construction of pos lists for the algorithms that are using this class.
  **/
 template <typename T>
-class ColumnMaterializerNUMA {
+class CxlumnMaterializerNUMA {
  public:
-  explicit ColumnMaterializerNUMA(bool materialize_null) : _materialize_null{materialize_null} {}
+  explicit CxlumnMaterializerNUMA(bool materialize_null) : _materialize_null{materialize_null} {}
 
  public:
   /**
    * Materializes and sorts all the chunks of an input table in parallel
    * by creating multiple jobs that materialize chunks.
-   * Returns the materialized columns and a list of null row ids if materialize_null is enabled.
+   * Returns the materialized cxlumns and a list of null row ids if materialize_null is enabled.
    **/
   std::pair<std::unique_ptr<MaterializedNUMAPartitionList<T>>, std::unique_ptr<PosList>> materialize(
       std::shared_ptr<const Table> input, CxlumnID cxlumn_id) {
@@ -119,12 +119,12 @@ class ColumnMaterializerNUMA {
     // This allocator ensures that materialized values are colocated with the actual values.
     auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
-    const auto column = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
+    const auto segment = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
 
     return std::make_shared<JobTask>(
-        [this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
-          resolve_cxlumn_type<T>(*column, [&](auto& typed_segment) {
-            _materialize_column(typed_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
+        [this, &output, &null_rows_output, segment, chunk_id, alloc, numa_node_id] {
+          resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
+            _materialize_segment(typed_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
           });
         },
         false);
@@ -134,9 +134,9 @@ class ColumnMaterializerNUMA {
    * Materialization works for all types of columns
    */
   template <typename ColumnType>
-  void _materialize_column(const ColumnType& column, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
+  void _materialize_segment(const ColumnType& column, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
                            MaterializedNUMAPartition<T>& partition) {
-    auto output = std::make_shared<MaterializedChunk<T>>(partition._alloc);
+    auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
 
     output->reserve(column.size());
 
@@ -153,16 +153,16 @@ class ColumnMaterializerNUMA {
       }
     });
 
-    partition._chunk_columns[chunk_id] = output;
+    partition._materialized_segments[chunk_id] = output;
   }
 
   /**
    * Specialization for dictionary columns
    */
-  std::shared_ptr<MaterializedChunk<T>> _materialize_column(const DictionarySegment<T>& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& column, ChunkID chunk_id,
                                                             std::unique_ptr<PosList>& null_rows_output,
                                                             MaterializedValueAllocator<T> alloc) {
-    auto output = MaterializedChunk<T>{alloc};
+    auto output = MaterializedSegment<T>{alloc};
     output.reserve(column.size());
 
     auto value_ids = column.attribute_vector();
@@ -180,7 +180,7 @@ class ColumnMaterializerNUMA {
       }
     });
 
-    return std::make_shared<MaterializedChunk<T>>(std::move(output));
+    return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
 
  private:

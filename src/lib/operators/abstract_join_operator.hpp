@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-// operator to join two tables using one column of each table
+// operator to join two tables using one cxlumn of each table
 // output is a table with reference segments
 // to filter by multiple criteria, you can chain the operator
 

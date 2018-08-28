@@ -95,7 +95,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 
-  // The problem is that we can only infer columns from sqlite if they have at least one row.
+  // The problem is that we can only infer colxmn types from sqlite if they have at least one row.
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
       << "The SQLiteTestRunner cannot handle queries without results";

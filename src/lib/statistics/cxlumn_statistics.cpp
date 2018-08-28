@@ -61,7 +61,7 @@ FilterByValueEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_
         return estimate_range(_min, value - 1);
       }
       // intentionally no break
-      // if ColumnType is a floating point number, OpLessThanEquals behaviour is expected instead of OpLessThan
+      // if CxlumnDataType is a floating point number, OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
     case PredicateCondition::LessThanEquals:
@@ -75,7 +75,7 @@ FilterByValueEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_
         return estimate_range(value + 1, _max);
       }
       // intentionally no break
-      // if ColumnType is a floating point number,
+      // if CxlumnDataType is a floating point number,
       // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
@@ -100,7 +100,7 @@ template <>
 FilterByValueEstimate CxlumnStatistics<std::string>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
-  // if column has no distinct values, it can only have null values which cannot be selected with this predicate
+  // if cxlumn has no distinct values, it can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0) {
     return {0.f, without_null_values()};
   }
@@ -153,7 +153,7 @@ FilterByValueEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_
       }
       // apply default selectivity for open ended
       output.selectivity *= TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY;
-      // column statistics have just been created, therefore, cast to the column type cannot fail
+      // cxlumn statistics have just been created, therefore, cast to the cxlumn type cannot fail
       auto cxlumn_statistics = std::dynamic_pointer_cast<CxlumnStatistics<CxlumnDataType>>(output.cxlumn_statistics);
       cxlumn_statistics->_distinct_count *= TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY;
       return output;
@@ -163,48 +163,48 @@ FilterByValueEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_
 }
 
 template <typename CxlumnDataType>
-FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_cxlumn(
+FilterByCxlumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_cxlumn(
     const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const {
   /**
-   * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
-   * range of both columns. 
+   * Calculate expected selectivity by looking at what ratio of values of both cxlumns are in the overlapping value
+   * range of both cxlumns. 
    * 
    * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping 
-   * range from both columns are taken to compute the selectivity.
+   * range from both cxlumns are taken to compute the selectivity.
    *
    * Example estimation:
    *
-   * |  Column name     |  col_left  |  col_right  |
-   * |  Min value       |  1         |  11         |
-   * |  Max value       |  20        |  40         |
-   * |  Distinct count  |  20        |  15         |
+   * |  Cxlumn name     |  colxmn_left  |  colxmn_right  |
+   * |  Min value       |  1            |  11            |
+   * |  Max value       |  20           |  40            |
+   * |  Distinct count  |  20           |  15            |
    *
    * Overlapping value range: 11 to 20  -->  overlapping_range_min = 11,  overlapping_range_max = 20
    * left_overlapping_ratio = (20 - 11 + 1) / (20 - 1 + 1) = 1 / 2
    * right_overlapping_ratio = (20 - 11 + 1) / (40 - 11 + 1) = 1 / 3
    *
    * left_below_overlapping_ratio = (10 - 1 + 1) / (20 - 1 + 1) = 1 / 2
-   * left_above_overlapping_ratio = 0 as col_left max value within overlapping range
+   * left_above_overlapping_ratio = 0 as colxmn_left max value within overlapping range
    * right_below_overlapping_ratio = (40 - 21 + 1) / (40 - 11 + 1) = 2 / 3
-   * right_above_overlapping_ratio = 0 as col_right min value within overlapping range
+   * right_above_overlapping_ratio = 0 as colxmn_right min value within overlapping range
    *
    * left_overlapping_distinct_count = (1 / 2) * 20 = 10
    * right_overlapping_distinct_count = (1 / 3) * 15 = 5
    *
    * For predicate condition equals only the ratios of values in the overlapping range is considered as values. If values could
    * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
-   * equal value ratio, the column with fewer distinct values within the overlapping range is determined. In this case
-   * this is col_right. Statistics component assumes that for two value sets for the same range the smaller set is
+   * equal value ratio, the cxlumn with fewer distinct values within the overlapping range is determined. In this case
+   * this is colxmn_right. Statistics component assumes that for two value sets for the same range the smaller set is
    * part of the bigger set. Therefore, it assumes that the 5 distinct values within the overlapping range of the right
-   * column also exist in the left column. The equal value ratio is then calculated by multiplying
-   * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left column (= 1 / 20):
+   * cxlumn also exist in the left cxlumn. The equal value ratio is then calculated by multiplying
+   * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left cxlumn (= 1 / 20):
    * equal_values_ratio = (1 / 2) * (1 / 20) = (1 / 40)
    * This is also the selectivity for the predicate condition equals: (1 / 40) = 2.5 %
    *
    * For predicate condition less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
-   * table entries where the col_left value is below the common range or the col_right value is above it will always be
-   * in the result. The probability that both values are within the overlapping range and that col_left < col_right is
-   * (probability of col_left != col_right where left and right values are in overlapping range) / 2
+   * table entries where the colxmn_left value is below the common range or the colxmn_right value is above it will always be
+   * in the result. The probability that both values are within the overlapping range and that colxmn_left < colxmn_right is
+   * (probability of colxmn_left != colxmn_right where left and right values are in overlapping range) / 2
    *
    * The selectivity for predicate condition less is the sum of different probabilities: // NOLINT
    *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT
@@ -215,7 +215,7 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
    *  = 29 / 40 = 72.5 % // NOLINT
    */
 
-  // Cannot compare columns of different type
+  // Cannot compare cxlumns of different type
   if (_data_type != base_right_cxlumn_statistics.data_type()) {
     return {1.0f, without_null_values(), base_right_cxlumn_statistics.without_null_values()};
   }
@@ -223,7 +223,7 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
   const auto& right_cxlumn_statistics =
       static_cast<const CxlumnStatistics<CxlumnDataType>&>(base_right_cxlumn_statistics);
 
-  // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
+  // if cxlumns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_cxlumn_statistics.distinct_count() == 0) {
     return {0.f, without_null_values(), right_cxlumn_statistics.without_null_values()};
   }
@@ -287,7 +287,7 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
   // used for <, <=, > and >= predicate_conditions
   auto estimate_selectivity_for_open_ended_operators = [&](float values_below_ratio, float values_above_ratio,
                                                            CxlumnDataType new_min, CxlumnDataType new_max,
-                                                           bool add_equal_values) -> FilterByColumnComparisonEstimate {
+                                                           bool add_equal_values) -> FilterByCxlumnComparisonEstimate {
     // selectivity calculated by adding up ratios that values are below, in or above overlapping range
     float selectivity = 0.f;
     // ratio of values on left hand side which are smaller than overlapping range
@@ -302,21 +302,21 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
     // remove ratio of rows, where one value is below and one value is above the overlapping range
     selectivity -= values_below_ratio * values_above_ratio;
 
-    auto new_left_column_stats = estimate_range(new_min, new_max).cxlumn_statistics;
-    auto new_right_column_stats = right_cxlumn_statistics.estimate_range(new_min, new_max).cxlumn_statistics;
-    return {combined_non_null_ratio * selectivity, new_left_column_stats, new_right_column_stats};
+    auto new_left_cxlumn_stats = estimate_range(new_min, new_max).cxlumn_statistics;
+    auto new_right_cxlumn_stats = right_cxlumn_statistics.estimate_range(new_min, new_max).cxlumn_statistics;
+    return {combined_non_null_ratio * selectivity, new_left_cxlumn_stats, new_right_cxlumn_stats};
   };
 
   // Currently the distinct count, min and max calculation is incorrect if predicate condition is OpLessThan or
-  // OpGreaterThan and right column min = left column min or right column max = left column max.
+  // OpGreaterThan and right cxlumn min = left cxlumn min or right cxlumn max = left cxlumn max.
   //
-  // E.g. Two integer columns have 3 distinct values and same min and max value of 1 and 3.
+  // E.g. Two integer cxlumns have 3 distinct values and same min and max value of 1 and 3.
   //
-  // Both new left and right column statistics will have the same min and max values of 1 and 3.
-  // However, for predicate condition OpLessThan, the left column max is actually 2 as there is no possibility
-  // for 3 < 3. Additionally, the right column min is actually 2, as there is no possibility for 1 < 1.
+  // Both new left and right cxlumn statistics will have the same min and max values of 1 and 3.
+  // However, for predicate condition OpLessThan, the left cxlumn max is actually 2 as there is no possibility
+  // for 3 < 3. Additionally, the right cxlumn min is actually 2, as there is no possibility for 1 < 1.
   // The same also applies for predicate condition OpGreaterThan vice versa.
-  // The smaller range between min and max values of a column will also lead to a smaller distinct count.
+  // The smaller range between min and max values of a cxlumn will also lead to a smaller distinct count.
   //
   // TODO(Anyone): Fix issue mentioned above.
 
@@ -324,17 +324,17 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
     case PredicateCondition::Equals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);
 
-      auto new_left_column_stats = std::make_shared<CxlumnStatistics>(0.0f, overlapping_distinct_count,
+      auto new_left_cxlumn_stats = std::make_shared<CxlumnStatistics>(0.0f, overlapping_distinct_count,
                                                                       overlapping_range_min, overlapping_range_max);
-      auto new_right_column_stats = std::make_shared<CxlumnStatistics>(0.0f, overlapping_distinct_count,
+      auto new_right_cxlumn_stats = std::make_shared<CxlumnStatistics>(0.0f, overlapping_distinct_count,
                                                                        overlapping_range_min, overlapping_range_max);
-      return {combined_non_null_ratio * equal_values_ratio, new_left_column_stats, new_right_column_stats};
+      return {combined_non_null_ratio * equal_values_ratio, new_left_cxlumn_stats, new_right_cxlumn_stats};
     }
     case PredicateCondition::NotEquals: {
-      auto new_left_column_stats = std::make_shared<CxlumnStatistics>(0.0f, distinct_count(), _min, _max);
-      auto new_right_column_stats = std::make_shared<CxlumnStatistics>(
+      auto new_left_cxlumn_stats = std::make_shared<CxlumnStatistics>(0.0f, distinct_count(), _min, _max);
+      auto new_right_cxlumn_stats = std::make_shared<CxlumnStatistics>(
           0.0f, right_cxlumn_statistics.distinct_count(), right_cxlumn_statistics._min, right_cxlumn_statistics._max);
-      return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_column_stats, new_right_column_stats};
+      return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_cxlumn_stats, new_right_cxlumn_stats};
     }
     case PredicateCondition::LessThan: {
       return estimate_selectivity_for_open_ended_operators(left_below_overlapping_ratio, right_above_overlapping_ratio,
@@ -361,14 +361,14 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-FilterByColumnComparisonEstimate CxlumnStatistics<std::string>::estimate_predicate_with_cxlumn(
+FilterByCxlumnComparisonEstimate CxlumnStatistics<std::string>::estimate_predicate_with_cxlumn(
     const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const {
   // TODO(anybody) implement special case for strings
-  Assert(_data_type == base_right_cxlumn_statistics.data_type(), "Cannot compare columns of different type");
+  Assert(_data_type == base_right_cxlumn_statistics.data_type(), "Cannot compare cxlumns of different type");
 
   const auto& right_cxlumn_statistics = static_cast<const CxlumnStatistics<std::string>&>(base_right_cxlumn_statistics);
 
-  // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
+  // if cxlumns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_cxlumn_statistics.distinct_count() == 0) {
     return {0.f, without_null_values(), right_cxlumn_statistics.without_null_values()};
   }
@@ -380,11 +380,11 @@ FilterByColumnComparisonEstimate CxlumnStatistics<std::string>::estimate_predica
 template <typename CxlumnDataType>
 std::string CxlumnStatistics<CxlumnDataType>::description() const {
   std::stringstream stream;
-  stream << "Col Stats: " << std::endl;
-  stream << "  dist.    " << _distinct_count << std::endl;
-  stream << "  min      " << _min << std::endl;
-  stream << "  max      " << _max << std::endl;
-  stream << "  non-null " << non_null_value_ratio() << std::endl;
+  stream << "Cxlumn Stats: " << std::endl;
+  stream << "     dist.    " << _distinct_count << std::endl;
+  stream << "     min      " << _min << std::endl;
+  stream << "     max      " << _max << std::endl;
+  stream << "     non-null " << non_null_value_ratio() << std::endl;
   return stream.str();
 }
 
@@ -413,14 +413,14 @@ float CxlumnStatistics<CxlumnDataType>::estimate_range_selectivity(const CxlumnD
 template <>
 float CxlumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,          // NOLINT
                                                                 const std::string maximum) const {  // NOLINT
-  // TODO(anyone) implement selectivity for range approximation for column type string.
+  // TODO(anyone) implement selectivity for range approximation for cxlumn type string.
   return (maximum < minimum) ? 0.f : 1.f;
 }
 
 template <typename CxlumnDataType>
 FilterByValueEstimate CxlumnStatistics<CxlumnDataType>::estimate_range(const CxlumnDataType minimum,
                                                                        const CxlumnDataType maximum) const {
-  // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
+  // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a cxlumn with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
   const auto common_min = std::max(minimum, _min);  // NOLINT (false performance-unnecessary-copy-initialization)
   const auto common_max = std::min(maximum, _max);  // NOLINT

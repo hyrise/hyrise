@@ -23,7 +23,7 @@ class Table;
 enum class OrderSensitivity { Yes, No };
 
 /**
- * "Strict" enforces that both tables have precisely the same column types, "Lenient" allows float instead of double, double
+ * "Strict" enforces that both tables have precisely the same cxlumn types, "Lenient" allows float instead of double, double
  * instead of float, long instead of int, int instead of long
  */
 enum class TypeCmpMode { Strict, Lenient };

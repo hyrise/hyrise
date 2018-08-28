@@ -15,8 +15,8 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    cxlumn_definitions.emplace_back("col_1", DataType::Int);
-    cxlumn_definitions.emplace_back("col_2", DataType::String);
+    cxlumn_definitions.emplace_back("cxlumn_1", DataType::Int);
+    cxlumn_definitions.emplace_back("cxlumn_2", DataType::String);
     t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
   }
 
@@ -41,7 +41,7 @@ TEST_F(StorageTableTest, GetChunk) {
   EXPECT_NE(t->get_chunk(ChunkID{1}), nullptr);
 }
 
-TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t->cxlumn_count(), 2u); }
+TEST_F(StorageTableTest, CxlumnCount) { EXPECT_EQ(t->cxlumn_count(), 2u); }
 
 TEST_F(StorageTableTest, RowCount) {
   EXPECT_EQ(t->row_count(), 0u);
@@ -51,14 +51,14 @@ TEST_F(StorageTableTest, RowCount) {
   EXPECT_EQ(t->row_count(), 3u);
 }
 
-TEST_F(StorageTableTest, GetColumnName) {
-  EXPECT_EQ(t->cxlumn_name(CxlumnID{0}), "col_1");
-  EXPECT_EQ(t->cxlumn_name(CxlumnID{1}), "col_2");
+TEST_F(StorageTableTest, GetCxlumnName) {
+  EXPECT_EQ(t->cxlumn_name(CxlumnID{0}), "cxlumn_1");
+  EXPECT_EQ(t->cxlumn_name(CxlumnID{1}), "cxlumn_2");
   // TODO(anyone): Do we want checks here?
   // EXPECT_THROW(t->cxlumn_name(CxlumnID{2}), std::exception);
 }
 
-TEST_F(StorageTableTest, GetColumnType) {
+TEST_F(StorageTableTest, GetCxlumnType) {
   EXPECT_EQ(t->cxlumn_data_type(CxlumnID{0}), DataType::Int);
   EXPECT_EQ(t->cxlumn_data_type(CxlumnID{1}), DataType::String);
   // TODO(anyone): Do we want checks here?
@@ -66,7 +66,7 @@ TEST_F(StorageTableTest, GetColumnType) {
 }
 
 TEST_F(StorageTableTest, GetCxlumnIDByName) {
-  EXPECT_EQ(t->cxlumn_id_by_name("col_2"), 1u);
+  EXPECT_EQ(t->cxlumn_id_by_name("cxlumn_2"), 1u);
   EXPECT_THROW(t->cxlumn_id_by_name("no_cxlumn_name"), std::exception);
 }
 

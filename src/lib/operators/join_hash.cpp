@@ -17,7 +17,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_column_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
@@ -245,7 +245,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
       auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-      resolve_cxlumn_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_segment) {
+      resolve_segment_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_segment) {
         auto reference_segment_offset = ChunkID{0};
         auto iterable = create_iterable_from_segment<T>(typed_segment);
 

@@ -81,9 +81,9 @@ std::shared_ptr<const Table> Print::_on_execute() {
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
         // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
-        auto col_width = widths[cxlumn_id];
-        auto cell = _truncate_cell((*chunk->get_segment(cxlumn_id))[row], col_width);
-        _out << std::setw(col_width) << cell << "|" << std::setw(0);
+        auto cxlumn_width = widths[cxlumn_id];
+        auto cell = _truncate_cell((*chunk->get_segment(cxlumn_id))[row], cxlumn_width);
+        _out << std::setw(cxlumn_width) << cell << "|" << std::setw(0);
       }
 
       if (_flags & PrintMvcc && chunk->has_mvcc_data()) {
@@ -109,25 +109,25 @@ std::shared_ptr<const Table> Print::_on_execute() {
   return input_table_left();
 }
 
-// In order to print the table as an actual table, with columns being aligned, we need to calculate the
-// number of characters in the printed representation of each column
-// `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
+// In order to print the table as an actual table, with cxlumns being aligned, we need to calculate the
+// number of characters in the printed representation of each cxlumn
+// `min` and `max` can be used to limit the width of the cxlumns - however, every cxlumn fits at least the cxlumn's name
 std::vector<uint16_t> Print::_cxlumn_string_widths(uint16_t min, uint16_t max,
                                                    const std::shared_ptr<const Table>& table) const {
   std::vector<uint16_t> widths(table->cxlumn_count());
-  // calculate the length of the column name
-  for (CxlumnID col{0}; col < table->cxlumn_count(); ++col) {
-    widths[col] = std::max(min, static_cast<uint16_t>(table->cxlumn_name(col).size()));
+  // calculate the length of the cxlumn name
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+    widths[cxlumn_id] = std::max(min, static_cast<uint16_t>(table->cxlumn_name(cxlumn_id).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
 
-    for (CxlumnID col{0}; col < chunk->cxlumn_count(); ++col) {
+    for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
       for (size_t row = 0; row < chunk->size(); ++row) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(col))[row]).size());
-        widths[col] = std::max({min, widths[col], std::min(max, cell_length)});
+        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(cxlumn_id))[row]).size());
+        widths[cxlumn_id] = std::max({min, widths[cxlumn_id], std::min(max, cell_length)});
       }
     }
   }

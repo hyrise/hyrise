@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include "column_index_type.hpp"
+#include "segment_index_type.hpp"
 #include "types.hpp"
 
 namespace opossum {

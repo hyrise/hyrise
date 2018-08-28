@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "column_materializer.hpp"
+#include "cxlumn_materializer.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
@@ -333,10 +333,10 @@ class RadixClusterSort {
     RadixClusterOutput<T> output;
 
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
-    auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_cxlumn_id);
-    auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_cxlumn_id);
+    CxlumnMaterializer<T> left_cxlumn_materializer(!_equi_case, _materialize_null_left);
+    CxlumnMaterializer<T> right_cxlumn_materializer(!_equi_case, _materialize_null_right);
+    auto materialization_left = left_cxlumn_materializer.materialize(_input_table_left, _left_cxlumn_id);
+    auto materialization_right = right_cxlumn_materializer.materialize(_input_table_right, _right_cxlumn_id);
     auto materialized_left_columns = std::move(materialization_left.first);
     auto materialized_right_columns = std::move(materialization_right.first);
     output.null_rows_left = std::move(materialization_left.second);

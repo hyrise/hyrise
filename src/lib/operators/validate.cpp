@@ -62,18 +62,18 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     Segments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
-    const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(CxlumnID{0}));
+    const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(CxlumnID{0}));
 
     // If the segments in this chunk reference a segment, build a poslist for a reference segment.
-    if (ref_col_in) {
+    if (ref_segment_in) {
       DebugAssert(chunk_in->references_exactly_one_table(),
                   "Input to Validate contains a Chunk referencing more than one table.");
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
-      referenced_table = ref_col_in->referenced_table();
+      referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
-      for (auto row_id : *ref_col_in->pos_list()) {
+      for (auto row_id : *ref_segment_in->pos_list()) {
         const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
@@ -87,8 +87,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
         const auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
         const auto referenced_cxlumn_id = reference_segment->referenced_cxlumn_id();
-        auto ref_col_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_cxlumn_id, pos_list_out);
-        output_segments.push_back(ref_col_out);
+        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_cxlumn_id, pos_list_out);
+        output_segments.push_back(ref_segment_out);
       }
 
       // Otherwise we have a Value- or DictionarySegment and simply iterate over all rows to build a poslist.
@@ -107,8 +107,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Create actual ReferenceSegment objects.
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
-        auto ref_col_out = std::make_shared<ReferenceSegment>(referenced_table, cxlumn_id, pos_list_out);
-        output_segments.push_back(ref_col_out);
+        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, cxlumn_id, pos_list_out);
+        output_segments.push_back(ref_segment_out);
       }
     }
 

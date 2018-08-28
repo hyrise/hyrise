@@ -45,11 +45,11 @@ class JoinIndex : public AbstractJoinOperator {
   void _perform_join();
 
   template <typename LeftIterator>
-  void _join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
+  void _join_two_segments_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
                                      const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _join_two_columns_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+  void _join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                                      RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                                      const ChunkID chunk_id_right);
 
@@ -58,7 +58,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_columns(Segments& output_columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_segments(Segments& output_columns, const std::shared_ptr<const Table>& input_table,
                              std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;

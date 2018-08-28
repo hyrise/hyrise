@@ -16,7 +16,7 @@ namespace opossum {
  *  - one or more aggregate functions in their SELECT list
  *  - a GROUP BY clause
  *
- *  The order of the output columns is groupby columns followed by aggregate columns
+ *  The order of the output cxlumns is groupby cxlumns followed by aggregate cxlumns
  */
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:

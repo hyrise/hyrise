@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "column_index_type.hpp"
+#include "segment_index_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

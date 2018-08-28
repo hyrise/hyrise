@@ -15,7 +15,7 @@
 namespace opossum {
 
 template <typename DerivedIndex>
-class MultiColumnIndexTest : public BaseTest {
+class MultiCxlumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
@@ -29,13 +29,13 @@ class MultiColumnIndexTest : public BaseTest {
   }
 
   template <class Iterator>
-  static std::vector<std::vector<AllTypeVariant>> result_as_vector(const std::vector<std::shared_ptr<BaseSegment>> cols,
+  static std::vector<std::vector<AllTypeVariant>> result_as_vector(const std::vector<std::shared_ptr<BaseSegment>> segments,
                                                                    Iterator begin, Iterator end) {
     std::vector<std::vector<AllTypeVariant>> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       auto row = std::vector<AllTypeVariant>{};
-      for (auto column : cols) {
-        row.emplace_back((*column)[*iter]);
+      for (auto segment : segments) {
+        row.emplace_back((*segment)[*iter]);
       }
       result.emplace_back(row);
     }
@@ -50,9 +50,9 @@ class MultiColumnIndexTest : public BaseTest {
 
 // List of indices to test
 typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndices;
-TYPED_TEST_CASE(MultiColumnIndexTest, DerivedIndices);
+TYPED_TEST_CASE(MultiCxlumnIndexTest, DerivedIndices);
 
-TYPED_TEST(MultiColumnIndexTest, FullRange) {
+TYPED_TEST(MultiCxlumnIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
   auto end_int_str = this->index_int_str->cend();
   auto result_values_int_str =
@@ -72,7 +72,7 @@ TYPED_TEST(MultiColumnIndexTest, FullRange) {
   EXPECT_EQ(expected_values_str_int, result_values_str_int);
 }
 
-TYPED_TEST(MultiColumnIndexTest, PointQueryWithSingleReturnValue) {
+TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithSingleReturnValue) {
   auto begin = this->index_int_str->lower_bound({3, "foo"});
   auto end = this->index_int_str->upper_bound({3, "foo"});
 
@@ -82,7 +82,7 @@ TYPED_TEST(MultiColumnIndexTest, PointQueryWithSingleReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, PointQueryWithNoReturnValue) {
+TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithNoReturnValue) {
   auto begin = this->index_int_str->lower_bound({3, "hello"});
   auto end = this->index_int_str->upper_bound({3, "hello"});
 
@@ -91,7 +91,7 @@ TYPED_TEST(MultiColumnIndexTest, PointQueryWithNoReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, PointQueryWithMultipleReturnValues) {
+TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithMultipleReturnValues) {
   auto begin = this->index_int_str->lower_bound({4, "bar"});
   auto end = this->index_int_str->upper_bound({4, "bar"});
 
@@ -100,7 +100,7 @@ TYPED_TEST(MultiColumnIndexTest, PointQueryWithMultipleReturnValues) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQuery) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQuery) {
   auto begin = this->index_int_str->lower_bound({1, "baz"});
   auto end = this->index_int_str->upper_bound({3, "bar"});
 
@@ -110,7 +110,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQuery) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQueryBelow) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQueryBelow) {
   auto begin = this->index_int_str->lower_bound({-3, "arrr!"});
   auto end = this->index_int_str->upper_bound({0, "bar"});
 
@@ -119,7 +119,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQueryPartiallyBelow) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQueryPartiallyBelow) {
   auto begin = this->index_int_str->lower_bound({-3, "arrr!"});
   auto end = this->index_int_str->upper_bound({1, "baz"});
 
@@ -128,7 +128,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryPartiallyBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQueryAbove) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQueryAbove) {
   auto begin = this->index_int_str->lower_bound({10, "srsly?"});
   auto end = this->index_int_str->upper_bound({13, "srsly?"});
 
@@ -137,7 +137,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQueryPartiallyAbove) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQueryPartiallyAbove) {
   auto begin = this->index_int_str->lower_bound({8, "bar"});
   auto end = this->index_int_str->upper_bound({13, "srsly?"});
 
@@ -146,7 +146,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryPartiallyAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQueryOpenEnd) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQueryOpenEnd) {
   auto begin = this->index_int_str->lower_bound({8, "bar"});
   auto end = this->index_int_str->cend();
 
@@ -155,7 +155,7 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryOpenEnd) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, RangeQueryOpenBegin) {
+TYPED_TEST(MultiCxlumnIndexTest, RangeQueryOpenBegin) {
   auto begin = this->index_int_str->cbegin();
   auto end = this->index_int_str->upper_bound({1, "baz"});
 
@@ -164,13 +164,13 @@ TYPED_TEST(MultiColumnIndexTest, RangeQueryOpenBegin) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, TooManyReferenceValues) {
+TYPED_TEST(MultiCxlumnIndexTest, TooManyReferenceValues) {
   if (!IS_DEBUG) return;
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }
 
-TYPED_TEST(MultiColumnIndexTest, QueryWithFewerValuesThanColumns) {
+TYPED_TEST(MultiCxlumnIndexTest, QueryWithFewerValuesThanCxlumns) {
   auto begin = this->index_int_str->lower_bound({4});
   auto end = this->index_int_str->upper_bound({4});
 
@@ -180,7 +180,7 @@ TYPED_TEST(MultiColumnIndexTest, QueryWithFewerValuesThanColumns) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
+TYPED_TEST(MultiCxlumnIndexTest, IsIndexForTest) {
   EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int}));
   EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int, this->dict_segment_str}));
   EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_segment_str}));
@@ -192,7 +192,7 @@ TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
   EXPECT_FALSE(this->index_str_int->is_index_for({}));
 }
 
-TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
+TYPED_TEST(MultiCxlumnIndexTest, CreateAndRetrieveUsingChunk) {
   auto chunk = std::make_shared<Chunk>(Segments({this->dict_segment_int, this->dict_segment_str}));
 
   chunk->create_index<TypeParam>({this->dict_segment_int});

@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * Base class for LQP nodes that do not query data (e.g, DML and DDL nodes) and therefore do not output columns.
+ * Base class for LQP nodes that do not query data (e.g, DML and DDL nodes) and therefore do not output cxlumns.
  *
  * Helper class that provides a cxlumn_expressions() override and contains an empty dummy expression vector
  */

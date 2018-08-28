@@ -1,4 +1,4 @@
-#include "column_comparison_table_scan_impl.hpp"
+#include "cxlumn_comparison_table_scan_impl.hpp"
 
 #include <memory>
 #include <string>
@@ -15,13 +15,13 @@
 
 namespace opossum {
 
-ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table,
+CxlumnComparisonTableScanImpl::CxlumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                              const CxlumnID left_cxlumn_id,
                                                              const PredicateCondition& predicate_condition,
                                                              const CxlumnID right_cxlumn_id)
     : BaseTableScanImpl{in_table, left_cxlumn_id, predicate_condition}, _right_cxlumn_id{right_cxlumn_id} {}
 
-std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
+std::shared_ptr<PosList> CxlumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
   const auto left_segment = chunk->get_segment(_left_cxlumn_id);
@@ -31,8 +31,8 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
 
   resolve_data_and_cxlumn_type(*left_segment, [&](auto left_type, auto& typed_left_segment) {
     resolve_data_and_cxlumn_type(*right_segment, [&](auto right_type, auto& typed_right_segment) {
-      using LeftColumnType = typename std::decay<decltype(typed_left_segment)>::type;
-      using RightColumnType = typename std::decay<decltype(typed_right_segment)>::type;
+      using LeftSegmentType = typename std::decay<decltype(typed_left_segment)>::type;
+      using RightSegmentType = typename std::decay<decltype(typed_right_segment)>::type;
 
       using LeftType = typename decltype(left_type)::type;
       using RightType = typename decltype(right_type)::type;
@@ -47,21 +47,21 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
        * reduces the number of combinations to 85.
        */
 
-      constexpr auto LEFT_IS_REFERENCE_SEGMENT = (std::is_same<LeftColumnType, ReferenceSegment>{});
-      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = (std::is_same<RightColumnType, ReferenceSegment>{});
+      constexpr auto LEFT_IS_REFERENCE_SEGMENT = (std::is_same<LeftSegmentType, ReferenceSegment>{});
+      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = (std::is_same<RightSegmentType, ReferenceSegment>{});
 
       constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
       constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
 
-      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
-      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
+      constexpr auto LEFT_IS_STRING_SEGMENT = (std::is_same<LeftType, std::string>{});
+      constexpr auto RIGHT_IS_STRING_SEGMENT = (std::is_same<RightType, std::string>{});
 
-      constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
-      constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
+      constexpr auto NEITHER_IS_STRING_SEGMENT = !LEFT_IS_STRING_SEGMENT && !RIGHT_IS_STRING_SEGMENT;
+      constexpr auto BOTH_ARE_STRING_SEGMENTS = LEFT_IS_STRING_SEGMENT && RIGHT_IS_STRING_SEGMENT;
 
       // clang-format off
       if constexpr((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
-                   (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
+                   (NEITHER_IS_STRING_SEGMENT || BOTH_ARE_STRING_SEGMENTS)) {
         auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
 

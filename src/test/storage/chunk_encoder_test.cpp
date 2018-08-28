@@ -38,16 +38,16 @@ class ChunkEncoderTest : public BaseTest {
  protected:
   void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
     for (auto cxlumn_id = CxlumnID{0u}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-      const auto column = chunk->get_segment(cxlumn_id);
-      const auto column_spec = spec.at(cxlumn_id);
+      const auto segment = chunk->get_segment(cxlumn_id);
+      const auto segment_spec = spec.at(cxlumn_id);
 
-      if (column_spec.encoding_type == EncodingType::Unencoded) {
-        const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(column);
+      if (segment_spec.encoding_type == EncodingType::Unencoded) {
+        const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
         EXPECT_NE(value_segment, nullptr);
       } else {
-        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(column);
+        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
         EXPECT_NE(encoded_segment, nullptr);
-        EXPECT_EQ(encoded_segment->encoding_type(), column_spec.encoding_type);
+        EXPECT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
       }
     }
   }
@@ -68,7 +68,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
   verify_encoding(chunk, chunk_encoding_spec);
 }
 
-TEST_F(ChunkEncoderTest, LeaveOneColumnUnencoded) {
+TEST_F(ChunkEncoderTest, LeaveOneSegmentUnencoded) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 

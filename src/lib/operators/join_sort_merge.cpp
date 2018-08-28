@@ -13,7 +13,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_column_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 
 namespace opossum {

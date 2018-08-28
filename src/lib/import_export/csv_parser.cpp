@@ -45,13 +45,13 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<Segments> columns_by_chunks;
+  std::list<Segments> segments_by_chunks;
   std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
     // create empty chunk
-    columns_by_chunks.emplace_back();
-    auto& columns = columns_by_chunks.back();
+    segments_by_chunks.emplace_back();
+    auto& segments = segments_by_chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
     std::string_view relevant_content = content_view.substr(0, field_ends.back());
@@ -60,8 +60,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &columns]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, columns);
+    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &segments]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, segments);
     }));
     tasks.back()->schedule();
   }
@@ -70,8 +70,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     task->join();
   }
 
-  for (auto& chunk_columns : columns_by_chunks) {
-    table->append_chunk(chunk_columns);
+  for (auto& segments : segments_by_chunks) {
+    table->append_chunk(segments);
   }
 
   if (_meta.auto_compress) ChunkEncoder::encode_all_chunks(table);
@@ -80,20 +80,20 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
-  TableCxlumnDefinitions colum_definitions;
-  for (const auto& column_meta : _meta.cxlumns) {
-    auto cxlumn_name = column_meta.name;
+  TableCxlumnDefinitions cxlumn_definitions;
+  for (const auto& cxlumn_meta : _meta.cxlumns) {
+    auto cxlumn_name = cxlumn_meta.name;
     BaseCsvConverter::unescape(cxlumn_name);
 
-    auto cxlumn_type = column_meta.type;
+    auto cxlumn_type = cxlumn_meta.type;
     BaseCsvConverter::unescape(cxlumn_type);
 
     const auto data_type = data_type_to_string.right.at(cxlumn_type);
 
-    colum_definitions.emplace_back(cxlumn_name, data_type, column_meta.nullable);
+    cxlumn_definitions.emplace_back(cxlumn_name, data_type, cxlumn_meta.nullable);
   }
 
-  return std::make_shared<Table>(colum_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
+  return std::make_shared<Table>(cxlumn_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
 }
 
 bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,
@@ -109,7 +109,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   unsigned int rows = 0, field_count = 1;
   bool in_quotes = false;
   while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
-    // Find either of row separator, column delimiter, quote identifier
+    // Find either of row separator, cxlumn delimiter, quote identifier
     pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
       break;
@@ -130,7 +130,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _meta.config.delimiter && !in_quotes) {
-      Assert(field_count == table.cxlumn_count(), "Number of CSV fields does not match number of columns.");
+      Assert(field_count == table.cxlumn_count(), "Number of CSV fields does not match number of cxlumns.");
       ++rows;
       field_count = 0;
     }
@@ -148,8 +148,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 }
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
-                                    const Table& table, Segments& columns) {
-  // For each csv column create a CsvConverter which builds up a ValueSegment
+                                    const Table& table, Segments& segments) {
+  // For each csv cxlumn, create a CsvConverter which builds up a ValueSegment
   const auto cxlumn_count = table.cxlumn_count();
   const auto row_count = field_ends.size() / cxlumn_count;
   std::vector<std::unique_ptr<BaseCsvConverter>> converters;
@@ -177,15 +177,15 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       try {
         converters[cxlumn_id]->insert(field, row_id);
       } catch (const std::exception& exception) {
-        throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
+        throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", cxlumn " +
                                std::to_string(cxlumn_id) + ":\n" + exception.what());
       }
     }
   }
 
-  // Transform the field_offsets to columns and add columns to chunk.
+  // Transform the field_offsets to segments and add segments to chunk.
   for (auto& converter : converters) {
-    columns.push_back(converter->finish());
+    segments.push_back(converter->finish());
   }
 
   return row_count;

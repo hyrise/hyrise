@@ -11,7 +11,7 @@
 namespace opossum {
 
 /**
- * Generate the statistics of a single column. Used by generate_table_statistics()
+ * Generate the statistics of a single cxlumn. Used by generate_table_statistics()
  */
 template <typename CxlumnDataType>
 std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics(const Table& table, const CxlumnID cxlumn_id) {
@@ -25,15 +25,15 @@ std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics(const Table& ta
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(cxlumn_id);
 
-    resolve_cxlumn_type<CxlumnDataType>(*base_segment, [&](auto& column) {
-      auto iterable = create_iterable_from_segment<CxlumnDataType>(column);
-      iterable.for_each([&](const auto& column_value) {
-        if (column_value.is_null()) {
+    resolve_segment_type<CxlumnDataType>(*base_segment, [&](auto& segment) {
+      auto iterable = create_iterable_from_segment<CxlumnDataType>(segment);
+      iterable.for_each([&](const auto& segment_value) {
+        if (segment_value.is_null()) {
           ++null_value_count;
         } else {
-          distinct_set.insert(column_value.value());
-          min = std::min(min, column_value.value());
-          max = std::max(max, column_value.value());
+          distinct_set.insert(segment_value.value());
+          min = std::min(min, segment_value.value());
+          max = std::max(max, segment_value.value());
         }
       });
     });

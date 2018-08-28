@@ -14,12 +14,12 @@ class BaseSegment;
 
 /**
  * Container class that holds a set of filters with statistical information about a
- * certain chunks column. Is part of ChunkStatistics.
+ * certain segment. Is part of ChunkStatistics.
  */
 class SegmentStatistics final {
  public:
   static std::shared_ptr<SegmentStatistics> build_statistics(DataType data_type,
-                                                                 const std::shared_ptr<const BaseSegment>& column);
+                                                                 const std::shared_ptr<const BaseSegment>& segment);
 
   void add_filter(std::shared_ptr<AbstractFilter> filter);
 

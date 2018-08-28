@@ -19,10 +19,10 @@
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/cxlumn_comparison_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_column_table_scan_impl.hpp"
+#include "table_scan/single_cxlumn_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -191,11 +191,11 @@ void TableScan::_init_scan() {
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition, right_value);
+    _impl = std::make_unique<SingleCxlumnTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition, right_value);
   } else /* is_cxlumn_name(_right_parameter) */ {
     const auto right_cxlumn_id = boost::get<CxlumnID>(_right_parameter);
 
-    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition,
+    _impl = std::make_unique<CxlumnComparisonTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition,
                                                             right_cxlumn_id);
   }
 }

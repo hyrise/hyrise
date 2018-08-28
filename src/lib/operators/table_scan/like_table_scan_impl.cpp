@@ -20,7 +20,7 @@ namespace opossum {
 
 LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
                                      const PredicateCondition predicate_condition, const std::string& pattern)
-    : BaseSingleColumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition},
+    : BaseSingleCxlumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
@@ -30,8 +30,8 @@ void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
-  auto& left_column = static_cast<const ValueSegment<std::string>&>(base_segment);
-  auto left_iterable = ValueSegmentIterable<std::string>{left_column};
+  auto& left_segment = static_cast<const ValueSegment<std::string>&>(base_segment);
+  auto left_iterable = ValueSegmentIterable<std::string>{left_segment};
 
   _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
 }
@@ -59,11 +59,11 @@ void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment
   std::pair<size_t, std::vector<bool>> result;
 
   if (base_segment.encoding_type() == EncodingType::Dictionary) {
-    const auto& left_column = static_cast<const DictionarySegment<std::string>&>(base_segment);
-    result = _find_matches_in_dictionary(*left_column.dictionary());
+    const auto& left_segment = static_cast<const DictionarySegment<std::string>&>(base_segment);
+    result = _find_matches_in_dictionary(*left_segment.dictionary());
   } else {
-    const auto& left_column = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
-    result = _find_matches_in_dictionary(*left_column.dictionary());
+    const auto& left_segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
+    result = _find_matches_in_dictionary(*left_segment.dictionary());
   }
 
   const auto& match_count = result.first;

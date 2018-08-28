@@ -15,8 +15,8 @@ struct FilterByValueEstimate final {
   std::shared_ptr<BaseCxlumnStatistics> cxlumn_statistics;
 };
 
-// Result of a cardinality estimation of filtering by comparing two columns
-struct FilterByColumnComparisonEstimate {
+// Result of a cardinality estimation of filtering by comparing two cxlumns
+struct FilterByCxlumnComparisonEstimate {
   float selectivity{0.0f};
   std::shared_ptr<BaseCxlumnStatistics> left_cxlumn_statistics;
   std::shared_ptr<BaseCxlumnStatistics> right_cxlumn_statistics;
@@ -54,14 +54,14 @@ class BaseCxlumnStatistics {
    * @{
    */
   /**
-   * Estimate a Column-Value Predicate, e.g. "a > 5"
+   * Estimate a Cxlumn-Value Predicate, e.g. "a > 5"
    */
   virtual FilterByValueEstimate estimate_predicate_with_value(
       const PredicateCondition predicate_condition, const AllTypeVariant& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
 
   /**
-   * Estimate a Column-ValuePlaceholder Predicate, e.g. "a > ?"
+   * Estimate a Cxlumn-ValuePlaceholder Predicate, e.g. "a > ?"
    * Since the value of the ValuePlaceholder (naturally) isn't known, has to resort to magic values.
    */
   virtual FilterByValueEstimate estimate_predicate_with_value_placeholder(
@@ -69,9 +69,9 @@ class BaseCxlumnStatistics {
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
 
   /**
-   * Estimate a Column-Column Predicate, e.g. "a > b"
+   * Estimate a Cxlumn-Cxlumn Predicate, e.g. "a > b"
    */
-  virtual FilterByColumnComparisonEstimate estimate_predicate_with_cxlumn(
+  virtual FilterByCxlumnComparisonEstimate estimate_predicate_with_cxlumn(
       const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const = 0;
   /** @} */
 

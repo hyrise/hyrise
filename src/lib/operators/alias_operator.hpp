@@ -6,7 +6,7 @@
 namespace opossum {
 
 /**
- * Forward the input columns in the specified orderwith updated column names
+ * Forward the input cxlumns in the specified orderwith updated cxlumn names
  */
 class AliasOperator : public AbstractReadOnlyOperator {
  public:

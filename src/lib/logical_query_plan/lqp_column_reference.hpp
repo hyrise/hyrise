@@ -9,9 +9,9 @@ namespace opossum {
 class AbstractLQPNode;
 
 /**
- * Used for identifying a Column in an LQP by the Node and the CxlumnID in that node in which it was created.
- * Currently this happens in StoredTableNode (which creates all of its columns), AggregateNode (which creates all
- * aggregate columns) and ProjectionNode (which creates all columns containing arithmetics)
+ * Used for identifying a Cxlumn in an LQP by the Node and the CxlumnID in that node in which it was created.
+ * Currently this happens in StoredTableNode (which creates all of its cxlumns), AggregateNode (which creates all
+ * aggregate cxlumns) and ProjectionNode (which creates all cxlumns containing arithmetics)
  */
 class LQPCxlumnReference final {
  public:
@@ -24,7 +24,7 @@ class LQPCxlumnReference final {
   bool operator==(const LQPCxlumnReference& rhs) const;
 
  private:
-  // Needs to be weak since Nodes can hold ColumnReferences referring to themselves
+  // Needs to be weak since Nodes can hold CxlumnReferences referring to themselves
   std::weak_ptr<const AbstractLQPNode> _original_node;
   CxlumnID _original_cxlumn_id{INVALID_cxlumn_id};
 };

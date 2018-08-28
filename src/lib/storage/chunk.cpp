@@ -188,7 +188,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
                   if (cxlumn_id >= cxlumn_count()) return false;
                 return true;
               }()),
-              "Column IDs not within range [0, cxlumn_count()).");
+              "cxlumn ids not within range [0, cxlumn_count()).");
 
   auto segments = std::vector<std::shared_ptr<const BaseSegment>>{};
   segments.reserve(cxlumn_ids.size());

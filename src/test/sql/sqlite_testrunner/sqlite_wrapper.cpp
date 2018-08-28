@@ -33,29 +33,29 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 
   std::string line;
   std::getline(infile, line);
-  std::vector<std::string> col_names = _split<std::string>(line, '|');
+  std::vector<std::string> cxlumn_names = _split<std::string>(line, '|');
   std::getline(infile, line);
-  std::vector<std::string> col_types;
+  std::vector<std::string> cxlumn_types;
 
   for (const std::string& type : _split<std::string>(line, '|')) {
     std::string actual_type = _split<std::string>(type, '_')[0];
     if (actual_type == "int" || actual_type == "long") {
-      col_types.push_back("INT");
+      cxlumn_types.push_back("INT");
     } else if (actual_type == "float" || actual_type == "double") {
-      col_types.push_back("REAL");
+      cxlumn_types.push_back("REAL");
     } else if (actual_type == "string") {
-      col_types.push_back("TEXT");
+      cxlumn_types.push_back("TEXT");
     } else {
-      DebugAssert(false, "SQLiteWrapper: column type " + type + " not supported.");
+      DebugAssert(false, "SQLiteWrapper: cxlumn type " + type + " not supported.");
     }
   }
 
   std::stringstream query;
   query << "CREATE TABLE " << table_name << "(";
-  for (size_t i = 0; i < col_names.size(); i++) {
-    query << col_names[i] << " " << col_types[i];
+  for (size_t i = 0; i < cxlumn_names.size(); i++) {
+    query << cxlumn_names[i] << " " << cxlumn_types[i];
 
-    if ((i + 1) < col_names.size()) {
+    if ((i + 1) < cxlumn_names.size()) {
       query << ", ";
     }
   }
@@ -65,7 +65,7 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
     query << "INSERT INTO " << table_name << " VALUES (";
     std::vector<std::string> values = _split<std::string>(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
-      if (col_types[i] == "TEXT" && values[i] != "null") {
+      if (cxlumn_types[i] == "TEXT" && values[i] != "null") {
         query << "'" << values[i] << "'";
       } else {
         query << values[i];
@@ -82,24 +82,24 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 }
 
 void SQLiteWrapper::create_table(const Table& table, const std::string& table_name) {
-  std::vector<std::string> col_types;
+  std::vector<std::string> cxlumn_types;
 
   for (const auto& cxlumn_definition : table.cxlumn_definitions()) {
     switch (cxlumn_definition.data_type) {
       case DataType::Int:
       case DataType::Long:
-        col_types.push_back("INT");
+        cxlumn_types.push_back("INT");
         break;
       case DataType::Float:
       case DataType::Double:
-        col_types.push_back("REAL");
+        cxlumn_types.push_back("REAL");
         break;
       case DataType::String:
-        col_types.push_back("TEXT");
+        cxlumn_types.push_back("TEXT");
         break;
       case DataType::Null:
       case DataType::Bool:
-        Fail("SQLiteWrapper: column type not supported.");
+        Fail("SQLiteWrapper: cxlumn type not supported.");
         break;
     }
   }
@@ -107,7 +107,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   std::stringstream create_table_query;
   create_table_query << "CREATE TABLE " << table_name << "(";
   for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table.cxlumn_definitions().size(); cxlumn_id++) {
-    create_table_query << table.cxlumn_definitions()[cxlumn_id].name << " " << col_types[cxlumn_id];
+    create_table_query << table.cxlumn_definitions()[cxlumn_id].name << " " << cxlumn_types[cxlumn_id];
 
     if (cxlumn_id + 1u < table.cxlumn_definitions().size()) {
       create_table_query << ", ";
@@ -124,10 +124,10 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
       insert_query << "INSERT INTO " << table_name << " VALUES (";
       for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table.cxlumn_count(); cxlumn_id++) {
-        const auto column = chunk->get_segment(cxlumn_id);
-        const auto value = (*column)[chunk_offset];
+        const auto segment = chunk->get_segment(cxlumn_id);
+        const auto value = (*segment)[chunk_offset];
 
-        if (col_types[cxlumn_id] == "TEXT" && !variant_is_null(value)) {
+        if (cxlumn_types[cxlumn_id] == "TEXT" && !variant_is_null(value)) {
           insert_query << "'" << value << "'";
         } else {
           insert_query << value;
@@ -149,7 +149,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   auto sql_pipeline = SQLPipelineBuilder{sql_query}.create_pipeline();
   const auto& queries = sql_pipeline.get_sql_strings();
 
-  // We need to split the queries such that we only create columns/add rows from the final SELECT query
+  // We need to split the queries such that we only create cxlumns/add rows from the final SELECT query
   std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);
   std::string select_query = queries.back();
 
@@ -189,36 +189,36 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
 }
 
 std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, int cxlumn_count) {
-  std::vector<bool> col_nullable(cxlumn_count, false);
-  std::vector<std::string> col_types(cxlumn_count, "");
-  std::vector<std::string> col_names(cxlumn_count, "");
+  std::vector<bool> cxlumn_nullable(cxlumn_count, false);
+  std::vector<std::string> cxlumn_types(cxlumn_count, "");
+  std::vector<std::string> cxlumn_names(cxlumn_count, "");
 
   bool no_result = true;
   int rc;
   while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
     for (int i = 0; i < cxlumn_count; ++i) {
       if (no_result) {
-        col_names[i] = sqlite3_column_name(result_row, i);
+        cxlumn_names[i] = sqlite3_column_name(result_row, i);
       }
 
       switch (sqlite3_column_type(result_row, i)) {
         case SQLITE_INTEGER: {
-          col_types[i] = "int";
+          cxlumn_types[i] = "int";
           break;
         }
 
         case SQLITE_FLOAT: {
-          col_types[i] = "double";
+          cxlumn_types[i] = "double";
           break;
         }
 
         case SQLITE_TEXT: {
-          col_types[i] = "string";
+          cxlumn_types[i] = "string";
           break;
         }
 
         case SQLITE_NULL: {
-          col_nullable[i] = true;
+          cxlumn_nullable[i] = true;
           break;
         }
 
@@ -226,7 +226,7 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
         default: {
           sqlite3_finalize(result_row);
           sqlite3_close(_db);
-          throw std::runtime_error("Column type not supported.");
+          throw std::runtime_error("Cxlumn type not supported.");
         }
       }
     }
@@ -236,13 +236,13 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
   if (!no_result) {
     TableCxlumnDefinitions cxlumn_definitions;
     for (int i = 0; i < cxlumn_count; ++i) {
-      if (col_types[i].empty()) {
-        // Hyrise does not have explicit NULL columns
-        col_types[i] = "int";
+      if (cxlumn_types[i].empty()) {
+        // Hyrise does not have explicit NULL cxlumns
+        cxlumn_types[i] = "int";
       }
 
-      const auto data_type = data_type_to_string.right.at(col_types[i]);
-      cxlumn_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
+      const auto data_type = data_type_to_string.right.at(cxlumn_types[i]);
+      cxlumn_definitions.emplace_back(cxlumn_names[i], data_type, cxlumn_nullable[i]);
     }
 
     return std::make_shared<Table>(cxlumn_definitions, TableType::Data);
@@ -280,7 +280,7 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
       default: {
         sqlite3_finalize(result_row);
         sqlite3_close(_db);
-        throw std::runtime_error("Column type not supported.");
+        throw std::runtime_error("Cxlumn type not supported.");
       }
     }
   }

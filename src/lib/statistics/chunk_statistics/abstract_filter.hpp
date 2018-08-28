@@ -8,8 +8,8 @@
 namespace opossum {
 
 /**
- * Base class for all Filters. A Filter is part of SegmentStatistics and holds
- * some kind of statistical information about the contents of a column within a chunk.
+ * Base class for all filters. A filter is part of SegmentStatistics and holds
+ * some kind of statistical information about the contents of a segment.
  * This information can be used to optimize queries.
 */
 class AbstractFilter : public std::enable_shared_from_this<AbstractFilter> {
@@ -22,7 +22,7 @@ class AbstractFilter : public std::enable_shared_from_this<AbstractFilter> {
    * represented by the filter data.
    * 
    * In other words: returns true if a scan operation with value and predicate_type
-   * on the column/chunk that this filter was created on would yield zero result rows.
+   * on the segment that this filter was created on would yield zero result rows.
   */
   virtual bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const = 0;
 };

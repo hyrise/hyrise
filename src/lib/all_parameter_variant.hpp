@@ -37,7 +37,7 @@ using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMp
 // Function to check if AllParameterVariant is AllTypeVariant
 inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
 
-// Function to check if AllParameterVariant is a column id
+// Function to check if AllParameterVariant is a cxlumn id
 inline bool is_cxlumn_id(const AllParameterVariant& variant) { return (variant.type() == typeid(CxlumnID)); }
 
 // Function to check if AllParameterVariant is a column origin

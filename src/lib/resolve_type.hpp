@@ -185,7 +185,7 @@ void resolve_data_type(DataType data_type, const Functor& func) {
  *
  *   void process_segment(ReferenceSegment& segment);
  *
- *   resolve_cxlumn_type<T>(base_segment, [&](auto& typed_segment) {
+ *   resolve_segment_type<T>(base_segment, [&](auto& typed_segment) {
  *     process_segment(typed_segment);
  *   });
  */
@@ -195,7 +195,7 @@ using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out
 template <typename CxlumnDataType, typename BaseSegmentType, typename Functor>
 // BaseSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
-/*void*/ resolve_cxlumn_type(BaseSegmentType& segment, const Functor& func) {
+/*void*/ resolve_segment_type(BaseSegmentType& segment, const Functor& func) {
   using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<CxlumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
@@ -240,7 +240,7 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
   resolve_data_type(segment.data_type(), [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 
-    resolve_cxlumn_type<CxlumnDataType>(segment, [&](auto& typed_segment) { func(type, typed_segment); });
+    resolve_segment_type<CxlumnDataType>(segment, [&](auto& typed_segment) { func(type, typed_segment); });
   });
 }
 

@@ -38,7 +38,7 @@ constexpr auto encoded_segment_for_type = hana::make_map(
  *
  * Since encoded segments are immutable, the function accepts a constant reference.
  *
- * @see resolve_cxlumn_type in resolve_type.hpp for info on usage
+ * @see resolve_segment_type in resolve_type.hpp for info on usage
  */
 template <typename CxlumnDataType, typename Functor>
 void resolve_encoded_segment_type(const BaseEncodedSegment& segment, const Functor& functor) {

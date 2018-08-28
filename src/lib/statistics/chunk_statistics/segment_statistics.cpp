@@ -41,19 +41,19 @@ static std::shared_ptr<SegmentStatistics> build_statistics_from_dictionary(const
 }
 
 std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
-    DataType data_type, const std::shared_ptr<const BaseSegment>& column) {
+    DataType data_type, const std::shared_ptr<const BaseSegment>& segment) {
   std::shared_ptr<SegmentStatistics> statistics;
-  resolve_data_and_cxlumn_type(*column, [&statistics](auto type, auto& typed_segment) {
-    using ColumnType = typename std::decay<decltype(typed_segment)>::type;
+  resolve_data_and_cxlumn_type(*segment, [&statistics](auto type, auto& typed_segment) {
+    using SegmentType = typename std::decay<decltype(typed_segment)>::type;
     using DataTypeT = typename decltype(type)::type;
 
     // clang-format off
-    if constexpr(std::is_same_v<ColumnType, DictionarySegment<DataTypeT>>) {
-        // we can use the fact that dictionary columns have an accessor for the dictionary
+    if constexpr(std::is_same_v<SegmentType, DictionarySegment<DataTypeT>>) {
+        // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
         statistics = build_statistics_from_dictionary(dictionary);
     } else {
-      // if we have a generic column we create the dictionary ourselves
+      // if we have a generic segment we create the dictionary ourselves
       auto iterable = create_iterable_from_segment<DataTypeT>(typed_segment);
       std::unordered_set<DataTypeT> values;
       iterable.for_each([&](const auto& value) {

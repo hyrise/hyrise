@@ -13,11 +13,11 @@ class Delete;
 class Insert;
 
 /**
- * Operator that updates a subset of columns of a number of rows and from one table with values supplied in another.
- * The first input table must consist of ReferenceSegments and specifies which rows and columns of the referenced table
+ * Operator that updates a subset of cxlumns of a number of rows and from one table with values supplied in another.
+ * The first input table must consist of ReferenceSegments and specifies which rows and cxlumns of the referenced table
  * should be updated. This operator uses bag semantics, that is, exactly the referenced cells are updated, and not all
  * rows with similar data.
- * The second input table must have the exact same column layout and number of rows as the first table and contains the
+ * The second input table must have the exact same cxlumn layout and number of rows as the first table and contains the
  * data that is used to update the rows specified by the first table.
  *
  * Assumption: The input has been validated before.

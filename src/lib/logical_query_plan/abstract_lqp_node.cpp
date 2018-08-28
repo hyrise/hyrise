@@ -193,7 +193,7 @@ std::optional<CxlumnID> AbstractLQPNode::find_cxlumn_id(const AbstractExpression
 
 CxlumnID AbstractLQPNode::get_cxlumn_id(const AbstractExpression& expression) const {
   const auto cxlumn_id = find_cxlumn_id(expression);
-  Assert(cxlumn_id, "This node has no column '"s + expression.as_cxlumn_name() + "'");
+  Assert(cxlumn_id, "This node has no cxlumn '"s + expression.as_cxlumn_name() + "'");
   return *cxlumn_id;
 }
 

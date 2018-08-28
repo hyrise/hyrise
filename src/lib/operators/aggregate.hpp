@@ -16,7 +16,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_column_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
