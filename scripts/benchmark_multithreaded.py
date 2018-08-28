@@ -129,9 +129,10 @@ def plot(args, result_dir):
 
     tpch_results = {}
     for _, _, files in os.walk(result_dir):
-        for file in sorted(files):
-            if file.split('.')[-1] != 'json':
-                continue
+        json_files = [f for f in files if f.split('.')[-1] == 'json']
+        num_cores_from_filename = lambda filename: int(filename.split('-')[0])
+        # Add the results in sorted order (low core count -> high core count) for plotting later
+        for file in sorted(json_files, key=num_cores_from_filename):
             with open(os.path.join(result_dir, file), 'r') as json_file:
                 data = json.load(json_file)
             cores = data['context']['cores']
