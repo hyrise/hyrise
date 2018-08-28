@@ -46,8 +46,9 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
   if (variant_value.which() == detail::index_of(data_types_including_null, hana::type_c<NullValue>)) {
-    // TODO: estimate_predicate_with_value() is not implemented for NullValue
-    auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(_null_value_ratio, _distinct_count, _min, _max);
+    // TODO(anyone): estimate_predicate_with_value() is not implemented for NullValue
+    auto column_statistics =
+        std::make_shared<ColumnStatistics<ColumnDataType>>(_null_value_ratio, _distinct_count, _min, _max);
     return {1.f, column_statistics};
   }
 
