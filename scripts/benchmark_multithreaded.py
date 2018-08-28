@@ -2,8 +2,11 @@ import os
 import argparse
 import multiprocessing
 import subprocess
+import json
 
 from datetime import datetime
+
+import matplotlib.pyplot as plt
 
 
 BENCHMARK_EXECUTABLE = 'hyriseBenchmarkTPCH'
@@ -49,6 +52,14 @@ def get_formatted_queries(args):
         formatted_queries += ['-q', str(query)]
     return formatted_queries
 
+def is_square(n):
+    return n ** 0.5 == int(n ** 0.5)
+
+def get_subplot_row_and_column_count(num_plots):
+    while not is_square(num_plots):
+        num_plots += 1
+    return num_plots ** 0.5
+
 def run_benchmarks(args, core_counts, executable, result_dir):
     benchmark_run = 0
     for core_count in core_counts:
@@ -82,8 +93,6 @@ def run_benchmarks(args, core_counts, executable, result_dir):
         subprocess.run(execution_command)
 
 def benchmark(args):
-    core_counts = get_core_counts(args)
-
     executable = os.path.join(args.build_dir, BENCHMARK_EXECUTABLE)
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     result_dir = os.path.join(args.result_dir, timestamp)
@@ -91,6 +100,7 @@ def benchmark(args):
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)
 
+    core_counts = get_core_counts(args)
     verbose_print(args.verbose, 'Executing benchmarks with the following numbers of cores: ' + str(core_counts))
 
     run_benchmarks(args, core_counts, executable, result_dir)
@@ -98,11 +108,65 @@ def benchmark(args):
     verbose_print(args.verbose, 'Benchmarks complete!')
     verbose_print(args.verbose, 'Saved results to: ' + result_dir)
 
-def plot(args):
-    pass
+    return result_dir
+
+def plot(args, result_dir):
+    verbose_print(args.verbose, 'Plotting results from: ' + result_dir)
+
+    tpch_results = {}
+    for _, _, files in os.walk(result_dir):
+        for file in sorted(files):
+            if file.split('.')[-1] != 'json':
+                continue
+            with open(os.path.join(result_dir, file), 'r') as json_file:
+                data = json.load(json_file)
+            cores = data['context']['cores']
+            for benchmark in data['benchmarks']:
+                name = benchmark['name']
+                items_per_second = benchmark['items_per_second']
+                if not name in tpch_results:
+                    tpch_results[name] = {'cores': [], 'items_per_second': []}
+                if cores == 0:
+                    tpch_results[name]['singlethreaded'] = items_per_second
+                else:
+                    tpch_results[name]['cores'].append(cores)
+                    tpch_results[name]['items_per_second'].append(items_per_second)
+
+    num_plots = len(tpch_results)
+    n_rows_and_cols = get_subplot_row_and_column_count(num_plots)
+    plot_pos = 0
+
+    fig = plt.figure(figsize=(n_rows_and_cols*3, n_rows_and_cols*2))
+    for name, data in tpch_results.items():
+        plot_pos += 1
+        ax = fig.add_subplot(n_rows_and_cols, n_rows_and_cols, plot_pos)
+        ax.set_title(name)
+        x = data['cores']
+        y = data['items_per_second']
+        base = data['singlethreaded']
+        multithreaded_plot = ax.plot(x, y, label='multithreaded')
+        singlethreaded_plot = ax.axhline(base, color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label='singlethreaded')
+        ax.set_ylim(ymin=0)
+
+    plt.figlegend((multithreaded_plot[0], singlethreaded_plot), ('multithreaded', 'singlethreaded'), 'lower right')
+
+    # This should prevent axes from different plots to overlap etc
+    plt.tight_layout()
+
+    # Add big axis descriptions for all plots
+    ax_legend = fig.add_subplot(111, frameon=False)
+    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    ax_legend.set_xlabel('Utilized cores', labelpad=10)
+    ax_legend.set_ylabel('Throughput (queries / sec)', labelpad=20)
+
+    # Save as png (rasterized) and pdf (vectorized)
+    for extension in ['png', 'pdf']:
+        result_plot_file = os.path.join(result_dir, 'result_plots.' + extension)
+        plt.savefig(result_plot_file, bbox_inches='tight')
+        verbose_print(args.verbose, 'Plot saved as: ' + result_plot_file)
 
 if __name__ == "__main__":
     args = parse_arguments()
 
-    benchmark(args)
-    plot(args)
+    result_dir = benchmark(args)
+    plot(args, result_dir)
