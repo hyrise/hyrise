@@ -3,8 +3,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 
 #include <chrono>
 #include <csetjmp>
@@ -41,7 +39,7 @@
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
-#include "utils/string_functions.hpp"
+#include "utils/string_utils.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
