@@ -1,8 +1,10 @@
 #include "join_ordering_rule.hpp"
 
+#include "logical_query_plan/projection_node.hpp"
+#include "expression/expression_utils.hpp"
+#include "optimizer/dp_ccp.hpp"
 #include "optimizer/join_graph.hpp"
 #include "utils/assert.hpp"
-#include "optimizer/dp_ccp.hpp"
 
 namespace opossum {
 
@@ -26,10 +28,16 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_traverse(const std::shared_p
     return lqp;
   }
 
-  const auto result_lqp = DpCcp{_cost_model}(*join_graph);
+  const auto expected_column_order = lqp->column_expressions();
+
+  auto result_lqp = DpCcp{_cost_model}(*join_graph);
 
   for (const auto& vertex : join_graph->vertices) {
     _traverse_inputs(vertex);
+  }
+
+  if (!expressions_equal(expected_column_order, result_lqp->column_expressions())) {
+    result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
 
   return result_lqp;
