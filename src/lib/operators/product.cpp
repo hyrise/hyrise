@@ -58,7 +58,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
-  ChunkSegments output_columns;
+  Segments output_columns;
   auto is_left_side = true;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {

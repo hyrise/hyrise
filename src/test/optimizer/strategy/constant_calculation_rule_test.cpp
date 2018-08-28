@@ -53,8 +53,8 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
 
   /**
    * NOTE
-   * The ProjectionNode will still contain a Column calculating 1233+1
-   *    * Because it is not the job of the ConstantCalculationRule to remove redundant columns
+   * The ProjectionNode will still contain a Cxlumn calculating 1233+1
+   *    * Because it is not the job of the ConstantCalculationRule to remove redundant cxlumns
    *    * It isn't pruned because the Optimizer (TODO(anybody)!) can't rewrite root expressions, because
    *        AbstractLQPNode::node_expressions() returns them by value.
    */

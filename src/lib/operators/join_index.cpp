@@ -181,7 +181,7 @@ void JoinIndex::_perform_join() {
   _pos_list_right->shrink_to_fit();
 
   // write output chunks
-  ChunkSegments output_columns;
+  Segments output_columns;
 
   _write_output_columns(output_columns, _left_in_table, _pos_list_left);
   _write_output_columns(output_columns, _right_in_table, _pos_list_right);
@@ -315,7 +315,7 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 }
 
-void JoinIndex::_write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<const Table>& input_table,
+void JoinIndex::_write_output_columns(Segments& output_columns, const std::shared_ptr<const Table>& input_table,
                                       std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {

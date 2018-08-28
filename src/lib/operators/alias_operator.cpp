@@ -57,7 +57,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    auto output_columns = ChunkSegments{};
+    auto output_columns = Segments{};
     output_columns.reserve(input_table_left()->cxlumn_count());
 
     for (const auto& cxlumn_id : _cxlumn_ids) {

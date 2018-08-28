@@ -20,7 +20,7 @@ namespace opossum {
  *
  * For convenience, the class also implements the method for_each, which
  * takes care of iterating over the elements and accepts a generic lambda
- * that expects a column value as the parameter (use const auto& as the
+ * that expects a segment value as the parameter (use const auto& as the
  * parameter declaration!).
  *
  *
@@ -69,7 +69,7 @@ class SegmentIterable {
   }
 
   /**
-   * @param f is a generic lambda accepting a column value (i.e. use const auto&)
+   * @param f is a generic lambda accepting a segment value (i.e. use const auto&)
    */
   template <typename Functor>
   void for_each(const Functor& f) const {
@@ -88,7 +88,7 @@ class SegmentIterable {
 
   /**
    * Materialize all values in this iterable.
-   * @param container   Container with the same value_type as the values in the column
+   * @param container   Container with the same value_type as the values in the segment
    */
   template <typename Container>
   void materialize_values(Container& container) const {
@@ -102,7 +102,7 @@ class SegmentIterable {
    * Materialize all values in this iterable as std::optional<ValueType>. std::nullopt if value is NULL.
    * @param container   Container with value_type std::pair<bool, T>, where
    *                        bool indicates whether the value is NULL or not
-   *                        T is the same as the type of the values in the column
+   *                        T is the same as the type of the values in the segment
    *                        pair in favour over optional to avoid branches for initialization
    */
   template <typename Container>

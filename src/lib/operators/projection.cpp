@@ -63,7 +63,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    * Perform the projection
    */
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    ChunkSegments output_columns;
+    Segments output_columns;
     output_columns.reserve(expressions.size());
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);

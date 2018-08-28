@@ -20,7 +20,7 @@ class BaseCompressedVector;
 /**
  * @brief Column implementing frame-of-reference encoding
  *
- * Frame-of-Reference encoding divides the values of column into
+ * Frame-of-Reference encoding divides the values of segment into
  * fixed-size blocks. The values of each block are encoded
  * as an offset from the block’s minimum value. These offsets,
  * which can ideally be represented by fewer bits, are then
@@ -33,7 +33,7 @@ template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
 class FrameOfReferenceSegment : public BaseEncodedSegment {
  public:
   /**
-   * The column is divided into fixed-size blocks.
+   * The segment is divided into fixed-size blocks.
    * Each block has its own minimum from which the
    * offsets are calculated. Theoretically, it would
    * possible to make the block size dependent on the

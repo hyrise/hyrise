@@ -69,7 +69,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
+TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherCxlumn) {
   table->create_index<GroupKeyIndex>({CxlumnID{2}});
 
   auto statistics_mock = generate_mock_statistics();
@@ -83,7 +83,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
+TEST_F(IndexScanRuleTest, NoIndexScanWithMultiCxlumnIndex) {
   table->create_index<CompositeGroupKeyIndex>({CxlumnID{2}, CxlumnID{1}});
 
   auto statistics_mock = generate_mock_statistics();
@@ -97,7 +97,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
+TEST_F(IndexScanRuleTest, NoIndexScanWithTwoCxlumnPredicate) {
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
 

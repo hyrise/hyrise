@@ -69,7 +69,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
                                                    const std::function<T(std::vector<size_t>)>& generator_function);
 
   template <typename T>
-  void _add_order_line_cxlumn(std::vector<ChunkSegments>& columns_by_chunk, TableCxlumnDefinitions& cxlumn_definitions,
+  void _add_order_line_cxlumn(std::vector<Segments>& columns_by_chunk, TableCxlumnDefinitions& cxlumn_definitions,
                               std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
                               order_line_counts_type order_line_counts,
                               const std::function<T(std::vector<size_t>)>& generator_function);

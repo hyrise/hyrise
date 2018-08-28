@@ -193,7 +193,7 @@ TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
-  auto chunk = std::make_shared<Chunk>(ChunkSegments({this->dict_segment_int, this->dict_segment_str}));
+  auto chunk = std::make_shared<Chunk>(Segments({this->dict_segment_int, this->dict_segment_str}));
 
   chunk->create_index<TypeParam>({this->dict_segment_int});
   chunk->create_index<TypeParam>({this->dict_segment_int, this->dict_segment_str});

@@ -72,7 +72,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
 
-    ChunkSegments segments;
+    Segments segments;
 
     for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
       auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);

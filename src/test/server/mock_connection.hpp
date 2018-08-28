@@ -26,7 +26,7 @@ class MockConnection {
   MOCK_METHOD1(send_error, boost::future<void>(const std::string& message));
   MOCK_METHOD1(send_notice, boost::future<void>(const std::string& notice));
   MOCK_METHOD1(send_status_message, boost::future<void>(const NetworkMessageType& type));
-  MOCK_METHOD1(send_row_description, boost::future<void>(const std::vector<ColumnDescription>& row_description));
+  MOCK_METHOD1(send_row_description, boost::future<void>(const std::vector<CxlumnDescription>& row_description));
   MOCK_METHOD1(send_data_row, boost::future<void>(const std::vector<std::string>& row_strings));
   MOCK_METHOD1(send_command_complete, boost::future<void>(const std::string& message));
 };

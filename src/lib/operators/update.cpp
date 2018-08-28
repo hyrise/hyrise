@@ -61,7 +61,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     }
 
     // Add ReferenceSegments with built poslist.
-    ChunkSegments insert_table_columns;
+    Segments insert_table_columns;
     for (CxlumnID cxlumn_id{0}; cxlumn_id < table_to_update->cxlumn_count(); ++cxlumn_id) {
       insert_table_columns.push_back(std::make_shared<ReferenceSegment>(table_to_update, cxlumn_id, pos_list));
     }

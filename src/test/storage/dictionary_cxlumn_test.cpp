@@ -15,20 +15,20 @@ namespace opossum {
 
 class StorageDictionarySegmentTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueSegment<int>> vc_int = std::make_shared<ValueSegment<int>>();
-  std::shared_ptr<ValueSegment<std::string>> vc_str = std::make_shared<ValueSegment<std::string>>();
-  std::shared_ptr<ValueSegment<double>> vc_double = std::make_shared<ValueSegment<double>>();
+  std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>();
+  std::shared_ptr<ValueSegment<std::string>> vs_str = std::make_shared<ValueSegment<std::string>>();
+  std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
 
 TEST_F(StorageDictionarySegmentTest, CompressColumnInt) {
-  vc_int->append(4);
-  vc_int->append(4);
-  vc_int->append(3);
-  vc_int->append(4);
-  vc_int->append(5);
-  vc_int->append(3);
+  vs_int->append(4);
+  vs_int->append(4);
+  vs_int->append(3);
+  vs_int->append(4);
+  vs_int->append(5);
+  vs_int->append(3);
 
-  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
 
   // Test attribute_vector size
@@ -45,14 +45,14 @@ TEST_F(StorageDictionarySegmentTest, CompressColumnInt) {
 }
 
 TEST_F(StorageDictionarySegmentTest, CompressColumnString) {
-  vc_str->append("Bill");
-  vc_str->append("Steve");
-  vc_str->append("Alexander");
-  vc_str->append("Steve");
-  vc_str->append("Hasso");
-  vc_str->append("Bill");
+  vs_str->append("Bill");
+  vs_str->append("Steve");
+  vs_str->append("Alexander");
+  vs_str->append("Steve");
+  vs_str->append("Hasso");
+  vs_str->append("Bill");
 
-  auto col = encode_segment(EncodingType::Dictionary, DataType::String, vc_str);
+  auto col = encode_segment(EncodingType::Dictionary, DataType::String, vs_str);
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<std::string>>(col);
 
   // Test attribute_vector size
@@ -70,14 +70,14 @@ TEST_F(StorageDictionarySegmentTest, CompressColumnString) {
 }
 
 TEST_F(StorageDictionarySegmentTest, CompressColumnDouble) {
-  vc_double->append(0.9);
-  vc_double->append(1.0);
-  vc_double->append(1.0);
-  vc_double->append(1.1);
-  vc_double->append(0.9);
-  vc_double->append(1.1);
+  vs_double->append(0.9);
+  vs_double->append(1.0);
+  vs_double->append(1.0);
+  vs_double->append(1.1);
+  vs_double->append(0.9);
+  vs_double->append(1.1);
 
-  auto col = encode_segment(EncodingType::Dictionary, DataType::Double, vc_double);
+  auto col = encode_segment(EncodingType::Dictionary, DataType::Double, vs_double);
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<double>>(col);
 
   // Test attribute_vector size
@@ -94,16 +94,16 @@ TEST_F(StorageDictionarySegmentTest, CompressColumnDouble) {
 }
 
 TEST_F(StorageDictionarySegmentTest, CompressNullableColumnInt) {
-  vc_int = std::make_shared<ValueSegment<int>>(true);
+  vs_int = std::make_shared<ValueSegment<int>>(true);
 
-  vc_int->append(4);
-  vc_int->append(4);
-  vc_int->append(3);
-  vc_int->append(4);
-  vc_int->append(NULL_VALUE);
-  vc_int->append(3);
+  vs_int->append(4);
+  vs_int->append(4);
+  vs_int->append(3);
+  vs_int->append(4);
+  vs_int->append(NULL_VALUE);
+  vs_int->append(3);
 
-  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
 
   // Test attribute_vector size
@@ -122,9 +122,9 @@ TEST_F(StorageDictionarySegmentTest, CompressNullableColumnInt) {
 }
 
 TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
-  for (int i = 0; i <= 10; i += 2) vc_int->append(i);
+  for (int i = 0; i <= 10; i += 2) vs_int->append(i);
 
-  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
 
   // Test for AllTypeVariant as parameter
@@ -139,11 +139,11 @@ TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
 }
 
 TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
-  vc_int->append(0);
-  vc_int->append(1);
-  vc_int->append(2);
+  vs_int->append(0);
+  vs_int->append(1);
+  vs_int->append(2);
 
-  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+  auto col = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
   auto attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
@@ -154,10 +154,10 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   EXPECT_EQ(attribute_vector_uint16_t, nullptr);
 
   for (int i = 3; i < 257; ++i) {
-    vc_int->append(i);
+    vs_int->append(i);
   }
 
-  col = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+  col = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
   dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
   attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
@@ -175,12 +175,12 @@ TEST_F(StorageDictionarySegmentTest, MemoryUsageEstimation) {
    */
 
   const auto empty_memory_usage =
-      encode_segment(EncodingType::Dictionary, DataType::Int, vc_int)->estimate_memory_usage();
+      encode_segment(EncodingType::Dictionary, DataType::Int, vs_int)->estimate_memory_usage();
 
-  vc_int->append(0);
-  vc_int->append(1);
-  vc_int->append(2);
-  const auto compressed_segment = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+  vs_int->append(0);
+  vs_int->append(1);
+  vs_int->append(2);
+  const auto compressed_segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;

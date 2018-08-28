@@ -126,7 +126,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
-  ChunkSegments output_columns;
+  Segments output_columns;
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     output_columns.push_back(
         _import_column(file, row_count, table->cxlumn_data_type(cxlumn_id), table->cxlumn_is_nullable(cxlumn_id)));

@@ -94,7 +94,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 }
 
 void Table::append_mutable_chunk() {
-  ChunkSegments segments;
+  Segments segments;
   for (const auto& cxlumn_definition : _cxlumn_definitions) {
     resolve_data_type(cxlumn_definition.data_type, [&](auto type) {
       using CxlumnDataType = typename decltype(type)::type;
@@ -140,7 +140,7 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::append_chunk(const ChunkSegments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
                          const std::shared_ptr<ChunkAccessCounter>& access_counter) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 

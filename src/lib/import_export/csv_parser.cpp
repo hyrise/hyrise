@@ -45,7 +45,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<ChunkSegments> columns_by_chunks;
+  std::list<Segments> columns_by_chunks;
   std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
@@ -148,7 +148,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 }
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
-                                    const Table& table, ChunkSegments& columns) {
+                                    const Table& table, Segments& columns) {
   // For each csv column create a CsvConverter which builds up a ValueSegment
   const auto cxlumn_count = table.cxlumn_count();
   const auto row_count = field_ends.size() / cxlumn_count;

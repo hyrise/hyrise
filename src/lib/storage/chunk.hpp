@@ -29,7 +29,7 @@ class BaseIndex;
 class BaseSegment;
 class ChunkStatistics;
 
-using ChunkSegments = pmr_vector<std::shared_ptr<BaseSegment>>;
+using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -43,7 +43,7 @@ class Chunk : private Noncopyable {
   // The last chunk offset is reserved for NULL as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-  Chunk(const ChunkSegments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
+  Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
@@ -77,7 +77,7 @@ class Chunk : private Noncopyable {
    */
   std::shared_ptr<BaseSegment> get_segment(CxlumnID cxlumn_id) const;
 
-  const ChunkSegments& segments() const;
+  const Segments& segments() const;
 
   bool has_mvcc_data() const;
   bool has_access_counter() const;
@@ -151,7 +151,7 @@ class Chunk : private Noncopyable {
 
  private:
   PolymorphicAllocator<Chunk> _alloc;
-  ChunkSegments _segments;
+  Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
   std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;

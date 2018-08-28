@@ -71,7 +71,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     empty_table_columns.emplace_back("s", DataType::String, false);
     table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
 
-    ChunkSegments columns;
+    Segments columns;
     columns.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
     columns.emplace_back(
         std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));

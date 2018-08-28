@@ -26,7 +26,7 @@
  * IDs and ensures all transactions are committed in the correct order. It also holds a global last commit ID, which is
  * the commit ID of the last transaction that has been committed. When a new transaction context is created, it retains
  * a copy of the current last commit ID, stored as snapshot_commit_id, which represents a snapshot of the database. The 
- * snapshot commit ID together with the MVCC columns is used to filter out any changes made after the creation
+ * snapshot commit ID together with the MVCC data is used to filter out any changes made after the creation
  * transaction context.
  *
  * TransactionContext contains data used by a transaction, mainly its ID, the snapshot commit ID explained above, and,
@@ -70,7 +70,7 @@ class TransactionManager : private Noncopyable {
 
  private:
   std::atomic<TransactionID> _next_transaction_id;
-  // TransactionID = 0 means "not set" in the MVCC columns
+  // TransactionID = 0 means "not set" in the MVCC data
   static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
 
   std::atomic<CommitID> _last_commit_id;

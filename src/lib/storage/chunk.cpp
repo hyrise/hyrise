@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-Chunk::Chunk(const ChunkSegments& segments, const std::shared_ptr<MvccData>& mvcc_data,
+Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter>& access_counter)
     : _segments(segments), _mvcc_data(mvcc_data), _access_counter(access_counter) {
@@ -62,7 +62,7 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(CxlumnID cxlumn_id) const {
   return std::atomic_load(&_segments.at(cxlumn_id));
 }
 
-const ChunkSegments& Chunk::segments() const { return _segments; }
+const Segments& Chunk::segments() const { return _segments; }
 
 uint16_t Chunk::cxlumn_count() const { return _segments.size(); }
 
@@ -152,7 +152,7 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   }
 
   _alloc = PolymorphicAllocator<size_t>(memory_source);
-  ChunkSegments new_segments(_alloc);
+  Segments new_segments(_alloc);
   for (const auto& segment : _segments) {
     new_segments.push_back(segment->copy_using_allocator(_alloc));
   }

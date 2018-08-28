@@ -11,8 +11,8 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table>& table) {
-  std::vector<ColumnDescription> result;
+std::vector<CxlumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table>& table) {
+  std::vector<CxlumnDescription> result;
 
   const auto& cxlumn_names = table->cxlumn_names();
   const auto& cxlumn_types = table->cxlumn_data_types();
@@ -46,7 +46,7 @@ std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const
         Fail("Bad DataType");
     }
 
-    result.emplace_back(ColumnDescription{cxlumn_names[cxlumn_id], object_id, type_id});
+    result.emplace_back(CxlumnDescription{cxlumn_names[cxlumn_id], object_id, type_id});
   }
 
   return result;
@@ -108,8 +108,8 @@ boost::future<void> QueryResponseBuilder::_send_query_response_rows(const send_r
   std::vector<std::string> row_strings(chunk.cxlumn_count());
 
   for (CxlumnID cxlumn_id{0}; cxlumn_id < CxlumnID{chunk.cxlumn_count()}; ++cxlumn_id) {
-    const auto& column = chunk.get_segment(cxlumn_id);
-    row_strings[cxlumn_id] = type_cast<std::string>((*column)[current_chunk_offset]);
+    const auto& segment = chunk.get_segment(cxlumn_id);
+    row_strings[cxlumn_id] = type_cast<std::string>((*segment)[current_chunk_offset]);
   }
 
   return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::_send_query_response_rows, send_row,

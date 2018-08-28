@@ -60,7 +60,7 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
   for (size_t row_idx = 0; row_idx < num_rows;) {
     const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
-    ChunkSegments segments;
+    Segments segments;
     for (auto cxlumn_idx = CxlumnID{0}; cxlumn_idx < num_cxlumns; ++cxlumn_idx) {
       /**
        * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table

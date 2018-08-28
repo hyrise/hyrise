@@ -284,13 +284,13 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   cxlumn_definitions.emplace_back("c", DataType::Int);
   auto table_left = std::make_shared<Table>(cxlumn_definitions, TableType::References, 3);
 
-  table_left->append_chunk(ChunkSegments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));
-  table_left->append_chunk(ChunkSegments({segment_left_1_0, segment_left_1_1, segment_left_1_2}));
+  table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));
+  table_left->append_chunk(Segments({segment_left_1_0, segment_left_1_1, segment_left_1_2}));
 
   auto table_right = std::make_shared<Table>(cxlumn_definitions, TableType::References, 4);
 
-  table_right->append_chunk(ChunkSegments({segment_right_0_0, segment_right_0_1, segment_right_0_2}));
-  table_right->append_chunk(ChunkSegments({segment_right_1_0, segment_right_1_1, segment_right_1_2}));
+  table_right->append_chunk(Segments({segment_right_0_0, segment_right_0_1, segment_right_0_2}));
+  table_right->append_chunk(Segments({segment_right_1_0, segment_right_1_1, segment_right_1_2}));
 
   auto table_wrapper_left_op = std::make_shared<TableWrapper>(table_left);
   auto table_wrapper_right_op = std::make_shared<TableWrapper>(table_right);

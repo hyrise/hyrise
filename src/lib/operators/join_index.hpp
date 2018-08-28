@@ -58,7 +58,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_columns(Segments& output_columns, const std::shared_ptr<const Table>& input_table,
                              std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;

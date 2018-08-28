@@ -8,11 +8,11 @@
 
 namespace opossum {
 
-GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& columns)
+GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<GroupKeyIndex>()},
-      _indexed_segments(std::dynamic_pointer_cast<const BaseDictionarySegment>(columns[0])) {
-  Assert(static_cast<bool>(_indexed_segments), "GroupKeyIndex only works with dictionary columns.");
-  Assert((columns.size() == 1), "GroupKeyIndex only works with a single column.");
+      _indexed_segments(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {
+  Assert(static_cast<bool>(_indexed_segments), "GroupKeyIndex only works with dictionary segments_to_index.");
+  Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
 
   // 1) Initialize the index structures
   // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position)

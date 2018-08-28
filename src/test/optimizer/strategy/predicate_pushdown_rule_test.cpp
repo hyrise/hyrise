@@ -169,7 +169,7 @@ TEST_F(PredicatePushdownRuleTest, AllowedValuePredicatePushdownThroughProjection
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
+TEST_F(PredicatePushdownRuleTest, AllowedCxlumnPredicatePushdownThroughProjectionTest) {
   // We can push `a > b` under the projection because it does not depend on the subselect.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));

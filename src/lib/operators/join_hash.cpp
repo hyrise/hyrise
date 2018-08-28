@@ -561,7 +561,7 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& i
   return pos_lists_by_column;
 }
 
-void write_output_segments(ChunkSegments& output_segments, const std::shared_ptr<const Table>& input_table,
+void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
                           std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
@@ -836,7 +836,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      ChunkSegments output_segments;
+      Segments output_segments;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {

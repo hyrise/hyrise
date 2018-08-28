@@ -28,20 +28,20 @@ template <typename AggregateKey>
 struct GroupByContext;
 
 /**
- * Aggregates are defined by the Column (CxlumnID for Operators, ColumnReference in LQP) they operate on and the aggregate
- * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
+ * Aggregates are defined by the cxlumn (CxlumnID for Operators, LQPCxlumnReference in LQP) they operate on and the aggregate
+ * function they use. COUNT() is the exception that doesn't use a cxlumn, which is why cxlumn is optional
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateCxlumnDefinition final {
-  AggregateCxlumnDefinition(const std::optional<CxlumnID>& column, const AggregateFunction function)
-      : column(column), function(function) {}
+  AggregateCxlumnDefinition(const std::optional<CxlumnID>& cxlumn, const AggregateFunction function)
+      : cxlumn(cxlumn), function(function) {}
 
-  std::optional<CxlumnID> column;
+  std::optional<CxlumnID> cxlumn;
   AggregateFunction function;
 };
 
 /*
-Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
+Operator to aggregate cxlumns by certain functions, such as min, max, sum, average, and count. The output is a table
  with reference segments. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
 
@@ -74,9 +74,9 @@ using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
  */
-using CountColumnType = int32_t;
+using CountCxlumnType = int32_t;
 using CountAggregateType = int64_t;
-using DistinctColumnType = int8_t;
+using DistinctCxlumnType = int8_t;
 using DistinctAggregateType = int8_t;
 
 /**
@@ -93,9 +93,9 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
-  // write the aggregated output for a given aggregate column
-  template <typename ColumnType, AggregateFunction function, typename AggregateKey>
-  void write_aggregate_output(CxlumnID column_index);
+  // write the aggregated output for a given aggregate cxlumn
+  template <typename CxlumnType, AggregateFunction function, typename AggregateKey>
+  void write_aggregate_output(CxlumnID cxlumn_index);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -111,26 +111,26 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   void _on_cleanup() override;
 
-  template <typename ColumnType>
-  static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
+  template <typename CxlumnType>
+  static void _create_aggregate_context(boost::hana::basic_type<CxlumnType> type,
                                         std::shared_ptr<SegmentVisitorContext>& aggregate_context,
                                         AggregateFunction function);
 
-  template <typename ColumnType, typename AggregateKey>
-  static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
+  template <typename CxlumnType, typename AggregateKey>
+  static void _create_aggregate_visitor(boost::hana::basic_type<CxlumnType> type,
                                         std::shared_ptr<AbstractSegmentVisitor>& builder,
                                         std::shared_ptr<SegmentVisitorContext> context,
                                         std::shared_ptr<GroupByContext<AggregateKey>> groupby_context,
                                         AggregateFunction function);
 
-  template <typename AggregateKey, typename ColumnType>
-  void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, CxlumnID column_index,
+  template <typename AggregateKey, typename CxlumnType>
+  void _write_aggregate_output(boost::hana::basic_type<CxlumnType> type, CxlumnID cxlumn_index,
                                AggregateFunction function);
 
   void _write_groupby_output(PosList& pos_list);
 
   template <typename CxlumnDataType, AggregateFunction function, typename AggregateKey>
-  void _aggregate_column(ChunkID chunk_id, CxlumnID column_index, const BaseSegment& base_segment,
+  void _aggregate_segment(ChunkID chunk_id, CxlumnID cxlumn_index, const BaseSegment& base_segment,
                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
@@ -144,10 +144,10 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::vector<CxlumnID> _groupby_cxlumn_ids;
 
   TableCxlumnDefinitions _output_cxlumn_definitions;
-  ChunkSegments _output_columns;
+  Segments _output_segments;
 
-  ChunkSegments _groupby_columns;
-  std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
+  Segments _groupby_segments;
+  std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_cxlumn;
 };
 
 }  // namespace opossum

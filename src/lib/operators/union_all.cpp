@@ -28,7 +28,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
     // iterating over all chunks of table input
     for (ChunkID in_chunk_id{0}; in_chunk_id < input->chunk_count(); in_chunk_id++) {
       // creating empty chunk to add columns with positions
-      ChunkSegments output_columns;
+      Segments output_columns;
 
       // iterating over all columns of the current chunk
       for (CxlumnID cxlumn_id{0}; cxlumn_id < input->cxlumn_count(); ++cxlumn_id) {

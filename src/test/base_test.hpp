@@ -30,7 +30,7 @@ template <typename ParamType>
 class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
                                                   ::testing::TestWithParam<ParamType>>::type {
  protected:
-  // creates a dictionary column with the given type and values
+  // creates a dictionary segment with the given type and values
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
                                                                          const std::vector<T>& values) {

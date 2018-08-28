@@ -422,7 +422,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_cxlumns(ChunkSegments& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_cxlumns(Segments& output_columns, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto cxlumn_count = input_table->cxlumn_count();
     for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
@@ -519,7 +519,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     }
 
     // Add the columns from both input tables to the output
-    ChunkSegments output_columns;
+    Segments output_columns;
     _add_output_cxlumns(output_columns, _mpsm_join.input_table_left(), output_left);
     _add_output_cxlumns(output_columns, _mpsm_join.input_table_right(), output_right);
 

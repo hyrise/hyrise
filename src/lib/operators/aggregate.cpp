@@ -31,7 +31,7 @@ Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
       _aggregates(aggregates),
       _groupby_cxlumn_ids(groupby_cxlumn_ids) {
   Assert(!(aggregates.empty() && groupby_cxlumn_ids.empty()),
-         "Neither aggregate nor groupby columns have been specified");
+         "Neither aggregate nor groupby cxlumns have been specified");
 }
 
 const std::vector<AggregateCxlumnDefinition>& Aggregate::aggregates() const { return _aggregates; }
@@ -56,8 +56,8 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
     const auto& aggregate = _aggregates[expression_idx];
     desc << aggregate_function_to_string.left.at(aggregate.function);
 
-    if (aggregate.column) {
-      desc << "(Column #" << *aggregate.column << ")";
+    if (aggregate.cxlumn) {
+      desc << "(Cxlumn #" << *aggregate.cxlumn << ")";
     } else {
       desc << "(*)";
     }
@@ -75,16 +75,16 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
 
 void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Aggregate::_on_cleanup() { _contexts_per_column.clear(); }
+void Aggregate::_on_cleanup() { _contexts_per_cxlumn.clear(); }
 
 /*
 Visitor context for the partitioning/grouping visitor
 */
 template <typename AggregateKey>
 struct GroupByContext : SegmentVisitorContext {
-  GroupByContext(const std::shared_ptr<const Table>& t, ChunkID chunk, CxlumnID column,
+  GroupByContext(const std::shared_ptr<const Table>& t, ChunkID chunk, CxlumnID cxlumn,
                  const std::shared_ptr<AggregateKeys<AggregateKey>>& keys)
-      : table_in(t), chunk_id(chunk), cxlumn_id(column), hash_keys(keys) {}
+      : table_in(t), chunk_id(chunk), cxlumn_id(cxlumn), hash_keys(keys) {}
 
   GroupByContext(const std::shared_ptr<BaseSegment>&, const std::shared_ptr<const Table>& referenced_table,
                  const std::shared_ptr<SegmentVisitorContext>& base_context, ChunkID chunk_id,
@@ -105,7 +105,7 @@ struct GroupByContext : SegmentVisitorContext {
 /*
 Visitor context for the AggregateVisitor.
 */
-template <typename ColumnType, typename AggregateType, typename AggregateKey>
+template <typename CxlumnType, typename AggregateType, typename AggregateKey>
 struct AggregateContext : SegmentVisitorContext {
   AggregateContext() = default;
   explicit AggregateContext(const std::shared_ptr<GroupByContext<AggregateKey>>& base_context)
@@ -121,7 +121,7 @@ struct AggregateContext : SegmentVisitorContext {
   }
 
   std::shared_ptr<GroupByContext<AggregateKey>> groupby_context;
-  std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+  std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, CxlumnType>, std::hash<AggregateKey>>>
       results;
 };
 
@@ -130,18 +130,18 @@ The AggregateFunctionBuilder is used to create the lambda function that will be 
 the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
-template <typename ColumnType, typename AggregateType>
-using AggregateFunctor = std::function<std::optional<AggregateType>(ColumnType, std::optional<AggregateType>)>;
+template <typename CxlumnType, typename AggregateType>
+using AggregateFunctor = std::function<std::optional<AggregateType>(CxlumnType, std::optional<AggregateType>)>;
 
-template <typename ColumnType, typename AggregateType, AggregateFunction function>
+template <typename CxlumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+template <typename CxlumnType, typename AggregateType>
+struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::Min> {
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() {
+    return [](CxlumnType new_value, std::optional<AggregateType> current_aggregate) {
       if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
         // New minimum found
         return new_value;
@@ -151,10 +151,10 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Mi
   }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+template <typename CxlumnType, typename AggregateType>
+struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::Max> {
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() {
+    return [](CxlumnType new_value, std::optional<AggregateType> current_aggregate) {
       if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
         // New maximum found
         return new_value;
@@ -164,49 +164,49 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Ma
   }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+template <typename CxlumnType, typename AggregateType>
+struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::Sum> {
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() {
+    return [](CxlumnType new_value, std::optional<AggregateType> current_aggregate) {
       // add new value to sum
       return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
     };
   }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+template <typename CxlumnType, typename AggregateType>
+struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::Avg> {
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() {
+    return [](CxlumnType new_value, std::optional<AggregateType> current_aggregate) {
       // add new value to sum
       return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
     };
   }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
+template <typename CxlumnType, typename AggregateType>
+struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::Count> {
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() {
+    return [](CxlumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
   }
 };
 
-template <typename ColumnType, typename AggregateType>
-struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
-  AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
+template <typename CxlumnType, typename AggregateType>
+struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::CountDistinct> {
+  AggregateFunctor<CxlumnType, AggregateType> get_aggregate_function() {
+    return [](CxlumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
   }
 };
 
 template <typename CxlumnDataType, AggregateFunction function, typename AggregateKey>
-void Aggregate::_aggregate_column(ChunkID chunk_id, CxlumnID column_index, const BaseSegment& base_segment,
+void Aggregate::_aggregate_segment(ChunkID chunk_id, CxlumnID cxlumn_index, const BaseSegment& base_segment,
                                   const KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<CxlumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<CxlumnDataType, AggregateType, function>().get_aggregate_function();
 
   auto& context = *std::static_pointer_cast<AggregateContext<CxlumnDataType, AggregateType, AggregateKey>>(
-      _contexts_per_column[column_index]);
+      _contexts_per_cxlumn[cxlumn_index]);
 
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
@@ -217,7 +217,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, CxlumnID column_index, const
 
         ChunkOffset chunk_offset{0};
 
-        // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
+        // Now that all relevant types have been resolved, we can iterate over the segment and build the aggregations.
         iterable.for_each([&, chunk_id, aggregator](const auto& value) {
           auto& hash_entry = results[hash_keys[chunk_offset]];
           hash_entry.row_id = RowID(chunk_id, chunk_offset);
@@ -258,20 +258,20 @@ void Aggregate::_aggregate() {
   auto input_table = input_table_left();
 
   for ([[maybe_unused]] const auto groupby_cxlumn_id : _groupby_cxlumn_ids) {
-    DebugAssert(groupby_cxlumn_id < input_table->cxlumn_count(), "GroupBy column index out of bounds");
+    DebugAssert(groupby_cxlumn_id < input_table->cxlumn_count(), "GroupBy cxlumn index out of bounds");
   }
 
   // check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
-    if (!aggregate.column) {
+    if (!aggregate.cxlumn) {
       if (aggregate.function != AggregateFunction::Count) {
         Fail("Aggregate: Asterisk is only valid with COUNT");
       }
     } else {
-      DebugAssert(*aggregate.column < input_table->cxlumn_count(), "Aggregate column index out of bounds");
-      if (input_table->cxlumn_data_type(*aggregate.column) == DataType::String &&
+      DebugAssert(*aggregate.cxlumn < input_table->cxlumn_count(), "Aggregate cxlumn index out of bounds");
+      if (input_table->cxlumn_data_type(*aggregate.cxlumn) == DataType::String &&
           (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
-        Fail("Aggregate: Cannot calculate SUM or AVG on string column");
+        Fail("Aggregate: Cannot calculate SUM or AVG on string cxlumn");
       }
     }
   }
@@ -280,7 +280,7 @@ void Aggregate::_aggregate() {
   PARTITIONING PHASE
   First we partition the input chunks by the given group key(s).
   This is done by creating a vector that contains the AggregateKey for each row.
-  It is gradually built by visitors, one for each group column.
+  It is gradually built by visitors, one for each group segment.
   */
 
   // Allocate a temporary memory buffer, for more details see aggregate.hpp
@@ -322,16 +322,16 @@ void Aggregate::_aggregate() {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(_groupby_cxlumn_ids.size());
 
-  for (size_t group_column_index = 0; group_column_index < _groupby_cxlumn_ids.size(); ++group_column_index) {
-    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, this]() {
-      const auto cxlumn_id = _groupby_cxlumn_ids.at(group_column_index);
+  for (size_t group_cxlumn_index = 0; group_cxlumn_index < _groupby_cxlumn_ids.size(); ++group_cxlumn_index) {
+    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_cxlumn_index, &keys_per_chunk, this]() {
+      const auto cxlumn_id = _groupby_cxlumn_ids.at(group_cxlumn_index);
       const auto data_type = input_table->cxlumn_data_type(cxlumn_id);
 
       resolve_data_type(data_type, [&](auto type) {
         using CxlumnDataType = typename decltype(type)::type;
 
         /*
-        Store unique IDs for equal values in the groupby column (similar to dictionary encoding). 
+        Store unique IDs for equal values in the groupby cxlumn (similar to dictionary encoding). 
         The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
         */
         auto id_map = std::unordered_map<CxlumnDataType, AggregateKeyEntry>();
@@ -350,7 +350,7 @@ void Aggregate::_aggregate() {
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   keys_per_chunk[chunk_id][chunk_offset] = 0u;
                 } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+                  keys_per_chunk[chunk_id][chunk_offset][group_cxlumn_index] = 0u;
                 }
               } else {
                 auto inserted = id_map.try_emplace(value.value(), id_counter);
@@ -358,7 +358,7 @@ void Aggregate::_aggregate() {
                 if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                   keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
                 } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
+                  keys_per_chunk[chunk_id][chunk_offset][group_cxlumn_index] = inserted.first->second;
                 }
 
                 // if the id_map didn't have the value as a key and a new element was inserted
@@ -379,42 +379,42 @@ void Aggregate::_aggregate() {
   /*
   AGGREGATION PHASE
   */
-  _contexts_per_column = std::vector<std::shared_ptr<SegmentVisitorContext>>(_aggregates.size());
+  _contexts_per_cxlumn = std::vector<std::shared_ptr<SegmentVisitorContext>>(_aggregates.size());
 
   if (_aggregates.empty()) {
     /*
     Insert a dummy context for the DISTINCT implementation.
-    That way, _contexts_per_column will always have at least one context with results.
+    That way, _contexts_per_cxlumn will always have at least one context with results.
     This is important later on when we write the group keys into the table.
 
-    We choose int8_t for column type and aggregate type because it's small.
+    We choose int8_t for cxlumn type and aggregate type because it's small.
     */
-    auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>();
+    auto context = std::make_shared<AggregateContext<DistinctCxlumnType, DistinctAggregateType, AggregateKey>>();
     context->results =
-        std::make_shared<std::unordered_map<AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>,
+        std::make_shared<std::unordered_map<AggregateKey, AggregateResult<DistinctAggregateType, DistinctCxlumnType>,
                                             std::hash<AggregateKey>>>();
 
-    _contexts_per_column.push_back(context);
+    _contexts_per_cxlumn.push_back(context);
   }
 
   /**
-   * Create an AggregateContext for each column in the input table that a normal (i.e. non-DISTINCT) aggregate is
+   * Create an AggregateContext for each cxlumn in the input table that a normal (i.e. non-DISTINCT) aggregate is
    * created on. We do this here, and not in the per-chunk-loop below, because there might be no Chunks in the input
    * and _write_aggregate_output() needs these contexts anyway.
    */
   for (CxlumnID cxlumn_id{0}; cxlumn_id < _aggregates.size(); ++cxlumn_id) {
     const auto& aggregate = _aggregates[cxlumn_id];
-    if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+    if (!aggregate.cxlumn && aggregate.function == AggregateFunction::Count) {
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
-      auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
+      auto context = std::make_shared<AggregateContext<CountCxlumnType, CountAggregateType, AggregateKey>>();
       context->results =
-          std::make_shared<std::unordered_map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>,
+          std::make_shared<std::unordered_map<AggregateKey, AggregateResult<CountAggregateType, CountCxlumnType>,
                                               std::hash<AggregateKey>>>();
-      _contexts_per_column[cxlumn_id] = context;
+      _contexts_per_cxlumn[cxlumn_id] = context;
       continue;
     }
-    auto data_type = input_table->cxlumn_data_type(*aggregate.column);
-    _contexts_per_column[cxlumn_id] = _create_aggregate_context<AggregateKey>(data_type, aggregate.function);
+    auto data_type = input_table->cxlumn_data_type(*aggregate.cxlumn);
+    _contexts_per_cxlumn[cxlumn_id] = _create_aggregate_context<AggregateKey>(data_type, aggregate.function);
   }
 
   // Process Chunks and perform aggregations
@@ -430,15 +430,15 @@ void Aggregate::_aggregate() {
        * In Opossum we handle the SQL keyword DISTINCT by grouping without aggregation.
        *
        * For a query like "SELECT DISTINCT * FROM A;"
-       * we would assume that all columns from A are part of 'groupby_columns',
-       * respectively any columns that were specified in the projection.
-       * The optimizer is responsible to take care of passing in the correct columns.
+       * we would assume that all cxlumns from A are part of 'groupby_cxlumns',
+       * respectively any cxlumns that were specified in the projection.
+       * The optimizer is responsible to take care of passing in the correct cxlumns.
        *
        * How does this operation work?
        * Distinct rows are retrieved by grouping by vectors of values. Similar as for the usual aggregation
-       * these vectors are used as keys in the 'column_results' map.
+       * these vectors are used as keys in the results map.
        *
-       * At this point we've got all the different keys from the chunks and accumulate them in 'column_results'.
+       * At this point we've got all the different keys from the chunks and accumulate them in 'results'.
        * In order to reuse the aggregation implementation, we add a dummy AggregateResult.
        * One could optimize here in the future.
        *
@@ -446,26 +446,26 @@ void Aggregate::_aggregate() {
        */
 
       auto context =
-          std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(
-              _contexts_per_column[0]);
+          std::static_pointer_cast<AggregateContext<DistinctCxlumnType, DistinctAggregateType, AggregateKey>>(
+              _contexts_per_cxlumn[0]);
       auto& results = *context->results;
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
         results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
-      CxlumnID column_index{0};
+      CxlumnID cxlumn_index{0};
       for (const auto& aggregate : _aggregates) {
         /**
          * Special COUNT(*) implementation.
-         * Because COUNT(*) does not have a specific target column, we use the maximum CxlumnID.
+         * Because COUNT(*) does not have a specific target cxlumn, we use the maximum CxlumnID.
          * We then go through the keys_per_chunk map and count the occurrences of each group key.
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
-          auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
-              _contexts_per_column[column_index]);
+        if (!aggregate.cxlumn && aggregate.function == AggregateFunction::Count) {
+          auto context = std::static_pointer_cast<AggregateContext<CountCxlumnType, CountAggregateType, AggregateKey>>(
+              _contexts_per_cxlumn[cxlumn_index]);
 
           auto& results = *context->results;
 
@@ -476,15 +476,15 @@ void Aggregate::_aggregate() {
             ++hash_entry.aggregate_count;
           }
 
-          ++column_index;
+          ++cxlumn_index;
           continue;
         }
 
-        auto base_segment = chunk_in->get_segment(*aggregate.column);
-        auto data_type = input_table->cxlumn_data_type(*aggregate.column);
+        auto base_segment = chunk_in->get_segment(*aggregate.cxlumn);
+        auto data_type = input_table->cxlumn_data_type(*aggregate.cxlumn);
 
         /*
-        Invoke correct aggregator for each column
+        Invoke correct aggregator for each cxlumn
         */
 
         resolve_data_type(data_type, [&, aggregate](auto type) {
@@ -492,58 +492,58 @@ void Aggregate::_aggregate() {
 
           switch (aggregate.function) {
             case AggregateFunction::Min:
-              _aggregate_column<CxlumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<CxlumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, cxlumn_index,
                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Max:
-              _aggregate_column<CxlumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<CxlumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, cxlumn_index,
                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Sum:
-              _aggregate_column<CxlumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<CxlumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, cxlumn_index,
                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Avg:
-              _aggregate_column<CxlumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<CxlumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, cxlumn_index,
                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Count:
-              _aggregate_column<CxlumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<CxlumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, cxlumn_index,
                                                                                         *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
-              _aggregate_column<CxlumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
-                  chunk_id, column_index, *base_segment, keys_per_chunk);
+              _aggregate_segment<CxlumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
+                  chunk_id, cxlumn_index, *base_segment, keys_per_chunk);
               break;
           }
         });
 
-        ++column_index;
+        ++cxlumn_index;
       }
     }
   }
 
-  // add group by columns
+  // add group by cxlumns
   for (const auto cxlumn_id : _groupby_cxlumn_ids) {
     _output_cxlumn_definitions.emplace_back(input_table->cxlumn_name(cxlumn_id),
                                             input_table->cxlumn_data_type(cxlumn_id));
 
-    auto groupby_column =
+    auto groupby_segment =
         make_shared_by_data_type<BaseSegment, ValueSegment>(input_table->cxlumn_data_type(cxlumn_id), true);
-    _groupby_columns.push_back(groupby_column);
-    _output_columns.push_back(groupby_column);
+    _groupby_segments.push_back(groupby_segment);
+    _output_segments.push_back(groupby_segment);
   }
   /**
-   * Write group-by columns.
+   * Write group-by cxlumns.
    *
-   * 'results_per_column' always contains at least one element, since there are either GroupBy or Aggregate columns.
-   * However, we need to look only at the first element, because the keys for all columns are the same.
+   * '_contexts_per_cxlumn' always contains at least one element, since there are either GroupBy or Aggregate cxlumns.
+   * However, we need to look only at the first element, because the keys for all cxlumns are the same.
    *
-   * The following loop is used for both, actual GroupBy columns and DISTINCT columns.
+   * The following loop is used for both, actual GroupBy cxlumns and DISTINCT cxlumns.
    **/
   if (_aggregates.empty()) {
-    auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(
-        _contexts_per_column[0]);
+    auto context = std::static_pointer_cast<AggregateContext<DistinctCxlumnType, DistinctAggregateType, AggregateKey>>(
+        _contexts_per_cxlumn[0]);
     auto pos_list = PosList();
     pos_list.reserve(context->results->size());
     for (auto& map : *context->results) {
@@ -553,25 +553,25 @@ void Aggregate::_aggregate() {
   }
 
   /*
-  Write the aggregated columns to the output
+  Write the aggregated cxlumns to the output
   */
-  CxlumnID column_index{0};
+  CxlumnID cxlumn_index{0};
   for (const auto& aggregate : _aggregates) {
-    const auto column = aggregate.column;
+    const auto cxlumn = aggregate.cxlumn;
 
-    // Output column for COUNT(*). int is chosen arbitrarily.
-    const auto data_type = !column ? DataType::Int : input_table->cxlumn_data_type(*column);
+    // Output cxlumn for COUNT(*). int is chosen arbitrarily.
+    const auto data_type = !cxlumn ? DataType::Int : input_table->cxlumn_data_type(*cxlumn);
 
-    resolve_data_type(data_type, [&, column_index](auto type) {
-      _write_aggregate_output<AggregateKey>(type, column_index, aggregate.function);
+    resolve_data_type(data_type, [&, cxlumn_index](auto type) {
+      _write_aggregate_output<AggregateKey>(type, cxlumn_index, aggregate.function);
     });
 
-    ++column_index;
+    ++cxlumn_index;
   }
 }
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
-  // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
+  // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate cxlumns.
   // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
   switch (_groupby_cxlumn_ids.size()) {
@@ -592,7 +592,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   // Write the output
   auto output = std::make_shared<Table>(_output_cxlumn_definitions, TableType::Data);
-  output->append_chunk(_output_columns);
+  output->append_chunk(_output_segments);
 
   return output;
 }
@@ -602,17 +602,17 @@ The following template functions write the aggregated values for the different a
 They are separate and templated to avoid compiler errors for invalid type/function combinations.
 */
 // MIN, MAX, SUM write the current aggregated value
-template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
+template <typename CxlumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
 typename std::enable_if<
     func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> column,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, CxlumnType>,
                                                           std::hash<AggregateKey>>>
                            results) {
-  DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
+  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
-  auto& values = column->values();
-  auto& null_values = column->null_values();
+  auto& values = segment->values();
+  auto& null_values = segment->null_values();
 
   values.resize(results->size());
   null_values.resize(results->size());
@@ -629,15 +629,15 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> column,
 }
 
 // COUNT writes the aggregate counter
-template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
+template <typename CxlumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
 typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> column,
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
-        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, CxlumnType>, std::hash<AggregateKey>>>
         results) {
-  DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
+  DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
-  auto& values = column->values();
+  auto& values = segment->values();
   values.resize(results->size());
 
   size_t i = 0;
@@ -648,15 +648,15 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggr
 }
 
 // COUNT(DISTINCT) writes the number of distinct values
-template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
+template <typename CxlumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
 typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type write_aggregate_values(
-    std::shared_ptr<ValueSegment<AggregateType>> column,
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
-        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, CxlumnType>, std::hash<AggregateKey>>>
         results) {
-  DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
+  DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
-  auto& values = column->values();
+  auto& values = segment->values();
   values.resize(results->size());
 
   size_t i = 0;
@@ -667,16 +667,16 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type wr
 }
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
-template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
+template <typename CxlumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
 typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> column,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, CxlumnType>,
                                                           std::hash<AggregateKey>>>
                            results) {
-  DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
+  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
-  auto& values = column->values();
-  auto& null_values = column->null_values();
+  auto& values = segment->values();
+  auto& null_values = segment->null_values();
 
   values.resize(results->size());
   null_values.resize(results->size());
@@ -693,10 +693,10 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> column,
 }
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
-template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
+template <typename CxlumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
 typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>>,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
+                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, CxlumnType>,
                                                           std::hash<AggregateKey>>>) {
   Fail("Invalid aggregate");
 }
@@ -704,56 +704,56 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>>,
 void Aggregate::_write_groupby_output(PosList& pos_list) {
   auto input_table = input_table_left();
 
-  for (size_t group_column_index = 0; group_column_index < _groupby_cxlumn_ids.size(); ++group_column_index) {
+  for (size_t group_cxlumn_index = 0; group_cxlumn_index < _groupby_cxlumn_ids.size(); ++group_cxlumn_index) {
     auto base_segments = std::vector<std::shared_ptr<const BaseSegment>>();
     for (const auto& chunk : input_table->chunks()) {
-      base_segments.push_back(chunk->get_segment(_groupby_cxlumn_ids[group_column_index]));
+      base_segments.push_back(chunk->get_segment(_groupby_cxlumn_ids[group_cxlumn_index]));
     }
     for (const auto row_id : pos_list) {
-      _groupby_columns[group_column_index]->append((*base_segments[row_id.chunk_id])[row_id.chunk_offset]);
+      _groupby_segments[group_cxlumn_index]->append((*base_segments[row_id.chunk_id])[row_id.chunk_offset]);
     }
   }
 }
 
-template <typename AggregateKey, typename ColumnType>
-void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type, CxlumnID column_index,
+template <typename AggregateKey, typename CxlumnType>
+void Aggregate::_write_aggregate_output(boost::hana::basic_type<CxlumnType> type, CxlumnID cxlumn_index,
                                         AggregateFunction function) {
   switch (function) {
     case AggregateFunction::Min:
-      write_aggregate_output<ColumnType, AggregateFunction::Min, AggregateKey>(column_index);
+      write_aggregate_output<CxlumnType, AggregateFunction::Min, AggregateKey>(cxlumn_index);
       break;
     case AggregateFunction::Max:
-      write_aggregate_output<ColumnType, AggregateFunction::Max, AggregateKey>(column_index);
+      write_aggregate_output<CxlumnType, AggregateFunction::Max, AggregateKey>(cxlumn_index);
       break;
     case AggregateFunction::Sum:
-      write_aggregate_output<ColumnType, AggregateFunction::Sum, AggregateKey>(column_index);
+      write_aggregate_output<CxlumnType, AggregateFunction::Sum, AggregateKey>(cxlumn_index);
       break;
     case AggregateFunction::Avg:
-      write_aggregate_output<ColumnType, AggregateFunction::Avg, AggregateKey>(column_index);
+      write_aggregate_output<CxlumnType, AggregateFunction::Avg, AggregateKey>(cxlumn_index);
       break;
     case AggregateFunction::Count:
-      write_aggregate_output<ColumnType, AggregateFunction::Count, AggregateKey>(column_index);
+      write_aggregate_output<CxlumnType, AggregateFunction::Count, AggregateKey>(cxlumn_index);
       break;
     case AggregateFunction::CountDistinct:
-      write_aggregate_output<ColumnType, AggregateFunction::CountDistinct, AggregateKey>(column_index);
+      write_aggregate_output<CxlumnType, AggregateFunction::CountDistinct, AggregateKey>(cxlumn_index);
       break;
   }
 }
 
-template <typename ColumnType, AggregateFunction function, typename AggregateKey>
-void Aggregate::write_aggregate_output(CxlumnID column_index) {
+template <typename CxlumnType, AggregateFunction function, typename AggregateKey>
+void Aggregate::write_aggregate_output(CxlumnID cxlumn_index) {
   // retrieve type information from the aggregation traits
-  typename AggregateTraits<ColumnType, function>::AggregateType aggregate_type;
-  auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
+  typename AggregateTraits<CxlumnType, function>::AggregateType aggregate_type;
+  auto aggregate_data_type = AggregateTraits<CxlumnType, function>::AGGREGATE_DATA_TYPE;
 
-  const auto& aggregate = _aggregates[column_index];
+  const auto& aggregate = _aggregates[cxlumn_index];
 
   if (aggregate_data_type == DataType::Null) {
-    // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->cxlumn_data_type(*aggregate.column);
+    // if not specified, it’s the input cxlumn’s type
+    aggregate_data_type = input_table_left()->cxlumn_data_type(*aggregate.cxlumn);
   }
 
-  // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
+  // Generate cxlumn name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
   // doesn't use Expressions, yet
   std::stringstream cxlumn_name_stream;
   if (aggregate.function == AggregateFunction::CountDistinct) {
@@ -762,8 +762,8 @@ void Aggregate::write_aggregate_output(CxlumnID column_index) {
     cxlumn_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
   }
 
-  if (aggregate.column) {
-    cxlumn_name_stream << input_table_left()->cxlumn_name(*aggregate.column);
+  if (aggregate.cxlumn) {
+    cxlumn_name_stream << input_table_left()->cxlumn_name(*aggregate.cxlumn);
   } else {
     cxlumn_name_stream << "*";
   }
@@ -772,13 +772,13 @@ void Aggregate::write_aggregate_output(CxlumnID column_index) {
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
   _output_cxlumn_definitions.emplace_back(cxlumn_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 
-  auto output_column = std::make_shared<ValueSegment<decltype(aggregate_type)>>(NEEDS_NULL);
+  auto output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(NEEDS_NULL);
 
-  auto context = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type), AggregateKey>>(
-      _contexts_per_column[column_index]);
+  auto context = std::static_pointer_cast<AggregateContext<CxlumnType, decltype(aggregate_type), AggregateKey>>(
+      _contexts_per_cxlumn[cxlumn_index]);
 
-  // write all group keys into the respective columns
-  if (column_index == 0) {
+  // write all group keys into the respective segment
+  if (cxlumn_index == 0) {
     auto pos_list = PosList();
     pos_list.reserve(context->results->size());
     for (auto& map : *context->results) {
@@ -787,19 +787,19 @@ void Aggregate::write_aggregate_output(CxlumnID column_index) {
     _write_groupby_output(pos_list);
   }
 
-  // write aggregated values into the column
+  // write aggregated values into the segment
   if (!context->results->empty()) {
-    write_aggregate_values<ColumnType, decltype(aggregate_type), function, AggregateKey>(output_column,
+    write_aggregate_values<CxlumnType, decltype(aggregate_type), function, AggregateKey>(output_segment,
                                                                                          context->results);
-  } else if (_groupby_columns.empty()) {
+  } else if (_groupby_segments.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    output_column->values().push_back(decltype(aggregate_type){});
+    output_segment->values().push_back(decltype(aggregate_type){});
     if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
-      output_column->null_values().push_back(true);
+      output_segment->null_values().push_back(true);
     }
   }
 
-  _output_columns.push_back(output_column);
+  _output_segments.push_back(output_segment);
 }
 
 template <typename AggregateKey>

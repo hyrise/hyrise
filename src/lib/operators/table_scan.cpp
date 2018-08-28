@@ -100,7 +100,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
       // The ChunkAccessCounter is reused to track accesses of the output chunk. Accesses of derived chunks are counted
       // towards the original chunk.
-      ChunkSegments out_columns;
+      Segments out_columns;
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can

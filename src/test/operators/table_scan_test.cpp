@@ -72,7 +72,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{0}, pos_list);
     auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{1}, pos_list);
 
-    ChunkSegments segments({segment_a, segment_b});
+    Segments segments({segment_a, segment_b});
 
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -110,7 +110,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
-    ChunkSegments segments;
+    Segments segments;
     TableCxlumnDefinitions cxlumn_definitions;
 
     for (auto cxlumn_id = CxlumnID{0u}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
@@ -147,7 +147,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     cxlumn_definitions.emplace_back("b", DataType::Int, true);
     auto ref_table = std::make_shared<Table>(cxlumn_definitions, TableType::References);
 
-    ChunkSegments segments({ref_segment_a, ref_segment_b});
+    Segments segments({ref_segment_a, ref_segment_b});
 
     ref_table->append_chunk(segments);
 

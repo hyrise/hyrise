@@ -633,7 +633,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   EXPECT_EQ(aggregate_op->groupby_cxlumn_ids().at(0), CxlumnID{1});
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column, CxlumnID{2});
+  EXPECT_EQ(aggregate_definition.cxlumn, CxlumnID{2});
   EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
 }
 

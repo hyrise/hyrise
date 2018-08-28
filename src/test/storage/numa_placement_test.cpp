@@ -48,13 +48,13 @@ class NUMAPlacementTest : public BaseTest {
     return result;
   }
 
-  // Creates a table with a single column and increasing integers modulo 1000.
+  // Creates a table with a single cxlumn and increasing integers modulo 1000.
   std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
     auto table = std::make_shared<Table>(TableCxlumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                          num_rows_per_chunk, UseMvcc::Yes);
 
     for (size_t i = 0; i < num_chunks; i++) {
-      ChunkSegments columns;
+      Segments segments;
 
       const auto alloc = PolymorphicAllocator<Chunk>(Topology::get().get_memory_resource(0));
       auto value_segment = std::allocate_shared<ValueSegment<int>>(alloc, alloc);
@@ -63,8 +63,8 @@ class NUMAPlacementTest : public BaseTest {
       for (size_t row = 0; row < num_rows_per_chunk; row++) {
         values.push_back(static_cast<int>(row % 1000));
       }
-      columns.push_back(value_segment);
-      table->append_chunk(columns, alloc, std::make_shared<ChunkAccessCounter>(alloc));
+      segments.push_back(value_segment);
+      table->append_chunk(segments, alloc, std::make_shared<ChunkAccessCounter>(alloc));
     }
     ChunkEncoder::encode_all_chunks(table);
     return table;

@@ -20,9 +20,9 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * @brief Base class of all column encoders
+ * @brief Base class of all segment encoders
  *
- * Use the column_encoder.template.hpp to add new implementations!
+ * Use the segment_encoder.template.hpp to add new implementations!
  */
 class BaseSegmentEncoder {
  public:
@@ -38,7 +38,7 @@ class BaseSegmentEncoder {
    *
    * @return encoded segment if data type is supported else throws exception
    */
-  virtual std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& column,
+  virtual std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& segment,
                                                     DataType data_type) = 0;
 
   virtual std::unique_ptr<BaseSegmentEncoder> create_new() const = 0;
@@ -73,7 +73,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
   }
 
   // Resolves the data type and calls the appropriate instantiation of encode().
-  std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& column,
+  std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& segment,
                                             DataType data_type) final {
     auto encoded_segment = std::shared_ptr<BaseEncodedSegment>{};
     resolve_data_type(data_type, [&](auto data_type_c) {
@@ -84,7 +84,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
          * The templated method encode() where the actual encoding happens
          * is only instantiated for data types supported by the encoding type.
          */
-        encoded_segment = this->encode(column, data_type_c);
+        encoded_segment = this->encode(segment, data_type_c);
       } else {
         Fail("Passed data type not supported by encoding.");
       }
@@ -136,7 +136,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
 
     const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<CxlumnDataType>>(base_value_segment);
-    Assert(value_segment != nullptr, "Value column must have passed data type.");
+    Assert(value_segment != nullptr, "Value segment must have passed data type.");
 
     return _self()._on_encode(value_segment);
   }

@@ -16,7 +16,7 @@ class AnySegmentIterableTest : public BaseTest {
  protected:
   static constexpr auto row_count = 200u;
 
-  void SetUp() override { _column = create_int_w_null_value_segment(); }
+  void SetUp() override { _segment = create_int_w_null_value_segment(); }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_w_null_value_segment() {
     auto values = pmr_concurrent_vector<int32_t>(row_count);
@@ -50,11 +50,11 @@ class AnySegmentIterableTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<ValueSegment<int32_t>> _column;
+  std::shared_ptr<ValueSegment<int32_t>> _segment;
 };
 
-TEST_F(AnySegmentIterableTest, SequentiallyIterateOverColumn) {
-  auto iterable = ValueSegmentIterable<int32_t>{*_column};
+TEST_F(AnySegmentIterableTest, SequentiallyIterateOverSegment) {
+  auto iterable = ValueSegmentIterable<int32_t>{*_segment};
   auto any_iterable = AnySegmentIterable{iterable};
 
   iterable.with_iterators([&](auto it, auto end) {
@@ -70,8 +70,8 @@ TEST_F(AnySegmentIterableTest, SequentiallyIterateOverColumn) {
   });
 }
 
-TEST_F(AnySegmentIterableTest, RandomlyIterateOverColumn) {
-  auto iterable = ValueSegmentIterable<int32_t>{*_column};
+TEST_F(AnySegmentIterableTest, RandomlyIterateOverSegment) {
+  auto iterable = ValueSegmentIterable<int32_t>{*_segment};
   auto any_iterable = AnySegmentIterable{iterable};
 
   const auto chunk_offsets_list = create_sequential_chunk_offsets_list();

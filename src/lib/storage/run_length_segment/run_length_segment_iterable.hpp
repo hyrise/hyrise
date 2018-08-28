@@ -11,32 +11,32 @@ namespace opossum {
 template <typename T>
 class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLengthSegmentIterable<T>> {
  public:
-  explicit RunLengthSegmentIterable(const RunLengthSegment<T>& column) : _column{column} {}
+  explicit RunLengthSegmentIterable(const RunLengthSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     auto begin =
-        Iterator{_column.values()->cbegin(), _column.null_values()->cbegin(), _column.end_positions()->cbegin(), 0u};
-    auto end = Iterator{_column.values()->cend(), _column.null_values()->cend(), _column.end_positions()->cend(),
-                        static_cast<ChunkOffset>(_column.size())};
+        Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(), _segment.end_positions()->cbegin(), 0u};
+    auto end = Iterator{_segment.values()->cend(), _segment.null_values()->cend(), _segment.end_positions()->cend(),
+                        static_cast<ChunkOffset>(_segment.size())};
 
     functor(begin, end);
   }
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(),
+    auto begin = PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(),
                                      mapped_chunk_offsets.cbegin()};
-    auto end = PointAccessIterator{*_column.values(), *_column.null_values(), *_column.end_positions(),
+    auto end = PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(),
                                    mapped_chunk_offsets.cend()};
 
     functor(begin, end);
   }
 
-  size_t _on_size() const { return _column.size(); }
+  size_t _on_size() const { return _segment.size(); }
 
  private:
-  const RunLengthSegment<T>& _column;
+  const RunLengthSegment<T>& _segment;
 
  private:
   class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorValue<T>> {

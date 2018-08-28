@@ -18,9 +18,9 @@ namespace opossum {
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert((data_types.size() == chunk->cxlumn_count()), "Number of column types must match the chunk’s column count.");
+  Assert((data_types.size() == chunk->cxlumn_count()), "Number of cxlumn types must match the chunk’s cxlumn count.");
   Assert((chunk_encoding_spec.size() == chunk->cxlumn_count()),
-         "Number of column encoding specs must match the chunk’s column count.");
+         "Number of cxlumn encoding specs must match the chunk’s cxlumn count.");
 
   std::vector<std::shared_ptr<SegmentStatistics>> cxlumn_statistics;
   for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {

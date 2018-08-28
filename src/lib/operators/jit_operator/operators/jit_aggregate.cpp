@@ -80,7 +80,7 @@ typename std::enable_if<!std::is_arithmetic<CxlumnDataType>::value, void>::type 
 
 void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) const {
   auto num_cxlumns = _aggregate_cxlumns.size() + _groupby_cxlumns.size();
-  ChunkSegments chunk_columns(num_cxlumns);
+  Segments chunk_columns(num_cxlumns);
 
   // If the operator did not consume a single tuple and there are no groupby columns, we create a single row in the
   // output with uninitialized aggregate values (0 for count, NULL for sum, max, min, avg).

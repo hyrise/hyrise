@@ -227,7 +227,7 @@ void JoinNestedLoop::_perform_join() {
   }
 
   // write output chunks
-  ChunkSegments segments;
+  Segments segments;
 
   if (_mode == JoinMode::Right) {
     _write_output_chunks(segments, right_table, _pos_list_right);
@@ -240,7 +240,7 @@ void JoinNestedLoop::_perform_join() {
   _output_table->append_chunk(segments);
 }
 
-void JoinNestedLoop::_write_output_chunks(ChunkSegments& segments, const std::shared_ptr<const Table>& input_table,
+void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_ptr<const Table>& input_table,
                                           const std::shared_ptr<PosList>& pos_list) {
   // Add segments from table to output chunk
   for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {

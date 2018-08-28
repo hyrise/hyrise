@@ -56,14 +56,14 @@ namespace opossum {
 class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    _column_int = create_dict_segment_by_type<int32_t>(DataType::Int, {2, 1, 0, 1, 0, 3, 2, 3});
-    _column_str = create_dict_segment_by_type<std::string>(
+    _segment_int = create_dict_segment_by_type<int32_t>(DataType::Int, {2, 1, 0, 1, 0, 3, 2, 3});
+    _segment_str = create_dict_segment_by_type<std::string>(
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str = std::make_shared<CompositeGroupKeyIndex>(
-        std::vector<std::shared_ptr<const BaseSegment>>{_column_int, _column_str});
+        std::vector<std::shared_ptr<const BaseSegment>>{_segment_int, _segment_str});
     _index_str_int = std::make_shared<CompositeGroupKeyIndex>(
-        std::vector<std::shared_ptr<const BaseSegment>>{_column_str, _column_int});
+        std::vector<std::shared_ptr<const BaseSegment>>{_segment_str, _segment_int});
 
     _keys_int_str = &(_index_int_str->_keys);
     _keys_str_int = &(_index_str_int->_keys);
@@ -78,8 +78,8 @@ class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
   std::shared_ptr<CompositeGroupKeyIndex> _index_int_str;
   std::shared_ptr<CompositeGroupKeyIndex> _index_str_int;
-  std::shared_ptr<BaseSegment> _column_int;
-  std::shared_ptr<BaseSegment> _column_str;
+  std::shared_ptr<BaseSegment> _segment_int;
+  std::shared_ptr<BaseSegment> _segment_str;
 
   /**
    * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the

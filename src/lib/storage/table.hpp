@@ -92,7 +92,7 @@ class Table : private Noncopyable {
    * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
    * @param alloc
    */
-  void append_chunk(const ChunkSegments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                     const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
   /**

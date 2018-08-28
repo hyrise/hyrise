@@ -353,7 +353,7 @@ int Console::_help(const std::string&) {
   out("  load FILE TABLENAME              - Load table from disc specified by filepath FILE, store it with name "
       "TABLENAME\n");
   out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                  - Fully print the given table (including MVCC columns)\n");
+  out("  print TABLENAME                  - Fully print the given table (including MVCC data)\n");
   out("  visualize [options] (noexec) SQL - Visualize a SQL query\n");
   out("                      <if set>        - does not execute the query (only supported with single statements)\n");
   out("             lqp                      - print the raw logical query plans\n");

@@ -125,7 +125,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   // Turn 'pos_lists' into a new chunk and append it to the table
   const auto emit_chunk = [&]() {
-    ChunkSegments output_columns;
+    Segments output_columns;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_cxlumn_id_begin = _column_segment_offsets[pos_lists_idx];

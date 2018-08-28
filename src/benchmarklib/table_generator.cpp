@@ -47,7 +47,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
      * Reset vectors and chunk.
      */
     if (i % vector_size == 0 && i > 0) {
-      ChunkSegments segments;
+      Segments segments;
       for (size_t j = 0; j < _num_cxlumns; j++) {
         segments.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
@@ -65,7 +65,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
    * Add remaining values to table, if any.
    */
   if (!value_vectors[0].empty()) {
-    ChunkSegments segments;
+    Segments segments;
     for (size_t j = 0; j < _num_cxlumns; j++) {
       segments.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
     }
@@ -86,13 +86,13 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   const auto num_cxlumns = cxlumn_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
-  // create result table and container for vectors holding the generated values for the columns
+  // create result table and container for vectors holding the generated values for the cxlumns
   std::vector<tbb::concurrent_vector<int>> value_vectors;
 
-  // add column definitions and initialize each value vector
+  // add cxlumn definitions and initialize each value vector
   TableCxlumnDefinitions cxlumn_definitions;
-  for (size_t column = 1; column <= num_cxlumns; ++column) {
-    auto cxlumn_name = "col_" + std::to_string(column);
+  for (size_t cxlumn = 1; cxlumn <= num_cxlumns; ++cxlumn) {
+    auto cxlumn_name = "col_" + std::to_string(cxlumn);
     cxlumn_definitions.emplace_back(cxlumn_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
   }
@@ -126,15 +126,15 @@ std::shared_ptr<Table> TableGenerator::generate_table(
     }
 #endif
 
-    auto columns = ChunkSegments(allocator_ptr_base_segment);
-    for (ChunkID column_index{0}; column_index < num_cxlumns; ++column_index) {
-      const auto& column_data_distribution = cxlumn_data_distributions[column_index];
+    auto segments = Segments(allocator_ptr_base_segment);
+    for (CxlumnID cxlumn_index{0}; cxlumn_index < num_cxlumns; ++cxlumn_index) {
+      const auto& cxlumn_data_distribution = cxlumn_data_distributions[cxlumn_index];
 
       // generate distribution from column configuration
-      switch (column_data_distribution.distribution_type) {
+      switch (cxlumn_data_distribution.distribution_type) {
         case DataDistributionType::Uniform: {
-          auto uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
-                                                                        column_data_distribution.max_value};
+          auto uniform_dist = boost::math::uniform_distribution<double>{cxlumn_data_distribution.min_value,
+                                                                        cxlumn_data_distribution.max_value};
           generate_value_by_distribution_type = [uniform_dist, &probability_dist, &pseudorandom_engine]() {
             const auto probability = probability_dist(pseudorandom_engine);
             return static_cast<int>(std::floor(boost::math::quantile(uniform_dist, probability)));
@@ -142,9 +142,9 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           break;
         }
         case DataDistributionType::NormalSkewed: {
-          auto skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
-                                                                         column_data_distribution.skew_scale,
-                                                                         column_data_distribution.skew_shape};
+          auto skew_dist = boost::math::skew_normal_distribution<double>{cxlumn_data_distribution.skew_location,
+                                                                         cxlumn_data_distribution.skew_scale,
+                                                                         cxlumn_data_distribution.skew_shape};
           generate_value_by_distribution_type = [skew_dist, &probability_dist, &pseudorandom_engine]() {
             const auto probability = probability_dist(pseudorandom_engine);
             return static_cast<int>(std::round(boost::math::quantile(skew_dist, probability) * 10));
@@ -152,8 +152,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           break;
         }
         case DataDistributionType::Pareto: {
-          auto pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
-                                                                      column_data_distribution.pareto_shape};
+          auto pareto_dist = boost::math::pareto_distribution<double>{cxlumn_data_distribution.pareto_scale,
+                                                                      cxlumn_data_distribution.pareto_shape};
           generate_value_by_distribution_type = [pareto_dist, &probability_dist, &pseudorandom_engine]() {
             const auto probability = probability_dist(pseudorandom_engine);
             return static_cast<int>(std::floor(boost::math::quantile(pareto_dist, probability)));
@@ -169,17 +169,17 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           break;
         }
 
-        value_vectors[column_index][row_offset] = generate_value_by_distribution_type();
+        value_vectors[cxlumn_index][row_offset] = generate_value_by_distribution_type();
       }
 
       // add values to column in chunk, reset value vector
-      columns.push_back(std::allocate_shared<ValueSegment<int>>(allocator_value_segment_int,
-                                                               std::move(value_vectors[column_index]), allocator_int));
-      value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
+      segments.push_back(std::allocate_shared<ValueSegment<int>>(allocator_value_segment_int,
+                                                               std::move(value_vectors[cxlumn_index]), allocator_int));
+      value_vectors[cxlumn_index] = tbb::concurrent_vector<int>(chunk_size);
 
       // add full chunk to table
-      if (column_index == num_cxlumns - 1) {
-        table->append_chunk(columns, allocator_chunk);
+      if (cxlumn_index == num_cxlumns - 1) {
+        table->append_chunk(segments, allocator_chunk);
       }
     }
   }

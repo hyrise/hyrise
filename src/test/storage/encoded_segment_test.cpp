@@ -127,7 +127,7 @@ INSTANTIATE_TEST_CASE_P(
                       SegmentEncodingSpec{EncodingType::RunLength}),
     formatter);
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntColumn) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntSegment) {
   auto value_segment = this->create_int_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
@@ -147,7 +147,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumn) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegment) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
@@ -180,7 +180,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsList) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
@@ -206,7 +206,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList
   });
 }
 
-TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOffsetsList) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 

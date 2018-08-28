@@ -124,7 +124,7 @@ boost::future<void> ClientConnection::send_status_message(const NetworkMessageTy
   return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
-boost::future<void> ClientConnection::send_row_description(const std::vector<ColumnDescription>& row_description) {
+boost::future<void> ClientConnection::send_row_description(const std::vector<CxlumnDescription>& row_description) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
 
   // Int16 Specifies the number of fields in a row (can be zero).

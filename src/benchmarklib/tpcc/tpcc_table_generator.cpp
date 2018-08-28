@@ -33,7 +33,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
   /**
    * indices[0] = item
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
@@ -71,7 +71,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
   /**
    * indices[0] = warehouse
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "W_ID", cardinalities,
@@ -110,7 +110,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
    * indices[0] = warehouse
    * indices[1] = stock
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
@@ -159,7 +159,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
    * indices[0] = warehouse
    * indices[1] = district
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "D_ID", cardinalities,
@@ -202,7 +202,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
    * indices[1] = district
    * indices[2] = customer
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
@@ -270,7 +270,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
    * indices[2] = customer
    * indices[3] = history
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "H_C_ID", cardinalities,
@@ -303,7 +303,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
    * indices[1] = district
    * indices[2] = order
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
@@ -380,7 +380,7 @@ std::vector<T> TpccTableGenerator::_generate_inner_order_line_cxlumn(
 }
 
 template <typename T>
-void TpccTableGenerator::_add_order_line_cxlumn(std::vector<ChunkSegments>& segments_by_chunk,
+void TpccTableGenerator::_add_order_line_cxlumn(std::vector<Segments>& segments_by_chunk,
                                                 TableCxlumnDefinitions& cxlumn_definitions, std::string name,
                                                 std::shared_ptr<std::vector<size_t>> cardinalities,
                                                 TpccTableGenerator::order_line_counts_type order_line_counts,
@@ -403,7 +403,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
    * indices[2] = order
    * indices[3] = order_line_size
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   _add_order_line_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "OL_O_ID", cardinalities, order_line_counts,
@@ -450,7 +450,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
    * indices[1] = district
    * indices[2] = new_order
    */
-  std::vector<ChunkSegments> segments_by_chunk;
+  std::vector<Segments> segments_by_chunk;
   TableCxlumnDefinitions cxlumn_definitions;
 
   add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "NO_O_ID", cardinalities,

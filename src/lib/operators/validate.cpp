@@ -59,7 +59,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
 
-    ChunkSegments output_segments;
+    Segments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(CxlumnID{0}));
