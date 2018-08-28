@@ -131,7 +131,7 @@ the AggregateVisitor. It is a separate class because methods cannot be partially
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
 template <typename ColumnType, typename AggregateType>
-using AggregateFunctor = std::function<std::optional<AggregateType>(ColumnType, std::optional<AggregateType>)>;
+using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
@@ -141,10 +141,10 @@ struct AggregateFunctionBuilder {
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+    return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
       if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
         // New minimum found
-        return new_value;
+        current_aggregate = new_value;
       }
       return *current_aggregate;
     };
@@ -154,10 +154,10 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Mi
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+    return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
       if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
         // New maximum found
-        return new_value;
+        current_aggregate = new_value;
       }
       return *current_aggregate;
     };
@@ -167,9 +167,13 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Ma
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+    return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
       // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
+      if (current_aggregate) {
+        *current_aggregate += new_value;
+      } else {
+        current_aggregate = new_value;
+      }
     };
   }
 };
@@ -177,24 +181,22 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Su
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
-      // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
-    };
+    // We reuse Sum here and use it together with aggregate_count to calculate the average
+    return AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
   }
 };
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
+    return [](const ColumnType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
   }
 };
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
+    return [](const ColumnType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
   }
 };
 
@@ -211,7 +213,9 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
+  // clang-format off
   resolve_column_type<ColumnDataType>(
+      // clang-format on
       base_column, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_column) {
         auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
 
@@ -227,12 +231,13 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
           */
           if (!value.is_null()) {
             // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-            hash_entry.current_aggregate = aggregator(value.value(), hash_entry.current_aggregate);
+            aggregator(value.value(), hash_entry.current_aggregate);
 
             // increase value counter
             ++hash_entry.aggregate_count;
 
-            if (function == AggregateFunction::CountDistinct) {
+            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+              // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
               // for the case of CountDistinct, insert this value into the set to keep track of distinct values
               hash_entry.distinct_values.insert(value.value());
             }
@@ -283,39 +288,43 @@ void Aggregate::_aggregate() {
   It is gradually built by visitors, one for each group column.
   */
 
-  // Allocate a temporary memory buffer, for more details see aggregate.hpp
-  // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
-  // that is fine
-  size_t needed_size_per_aggregate_key =
-      aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
-  size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
-                       input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
-                       input_table->row_count() * needed_size_per_aggregate_key;
-  needed_size *= 1.1;  // Give it a little bit more, just in case
+  KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
-  auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
-  allocator.allocate(1);  // Make sure that the buffer is initialized
-  const auto start_next_buffer_size = temp_buffer.next_buffer_size();
+  {
+    // Allocate a temporary memory buffer, for more details see aggregate.hpp
+    // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
+    // that is fine
+    size_t needed_size_per_aggregate_key =
+        aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
+    size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
+                         input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
+                         input_table->row_count() * needed_size_per_aggregate_key;
+    needed_size *= 1.1;  // Give it a little bit more, just in case
 
-  // Create the actual data structure
-  auto keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
-  keys_per_chunk.reserve(input_table->chunk_count());
-  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    if constexpr (std::is_same_v<AggregateKey, pmr_vector<AggregateKeyEntry>>) {
-      keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
-    } else {
-      keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey{});
+    auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
+    auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
+    allocator.allocate(1);  // Make sure that the buffer is initialized
+    const auto start_next_buffer_size = temp_buffer.next_buffer_size();
+
+    // Create the actual data structure
+    keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
+    keys_per_chunk.reserve(input_table->chunk_count());
+    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+      if constexpr (std::is_same_v<AggregateKey, pmr_vector<AggregateKeyEntry>>) {
+        keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
+      } else {
+        keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey{});
+      }
     }
-  }
 
-  // Make sure that we did not have to allocate more memory than originally computed
-  if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
-    // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
-    // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
-    // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
-    PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
-                       " was not enough and a second buffer was needed");
+    // Make sure that we did not have to allocate more memory than originally computed
+    if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
+      // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
+      // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
+      // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
+      PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
+                         " was not enough and a second buffer was needed");
+    }
   }
 
   // Now that we have the data structures in place, we can start the actual work
@@ -334,7 +343,15 @@ void Aggregate::_aggregate() {
         Store unique IDs for equal values in the groupby column (similar to dictionary encoding). 
         The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
         */
-        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry>();
+
+        // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
+        // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
+        // allocate a bit too much.
+        auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
+        auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
+
+        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+                                         std::equal_to<ColumnDataType>, decltype(allocator)>(allocator);
         AggregateKeyEntry id_counter = 1u;
 
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {

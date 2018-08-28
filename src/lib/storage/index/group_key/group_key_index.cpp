@@ -42,7 +42,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>
     auto value_id_it = attribute_vector.cbegin();
     auto position = 0u;
     for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++position) {
-      const auto& value_id = *value_id_it;
+      const auto& value_id = static_cast<ValueID>(*value_id_it);
       _index_postings[index_offset_copy[value_id]] = position;
 
       // increase the write-offset in the copy by one to ensure that further writes
