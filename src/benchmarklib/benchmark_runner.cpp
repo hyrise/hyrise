@@ -331,7 +331,6 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
   // clang-format off
   cli_options.add_options()
-    ("help", "print this help message")
     ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
     ("r,runs", "Maximum number of runs of a single query(set)", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
     ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
