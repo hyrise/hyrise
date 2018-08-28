@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_set>
 
+#include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
@@ -11,6 +12,7 @@
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
+#include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
@@ -95,6 +97,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
+  final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
   final_batch.add_rule(std::make_shared<IndexScanRule>());
   optimizer->add_rule_batch(final_batch);
 

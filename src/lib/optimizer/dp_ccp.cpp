@@ -12,18 +12,18 @@ namespace opossum {
 DpCcp::DpCcp(const std::shared_ptr<AbstractCostModel>& cost_model):
   _cost_model(cost_model) {}
 
-std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const std::shared_ptr<JoinGraph>& join_graph) {
+std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) {
   // No std::unordered_map, since hashing of JoinGraphVertexSet is not trivially possible because of hidden data
   auto best_plan = std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>{};
 
   /**
    * 1. Initialize single-vertex vertex_sets with the vertex nodes and their local predicates
    */
-  for (size_t vertex_idx = 0; vertex_idx < join_graph->vertices.size(); ++vertex_idx) {
-    const auto vertex_predicates = join_graph->find_local_predicates(vertex_idx);
-    const auto vertex = join_graph->vertices[vertex_idx];
+  for (size_t vertex_idx = 0; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
+    const auto vertex_predicates = join_graph.find_local_predicates(vertex_idx);
+    const auto vertex = join_graph.vertices[vertex_idx];
 
-    auto single_vertex_set = JoinGraphVertexSet{join_graph->vertices.size()};
+    auto single_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
     single_vertex_set.set(vertex_idx);
 
     best_plan[single_vertex_set] = _add_predicates(vertex, vertex_predicates);
@@ -33,7 +33,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const std::shared_ptr<JoinGra
    * 2. Prepare EnumerateCcp: Transform the JoinGraph's vertex-to-vertex edges into index pairs
    */
   std::vector<std::pair<size_t, size_t>> enumerate_ccp_edges;
-  for (const auto& edge : join_graph->edges) {
+  for (const auto& edge : join_graph.edges) {
     // Don't include local predicate pseudo edges
     if (edge.vertex_set.count() == 1) continue;
     Assert(edge.vertex_set.count() == 2, "Can't place complex predicates yet");
@@ -47,13 +47,13 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const std::shared_ptr<JoinGra
   /**
    * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan
    */
-  const auto csg_cmp_pairs = EnumerateCcp{join_graph->vertices.size(), enumerate_ccp_edges}();
+  const auto csg_cmp_pairs = EnumerateCcp{join_graph.vertices.size(), enumerate_ccp_edges}();
   for (const auto& csg_cmp_pair : csg_cmp_pairs) {
     const auto best_plan_left_iter = best_plan.find(csg_cmp_pair.first);
     const auto best_plan_right_iter = best_plan.find(csg_cmp_pair.second);
     DebugAssert(best_plan_left_iter != best_plan.end() && best_plan_right_iter != best_plan.end(), "Subplan missing: either the JoinGraph is invalid or EnumerateCcp is buggy");
 
-    const auto join_predicates = join_graph->find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
+    const auto join_predicates = join_graph.find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
 
     auto candidate_plan = _join(best_plan_left_iter->second, best_plan_right_iter->second, join_predicates);
 
@@ -68,7 +68,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const std::shared_ptr<JoinGra
   /**
    * 4. Build vertex set with all vertices and return the plan for it
    */
-  boost::dynamic_bitset<> all_vertices_set{join_graph->vertices.size()};
+  boost::dynamic_bitset<> all_vertices_set{join_graph.vertices.size()};
   all_vertices_set.flip();  // Turns all bits to '1'
 
   const auto best_plan_iter = best_plan.find(all_vertices_set);

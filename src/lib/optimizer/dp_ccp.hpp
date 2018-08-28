@@ -17,7 +17,7 @@ class DpCcp final {
  public:
   explicit DpCcp(const std::shared_ptr<AbstractCostModel>& cost_model);
 
-  std::shared_ptr<AbstractLQPNode> operator()(const std::shared_ptr<JoinGraph>& join_graph);
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph);
 
  private:
   std::shared_ptr<AbstractLQPNode> _add_predicates(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const;

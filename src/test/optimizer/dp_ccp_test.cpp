@@ -55,7 +55,7 @@ TEST_F(DpCcpTest, Basic) {
   auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
   auto join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, expression_vector(equals_(a_a, c_a))};
 
-  auto join_graph = std::make_shared<JoinGraph>(
+  auto join_graph = JoinGraph(
     std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c})
   );
