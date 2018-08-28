@@ -25,10 +25,18 @@ In the same way, items can be over counted but not under counted.
 CQF can be configured with quotient size, which determines the number of slots, and the remainder size, which
 corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32. */
 
+enum class RemainderSize : uint8_t {
+  bits2 = 2,
+  bits4 = 4,
+  bits8 = 8,
+  bits16 = 16,
+  bits32 = 32
+};
+
 template <typename ElementType>
 class CountingQuotientFilter : AbstractFilter {
  public:
-  CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_bits);
+  CountingQuotientFilter(uint8_t quotient_bits, RemainderSize remainder_size);
   virtual ~CountingQuotientFilter();
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
@@ -47,8 +55,7 @@ class CountingQuotientFilter : AbstractFilter {
   std::optional<gqf8::quotient_filter> _quotient_filter8;
   std::optional<gqf16::quotient_filter> _quotient_filter16;
   std::optional<gqf32::quotient_filter> _quotient_filter32;
-  uint64_t _quotient_bits;
-  uint64_t _remainder_bits;
+  RemainderSize _remainder_size;
   uint64_t _number_of_slots;
   uint64_t _hash_bits;
   uint64_t _hash(ElementType value) const;

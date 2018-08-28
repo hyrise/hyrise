@@ -31,11 +31,11 @@ class CountingQuotientFilterTest : public BaseTest {
       }
     }
 
-    cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, 2);
-    cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, 4);
-    cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, 8);
-    cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, 16);
-    cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, 32);
+    cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits2);
+    cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits4);
+    cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits8);
+    cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits16);
+    cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits32);
     cqf2->populate(column);
     cqf4->populate(column);
     cqf8->populate(column);

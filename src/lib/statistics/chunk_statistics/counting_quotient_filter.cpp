@@ -16,30 +16,27 @@
 namespace opossum {
 
 template <typename ElementType>
-CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_bits) {
-  DebugAssert(remainder_bits == 2 || remainder_bits == 4 || remainder_bits == 8 || remainder_bits == 16
-              || remainder_bits == 32, "Only the remainder sizes 2, 4, 8, 16, and 32 are supported");
-  DebugAssert(quotient_bits > 0, "quotient size can not be zero.");
-  DebugAssert(quotient_bits + remainder_bits <= 64, "The hash length can not exceed 64 bits.");
+CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_size, RemainderSize remainder_size) {
+  DebugAssert(quotient_size > 0, "quotient size can not be zero.");
+  DebugAssert(quotient_size + static_cast<uint8_t>(remainder_size) <= 64, "The hash length can not exceed 64 bits.");
 
-  _quotient_bits = quotient_bits;
-  _remainder_bits = remainder_bits;
-  _number_of_slots = std::pow(2, _quotient_bits);
-  _hash_bits = _quotient_bits + _remainder_bits;
+  _remainder_size = remainder_size;
+  _number_of_slots = std::pow(2, quotient_size);
+  _hash_bits = quotient_size + static_cast<uint8_t>(remainder_size);
 
-if (remainder_bits == 2) {
+if (remainder_size == RemainderSize::bits2) {
     _quotient_filter2 = gqf2::quotient_filter();
     gqf2::qf_init(&_quotient_filter2.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_bits == 4) {
+  } else if (remainder_size == RemainderSize::bits4) {
     _quotient_filter4 = gqf4::quotient_filter();
     gqf4::qf_init(&_quotient_filter4.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_bits == 8) {
+  } else if (remainder_size == RemainderSize::bits8) {
     _quotient_filter8 = gqf8::quotient_filter();
     gqf8::qf_init(&_quotient_filter8.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_bits == 16) {
+  } else if (remainder_size == RemainderSize::bits16) {
     _quotient_filter16 = gqf16::quotient_filter();
     gqf16::qf_init(&_quotient_filter16.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_bits == 32) {
+  } else if (remainder_size == RemainderSize::bits32) {
     _quotient_filter32 = gqf32::quotient_filter();
     gqf32::qf_init(&_quotient_filter32.value(), _number_of_slots, _hash_bits, 0);
   }
@@ -69,15 +66,15 @@ void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t c
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
   for (uint64_t i = 0; i < count; i++) {
-    if (_remainder_bits == 2) {
+    if (_remainder_size == RemainderSize::bits2) {
       gqf2::qf_insert(&_quotient_filter2.value(), hash, 0, 1);
-    } else if (_remainder_bits == 4) {
+    } else if (_remainder_size == RemainderSize::bits4) {
       gqf4::qf_insert(&_quotient_filter4.value(), hash, 0, 1);
-    } else if (_remainder_bits == 8) {
+    } else if (_remainder_size == RemainderSize::bits8) {
       gqf8::qf_insert(&_quotient_filter8.value(), hash, 0, 1);
-    } else if (_remainder_bits == 16) {
+    } else if (_remainder_size == RemainderSize::bits16) {
       gqf16::qf_insert(&_quotient_filter16.value(), hash, 0, 1);
-    } else if (_remainder_bits == 32) {
+    } else if (_remainder_size == RemainderSize::bits32) {
       gqf32::qf_insert(&_quotient_filter32.value(), hash, 0, 1);
     }
   }
@@ -105,13 +102,13 @@ template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::count(ElementType element) const {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
-  if (_remainder_bits == 2) {
+  if (_remainder_size == RemainderSize::bits2) {
     return gqf2::qf_count_key_value(&_quotient_filter2.value(), hash, 0);
-  } else if (_remainder_bits == 4) {
+  } else if (_remainder_size == RemainderSize::bits4) {
     return gqf4::qf_count_key_value(&_quotient_filter4.value(), hash, 0);
-  } else if (_remainder_bits == 8) {
+  } else if (_remainder_size == RemainderSize::bits8) {
     return gqf8::qf_count_key_value(&_quotient_filter8.value(), hash, 0);
-  } else if (_remainder_bits == 16) {
+  } else if (_remainder_size == RemainderSize::bits16) {
     return gqf16::qf_count_key_value(&_quotient_filter16.value(), hash, 0);
   } else {
     return gqf32::qf_count_key_value(&_quotient_filter32.value(), hash, 0);
@@ -150,13 +147,13 @@ void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseCol
 template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
   uint64_t memory_consumption = 0;
-  if (_remainder_bits == 2) {
+  if (_remainder_size == RemainderSize::bits2) {
     memory_consumption += gqf2::memory_consumption(_quotient_filter2.value());
-  } else if (_remainder_bits == 4) {
+  } else if (_remainder_size == RemainderSize::bits4) {
     memory_consumption += gqf4::memory_consumption(_quotient_filter4.value());
-  } else if (_remainder_bits == 8) {
+  } else if (_remainder_size == RemainderSize::bits8) {
     memory_consumption += gqf8::memory_consumption(_quotient_filter8.value());
-  } else if (_remainder_bits == 16) {
+  } else if (_remainder_size == RemainderSize::bits16) {
     memory_consumption += gqf16::memory_consumption(_quotient_filter16.value());
   } else {
     memory_consumption += gqf32::memory_consumption(_quotient_filter32.value());
@@ -166,13 +163,13 @@ uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
 
 template <typename ElementType>
 double CountingQuotientFilter<ElementType>::load_factor() const {
-  if (_remainder_bits == 2) {
+  if (_remainder_size == RemainderSize::bits2) {
     return _quotient_filter2.value().noccupied_slots / static_cast<double>(_quotient_filter2.value().nslots);
-  } else if (_remainder_bits == 4) {
+  } else if (_remainder_size == RemainderSize::bits4) {
     return _quotient_filter4.value().noccupied_slots / static_cast<double>(_quotient_filter4.value().nslots);
-  } else if (_remainder_bits == 8) {
+  } else if (_remainder_size == RemainderSize::bits8) {
     return _quotient_filter8.value().noccupied_slots / static_cast<double>(_quotient_filter8.value().nslots);
-  } else if (_remainder_bits == 16) {
+  } else if (_remainder_size == RemainderSize::bits16) {
     return _quotient_filter16.value().noccupied_slots / static_cast<double>(_quotient_filter16.value().nslots);
   } else {
     return _quotient_filter32.value().noccupied_slots / static_cast<double>(_quotient_filter32.value().nslots);
