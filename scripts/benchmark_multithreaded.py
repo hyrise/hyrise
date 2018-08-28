@@ -23,7 +23,8 @@ def parse_arguments():
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
     parser.add_argument('-q', '--queries', action='store', type=int, metavar='Q', nargs='+', help='Specify the TPC-H queries that will be benchmarked')
     parser.add_argument('--chunk-size', action='store', type=int, metavar='S', help='Specify maximum chunk size (default: Maximum available)')
-    parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the results will be stored (default: \'results/\')')
+    parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the result folder will be stored (default: \'results/\')')
+    parser.add_argument('--result-name', action='store', type=str, metavar='NAME', help='Directory where the actual results will be stored (default: current datetime)')
     parser.add_argument('--build-dir', action='store', type=str, metavar='DIR', required=True, help='Directory that contains the hyriseBenchmarkTPCH executable')
 
     core_group = parser.add_mutually_exclusive_group()
@@ -104,8 +105,8 @@ def run_benchmarks(args, core_counts, executable, result_dir):
 
 def benchmark(args):
     executable = os.path.join(args.build_dir, BENCHMARK_EXECUTABLE)
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    result_dir = os.path.join(args.result_dir, timestamp)
+    result_name = args.result_name if args.result_name else datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    result_dir = os.path.join(args.result_dir, result_name)
         
     if not os.path.exists(result_dir):
         os.makedirs(result_dir)
