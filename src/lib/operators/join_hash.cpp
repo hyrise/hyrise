@@ -159,6 +159,11 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         const auto& element = partition_left[partition_offset];
 
+        if (element.partition_hash == 0) {
+          // initialized, but empty elements
+          continue;
+        }
+
         const auto hash_key = type_cast<HashedType>(element.value);
         const auto it = hashtable.find(hash_key);
         if (it == hashtable.end()) {
@@ -267,7 +272,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             }
 
             const Hash radix = hashed_value & mask;
-            histogram[radix]++;
+            ++histogram[radix];
           }
           // reference_column_offset is only used for ReferenceColumns
           if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceColumn>::value) {
@@ -280,6 +285,19 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
+
+  size_t table_size_considered_large = 100'000;
+  if (in_table->row_count() >= table_size_considered_large) {
+    size_t elements_written = 0;
+    for (const auto& histogram : histograms) {
+      elements_written += std::accumulate(histogram->begin(), histogram->end(), 0);
+    }
+    if (elements_written < 0.25 * in_table->row_count()) {
+      // Less than one quarter of the values materialized do store non-NULL values and table is rather large
+      PerformanceWarning(std::string("Sparse column materialization in Hash Join, potentially causing too much ") +
+        std::string("memory being allocated and data being radix-clustered suboptimally."));
+    }
+  }
 
   return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}};
 }
