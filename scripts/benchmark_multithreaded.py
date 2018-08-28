@@ -11,20 +11,24 @@ import matplotlib.pyplot as plt
 
 BENCHMARK_EXECUTABLE = 'hyriseBenchmarkTPCH'
 DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
+MAX_CORE_COUNT = multiprocessing.cpu_count()
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--cores', action='store', type=int, metavar='N', help='Number of cores this machine has available')
     parser.add_argument('-s', '--scale', action='store', type=float, metavar='S', default=0.1, help='TPC-H scale factor (default: 0.1)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
-    parser.add_argument('-q', '--queries', action='store', type=int, nargs='+', help='Specify the TPC-H queries that will be benchmarked')
+    parser.add_argument('-q', '--queries', action='store', type=int, metavar='Q', nargs='+', help='Specify the TPC-H queries that will be benchmarked')
     parser.add_argument('--chunk-size', action='store', type=int, metavar='S', help='Specify maximum chunk size (default: Maximum available)')
     parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the results will be stored (default: \'results/\')')
     parser.add_argument('--build-dir', action='store', type=str, metavar='DIR', required=True, help='Directory that contains the hyriseBenchmarkTPCH executable')
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--fixed-runs', action='store', type=int, metavar='N', help='Fixed number of runs each query is executed')
-    group.add_argument('--runs-per-core', action='store', type=int, metavar='N', help='Number of runs per core each query is executed')
+    core_group = parser.add_mutually_exclusive_group()
+    core_group.add_argument('-c', '--cores', action='store', type=int, metavar='C', nargs='+', help='List of cores to be used for the benchmarks')
+    core_group.add_argument('--max-cores', action='store', type=int, metavar='C', help='Number of cores this machine has available')
+
+    run_group = parser.add_mutually_exclusive_group(required=True)
+    run_group.add_argument('--fixed-runs', action='store', type=int, metavar='N', help='Fixed number of runs each query is executed')
+    run_group.add_argument('--runs-per-core', action='store', type=int, metavar='N', help='Number of runs per core each query is executed')
     
     return parser.parse_args()
 
@@ -32,7 +36,9 @@ def verbose_print(verbose, message):
     if verbose: print('python> ' + message)
 
 def get_core_counts(args):
-    max_core_count = args.cores if args.cores else multiprocessing.cpu_count()
+    if args.cores:
+        return args.cores
+    max_core_count = args.max_cores if args.max_cores else MAX_CORE_COUNT
     if max_core_count < 8:
         step = -1
     elif max_core_count < 16:
@@ -103,10 +109,14 @@ def benchmark(args):
     core_counts = get_core_counts(args)
     verbose_print(args.verbose, 'Executing benchmarks with the following numbers of cores: ' + str(core_counts))
 
+    # Make sure our machine has the number of cores we are trying to benchmark with
+    for core_count in core_counts:
+        assert core_count <= MAX_CORE_COUNT
+
     run_benchmarks(args, core_counts, executable, result_dir)
 
     verbose_print(args.verbose, 'Benchmarks complete!')
-    verbose_print(args.verbose, 'Saved results to: ' + result_dir)
+    verbose_print(args.verbose, 'Saved JSON results to: ' + result_dir)
 
     return result_dir
 
@@ -136,19 +146,21 @@ def plot(args, result_dir):
     n_rows_and_cols = get_subplot_row_and_column_count(num_plots)
     plot_pos = 0
 
+    plot_baseline = False
     fig = plt.figure(figsize=(n_rows_and_cols*3, n_rows_and_cols*2))
     for name, data in tpch_results.items():
         plot_pos += 1
         ax = fig.add_subplot(n_rows_and_cols, n_rows_and_cols, plot_pos)
         ax.set_title(name)
-        x = data['cores']
-        y = data['items_per_second']
-        base = data['singlethreaded']
-        multithreaded_plot = ax.plot(x, y, label='multithreaded')
-        singlethreaded_plot = ax.axhline(base, color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label='singlethreaded')
+
+        multithreaded_plot = ax.plot(data['cores'], data['items_per_second'], label='multithreaded')
+        if 'singlethreaded' in data:
+            plot_baseline = True
+            singlethreaded_plot = ax.axhline(data['singlethreaded'], color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label='singlethreaded')
         ax.set_ylim(ymin=0)
 
-    plt.figlegend((multithreaded_plot[0], singlethreaded_plot), ('multithreaded', 'singlethreaded'), 'lower right')
+    if plot_baseline:
+        plt.figlegend((multithreaded_plot[0], singlethreaded_plot), ('multithreaded', 'singlethreaded'), 'lower right')
 
     # This should prevent axes from different plots to overlap etc
     plt.tight_layout()
