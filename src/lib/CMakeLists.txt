@@ -585,16 +585,25 @@ endif()
 
 # Generate a macro file containing probe definitions for dtrace users. As soon as a probe is not present
 # in `provider.h` a compile error would be thrown. With this ugly solution we can avoid this.
-# First we find all probes within the code (e.g. DTRACE_PROBE1(HYRISE, TEST, arg1))
-# Than the regex greps provider and probe name and concactenates them with '_' (e.g. HYRISE_TEST)
-# The probes are than written into a file in order to define the probes
+# First, we find all probes within the code (e.g. DTRACE_PROBE1(HYRISE, TEST, arg1))
+# After that, lines commented out (starting with // or *) are ignored.
+# The sed regex works as follows:
+#   [^(]            - ignore anything before opening bracket
+#   (               - match bracket itself, but do not capture
+#   \\([^,]*\\)     - Capture anything until comma (backslash must be escaped) -> provider
+#   ,               - match comma and space, but do not capture
+#   \\([^(,|))]*\\) - Capture anything until comma or closing bracket -> probe name
+#   .*              - match anything the rest of the line
+#   \\1_\\2         - concat the first and second match group via underscore
+# The probes are then written into a file in order to define the probes
 
 set(PROBES_FILE "${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/probe_definitions.hpp")
 set(LINE "#ifndef &\\n#define &(...)\\n#endif\\n")
 add_custom_command (
     OUTPUT ${PROBES_FILE}
     DEPENDS ${SOURCES}
-    COMMAND grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |  sed "s/[^(]*(\\([^,]*\\), \\([^(,|))]*\\).*/\\1_\\2/" | uniq | xargs -n 1 -I & printf "${LINE}" > ${PROBES_FILE}
+    COMMAND grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |
+    grep "^[[:space:]]*[^[:space:]\\/\\*]" | sed "s/[^(]*(\\([^,]*\\), \\([^(,|))]*\\).*/\\1_\\2/" | uniq | xargs -n 1 -I & printf "${LINE}" > ${PROBES_FILE}
     VERBATIM
 )
 
