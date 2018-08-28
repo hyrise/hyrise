@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 BENCHMARK_EXECUTABLE = 'hyriseBenchmarkTPCH'
-DEFAULT_TPCH_QUERIES = [query for query in range(23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
+DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
