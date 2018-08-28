@@ -30,6 +30,10 @@ class ColumnStatisticsTest : public BaseTest {
     _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
     auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
     _column_statistics_uniform_columns = table_statistics2.column_statistics();
+
+    _table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
+    auto table_statistics3 = generate_table_statistics(*_table_with_null);
+    _column_statistics_int_null = table_statistics3.column_statistics()[0];
   }
 
   // For single value scans (i.e. all but BETWEEN)
@@ -100,6 +104,9 @@ class ColumnStatisticsTest : public BaseTest {
   std::shared_ptr<ColumnStatistics<std::string>> _column_statistics_string;
   std::shared_ptr<Table> _table_uniform_distribution;
   std::vector<std::shared_ptr<const BaseColumnStatistics>> _column_statistics_uniform_columns;
+
+  std::shared_ptr<Table> _table_with_null;
+  std::shared_ptr<const BaseColumnStatistics> _column_statistics_int_null;
 
   //  {below min, min, middle, max, above max}
   std::vector<int32_t> _int_values{0, 1, 3, 6, 7};
@@ -431,6 +438,11 @@ TEST_F(ColumnStatisticsTest, Dummy) {
     EXPECT_EQ(dummy_col_statistics.min(), "");
     EXPECT_EQ(dummy_col_statistics.max(), "");
   }
+}
+
+TEST_F(ColumnStatisticsTest, EstimateNullPredicate) {
+  auto result = _column_statistics_int_null->estimate_predicate_with_value(PredicateCondition::Equals, AllTypeVariant(NullValue{}));
+  EXPECT_FLOAT_EQ(result.selectivity, 1.f);
 }
 
 }  // namespace opossum
