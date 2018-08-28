@@ -30,7 +30,7 @@ namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-                   const size_t radix_bits)
+                   const std::optional<size_t> radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
@@ -620,7 +620,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
-               const size_t radix_bits)
+               const std::optional<size_t> radix_bits = std::nullopt)
       : _left(left),
         _right(right),
         _mode(mode),
@@ -641,6 +641,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     const auto build_relation_size = _left->get_output()->row_count();
     const auto probe_relation_size = _right->get_output()->row_count();
+
+    if (radix_bits.has_value()) {
+      _radix_bits = radix_bits.value();
+      return;
+    }
 
     if (build_relation_size > probe_relation_size) {
       /*

@@ -67,13 +67,19 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
   if (std::is_same<TypeParam, JoinHash>::value) {
     // float with int
-    // radix bits = 1
+    // radix bits = 0
     std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/float_int_inner.tbl", 1);
     auto join = std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
-                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 1);
+                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 0);
     join->execute();
-
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+
+    for (size_t radix_bits : {1, 2, 3, 10, 17}) {
+      auto join_comp = std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
+                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, radix_bits);
+      join_comp->execute();
+      EXPECT_TABLE_EQ_UNORDERED(join->get_output(), join_comp->get_output());
+    }
   }
 }
 
