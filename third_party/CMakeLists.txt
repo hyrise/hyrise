@@ -66,12 +66,6 @@ add_library(
     cqf/src/cqf32.cpp
 )
 
-target_compile_options(
-    cqf
-    PRIVATE
-    -O3
-)
-
 target_include_directories(
     cqf
 
