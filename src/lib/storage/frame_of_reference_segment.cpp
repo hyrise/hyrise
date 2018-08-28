@@ -9,7 +9,7 @@ namespace opossum {
 
 template <typename T, typename U>
 FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
-                                                     std::unique_ptr<const BaseCompressedVector> offset_values)
+                                                       std::unique_ptr<const BaseCompressedVector> offset_values)
     : BaseEncodedSegment{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
@@ -61,7 +61,7 @@ std::shared_ptr<BaseSegment> FrameOfReferenceSegment<T, U>::copy_using_allocator
   auto new_offset_values = _offset_values->copy_using_allocator(alloc);
 
   return std::allocate_shared<FrameOfReferenceSegment>(alloc, std::move(new_block_minima), std::move(new_null_values),
-                                                      std::move(new_offset_values));
+                                                       std::move(new_offset_values));
 }
 
 template <typename T, typename U>

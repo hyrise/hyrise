@@ -66,11 +66,13 @@ void JitWriteTuples::_create_output_chunk(JitRuntimeContext& context) const {
       context.out_chunk.push_back(segment);
 
       if (is_nullable) {
-        context.outputs.push_back(std::make_shared<JitSegmentWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, true>>(
-            segment, output_cxlumn.tuple_value));
+        context.outputs.push_back(
+            std::make_shared<JitSegmentWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, true>>(
+                segment, output_cxlumn.tuple_value));
       } else {
-        context.outputs.push_back(std::make_shared<JitSegmentWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, false>>(
-            segment, output_cxlumn.tuple_value));
+        context.outputs.push_back(
+            std::make_shared<JitSegmentWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, false>>(
+                segment, output_cxlumn.tuple_value));
       }
     });
   }

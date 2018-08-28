@@ -145,8 +145,7 @@ void JoinIndex::_perform_join() {
                                           track_right_matches,
                                           _mode,
                                           _predicate_condition};
-        JoinNestedLoop::_join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right,
-                                                  params);
+        JoinNestedLoop::_join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
       }
       performance_data.chunks_scanned_without_index++;
     }
@@ -198,7 +197,7 @@ void JoinIndex::_perform_join() {
 // join loop that joins two chunks of two segments using an iterator for the left, and an index for the right
 template <typename LeftIterator>
 void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
-                                              const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index) {
+                                               const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index) {
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
     if (left_value.is_null()) continue;
@@ -255,8 +254,8 @@ void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterato
 // join loop that joins two chunks of two segments via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                              RightIterator right_begin, RightIterator right_end,
-                                              const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
+                                               RightIterator right_begin, RightIterator right_end,
+                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
   // No index so we fall back on a nested loop join
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
@@ -315,7 +314,7 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
 }
 
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                                      std::shared_ptr<PosList> pos_list) {
+                                       std::shared_ptr<PosList> pos_list) {
   // Add segments from table to output chunk
   for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {
     std::shared_ptr<BaseSegment> segment;
@@ -326,8 +325,8 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
 
         ChunkID current_chunk_id{0};
 
-        auto reference_segment =
-            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
+        auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
+            input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto row : *pos_list) {
@@ -345,7 +344,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
         }
 
         segment = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
-                                                   reference_segment->referenced_cxlumn_id(), new_pos_list);
+                                                     reference_segment->referenced_cxlumn_id(), new_pos_list);
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that

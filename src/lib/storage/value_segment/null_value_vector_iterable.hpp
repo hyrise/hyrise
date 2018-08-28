@@ -50,7 +50,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
     SegmentIteratorNullValue dereference() const {
       return SegmentIteratorNullValue{*_null_value_it,
-                                     static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
+                                      static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
    private:

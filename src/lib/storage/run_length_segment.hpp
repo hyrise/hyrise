@@ -29,8 +29,8 @@ template <typename T>
 class RunLengthSegment : public BaseEncodedSegment {
  public:
   explicit RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
-                           const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                           const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions);
+                            const std::shared_ptr<const pmr_vector<bool>>& null_values,
+                            const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions);
 
   std::shared_ptr<const pmr_vector<T>> values() const;
   std::shared_ptr<const pmr_vector<bool>> null_values() const;

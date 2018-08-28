@@ -3,9 +3,9 @@
 #include <memory>
 
 #include "storage/base_value_segment.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
@@ -21,7 +21,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_
 }
 
 void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
-                                        std::shared_ptr<SegmentVisitorContext> base_context) {
+                                         std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   BaseSingleCxlumnTableScanImpl::handle_segment(base_segment, base_context);
 
@@ -36,7 +36,7 @@ void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
 }
 
 void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
-                                        std::shared_ptr<SegmentVisitorContext> base_context) {
+                                         std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
@@ -55,22 +55,22 @@ void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   auto base_segment_iterable = NullValueVectorIterable{base_segment.null_values()};
 
   base_segment_iterable.with_iterators(mapped_chunk_offsets.get(),
-                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
-                                        std::shared_ptr<SegmentVisitorContext> base_context) {
+                                         std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
   auto base_segment_iterable = create_iterable_from_attribute_vector(base_segment);
 
   base_segment_iterable.with_iterators(mapped_chunk_offsets.get(),
-                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
-                                        std::shared_ptr<SegmentVisitorContext> base_context) {
+                                         std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 

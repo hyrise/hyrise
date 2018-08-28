@@ -87,6 +87,8 @@ GroupKeyIndex::Iterator GroupKeyIndex::_get_postings_iterator_at(ValueID value_i
   return iter;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_indexed_segments() const { return {_indexed_segments}; }
+std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_indexed_segments() const {
+  return {_indexed_segments};
+}
 
 }  // namespace opossum

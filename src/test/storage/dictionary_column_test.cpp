@@ -6,8 +6,8 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 

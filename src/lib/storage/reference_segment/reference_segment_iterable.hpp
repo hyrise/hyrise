@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "storage/segment_iterables.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_iterables.hpp"
 
 namespace opossum {
 

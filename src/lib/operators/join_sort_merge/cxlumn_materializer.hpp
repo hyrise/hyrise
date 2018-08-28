@@ -81,7 +81,7 @@ class CxlumnMaterializer {
    */
   template <typename SegmentType>
   std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const SegmentType& segment, ChunkID chunk_id,
-                                                             std::unique_ptr<PosList>& null_rows_output) {
+                                                               std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
@@ -110,7 +110,7 @@ class CxlumnMaterializer {
    * Specialization for dictionary segments
    */
   std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
-                                                             std::unique_ptr<PosList>& null_rows_output) {
+                                                               std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 

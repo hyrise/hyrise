@@ -56,7 +56,8 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
 
       while (segment_it != segment_end) {
         auto value_block_it = current_value_block.begin();
-        for (; value_block_it != current_value_block.end() && segment_it != segment_end; ++value_block_it, ++segment_it) {
+        for (; value_block_it != current_value_block.end() && segment_it != segment_end;
+             ++value_block_it, ++segment_it) {
           const auto segment_value = *segment_it;
 
           *value_block_it = segment_value.is_null() ? T{0u} : segment_value.value();
@@ -88,7 +89,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
     auto encoded_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_offset});
 
     return std::allocate_shared<FrameOfReferenceSegment<T>>(alloc, std::move(block_minima), std::move(null_values),
-                                                           std::move(encoded_offset_values));
+                                                            std::move(encoded_offset_values));
   }
 };
 

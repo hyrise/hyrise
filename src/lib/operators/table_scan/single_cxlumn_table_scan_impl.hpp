@@ -28,12 +28,14 @@ class SingleCxlumnTableScanImpl : public BaseSingleCxlumnTableScanImpl {
 
   std::shared_ptr<PosList> scan_chunk(ChunkID) override;
 
-  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const BaseValueSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   void handle_segment(const BaseDictionarySegment& base_segment,
-                     std::shared_ptr<SegmentVisitorContext> base_context) override;
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   using BaseSingleCxlumnTableScanImpl::handle_segment;
 

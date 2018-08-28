@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -95,9 +95,9 @@ void JoinNestedLoop::_process_match(RowID left_row_id, RowID right_row_id, JoinN
 // inner join loop that joins two segments via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinNestedLoop::_join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                             RightIterator right_begin, RightIterator right_end,
-                                             const ChunkID chunk_id_left, const ChunkID chunk_id_right,
-                                             JoinNestedLoop::JoinParams& params) {
+                                              RightIterator right_begin, RightIterator right_end,
+                                              const ChunkID chunk_id_left, const ChunkID chunk_id_right,
+                                              JoinNestedLoop::JoinParams& params) {
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
     if (left_value.is_null()) continue;
@@ -115,9 +115,9 @@ void JoinNestedLoop::_join_two_typed_segments(const BinaryFunctor& func, LeftIte
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& segment_left,
-                                               const std::shared_ptr<const BaseSegment>& segment_right,
-                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right,
-                                               JoinNestedLoop::JoinParams& params) {
+                                                const std::shared_ptr<const BaseSegment>& segment_right,
+                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
+                                                JoinNestedLoop::JoinParams& params) {
   resolve_data_and_cxlumn_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
     resolve_data_and_cxlumn_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
       using LeftType = typename decltype(left_type)::type;
@@ -261,11 +261,11 @@ void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_
           }
         }
 
-        auto reference_segment =
-            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
+        auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
+            input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
 
         segment = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
-                                                   reference_segment->referenced_cxlumn_id(), new_pos_list);
+                                                     reference_segment->referenced_cxlumn_id(), new_pos_list);
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that

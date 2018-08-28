@@ -10,9 +10,9 @@
 #include <utility>
 #include <vector>
 
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 
@@ -25,7 +25,7 @@ LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_tabl
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
 void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
-                                      std::shared_ptr<SegmentVisitorContext> base_context) {
+                                       std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -37,7 +37,7 @@ void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
 }
 
 void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
-                                      std::shared_ptr<SegmentVisitorContext> base_context) {
+                                       std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -50,7 +50,7 @@ void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
 }
 
 void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
-                                      std::shared_ptr<SegmentVisitorContext> base_context) {
+                                       std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;

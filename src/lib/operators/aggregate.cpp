@@ -200,7 +200,7 @@ struct AggregateFunctionBuilder<CxlumnType, AggregateType, AggregateFunction::Co
 
 template <typename CxlumnDataType, AggregateFunction function, typename AggregateKey>
 void Aggregate::_aggregate_segment(ChunkID chunk_id, CxlumnID cxlumn_index, const BaseSegment& base_segment,
-                                  const KeysPerChunk<AggregateKey>& keys_per_chunk) {
+                                   const KeysPerChunk<AggregateKey>& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<CxlumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<CxlumnDataType, AggregateType, function>().get_aggregate_function();
@@ -493,23 +493,23 @@ void Aggregate::_aggregate() {
           switch (aggregate.function) {
             case AggregateFunction::Min:
               _aggregate_segment<CxlumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, cxlumn_index,
-                                                                                      *base_segment, keys_per_chunk);
+                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Max:
               _aggregate_segment<CxlumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, cxlumn_index,
-                                                                                      *base_segment, keys_per_chunk);
+                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Sum:
               _aggregate_segment<CxlumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, cxlumn_index,
-                                                                                      *base_segment, keys_per_chunk);
+                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Avg:
               _aggregate_segment<CxlumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, cxlumn_index,
-                                                                                      *base_segment, keys_per_chunk);
+                                                                                       *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Count:
               _aggregate_segment<CxlumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, cxlumn_index,
-                                                                                        *base_segment, keys_per_chunk);
+                                                                                         *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
               _aggregate_segment<CxlumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
@@ -804,7 +804,7 @@ void Aggregate::write_aggregate_output(CxlumnID cxlumn_index) {
 
 template <typename AggregateKey>
 std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context(const DataType data_type,
-                                                                           const AggregateFunction function) const {
+                                                                            const AggregateFunction function) const {
   std::shared_ptr<SegmentVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;

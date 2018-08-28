@@ -18,14 +18,17 @@ class IsNullTableScanImpl : public BaseSingleCxlumnTableScanImpl {
   IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
                       const PredicateCondition& predicate_condition);
 
-  void handle_segment(const ReferenceSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const ReferenceSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const BaseValueSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   void handle_segment(const BaseDictionarySegment& base_segment,
-                     std::shared_ptr<SegmentVisitorContext> base_context) override;
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   using BaseSingleCxlumnTableScanImpl::handle_segment;
 

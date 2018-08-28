@@ -21,7 +21,7 @@ class ReferenceSegment : public BaseSegment {
   // creates a reference segment
   // the parameters specify the positions and the referenced cxlumn
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const CxlumnID referenced_cxlumn_id,
-                  const std::shared_ptr<const PosList>& pos);
+                   const std::shared_ptr<const PosList>& pos);
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 

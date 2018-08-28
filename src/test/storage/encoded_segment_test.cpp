@@ -10,10 +10,10 @@
 
 #include "constant_mappings.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 
 #include "types.hpp"
@@ -96,10 +96,10 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> encode_value_segment(DataType data_type,
-                                                         const std::shared_ptr<ValueSegment<T>>& value_segment) {
+                                                           const std::shared_ptr<ValueSegment<T>>& value_segment) {
     const auto segment_encoding_spec = GetParam();
     return encode_segment(segment_encoding_spec.encoding_type, data_type, value_segment,
-                         segment_encoding_spec.vector_compression_type);
+                          segment_encoding_spec.vector_compression_type);
   }
 };
 
@@ -193,15 +193,16 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
-        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+      encoded_segment_iterable.with_iterators(
+          &chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+            for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+              EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
-          if (!value_segment_it->is_null()) {
-            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-          }
-        }
-      });
+              if (!value_segment_it->is_null()) {
+                EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+              }
+            }
+          });
     });
   });
 }
@@ -219,15 +220,16 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
-        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+      encoded_segment_iterable.with_iterators(
+          &chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+            for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+              EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
-          if (!value_segment_it->is_null()) {
-            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-          }
-        }
-      });
+              if (!value_segment_it->is_null()) {
+                EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+              }
+            }
+          });
     });
   });
 }

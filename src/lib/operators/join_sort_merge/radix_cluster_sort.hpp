@@ -174,7 +174,7 @@ class RadixClusterSort {
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
   std::unique_ptr<MaterializedSegmentList<T>> _cluster(std::unique_ptr<MaterializedSegmentList<T>>& input_chunks,
-                                                      std::function<size_t(const T&)> clusterer) {
+                                                       std::function<size_t(const T&)> clusterer) {
     auto output_table = std::make_unique<MaterializedSegmentList<T>>(_cluster_count);
     TableInformation table_information(input_chunks->size(), _cluster_count);
 
@@ -242,7 +242,8 @@ class RadixClusterSort {
   * - hand select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::unique_ptr<MaterializedSegmentList<T>> _radix_cluster(std::unique_ptr<MaterializedSegmentList<T>>& input_chunks) {
+  std::unique_ptr<MaterializedSegmentList<T>> _radix_cluster(
+      std::unique_ptr<MaterializedSegmentList<T>>& input_chunks) {
     auto radix_bitmask = _cluster_count - 1;
     return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
@@ -275,7 +276,8 @@ class RadixClusterSort {
   * right table in a pair.
   **/
   std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<MaterializedSegmentList<T>>> _range_cluster(
-      std::unique_ptr<MaterializedSegmentList<T>>& input_left, std::unique_ptr<MaterializedSegmentList<T>>& input_right) {
+      std::unique_ptr<MaterializedSegmentList<T>>& input_left,
+      std::unique_ptr<MaterializedSegmentList<T>>& input_right) {
     std::vector<std::map<T, size_t>> sample_values(_cluster_count - 1);
 
     _pick_sample_values(sample_values, input_left);

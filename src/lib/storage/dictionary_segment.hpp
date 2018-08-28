@@ -20,8 +20,8 @@ template <typename T>
 class DictionarySegment : public BaseDictionarySegment {
  public:
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                            const ValueID null_value_id);
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                             const ValueID null_value_id);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;

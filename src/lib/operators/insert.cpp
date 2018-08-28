@@ -145,7 +145,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto old_size = current_chunk->size();
       for (CxlumnID cxlumn_id{0}; cxlumn_id < current_chunk->cxlumn_count(); ++cxlumn_id) {
         typed_segment_processors[cxlumn_id]->resize_vector(current_chunk->get_segment(cxlumn_id),
-                                                          old_size + rows_to_insert_this_loop);
+                                                           old_size + rows_to_insert_this_loop);
       }
 
       remaining_rows -= rows_to_insert_this_loop;
@@ -181,8 +181,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       for (CxlumnID cxlumn_id{0}; cxlumn_id < target_chunk->cxlumn_count(); ++cxlumn_id) {
         const auto& source_segment = source_chunk->get_segment(cxlumn_id);
         typed_segment_processors[cxlumn_id]->copy_data(source_segment, source_chunk_start_index,
-                                                      target_chunk->get_segment(cxlumn_id), target_start_index,
-                                                      num_to_insert);
+                                                       target_chunk->get_segment(cxlumn_id), target_start_index,
+                                                       num_to_insert);
       }
       still_to_insert -= num_to_insert;
       target_start_index += num_to_insert;

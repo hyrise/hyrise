@@ -11,8 +11,8 @@ namespace opossum {
 
 template <typename T>
 RunLengthSegment<T>::RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
-                                    const std::shared_ptr<const pmr_vector<bool>>& null_values,
-                                    const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
+                                      const std::shared_ptr<const pmr_vector<bool>>& null_values,
+                                      const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
     : BaseEncodedSegment(data_type_from_type<T>()),
       _values{values},
       _null_values{null_values},
@@ -54,7 +54,8 @@ size_t RunLengthSegment<T>::size() const {
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
   auto new_values = pmr_vector<T>{*_values, alloc};
   auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
   auto new_end_positions = pmr_vector<ChunkOffset>{*_end_positions, alloc};

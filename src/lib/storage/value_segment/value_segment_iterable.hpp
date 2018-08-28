@@ -146,8 +146,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      return SegmentIteratorValue<T>{_values[chunk_offsets.into_referenced], _null_values[chunk_offsets.into_referenced],
-                                    chunk_offsets.into_referencing};
+      return SegmentIteratorValue<T>{_values[chunk_offsets.into_referenced],
+                                     _null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
     }
 
    private:

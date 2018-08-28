@@ -43,7 +43,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
       return _encode_dictionary_segment(pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()},
-                                       value_segment);
+                                        value_segment);
     }
   }
 
@@ -122,10 +122,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       return std::allocate_shared<FixedStringDictionarySegment<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                                  ValueID{null_value_id});
+                                                                   ValueID{null_value_id});
     } else {
       return std::allocate_shared<DictionarySegment<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                       ValueID{null_value_id});
+                                                        ValueID{null_value_id});
     }
   }
 

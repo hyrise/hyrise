@@ -173,8 +173,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       }
 
       // add values to segment, reset value vector
-      segments.push_back(std::allocate_shared<ValueSegment<int>>(allocator_value_segment_int,
-                                                               std::move(value_vectors[cxlumn_index]), allocator_int));
+      segments.push_back(std::allocate_shared<ValueSegment<int>>(
+          allocator_value_segment_int, std::move(value_vectors[cxlumn_index]), allocator_int));
       value_vectors[cxlumn_index] = tbb::concurrent_vector<int>(chunk_size);
 
       // add full chunk to table

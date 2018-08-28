@@ -562,8 +562,8 @@ PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const Table>&
 }
 
 void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                          const PosListsBySegment& input_pos_list_ptrs_sptrs_by_segments,
-                          std::shared_ptr<PosList> pos_list) {
+                           const PosListsBySegment& input_pos_list_ptrs_sptrs_by_segments,
+                           std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop
@@ -593,10 +593,10 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
           iter = output_pos_list_cache.emplace(input_table_pos_lists, new_pos_list).first;
         }
 
-        auto reference_segment =
-            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
-        output_segments.push_back(std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
-                                                                   reference_segment->referenced_cxlumn_id(), iter->second));
+        auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
+            input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
+        output_segments.push_back(std::make_shared<ReferenceSegment>(
+            reference_segment->referenced_table(), reference_segment->referenced_cxlumn_id(), iter->second));
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that

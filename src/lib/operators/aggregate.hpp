@@ -131,11 +131,11 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   template <typename CxlumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, CxlumnID cxlumn_index, const BaseSegment& base_segment,
-                         const KeysPerChunk<AggregateKey>& keys_per_chunk);
+                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
-                                                                  const AggregateFunction function) const;
+                                                                   const AggregateFunction function) const;
 
   template <typename CxlumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context_impl() const;

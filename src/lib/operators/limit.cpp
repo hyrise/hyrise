@@ -74,7 +74,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         }
       }
 
-      output_segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, output_cxlumn_id, output_pos_list));
+      output_segments.push_back(
+          std::make_shared<ReferenceSegment>(referenced_table, output_cxlumn_id, output_pos_list));
     }
 
     i += output_chunk_row_count;

@@ -171,15 +171,16 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); cxlumn_id++) {
     auto visitor =
         make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->cxlumn_data_type(cxlumn_id));
-    resolve_data_and_cxlumn_type(
-        *chunk->get_segment(cxlumn_id),
-        [&](const auto data_type_t, const auto& resolved_segment) { visitor->handle_segment(resolved_segment, context); });
+    resolve_data_and_cxlumn_type(*chunk->get_segment(cxlumn_id),
+                                 [&](const auto data_type_t, const auto& resolved_segment) {
+                                   visitor->handle_segment(resolved_segment, context);
+                                 });
   }
 }
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment& base_segment,
-                                                         std::shared_ptr<SegmentVisitorContext> base_context) {
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& segment = static_cast<const ValueSegment<T>&>(base_segment);
 
@@ -194,7 +195,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment& ref_segment,
-                                                         std::shared_ptr<SegmentVisitorContext> base_context) {
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference segments and save them as value segments
@@ -209,8 +210,8 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
 
 // handle_segment implementation for string segments
 template <>
-void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(const ReferenceSegment& ref_segment,
-                                                                   std::shared_ptr<SegmentVisitorContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(
+    const ReferenceSegment& ref_segment, std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference segments and save them as value segments
@@ -236,7 +237,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(const Refere
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySegment& base_segment,
-                                                         std::shared_ptr<SegmentVisitorContext> base_context) {
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   const auto is_fixed_size_byte_aligned = [&]() {
@@ -292,7 +293,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseEncodedSegment& base_segment,
-                                                         std::shared_ptr<SegmentVisitorContext> base_context) {
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   Fail("Binary export not implemented yet for encoded segments.");
 }
 

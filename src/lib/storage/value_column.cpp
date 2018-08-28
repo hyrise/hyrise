@@ -32,7 +32,7 @@ ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, const Polymorph
 
 template <typename T>
 ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
-                            const PolymorphicAllocator<T>& alloc)
+                              const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()),
       _values(std::move(values), alloc),
       _null_values({std::move(null_values), alloc}) {}
@@ -43,7 +43,7 @@ ValueSegment<T>::ValueSegment(std::vector<T>& values, const PolymorphicAllocator
 
 template <typename T>
 ValueSegment<T>::ValueSegment(std::vector<T>& values, std::vector<bool>& null_values,
-                            const PolymorphicAllocator<T>& alloc)
+                              const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()),
       _values(values, alloc),
       _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {}

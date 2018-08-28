@@ -97,7 +97,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       }
 
       // creating a ReferenceSegment for the output
-      auto out_reference_segment = std::make_shared<ReferenceSegment>(out_referenced_table, out_cxlumn_id, pos_list_out);
+      auto out_reference_segment =
+          std::make_shared<ReferenceSegment>(out_referenced_table, out_cxlumn_id, pos_list_out);
       output_segments.push_back(out_reference_segment);
     }
 

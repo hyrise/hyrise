@@ -24,7 +24,7 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type);
  * @return encoded segment if data type is supported else throws exception
  */
 std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, DataType data_type,
-                                                 const std::shared_ptr<const BaseValueSegment>& segment,
-                                                 std::optional<VectorCompressionType> zero_suppression_type = {});
+                                                   const std::shared_ptr<const BaseValueSegment>& segment,
+                                                   std::optional<VectorCompressionType> zero_suppression_type = {});
 
 }  // namespace opossum

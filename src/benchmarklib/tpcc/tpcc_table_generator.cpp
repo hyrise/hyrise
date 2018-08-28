@@ -127,7 +127,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
     add_cxlumn<std::string>(segments_by_chunk, cxlumn_definitions, "S_DIST_" + district_i_str.str(), cardinalities,
                             [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
   }
-  add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "S_YTD", cardinalities, [&](std::vector<size_t>) { return 0; });
+  add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "S_YTD", cardinalities,
+                  [&](std::vector<size_t>) { return 0; });
   add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "S_ORDER_CNT", cardinalities,
                   [&](std::vector<size_t>) { return 0; });
   add_cxlumn<int>(segments_by_chunk, cxlumn_definitions, "S_REMOTE_CNT", cardinalities,

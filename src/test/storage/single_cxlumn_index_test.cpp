@@ -25,13 +25,14 @@ class SingleSegmentIndexTest : public BaseTest {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int}));
 
-    dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(DataType::String,
-                                                                     {"hello", "world", "test", "foo", "bar", "foo"});
+    dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(
+        DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
     index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str}));
   }
 
   template <class Iterator>
-  static std::vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseSegment> segment, Iterator begin, Iterator end) {
+  static std::vector<AllTypeVariant> result_as_vector(std::shared_ptr<BaseSegment> segment, Iterator begin,
+                                                      Iterator end) {
     std::vector<AllTypeVariant> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       result.emplace_back((*segment)[*iter]);
@@ -175,7 +176,8 @@ TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
   auto vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
   vs_int->append(4);
 
-  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseSegment>>({vs_int})), std::logic_error);
+  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseSegment>>({vs_int})),
+               std::logic_error);
 }
 
 }  // namespace opossum

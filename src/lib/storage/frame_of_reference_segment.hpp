@@ -43,7 +43,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
   static constexpr auto block_size = 2048u;
 
   explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
-                                  std::unique_ptr<const BaseCompressedVector> offset_values);
+                                   std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
   const pmr_vector<bool>& null_values() const;

@@ -134,7 +134,8 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_segment(const ReferenceSegment& ref_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const ReferenceSegment& ref_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   /**
    * Dictionary Segments are dumped with the following layout:
@@ -159,9 +160,10 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_segment(const BaseDictionarySegment& base_segment,
-                     std::shared_ptr<SegmentVisitorContext> base_context) override;
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.

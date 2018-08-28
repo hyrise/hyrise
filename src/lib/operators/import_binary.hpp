@@ -83,7 +83,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
 
   // Calls the right _import_cxlumn<CxlumnDataType> depending on the given data_type.
   static std::shared_ptr<BaseSegment> _import_cxlumn(std::ifstream& file, ChunkOffset row_count, DataType data_type,
-                                                    bool is_nullable);
+                                                     bool is_nullable);
 
   // Reads the cxlumn type from the given file and chooses a cxlumn import function from it.
   template <typename CxlumnDataType>
@@ -116,7 +116,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static std::shared_ptr<ValueSegment<T>> _import_value_segment(std::ifstream& file, ChunkOffset row_count,
-                                                              bool is_nullable);
+                                                                bool is_nullable);
 
   /*
    * Imports a serialized DictionarySegment from the given file.

@@ -265,7 +265,8 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       for (const auto& cxlumn : nlohmann::json::iterator_wrapper(cxlumns)) {
         const auto& cxlumn_name = cxlumn.key();
         const auto& encoding_info = cxlumn.value();
-        Assert(encoding_info.is_object(), "The custom encoding for cxlumn types needs to be specified as a json object.");
+        Assert(encoding_info.is_object(),
+               "The custom encoding for cxlumn types needs to be specified as a json object.");
         custom_encoding_mapping[table_name][cxlumn_name] = encoding_spec_from_json(encoding_info);
       }
     }
@@ -292,7 +293,7 @@ EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTy
 EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}; }
 
 SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
-                                                              const std::string& compression_str) {
+                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
 

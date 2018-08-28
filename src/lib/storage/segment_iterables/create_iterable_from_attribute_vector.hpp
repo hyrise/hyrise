@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/dictionary_segment/attribute_vector_iterable.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -19,7 +19,8 @@ namespace opossum {
  */
 
 inline auto create_iterable_from_attribute_vector(const BaseDictionarySegment& segment) {
-  return erase_type_from_iterable_if_debug(AttributeVectorIterable{*segment.attribute_vector(), segment.null_value_id()});
+  return erase_type_from_iterable_if_debug(
+      AttributeVectorIterable{*segment.attribute_vector(), segment.null_value_id()});
 }
 
 /**@}*/

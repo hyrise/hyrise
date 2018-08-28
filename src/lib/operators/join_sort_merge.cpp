@@ -582,7 +582,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Adds the segments from an input table to the output table
   **/
   void _add_output_segments(Segments& output_segments, std::shared_ptr<const Table> input_table,
-                           std::shared_ptr<const PosList> pos_list) {
+                            std::shared_ptr<const PosList> pos_list) {
     auto cxlumn_count = input_table->cxlumn_count();
     for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
       // Add the segment data (in the form of a poslist)
@@ -595,7 +595,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
 
           auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
-                                                                  ref_segment->referenced_cxlumn_id(), new_pos_list);
+                                                                    ref_segment->referenced_cxlumn_id(), new_pos_list);
           output_segments.push_back(new_ref_segment);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to

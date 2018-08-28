@@ -85,7 +85,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
-        const auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
+        const auto reference_segment =
+            std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
         const auto referenced_cxlumn_id = reference_segment->referenced_cxlumn_id();
         auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_cxlumn_id, pos_list_out);
         output_segments.push_back(ref_segment_out);

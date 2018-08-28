@@ -106,7 +106,7 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         OffsetValueDecompressorT* attribute_decoder, ChunkOffsetsIterator chunk_offsets_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
-                                        SegmentIteratorValue<T>>{chunk_offsets_it},
+                                         SegmentIteratorValue<T>>{chunk_offsets_it},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decoder{attribute_decoder} {}

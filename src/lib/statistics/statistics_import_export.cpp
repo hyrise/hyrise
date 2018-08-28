@@ -2,8 +2,8 @@
 
 #include <fstream>
 
-#include "cxlumn_statistics.hpp"
 #include "constant_mappings.hpp"
+#include "cxlumn_statistics.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 

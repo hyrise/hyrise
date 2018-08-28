@@ -60,7 +60,7 @@ std::shared_ptr<BaseSegment> FixedStringDictionarySegment<T>::copy_using_allocat
   auto new_dictionary = FixedStringVector(*_dictionary);
   auto new_dictionary_ptr = std::allocate_shared<FixedStringVector>(alloc, std::move(new_dictionary));
   return std::allocate_shared<FixedStringDictionarySegment<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
-                                                              _null_value_id);
+                                                               _null_value_id);
 }
 
 template <typename T>

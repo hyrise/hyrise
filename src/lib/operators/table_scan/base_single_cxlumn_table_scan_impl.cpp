@@ -6,9 +6,9 @@
 
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
@@ -34,7 +34,7 @@ std::shared_ptr<PosList> BaseSingleCxlumnTableScanImpl::scan_chunk(ChunkID chunk
 }
 
 void BaseSingleCxlumnTableScanImpl::handle_segment(const ReferenceSegment& segment,
-                                                  std::shared_ptr<SegmentVisitorContext> base_context) {
+                                                   std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const ChunkID chunk_id = context->_chunk_id;
   auto& matches_out = context->_matches_out;

@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -36,7 +36,7 @@ std::shared_ptr<PosList> SingleCxlumnTableScanImpl::scan_chunk(ChunkID chunk_id)
 }
 
 void SingleCxlumnTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
-                                              std::shared_ptr<SegmentVisitorContext> base_context) {
+                                               std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -61,7 +61,7 @@ void SingleCxlumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
 }
 
 void SingleCxlumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
-                                              std::shared_ptr<SegmentVisitorContext> base_context) {
+                                               std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -85,7 +85,7 @@ void SingleCxlumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_se
 }
 
 void SingleCxlumnTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
-                                              std::shared_ptr<SegmentVisitorContext> base_context) {
+                                               std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;

@@ -30,7 +30,8 @@ namespace hana = boost::hana;
 constexpr auto encoded_segment_for_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionarySegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthSegment>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, template_c<FixedStringDictionarySegment>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>,
+                    template_c<FixedStringDictionarySegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>));
 
 /**

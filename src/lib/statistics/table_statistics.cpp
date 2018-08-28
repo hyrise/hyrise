@@ -207,8 +207,9 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       };
 
   // calculate how many null values need to be added to cxlumns from the left table for right/outer joins
-  auto left_null_value_no = calculate_added_null_values_for_outer_join(
-      right_table_statistics.row_count(), right_cxlumn_stats, stats_container.right_cxlumn_statistics->distinct_count());
+  auto left_null_value_no =
+      calculate_added_null_values_for_outer_join(right_table_statistics.row_count(), right_cxlumn_stats,
+                                                 stats_container.right_cxlumn_statistics->distinct_count());
   // calculate how many null values need to be added to cxlumns from the right table for left/outer joins
   auto right_null_value_no = calculate_added_null_values_for_outer_join(
       row_count(), left_cxlumn_stats, stats_container.left_cxlumn_statistics->distinct_count());

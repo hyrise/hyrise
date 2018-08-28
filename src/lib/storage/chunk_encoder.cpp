@@ -8,8 +8,8 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "statistics/chunk_statistics/segment_statistics.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
+#include "statistics/chunk_statistics/segment_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "utils/assert.hpp"

@@ -6,8 +6,8 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
@@ -146,7 +146,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   vs_str->append("B");
   vs_str->append("C");
   const auto compressed_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
-  const auto dictionary_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(compressed_segment);
+  const auto dictionary_segment =
+      std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;

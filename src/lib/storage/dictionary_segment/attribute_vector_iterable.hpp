@@ -77,7 +77,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         ChunkOffsetsIterator chunk_offsets_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
-                                        SegmentIteratorValue<ValueID>>{chunk_offsets_it},
+                                         SegmentIteratorValue<ValueID>>{chunk_offsets_it},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
 

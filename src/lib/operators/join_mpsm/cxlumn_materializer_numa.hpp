@@ -41,9 +41,9 @@ struct MaterializedNUMAPartition {
   MaterializedNUMAPartition() {}
 
   void shrink_to_fit() {
-    _materialized_segments.erase(
-        std::remove(_materialized_segments.begin(), _materialized_segments.end(), std::shared_ptr<MaterializedSegment<T>>{}),
-        _materialized_segments.end());
+    _materialized_segments.erase(std::remove(_materialized_segments.begin(), _materialized_segments.end(),
+                                             std::shared_ptr<MaterializedSegment<T>>{}),
+                                 _materialized_segments.end());
   }
 };
 
@@ -135,7 +135,7 @@ class CxlumnMaterializerNUMA {
    */
   template <typename SegmentType>
   void _materialize_segment(const SegmentType& segment, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
-                           MaterializedNUMAPartition<T>& partition) {
+                            MaterializedNUMAPartition<T>& partition) {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
 
     output->reserve(segment.size());
@@ -160,8 +160,8 @@ class CxlumnMaterializerNUMA {
    * Specialization for dictionary segments
    */
   std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
-                                                            std::unique_ptr<PosList>& null_rows_output,
-                                                            MaterializedValueAllocator<T> alloc) {
+                                                               std::unique_ptr<PosList>& null_rows_output,
+                                                               MaterializedValueAllocator<T> alloc) {
     auto output = MaterializedSegment<T>{alloc};
     output.reserve(segment.size());
 

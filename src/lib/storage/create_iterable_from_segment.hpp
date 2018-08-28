@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_segment.hpp"

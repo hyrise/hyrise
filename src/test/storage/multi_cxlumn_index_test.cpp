@@ -22,15 +22,15 @@ class MultiCxlumnIndexTest : public BaseTest {
     dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(
         DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
-    index_int_str =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_int, dict_segment_str});
-    index_str_int =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_str, dict_segment_int});
+    index_int_str = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_int, dict_segment_str});
+    index_str_int = std::make_shared<DerivedIndex>(
+        std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_str, dict_segment_int});
   }
 
   template <class Iterator>
-  static std::vector<std::vector<AllTypeVariant>> result_as_vector(const std::vector<std::shared_ptr<BaseSegment>> segments,
-                                                                   Iterator begin, Iterator end) {
+  static std::vector<std::vector<AllTypeVariant>> result_as_vector(
+      const std::vector<std::shared_ptr<BaseSegment>> segments, Iterator begin, Iterator end) {
     std::vector<std::vector<AllTypeVariant>> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
       auto row = std::vector<AllTypeVariant>{};

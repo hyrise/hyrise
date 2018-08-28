@@ -11,7 +11,7 @@
 namespace opossum {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
-                                 const CxlumnID referenced_cxlumn_id, const std::shared_ptr<const PosList>& pos)
+                                   const CxlumnID referenced_cxlumn_id, const std::shared_ptr<const PosList>& pos)
     : BaseSegment(referenced_table->cxlumn_data_type(referenced_cxlumn_id)),
       _referenced_table(referenced_table),
       _referenced_cxlumn_id(referenced_cxlumn_id),

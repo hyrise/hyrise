@@ -188,7 +188,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     for (auto& partition : (*table)) {
       auto last_cluster = partition._materialized_segments.size() - 1;
       auto node_id = partition._node_id;
-      end_positions[node_id] = TablePosition(node_id, last_cluster, partition._materialized_segments[last_cluster]->size());
+      end_positions[node_id] =
+          TablePosition(node_id, last_cluster, partition._materialized_segments[last_cluster]->size());
     }
 
     return end_positions;
@@ -257,7 +258,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(NodeID output_partition, ClusterID output_cluster,
-                                     std::shared_ptr<MaterializedSegment<T>> left_chunk, std::vector<bool> left_joined) {
+                                     std::shared_ptr<MaterializedSegment<T>> left_chunk,
+                                     std::vector<bool> left_joined) {
     for (auto entry_id = size_t{0}; entry_id < left_joined.size(); ++entry_id) {
       if (!left_joined[entry_id]) {
         _emit_combination(output_partition, output_cluster, (*left_chunk)[entry_id].row_id, NULL_ROW_ID);
@@ -436,7 +438,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
           const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
 
           auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
-                                                                  ref_segment->referenced_cxlumn_id(), new_pos_list);
+                                                                    ref_segment->referenced_cxlumn_id(), new_pos_list);
           output_segments.push_back(new_ref_segment);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
