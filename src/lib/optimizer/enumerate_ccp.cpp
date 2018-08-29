@@ -18,18 +18,19 @@ EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size
 #endif
 }
 
-std::vector<std::pair<JoinGraphVertexSet, boost::dynamic_bitset<>>> EnumerateCcp::operator()() {
-  _vertex_neighbourhoods.resize(_num_vertices);
+std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::operator()() {
+  /**
+   * Initialize vertex neighborhood lookup table
+   */
+  _vertex_neighborhoods.resize(_num_vertices);
   for (auto vertex_idx = size_t{0}; vertex_idx < _num_vertices; ++vertex_idx) {
-    JoinGraphVertexSet vertex_set{_num_vertices};
-    vertex_set.set(vertex_idx);
-    JoinGraphVertexSet exclusion_set{_num_vertices};
-
-    _vertex_neighbourhoods[vertex_idx] = _neighbourhood(vertex_set, exclusion_set);
+    _vertex_neighborhoods[vertex_idx] = _single_vertex_neighborhood(vertex_idx);
   }
 
-  auto csg_count = size_t{0};
-
+  /**
+   * This loop corresponds to EnumerateCsg in the paper
+   * Iterate fro the highest to the lowest vertex index
+   */
   for (size_t reverse_vertex_idx = 0; reverse_vertex_idx < _num_vertices; ++reverse_vertex_idx) {
     const auto forward_vertex_idx = _num_vertices - reverse_vertex_idx - 1;
 
@@ -37,9 +38,8 @@ std::vector<std::pair<JoinGraphVertexSet, boost::dynamic_bitset<>>> EnumerateCcp
     start_vertex_set.set(forward_vertex_idx);
     _enumerate_cmp(start_vertex_set);
 
-    std::vector<boost::dynamic_bitset<>> csgs;
+    std::vector<JoinGraphVertexSet> csgs;
     _enumerate_csg_recursive(csgs, start_vertex_set, _exclusion_set(forward_vertex_idx));
-    csg_count += csgs.size() + 1;
     for (const auto& csg : csgs) {
       _enumerate_cmp(csg);
     }
@@ -48,43 +48,38 @@ std::vector<std::pair<JoinGraphVertexSet, boost::dynamic_bitset<>>> EnumerateCcp
 #if IS_DEBUG
   // Assert that the algorithm didn't create duplicates and that all created ccps contain only previously enumerated
   // subsets
-  std::set<boost::dynamic_bitset<>> enumerated_csg_set;
-  std::set<std::pair<JoinGraphVertexSet, boost::dynamic_bitset<>>> enumerated_ccp_set;
 
-  // Consider all single-vertex csgs to be enumerated
-  for (size_t vertex_idx = 0; vertex_idx < _num_vertices; ++vertex_idx) {
-    JoinGraphVertexSet csg{_num_vertices};
-    csg.set(vertex_idx);
-    enumerated_csg_set.insert(csg);
-  }
+  std::set<JoinGraphVertexSet> enumerated_subsets;
+  std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
 
   for (auto csg_cmp_pair : _csg_cmp_pairs) {
-    Assert(!enumerated_csg_set.emplace(csg_cmp_pair.first).second &&
-           !enumerated_csg_set.emplace(csg_cmp_pair.second).second,
-           "CSG not yet enumerated");
-    enumerated_csg_set.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
+    // Components must be either single-vertex or must have been enumerated as the vertex set of a previously CCP
+    Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0, "CSG not yet enumerated");
+    Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0, "CSG not yet enumerated");
 
-    Assert(enumerated_ccp_set.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+    enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
+
+    Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
     std::swap(csg_cmp_pair.first, csg_cmp_pair.second);
-    Assert(enumerated_ccp_set.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
+    Assert(enumerated_ccps.emplace(csg_cmp_pair).second, "Duplicate CCP was generated");
   }
 #endif
 
   return _csg_cmp_pairs;
 }
 
-void EnumerateCcp::_enumerate_csg_recursive(std::vector<boost::dynamic_bitset<>>& csgs,
+void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs,
                                             const JoinGraphVertexSet& vertex_set,
                                             const JoinGraphVertexSet& exclusion_set) {
-  const auto neighbourhood = _neighbourhood2(vertex_set, exclusion_set);
-  const auto neighbourhood_subsets = _non_empty_subsets(neighbourhood);
-  const auto extended_exclusion_set = exclusion_set | neighbourhood;
+  const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
+  const auto neighborhood_subsets = _non_empty_subsets(neighborhood);
+  const auto extended_exclusion_set = exclusion_set | neighborhood;
 
-  for (const auto& subset : neighbourhood_subsets) {
+  for (const auto& subset : neighborhood_subsets) {
     csgs.emplace_back(subset | vertex_set);
   }
 
-  for (const auto& subset : neighbourhood_subsets) {
+  for (const auto& subset : neighborhood_subsets) {
     _enumerate_csg_recursive(csgs, subset | vertex_set, extended_exclusion_set);
   }
 }
@@ -92,16 +87,16 @@ void EnumerateCcp::_enumerate_csg_recursive(std::vector<boost::dynamic_bitset<>>
 void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& vertex_set) {
 
   const auto exclusion_set = _exclusion_set(vertex_set.find_first()) | vertex_set;
-  const auto neighbourhood = _neighbourhood(vertex_set, exclusion_set);
+  const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
 
-  if (neighbourhood.none()) return;
+  if (neighborhood.none()) return;
 
   std::vector<size_t> reverse_vertex_indices;
-  auto current_vertex_idx = neighbourhood.find_first();
+  auto current_vertex_idx = neighborhood.find_first();
 
   do {
     reverse_vertex_indices.emplace_back(current_vertex_idx);
-  } while ((current_vertex_idx = neighbourhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);
+  } while ((current_vertex_idx = neighborhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);
 
   for (auto iter = reverse_vertex_indices.rbegin(); iter != reverse_vertex_indices.rend(); ++iter) {
     auto cmp_vertex_set = JoinGraphVertexSet(_num_vertices);
@@ -109,9 +104,9 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& vertex_set) {
 
     _csg_cmp_pairs.emplace_back(std::make_pair(vertex_set, cmp_vertex_set));
 
-    const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighbourhood);
+    const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighborhood);
 
-    std::vector<boost::dynamic_bitset<>> csgs;
+    std::vector<JoinGraphVertexSet> csgs;
     _enumerate_csg_recursive(csgs, cmp_vertex_set, extended_exclusion_set);
 
     for (const auto& csg : csgs) {
@@ -128,44 +123,39 @@ JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
   return exclusion_set;
 }
 
-JoinGraphVertexSet EnumerateCcp::_neighbourhood(const JoinGraphVertexSet& vertex_set,
-                                                     const JoinGraphVertexSet& exclusion_set) const {
-  JoinGraphVertexSet neighbourhood(_num_vertices);
-
-  auto current_vertex_idx = vertex_set.find_first();
-  Assert(current_vertex_idx != JoinGraphVertexSet::npos, "Cannot find neighbourhood of empty vertex set");
-
-  for (const auto& edge : _edges) {
-    if (vertex_set[edge.first] && !vertex_set[edge.second] && !exclusion_set[edge.second])
-      neighbourhood.set(edge.second);
-    if (vertex_set[edge.second] && !vertex_set[edge.first] && !exclusion_set[edge.first]) neighbourhood.set(edge.first);
-  }
-
-  //std::cout << "Neighbourhood of " << vertex_set << " under exclusion of " << exclusion_set << " is " << neighbourhood << std::endl;
-
-  return neighbourhood;
-}
-
-JoinGraphVertexSet EnumerateCcp::_neighbourhood2(const JoinGraphVertexSet& vertex_set,
-                                                      const JoinGraphVertexSet& exclusion_set) const {
-  JoinGraphVertexSet neighbourhood(_num_vertices);
-
-  //vertex_set.find_first();
-  //Assert(current_vertex_idx != JoinGraphVertexSet::npos, "Cannot find neighbourhood of empty vertex set");
+JoinGraphVertexSet EnumerateCcp::_neighborhood(const JoinGraphVertexSet& vertex_set,
+                                               const JoinGraphVertexSet& exclusion_set) const {
+  JoinGraphVertexSet neighborhood(_num_vertices);
 
   for (auto current_vertex_idx = size_t{0};current_vertex_idx < _num_vertices; ++current_vertex_idx) {
     if (!vertex_set[current_vertex_idx]) continue;
 
-    neighbourhood |= _vertex_neighbourhoods[current_vertex_idx];
+    neighborhood |= _vertex_neighborhoods[current_vertex_idx];
   }
 
-  return neighbourhood - exclusion_set - vertex_set;
+  return neighborhood - exclusion_set - vertex_set;
 }
 
-std::vector<boost::dynamic_bitset<>> EnumerateCcp::_non_empty_subsets(const JoinGraphVertexSet& vertex_set) const {
+JoinGraphVertexSet EnumerateCcp::_single_vertex_neighborhood(const size_t vertex_idx) const {
+  JoinGraphVertexSet neighbourhood(_num_vertices);
+  for (const auto& edge : _edges) {
+    if (vertex_idx == edge.first && vertex_idx != edge.second) {
+      neighbourhood.set(edge.second);
+    }
+    if (vertex_idx != edge.first && vertex_idx == edge.second) {
+      neighbourhood.set(edge.first);
+    }
+  }
+
+  return neighbourhood;
+}
+
+std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraphVertexSet& vertex_set) const {
+  DebugAssert(vertex_set.size() <= sizeof(unsigned long) * 8, "To many bits to perform subset enumerations with this algorithm, since it relies on to_ulong()");
+
   if (vertex_set.none()) return {};
 
-  std::vector<boost::dynamic_bitset<>> subsets;
+  std::vector<JoinGraphVertexSet> subsets;
 
   const auto s = vertex_set.to_ulong();
   auto s1 = s & -s;

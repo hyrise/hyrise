@@ -1,7 +1,5 @@
 #pragma once
 
-#define NDEBUG 1
-
 #include <cstdint>
 #include <optional>
 #include <utility>
@@ -13,30 +11,43 @@ namespace opossum {
 
 class JoinGraph;
 
+/**
+ * CsgCmpPair enumeration algorithm described in in https://dl.acm.org/citation.cfm?id=1164207
+ */
 class EnumerateCcp final {
  public:
-  EnumerateCcp(size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges);
+  EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges);
 
+  // Corresponds to EnumerateCsg in the paper
   std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> operator()();
 
  private:
-  size_t _num_vertices;
-  std::vector<std::pair<size_t, size_t>> _edges;
-  std::vector<std::pair<JoinGraphVertexSet, boost::dynamic_bitset<>>> _csg_cmp_pairs;
+  const size_t _num_vertices;
+  const std::vector<std::pair<size_t, size_t>> _edges;
+  
+  std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> _csg_cmp_pairs;
+  
+  // Lookup table
+  std::vector<JoinGraphVertexSet> _vertex_neighborhoods;
 
-  std::vector<boost::dynamic_bitset<>> _vertex_neighbourhoods;
-
-  void _enumerate_csg_recursive(std::vector<boost::dynamic_bitset<>>& csgs, const JoinGraphVertexSet& vertex_set,
+  // Corresponds to EnumerateCsgRec in the paper
+  void _enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs, const JoinGraphVertexSet& vertex_set,
                                 const JoinGraphVertexSet& exclusion_set);
-  void _enumerate_cmp(const JoinGraphVertexSet& vertex_set);
-  JoinGraphVertexSet _exclusion_set(const size_t vertex_idx) const;
-  JoinGraphVertexSet _neighbourhood(const JoinGraphVertexSet& vertex_set,
-                                         const JoinGraphVertexSet& exclusion_set) const;
-  JoinGraphVertexSet _neighbourhood2(const JoinGraphVertexSet& vertex_set,
-                                          const JoinGraphVertexSet& exclusion_set) const;
-  std::vector<boost::dynamic_bitset<>> _non_empty_subsets(const JoinGraphVertexSet& vertex_set) const;
-};
 
-std::vector<std::pair<size_t, size_t>> enumerate_ccp_edges_from_join_graph(const JoinGraph& join_graph);
+  // Corresponds to EnumerateCmp in the paper
+  void _enumerate_cmp(const JoinGraphVertexSet& vertex_set);
+
+  // Corresponds to B_i(V) in the paper
+  JoinGraphVertexSet _exclusion_set(const size_t vertex_idx) const;
+
+  // Corresponds to N(S) in the paper
+  JoinGraphVertexSet _neighborhood(const JoinGraphVertexSet& vertex_set,
+                                          const JoinGraphVertexSet& exclusion_set) const;
+
+  JoinGraphVertexSet _single_vertex_neighborhood(const size_t vertex_idx) const;
+
+  // Corresponds to subset-first subset enunmeration in the paper
+  std::vector<JoinGraphVertexSet> _non_empty_subsets(const JoinGraphVertexSet& vertex_set) const;
+};
 
 }  // namespace opossum

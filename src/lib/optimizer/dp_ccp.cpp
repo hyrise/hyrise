@@ -90,6 +90,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(const std::shared_ptr<Ab
   auto predicate_nodes_and_cost = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cost>>{};
   predicate_nodes_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
+    std::cout << "P: " << predicate->as_column_name() << std::endl;
     const auto predicate_node = PredicateNode::make(predicate, lqp);
     predicate_nodes_and_cost.emplace_back(predicate_node, _cost_model->estimate_plan_cost(predicate_node));
   }
@@ -97,6 +98,10 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(const std::shared_ptr<Ab
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
     return lhs.second < rhs.second;
   });
+
+  for (const auto& node : predicate_nodes_and_cost) {
+    std::cout << "N: " << node.first->description() << " " << node.second << std::endl;
+  }
 
   predicate_nodes_and_cost.front().first->set_left_input(lqp);
 
