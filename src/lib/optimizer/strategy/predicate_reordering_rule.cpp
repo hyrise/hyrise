@@ -20,6 +20,7 @@ std::string PredicateReorderingRule::name() const { return "Predicate Reordering
 bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   auto reordered = false;
 
+  // Validate can be seen as a Predicate on the MVCC column
   if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
