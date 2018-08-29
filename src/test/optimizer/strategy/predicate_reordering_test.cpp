@@ -39,7 +39,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
     _rule = std::make_shared<PredicateReorderingRule>();
 
     std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
-        {std::make_shared<ColumnStatistics<int32_t>>(0.0f, 20, 10, 100),
+        {std::make_shared<ColumnStatistics<int32_t>>(0.5f, 20, 10, 100),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 5, 50, 60),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 2, 110, 1100)});
 
@@ -257,6 +257,21 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
     ValidateNode::make(
       PredicateNode::make(greater_than_(a, 50),
         node));
+  // clang-format on
+
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+}
+
+TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
+  // clang-format off
+  const auto input_lqp =
+    PredicateNode::make(greater_than_(a, 90),
+      ValidateNode::make(node));
+
+  const auto expected_lqp =
+    PredicateNode::make(greater_than_(a, 90),
+      ValidateNode::make(node));
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
