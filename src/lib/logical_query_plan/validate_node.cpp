@@ -20,8 +20,7 @@ std::shared_ptr<TableStatistics> ValidateNode::derive_statistics_from(
 
   auto input_statistics = left_input->get_statistics();
 
-  return std::make_shared<TableStatistics>(input_statistics->table_type(),
-                                           input_statistics->approx_valid_row_count(),
+  return std::make_shared<TableStatistics>(input_statistics->table_type(), input_statistics->approx_valid_row_count(),
                                            input_statistics->column_statistics());
 }
 
