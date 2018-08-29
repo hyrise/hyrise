@@ -13,7 +13,9 @@ template <typename T>
 RunLengthColumn<T>::RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
                                     const std::shared_ptr<const pmr_vector<bool>>& null_values,
                                     const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
-    : BaseEncodedColumn(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseEncodedColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
       _values{values},
       _null_values{null_values},
       _end_positions{end_positions} {}
@@ -36,15 +38,29 @@ std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthColumn<T>::end_positions
 template <typename T>
 const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (!typed_value.has_value()) {
+    return NULL_VALUE;
+  }
+  return *typed_value;
+}
 
+template <typename T>
+const std::optional<T> RunLengthColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
   const auto is_null = (*_null_values)[index];
-  if (is_null) return NULL_VALUE;
+  if (is_null) {
+    return std::nullopt;
+  }
 
-  const auto value = (*_values)[index];
-  return AllTypeVariant{value};
+  return (*_values)[index];
+}
+
+template <typename T>
+void RunLengthColumn<T>::append_typed_value(const std::optional<T> value_or_null) {
+  Fail("Encoded column is immutable.");
 }
 
 template <typename T>

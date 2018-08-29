@@ -10,7 +10,9 @@ namespace opossum {
 template <typename T, typename U>
 FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
                                                      std::unique_ptr<const BaseCompressedVector> offset_values)
-    : BaseEncodedColumn{data_type_from_type<T>()},
+    : BaseColumn{data_type_from_type<T>()},
+      BaseEncodedColumn{data_type_from_type<T>()},
+      BaseTypedColumn<T>{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
       _offset_values{std::move(offset_values)},
@@ -34,18 +36,28 @@ const BaseCompressedVector& FrameOfReferenceColumn<T, U>::offset_values() const 
 template <typename T, typename U>
 const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
-
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
-  if (_null_values[chunk_offset]) {
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (!typed_value.has_value()) {
     return NULL_VALUE;
   }
+  return *typed_value;
+}
 
+template <typename T, typename U>
+const std::optional<T> FrameOfReferenceColumn<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
+  if (_null_values[chunk_offset]) {
+    return std::nullopt;
+  }
   const auto minimum = _block_minima[chunk_offset / block_size];
-
   const auto value = static_cast<T>(_decoder->get(chunk_offset)) + minimum;
-
   return value;
+}
+
+template <typename T, typename U>
+void FrameOfReferenceColumn<T, U>::append_typed_value(const std::optional<T> value_or_null) {
+  Fail("Encoded column is immutable.");
 }
 
 template <typename T, typename U>

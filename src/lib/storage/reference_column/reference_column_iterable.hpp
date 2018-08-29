@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+#include "storage/base_typed_column.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
@@ -43,10 +45,13 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _table{table},
           _column_id{column_id},
-          _cached_chunk_id{INVALID_CHUNK_ID},
-          _cached_column{nullptr},
           _begin_pos_list_it{begin_pos_list_it},
-          _pos_list_it{pos_list_it} {}
+          _pos_list_it{pos_list_it},
+          _columns{_table->chunk_count(), nullptr} {
+      for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
+        _insert_referenced_column(chunk_id);
+      }
+    }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -55,49 +60,38 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     bool equal(const Iterator& other) const { return _pos_list_it == other._pos_list_it; }
 
-    // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     ColumnIteratorValue<T> dereference() const {
       if (_pos_list_it->is_null()) return ColumnIteratorValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      if (chunk_id != _cached_chunk_id) {
-        _cached_chunk_id = chunk_id;
-        const auto chunk = _table->get_chunk(chunk_id);
-        _cached_column = chunk->get_column(_column_id);
-      }
-
-      /**
-       * This is just a temporary solution to supporting encoded column type.
-       * It’s very slow and is going to be replaced very soon!
-       */
-      return _value_from_any_column(*_cached_column, chunk_offset);
-    }
-
-   private:
-    auto _value_from_any_column(const BaseColumn& column, const ChunkOffset& chunk_offset) const {
-      const auto variant_value = column[chunk_offset];
-
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      if (variant_is_null(variant_value)) {
-        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_column};
-      }
+      const auto typed_value = _columns[chunk_id]->get_typed_value(chunk_offset);
 
-      return ColumnIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_column};
+      return ColumnIteratorValue<T>{typed_value.value_or(T{}), !typed_value.has_value(), chunk_offset_into_ref_column};
+    }
+
+   private:
+    void _insert_referenced_column(const ChunkID chunk_id) {
+      if (_columns[chunk_id] == nullptr) {
+        auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
+        auto base_column_t = std::dynamic_pointer_cast<const BaseTypedColumn<T>>(column);
+        DebugAssert(base_column_t, "Cannot cast to BaseColumnT<T>");
+        _columns[chunk_id] = base_column_t;
+      }
     }
 
    private:
     const std::shared_ptr<const Table> _table;
     const ColumnID _column_id;
 
-    mutable ChunkID _cached_chunk_id;
-    mutable std::shared_ptr<const BaseColumn> _cached_column;
-
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
+
+    std::vector<std::shared_ptr<const BaseTypedColumn<T>>> _columns;
   };
 };
 

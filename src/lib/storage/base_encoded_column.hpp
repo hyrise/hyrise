@@ -13,7 +13,7 @@ enum class CompressedVectorType : uint8_t;
  * Since encoded columns are immutable, all member variables
  * of sub-classes should be declared const.
  */
-class BaseEncodedColumn : public BaseColumn {
+class BaseEncodedColumn : public virtual BaseColumn {
  public:
   using BaseColumn::BaseColumn;
 

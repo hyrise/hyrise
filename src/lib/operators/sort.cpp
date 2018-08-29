@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -88,15 +89,34 @@ class Sort::SortImplMaterializeOutput {
         auto column_it = columns_out.begin();
         auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
+
+        auto column_ptr_and_typed_ptr_by_chunk_id =
+            std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseColumn>,
+                                                  std::shared_ptr<const BaseTypedColumn<ColumnDataType>>>>();
+        column_ptr_and_typed_ptr_by_chunk_id.reserve(row_count_out);
+
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
-          const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
+          auto& column_ptr_and_typed_ptr_pair = column_ptr_and_typed_ptr_by_chunk_id[chunk_id];
+          auto& base_column = column_ptr_and_typed_ptr_pair.first;
+          auto& typed_column = column_ptr_and_typed_ptr_pair.second;
 
-          // Previously the value was retrieved by calling a virtual method,
-          // which was just as slow as using the subscript operator.
-          const auto value = (*column)[chunk_offset];
-          (*column_it)->append(value);
+          if (!base_column) {
+            base_column = _table_in->get_chunk(chunk_id)->get_column(column_id);
+            typed_column = std::dynamic_pointer_cast<const BaseTypedColumn<ColumnDataType>>(base_column);
+          }
+
+          // If the input column is not a ReferenceColumn, we can take a fast(er) path
+          if (typed_column) {
+            const auto value = typed_column->get_typed_value(chunk_offset);
+            (*column_it)->append_typed_value(value);
+          } else {
+            // Previously the value was retrieved by calling a virtual method,
+            // which was just as slow as using the subscript operator.
+            const auto value = (*base_column)[chunk_offset];
+            (*column_it)->append(value);
+          }
 
           ++chunk_offset_out;
 

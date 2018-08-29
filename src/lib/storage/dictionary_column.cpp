@@ -15,7 +15,9 @@ template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
-    : BaseDictionaryColumn(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseDictionaryColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
@@ -24,16 +26,27 @@ DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
-
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _decoder->get(chunk_offset);
-
-  if (value_id == _null_value_id) {
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (!typed_value.has_value()) {
     return NULL_VALUE;
   }
+  return *typed_value;
+}
 
+template <typename T>
+const std::optional<T> DictionaryColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  const auto value_id = _decoder->get(chunk_offset);
+  if (value_id == _null_value_id) {
+    return std::nullopt;
+  }
   return (*_dictionary)[value_id];
+}
+
+template <typename T>
+void DictionaryColumn<T>::append_typed_value(const std::optional<T>) {
+  Fail("Encoded column is immutable.");
 }
 
 template <typename T>

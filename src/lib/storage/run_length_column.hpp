@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "base_encoded_column.hpp"
+#include "base_typed_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -26,7 +27,7 @@ class BaseCompressedVector;
  * additional boolean vector.
  */
 template <typename T>
-class RunLengthColumn : public BaseEncodedColumn {
+class RunLengthColumn : public BaseEncodedColumn, public BaseTypedColumn<T> {
  public:
   explicit RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
                            const std::shared_ptr<const pmr_vector<bool>>& null_values,
@@ -42,6 +43,10 @@ class RunLengthColumn : public BaseEncodedColumn {
    */
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const final;
+
+  void append_typed_value(const std::optional<T> value_or_null) final;
 
   size_t size() const final;
 

@@ -16,35 +16,51 @@
 namespace opossum {
 
 template <typename T>
-ValueColumn<T>::ValueColumn(bool nullable) : BaseValueColumn(data_type_from_type<T>()) {
+ValueColumn<T>::ValueColumn(bool nullable)
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>
 ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable)
-    : BaseValueColumn(data_type_from_type<T>()), _values(alloc) {
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
+      _values(alloc) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>
 ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()), _values(std::move(values), alloc) {}
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
+      _values(std::move(values), alloc) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                             const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
       _values(std::move(values), alloc),
       _null_values({std::move(null_values), alloc}) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()), _values(values, alloc) {}
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
+      _values(values, alloc) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
                             const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
       _values(values, alloc),
       _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {}
 
@@ -57,8 +73,16 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   if (is_nullable() && _null_values->at(chunk_offset)) {
     return NULL_VALUE;
   }
-
   return _values.at(chunk_offset);
+}
+
+template <typename T>
+const std::optional<T> ValueColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  // Column supports null values and value is null
+  if (is_nullable() && (*_null_values)[chunk_offset]) {
+    return std::nullopt;
+  }
+  return _values[chunk_offset];
 }
 
 template <typename T>
@@ -84,9 +108,24 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+  Assert(!is_null, "ValueColumn is not nullable but value passed is null.");
 
   _values.push_back(type_cast<T>(val));
+}
+
+template <typename T>
+void ValueColumn<T>::append_typed_value(const std::optional<T> value_or_null) {
+  const bool is_null = !value_or_null.has_value();
+
+  if (is_nullable()) {
+    (*_null_values).push_back(is_null);
+    _values.push_back(is_null ? T{} : *value_or_null);
+    return;
+  }
+
+  Assert(!is_null, "ValueColumn is not nullable but value passed is null.");
+
+  _values.push_back(*value_or_null);
 }
 
 template <typename T>
