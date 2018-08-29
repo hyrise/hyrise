@@ -29,6 +29,8 @@ Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode
       switch (union_node->union_mode) {
         case UnionMode::Positions:
           return left_row_count * std::log(left_row_count) + right_row_count * std::log(right_row_count);
+        default:
+          Fail("GCC thinks this is reachable");
       }
     }
 
