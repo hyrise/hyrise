@@ -38,8 +38,8 @@ class DpCcpTest : public ::testing::Test {
     node_c->set_statistics(table_statistics_c);
 
     a_a = node_a->get_column("a");
-    b_a = node_a->get_column("a");
-    c_a = node_a->get_column("a");
+    b_a = node_b->get_column("a");
+    c_a = node_c->get_column("a");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
@@ -52,18 +52,16 @@ TEST_F(DpCcpTest, Basic) {
    * Test two vertices and a single join predicate
    */
 
-  auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
-  auto join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, expression_vector(equals_(a_a, c_a))};
+  const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
+  const auto join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, expression_vector(equals_(a_a, c_a))};
 
-  auto join_graph = JoinGraph(
+  const auto join_graph = JoinGraph(
     std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c})
   );
   DpCcp dp_ccp{cost_model};
 
   const auto actual_lqp = dp_ccp(join_graph);
-
-  actual_lqp->print();
 
   // clang-format off
   const auto expected_lqp =
@@ -75,6 +73,32 @@ TEST_F(DpCcpTest, Basic) {
   // clang-format on
 
   EXPECT_LQP_EQ(expected_lqp, actual_lqp);
+}
+
+TEST_F(DpCcpTest, ComplexJoinPredicate) {
+  // Test that complex predicates will not be considered for the join operation (since our join operators can't execute
+  // them)
+
+  const auto complex_predicate = equals_(add_(a_a, 2), b_a);
+  auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b11}, expression_vector(complex_predicate)};
+
+  const auto join_graph = JoinGraph(
+    std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
+    std::vector<JoinGraphEdge>({join_edge_a_b})
+  );
+  DpCcp dp_ccp{cost_model};
+
+  const auto actual_lqp = dp_ccp(join_graph);
+
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(complex_predicate,
+    JoinNode::make(JoinMode::Cross,
+      node_a,
+      node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum

@@ -188,7 +188,7 @@ TEST_F(JoinGraphBuilderTest, ComputedExpression) {
 }
 
 TEST_F(JoinGraphBuilderTest, OuterJoin) {
-  // OuterJoins are treated as
+  // Test that outer joins are treated as vertices
 
   // clang-format off
   const auto outer_join_node =
@@ -213,7 +213,28 @@ TEST_F(JoinGraphBuilderTest, OuterJoin) {
   EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(2, 0b11));
   EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 1u);
   EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0), *equals_(a_a, b_a));
+}
 
+TEST_F(JoinGraphBuilderTest, MultipleComponents) {
+  // Test that components in the join graph get merged with a cross join
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Cross,
+    node_a,
+    node_b);
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder{}(lqp);
+  ASSERT_TRUE(join_graph);
+
+  ASSERT_EQ(join_graph->vertices.size(), 2u);
+  EXPECT_EQ(join_graph->vertices.at(0), node_a);
+  EXPECT_EQ(join_graph->vertices.at(1), node_b);
+
+  ASSERT_EQ(join_graph->edges.size(), 1u);
+  EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(2, 0b11));
+  EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 0u);
 }
 
 }  // namespace opossum

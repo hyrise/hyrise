@@ -89,6 +89,7 @@ set(
     statistics/table_statistics_test.cpp
     optimizer/enumerate_ccp_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/join_graph_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/dp_ccp_test.cpp

@@ -36,14 +36,3 @@ class JoinGraphEdge final {
 };
 
 }  // namespace opossum
-
-namespace std {
-template<typename B, typename A>
-struct hash<boost::dynamic_bitset<B, A>> {
-  std::size_t operator()(const boost::dynamic_bitset<B, A> &v) const {
-    for (const auto& block : v)
-
-    return boost::hash_value(v.to_ulong());
-  }
-};
-}

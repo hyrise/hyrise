@@ -4,6 +4,7 @@
 
 #include "cost_model/abstract_cost_model.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "enumerate_ccp.hpp"
 #include "join_graph.hpp"
 
@@ -90,7 +91,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(const std::shared_ptr<Ab
   auto predicate_nodes_and_cost = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cost>>{};
   predicate_nodes_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
-    std::cout << "P: " << predicate->as_column_name() << std::endl;
     const auto predicate_node = PredicateNode::make(predicate, lqp);
     predicate_nodes_and_cost.emplace_back(predicate_node, _cost_model->estimate_plan_cost(predicate_node));
   }
@@ -98,10 +98,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(const std::shared_ptr<Ab
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
     return lhs.second < rhs.second;
   });
-
-  for (const auto& node : predicate_nodes_and_cost) {
-    std::cout << "N: " << node.first->description() << " " << node.second << std::endl;
-  }
 
   predicate_nodes_and_cost.front().first->set_left_input(lqp);
 
@@ -118,6 +114,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPN
   /**
    * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates) are executed as
    * column-to-column scans after the join.
+   * The primary predicate needs to be a simple "<column> <operator> <column>" predicate, otherwise the join operators
+   * won't be able to execute it.
    *
    * The optimality-ensuring way to order the predicates would be to find the cheapest of the predicates.size()!
    * orders of them.
@@ -125,6 +123,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPN
    * directly on top of `lqp`, with the cheapest predicate becoming the primary predicate.
    */
 
+  // Sort the predicates by increasing cost
   auto predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
   predicates_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
@@ -140,15 +139,30 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPN
     return lhs.second < rhs.second;
   });
 
-  std::shared_ptr<AbstractLQPNode> lqp = JoinNode::make(JoinMode::Inner, predicates_and_cost.front().first, left_lqp, right_lqp);
+  // Find the simple predicate with the lowest cost (if any exists), which will act as the primary predicate
+  std::shared_ptr<AbstractExpression> primary_predicate;
+  for (auto predicate_iter = predicates_and_cost.begin(); predicate_iter != predicates_and_cost.end(); ++predicate_iter) {
+    const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
+    if (operator_join_predicate) {
+      primary_predicate = predicate_iter->first;
+      predicates_and_cost.erase(predicate_iter);
+      break;
+    }
+  }
 
-  for (auto predicate_idx = size_t{1}; predicate_idx < predicates_and_cost.size(); ++predicate_idx) {
-    lqp = PredicateNode::make(predicates_and_cost[predicate_idx].first, lqp);
+  // Build JoinNode (for primary predicate) and subsequent scans (for secondary predicates)
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+  if (primary_predicate) {
+    lqp = JoinNode::make(JoinMode::Inner, primary_predicate, left_lqp, right_lqp);
+  } else {
+    lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
+  }
+
+  for (const auto& predicate_and_cost : predicates_and_cost) {
+    lqp = PredicateNode::make(predicate_and_cost.first, lqp);
   }
 
   return lqp;
-
-
 }
 
 }

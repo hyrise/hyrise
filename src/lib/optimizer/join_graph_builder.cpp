@@ -1,5 +1,6 @@
 #include "join_graph_builder.hpp"
 
+#include <algorithm>
 #include <numeric>
 #include <stack>
 #include <queue>
