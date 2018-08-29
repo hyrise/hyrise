@@ -49,8 +49,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
   if (variant_value.which() == detail::index_of(data_types_including_null, hana::type_c<NullValue>)) {
     auto column_statistics =
         std::make_shared<ColumnStatistics<ColumnDataType>>(_null_value_ratio, _distinct_count, _min, _max);
-    auto selectivity = 1.f - _null_value_ratio;
-    return {selectivity, column_statistics};
+    return {_null_value_ratio, column_statistics};
   }
 
   const auto value = type_cast<ColumnDataType>(variant_value);
