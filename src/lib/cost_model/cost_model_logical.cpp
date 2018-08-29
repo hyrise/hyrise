@@ -3,9 +3,9 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -26,7 +26,7 @@ Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode
     case LQPNodeType::Union: {
       const auto union_node = std::static_pointer_cast<UnionNode>(node);
 
-      switch(union_node->union_mode) {
+      switch (union_node->union_mode) {
         case UnionMode::Positions:
           return left_row_count * std::log(left_row_count) + right_row_count * std::log(right_row_count);
       }

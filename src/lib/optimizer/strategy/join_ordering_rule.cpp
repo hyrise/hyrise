@@ -1,19 +1,16 @@
 #include "join_ordering_rule.hpp"
 
-#include "logical_query_plan/projection_node.hpp"
 #include "expression/expression_utils.hpp"
+#include "logical_query_plan/projection_node.hpp"
 #include "optimizer/dp_ccp.hpp"
 #include "optimizer/join_graph.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-JoinOrderingRule::JoinOrderingRule(const std::shared_ptr<AbstractCostModel>& cost_model):
-  _cost_model(cost_model) {}
+JoinOrderingRule::JoinOrderingRule(const std::shared_ptr<AbstractCostModel>& cost_model) : _cost_model(cost_model) {}
 
-std::string JoinOrderingRule::name() const {
-  return "JoinOrderingRule";
-}
+std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
 bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
@@ -32,15 +29,15 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
   return false;
 }
 
-std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_traverse_and_perform_join_ordering(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_traverse_and_perform_join_ordering(
+    const std::shared_ptr<AbstractLQPNode>& lqp) const {
   const auto join_graph = JoinGraph::from_lqp(lqp);
   if (!join_graph) {
     _apply_traverse_to_inputs(lqp);
     return lqp;
   }
 
-
-  auto result_lqp = DpCcp{_cost_model}(*join_graph);
+  auto result_lqp = DpCcp{_cost_model}(*join_graph);  // NOLINT - doesn't like `{}()`
 
   for (const auto& vertex : join_graph->vertices) {
     _apply_traverse_to_inputs(vertex);

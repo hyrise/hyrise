@@ -21,7 +21,8 @@ class MockNodeTest : public ::testing::Test {
     auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     _statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
 
-    _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
+    _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
+        {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }

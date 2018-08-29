@@ -24,9 +24,9 @@ class EnumerateCcp final {
  private:
   const size_t _num_vertices;
   const std::vector<std::pair<size_t, size_t>> _edges;
-  
+
   std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> _csg_cmp_pairs;
-  
+
   // Lookup table
   std::vector<JoinGraphVertexSet> _vertex_neighborhoods;
 
@@ -41,8 +41,7 @@ class EnumerateCcp final {
   JoinGraphVertexSet _exclusion_set(const size_t vertex_idx) const;
 
   // Corresponds to N(S) in the paper
-  JoinGraphVertexSet _neighborhood(const JoinGraphVertexSet& vertex_set,
-                                          const JoinGraphVertexSet& exclusion_set) const;
+  JoinGraphVertexSet _neighborhood(const JoinGraphVertexSet& vertex_set, const JoinGraphVertexSet& exclusion_set) const;
 
   JoinGraphVertexSet _single_vertex_neighborhood(const size_t vertex_idx) const;
 

@@ -25,9 +25,7 @@ LQPColumnReference MockNode::get_column(const std::string& name) const {
   Fail("Couldn't find column named '"s + name + "' in MockNode");
 }
 
-const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
-  return _column_definitions;
-}
+const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
   if (!_column_expressions) {
@@ -52,9 +50,7 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
   return _table_statistics;
 }
 
-void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) {
-  _table_statistics = statistics;
-}
+void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }
 
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions);

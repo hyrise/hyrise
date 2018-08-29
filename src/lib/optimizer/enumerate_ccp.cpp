@@ -8,9 +8,8 @@
 namespace opossum {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
-: _num_vertices(num_vertices), _edges(std::move(edges)) {
-
-  Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");
+    : _num_vertices(num_vertices), _edges(std::move(edges)) {
+  Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");  // NOLINT
 
 #if IS_DEBUG
   // Test the input data for validity, i.e. whether all mentioned vertex indices in the edges are smaller than
@@ -57,8 +56,10 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 
   for (auto csg_cmp_pair : _csg_cmp_pairs) {
     // Components must be either single-vertex or must have been enumerated as the vertex set of a previously CCP
-    Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0, "CSG not yet enumerated");
-    Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0, "CSG not yet enumerated");
+    Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
+           "CSG not yet enumerated");
+    Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,
+           "CSG not yet enumerated");
 
     enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
 
@@ -71,8 +72,7 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
   return _csg_cmp_pairs;
 }
 
-void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs,
-                                            const JoinGraphVertexSet& vertex_set,
+void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs, const JoinGraphVertexSet& vertex_set,
                                             const JoinGraphVertexSet& exclusion_set) {
   const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
   const auto neighborhood_subsets = _non_empty_subsets(neighborhood);
@@ -88,7 +88,6 @@ void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csg
 }
 
 void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& vertex_set) {
-
   const auto exclusion_set = _exclusion_set(vertex_set.find_first()) | vertex_set;
   const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
 
@@ -130,7 +129,7 @@ JoinGraphVertexSet EnumerateCcp::_neighborhood(const JoinGraphVertexSet& vertex_
                                                const JoinGraphVertexSet& exclusion_set) const {
   JoinGraphVertexSet neighborhood(_num_vertices);
 
-  for (auto current_vertex_idx = size_t{0};current_vertex_idx < _num_vertices; ++current_vertex_idx) {
+  for (auto current_vertex_idx = size_t{0}; current_vertex_idx < _num_vertices; ++current_vertex_idx) {
     if (!vertex_set[current_vertex_idx]) continue;
 
     neighborhood |= _vertex_neighborhoods[current_vertex_idx];

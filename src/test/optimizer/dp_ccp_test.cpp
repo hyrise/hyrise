@@ -7,11 +7,11 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/dp_ccp.hpp"
 #include "optimizer/join_graph.hpp"
-#include "storage/storage_manager.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/load_table.hpp"
+#include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -26,9 +26,12 @@ class DpCcpTest : public ::testing::Test {
     const auto column_statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 40, 100);
     const auto column_statistics_c_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 100);
 
-    const auto table_statistics_a = std::make_shared<TableStatistics>(TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_a_a});
-    const auto table_statistics_b = std::make_shared<TableStatistics>(TableType::Data, 3, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
-    const auto table_statistics_c = std::make_shared<TableStatistics>(TableType::Data, 5, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
+    const auto table_statistics_a = std::make_shared<TableStatistics>(
+        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_a_a});
+    const auto table_statistics_b = std::make_shared<TableStatistics>(
+        TableType::Data, 3, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
+    const auto table_statistics_c = std::make_shared<TableStatistics>(
+        TableType::Data, 5, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_statistics(table_statistics_a);
@@ -55,10 +58,8 @@ TEST_F(DpCcpTest, Basic) {
   const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
   const auto join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, expression_vector(equals_(a_a, c_a))};
 
-  const auto join_graph = JoinGraph(
-    std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
-    std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c})
-  );
+  const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
+                                    std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c}));
   DpCcp dp_ccp{cost_model};
 
   const auto actual_lqp = dp_ccp(join_graph);
@@ -82,10 +83,8 @@ TEST_F(DpCcpTest, ComplexJoinPredicate) {
   const auto complex_predicate = equals_(add_(a_a, 2), b_a);
   auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b11}, expression_vector(complex_predicate)};
 
-  const auto join_graph = JoinGraph(
-    std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
-    std::vector<JoinGraphEdge>({join_edge_a_b})
-  );
+  const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
+                                    std::vector<JoinGraphEdge>({join_edge_a_b}));
   DpCcp dp_ccp{cost_model};
 
   const auto actual_lqp = dp_ccp(join_graph);

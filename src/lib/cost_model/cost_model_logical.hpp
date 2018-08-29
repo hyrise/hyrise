@@ -11,7 +11,7 @@ class AbstractExpression;
  */
 class CostModelLogical : public AbstractCostModel {
  protected:
-  virtual Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   // Number of operations +  number of different columns accessed to judge expression complexity
   static float _get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression);

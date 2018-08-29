@@ -3,15 +3,14 @@
 #include <unordered_map>
 
 #include "cost_model/abstract_cost_model.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "operators/operator_join_predicate.hpp"
 #include "enumerate_ccp.hpp"
 #include "join_graph.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "operators/operator_join_predicate.hpp"
 
 namespace opossum {
 
-DpCcp::DpCcp(const std::shared_ptr<AbstractCostModel>& cost_model):
-  _cost_model(cost_model) {}
+DpCcp::DpCcp(const std::shared_ptr<AbstractCostModel>& cost_model) : _cost_model(cost_model) {}
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) {
   // No std::unordered_map, since hashing of JoinGraphVertexSet is not trivially possible because of hidden data
@@ -48,11 +47,12 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   /**
    * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan
    */
-  const auto csg_cmp_pairs = EnumerateCcp{join_graph.vertices.size(), enumerate_ccp_edges}();
+  const auto csg_cmp_pairs = EnumerateCcp{join_graph.vertices.size(), enumerate_ccp_edges}();  // NOLINT
   for (const auto& csg_cmp_pair : csg_cmp_pairs) {
     const auto best_plan_left_iter = best_plan.find(csg_cmp_pair.first);
     const auto best_plan_right_iter = best_plan.find(csg_cmp_pair.second);
-    DebugAssert(best_plan_left_iter != best_plan.end() && best_plan_right_iter != best_plan.end(), "Subplan missing: either the JoinGraph is invalid or EnumerateCcp is buggy");
+    DebugAssert(best_plan_left_iter != best_plan.end() && best_plan_right_iter != best_plan.end(),
+                "Subplan missing: either the JoinGraph is invalid or EnumerateCcp is buggy");
 
     const auto join_predicates = join_graph.find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
 
@@ -61,7 +61,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
     const auto joined_vertex_set = csg_cmp_pair.first | csg_cmp_pair.second;
 
     const auto best_plan_iter = best_plan.find(joined_vertex_set);
-    if (best_plan_iter == best_plan.end() || _cost_model->estimate_plan_cost(candidate_plan) < _cost_model->estimate_plan_cost(best_plan_iter->second)) {
+    if (best_plan_iter == best_plan.end() ||
+        _cost_model->estimate_plan_cost(candidate_plan) < _cost_model->estimate_plan_cost(best_plan_iter->second)) {
       best_plan.insert_or_assign(joined_vertex_set, candidate_plan);
     }
   }
@@ -78,7 +79,9 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   return best_plan_iter->second;
 }
 
-std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
+std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(
+    const std::shared_ptr<AbstractLQPNode>& lqp,
+    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
   if (predicates.empty()) return lqp;
 
   /**
@@ -95,20 +98,23 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(const std::shared_ptr<Ab
     predicate_nodes_and_cost.emplace_back(predicate_node, _cost_model->estimate_plan_cost(predicate_node));
   }
 
-  std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.second < rhs.second;
-  });
+  std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
+            [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   predicate_nodes_and_cost.front().first->set_left_input(lqp);
 
-  for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes_and_cost.size(); ++predicate_node_idx) {
-    predicate_nodes_and_cost[predicate_node_idx].first->set_left_input(predicate_nodes_and_cost[predicate_node_idx - 1].first);
+  for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes_and_cost.size();
+       ++predicate_node_idx) {
+    predicate_nodes_and_cost[predicate_node_idx].first->set_left_input(
+        predicate_nodes_and_cost[predicate_node_idx - 1].first);
   }
 
   return predicate_nodes_and_cost.back().first;
 }
 
-std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp, std::vector<std::shared_ptr<AbstractExpression>> predicates) const {
+std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPNode>& left_lqp,
+                                              const std::shared_ptr<AbstractLQPNode>& right_lqp,
+                                              std::vector<std::shared_ptr<AbstractExpression>> predicates) const {
   if (predicates.empty()) return JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
 
   /**
@@ -135,14 +141,15 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPN
     join_node->set_right_input(nullptr);
   }
 
-  std::sort(predicates_and_cost.begin(), predicates_and_cost.end(), [&](const auto& lhs, const auto& rhs) {
-    return lhs.second < rhs.second;
-  });
+  std::sort(predicates_and_cost.begin(), predicates_and_cost.end(),
+            [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   // Find the simple predicate with the lowest cost (if any exists), which will act as the primary predicate
   std::shared_ptr<AbstractExpression> primary_predicate;
-  for (auto predicate_iter = predicates_and_cost.begin(); predicate_iter != predicates_and_cost.end(); ++predicate_iter) {
-    const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
+  for (auto predicate_iter = predicates_and_cost.begin(); predicate_iter != predicates_and_cost.end();
+       ++predicate_iter) {
+    const auto operator_join_predicate =
+        OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
     if (operator_join_predicate) {
       primary_predicate = predicate_iter->first;
       predicates_and_cost.erase(predicate_iter);
@@ -165,4 +172,4 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPN
   return lqp;
 }
 
-}
+}  // namespace opossum

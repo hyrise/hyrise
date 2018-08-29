@@ -4,7 +4,9 @@
 
 namespace opossum {
 
-JoinGraphEdge::JoinGraphEdge(const JoinGraphVertexSet& vertex_set, const std::vector<std::shared_ptr<AbstractExpression>>&predicates) : vertex_set(vertex_set), predicates(predicates) {}
+JoinGraphEdge::JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
+                             const std::vector<std::shared_ptr<AbstractExpression>>& predicates)
+    : vertex_set(vertex_set), predicates(predicates) {}
 
 void JoinGraphEdge::print(std::ostream& stream) const {
   stream << "Vertices: " << vertex_set << "; " << predicates.size() << " predicates" << std::endl;

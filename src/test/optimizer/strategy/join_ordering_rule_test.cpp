@@ -3,9 +3,9 @@
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -25,7 +25,8 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
     const auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
-    const auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
+    const auto table_statistics = std::make_shared<TableStatistics>(
+        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_statistics(table_statistics);
@@ -81,7 +82,6 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   actual_lqp->print();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-
 }
 
 }  // namespace opossum

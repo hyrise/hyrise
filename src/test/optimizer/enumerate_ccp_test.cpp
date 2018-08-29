@@ -9,12 +9,12 @@ namespace {
 using namespace opossum;  // NOLINT
 
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs,
-            const std::pair<unsigned long, unsigned long>& rhs) {
-  Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,
+            const std::pair<unsigned long, unsigned long>& rhs) {  // NOLINT - doesn't like unsigned long
+  Assert(lhs.first.size() == lhs.second.size() && lhs.first.size() <= sizeof(unsigned long) * 8,  // NOLINT
          "Bitset has too many bits for comparison");
   return lhs.first.to_ulong() == rhs.first && lhs.second.to_ulong() == rhs.second;
 }
-}
+}  // namespace
 
 namespace opossum {
 
@@ -25,7 +25,7 @@ namespace opossum {
 TEST(EnumerateCcpTest, Simple) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}};
 
-  const auto pairs = EnumerateCcp{2, edges}();
+  const auto pairs = EnumerateCcp{2, edges}();  // NOLINT - {}()
 
   ASSERT_EQ(pairs.size(), 1u);
 
@@ -35,7 +35,7 @@ TEST(EnumerateCcpTest, Simple) {
 TEST(EnumerateCcpTest, Chain) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {1, 2}, {2, 3}};
 
-  const auto pairs = EnumerateCcp{4, edges}();
+  const auto pairs = EnumerateCcp{4, edges}();  // NOLINT - {}()
 
   ASSERT_EQ(pairs.size(), 10u);
 
@@ -54,7 +54,7 @@ TEST(EnumerateCcpTest, Chain) {
 TEST(EnumerateCcpTest, Ring) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {1, 2}, {2, 0}};
 
-  const auto pairs = EnumerateCcp{3, edges}();
+  const auto pairs = EnumerateCcp{3, edges}();  // NOLINT - {}()
 
   ASSERT_EQ(pairs.size(), 6u);
 
@@ -69,7 +69,7 @@ TEST(EnumerateCcpTest, Ring) {
 TEST(EnumerateCcpTest, Star) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {0, 2}, {0, 3}};
 
-  const auto pairs = EnumerateCcp{4, edges}();
+  const auto pairs = EnumerateCcp{4, edges}();  // NOLINT - {}()
 
   ASSERT_EQ(pairs.size(), 12u);
 
@@ -90,7 +90,7 @@ TEST(EnumerateCcpTest, Star) {
 TEST(EnumerateCcpTest, Clique) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 1}, {0, 2}, {0, 3}, {1, 2}, {2, 3}, {1, 3}};
 
-  const auto pairs = EnumerateCcp{4, edges}();
+  const auto pairs = EnumerateCcp{4, edges}();  // NOLINT - {}()
   ASSERT_EQ(pairs.size(), 25u);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b0100ul, 0b1000ul)));
@@ -123,7 +123,7 @@ TEST(EnumerateCcpTest, Clique) {
 TEST(EnumerateCcpTest, ArbitraryVertexNumbering) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 2}, {2, 1}};
 
-  const auto pairs = EnumerateCcp{3, edges}();
+  const auto pairs = EnumerateCcp{3, edges}();  // NOLINT - {}()
   ASSERT_EQ(pairs.size(), 4u);
 
   EXPECT_TRUE(equals(pairs[0], std::make_pair(0b010ul, 0b100ul)));

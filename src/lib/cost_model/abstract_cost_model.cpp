@@ -1,7 +1,7 @@
 #include "abstract_cost_model.hpp"
 
-#include <unordered_set>
 #include <queue>
+#include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 

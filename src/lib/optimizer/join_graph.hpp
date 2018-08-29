@@ -27,8 +27,7 @@ class JoinGraph final {
   static std::optional<JoinGraph> from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 
   JoinGraph() = default;
-  JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-            const std::vector<JoinGraphEdge>& edges);
+  JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, const std::vector<JoinGraphEdge>& edges);
 
   /**
    * Find all predicates that use exactly the nodes in vertex set
@@ -38,8 +37,8 @@ class JoinGraph final {
   /**
    * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them
    */
-  std::vector<std::shared_ptr<AbstractExpression>> find_join_predicates(
-  const JoinGraphVertexSet& vertex_set_a, const JoinGraphVertexSet& vertex_set_b) const;
+  std::vector<std::shared_ptr<AbstractExpression>> find_join_predicates(const JoinGraphVertexSet& vertex_set_a,
+                                                                        const JoinGraphVertexSet& vertex_set_b) const;
 
   void print(std::ostream& stream = std::cout) const;
 

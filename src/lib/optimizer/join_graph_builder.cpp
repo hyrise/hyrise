@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <numeric>
-#include <stack>
 #include <queue>
+#include <stack>
 
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -95,7 +95,7 @@ void JoinGraphBuilder::traverse(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 
 JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
-const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
@@ -124,7 +124,7 @@ const std::shared_ptr<AbstractLQPNode>& node) const {
 }
 
 JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
-const std::shared_ptr<UnionNode>& union_node) const {
+    const std::shared_ptr<UnionNode>& union_node) const {
   DebugAssert(union_node->left_input() && union_node->right_input(),
               "UnionNode needs both inputs set in order to be parsed");
 
@@ -143,8 +143,8 @@ bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) con
 }
 
 std::vector<JoinGraphEdge> JoinGraphBuilder::join_edges_from_predicates(
-                                                                                    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-                                                                                    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
   std::map<JoinGraphVertexSet, size_t> vertices_to_edge_idx;
   std::vector<JoinGraphEdge> edges;
 
@@ -162,7 +162,7 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::join_edges_from_predicates(
 }
 
 std::vector<JoinGraphEdge> JoinGraphBuilder::cross_edges_between_components(
-const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges) {
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges) {
   /**
    * Create edges from the gathered JoinPlanPredicates. We can't directly create the JoinGraph from this since we want
    * the JoinGraph to be connected and there might be edges from CrossJoins still missing.
@@ -241,9 +241,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinG
   return inter_component_edges;
 }
 
-JoinGraphVertexSet JoinGraphBuilder::_get_vertex_set_accessed_by_expression(const AbstractExpression& expression,
-                                                                            const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) {
-
+JoinGraphVertexSet JoinGraphBuilder::_get_vertex_set_accessed_by_expression(
+    const AbstractExpression& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) {
   auto vertex_set = JoinGraphVertexSet{vertices.size()};
   for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
     if (vertices[vertex_idx]->find_column_id(expression)) {

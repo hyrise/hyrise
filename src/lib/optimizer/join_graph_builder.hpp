@@ -35,11 +35,11 @@ class JoinGraphBuilder final {
   std::optional<JoinGraph> operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
 
   static std::vector<JoinGraphEdge> join_edges_from_predicates(
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-  const std::vector<std::shared_ptr<AbstractExpression>>& predicates);
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+      const std::vector<std::shared_ptr<AbstractExpression>>& predicates);
 
   static std::vector<JoinGraphEdge> cross_edges_between_components(
-  const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges);
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges);
 
   /**
    * Traverse the LQP recursively identifying predicates and vertices along the way
@@ -47,7 +47,6 @@ class JoinGraphBuilder final {
   void traverse(const std::shared_ptr<AbstractLQPNode>& node);
 
  private:
-
   /**
    * A subgraph in the LQP consisting of UnionNodes and PredicateNodes can be translated into a single complex predicate
    *
@@ -68,7 +67,7 @@ class JoinGraphBuilder final {
   struct PredicateParseResult {
     PredicateParseResult(const std::shared_ptr<AbstractLQPNode>& base_node,
                          const std::shared_ptr<AbstractExpression>& predicate)
-    : base_node(base_node), predicate(predicate) {}
+        : base_node(base_node), predicate(predicate) {}
 
     std::shared_ptr<AbstractLQPNode> base_node;
     std::shared_ptr<AbstractExpression> predicate;
@@ -86,8 +85,8 @@ class JoinGraphBuilder final {
   /**
    * Lookup which vertices an expression references
    */
-  static JoinGraphVertexSet _get_vertex_set_accessed_by_expression(const AbstractExpression& expression,
-                                                                   const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices);
+  static JoinGraphVertexSet _get_vertex_set_accessed_by_expression(
+      const AbstractExpression& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices);
 
   std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
   std::vector<std::shared_ptr<AbstractExpression>> _predicates;

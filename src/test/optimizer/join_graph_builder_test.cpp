@@ -4,11 +4,11 @@
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_graph_builder.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -46,7 +46,7 @@ TEST_F(JoinGraphBuilderTest, None) {
         node_b)));
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_FALSE(join_graph);
 }
 
@@ -66,7 +66,7 @@ TEST_F(JoinGraphBuilderTest, Basic) {
           node_c))));
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
 
   ASSERT_EQ(join_graph->vertices.size(), 3u);
@@ -100,7 +100,7 @@ TEST_F(JoinGraphBuilderTest, LocalPredicates) {
         node_b)));
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
 
   ASSERT_EQ(join_graph->vertices.size(), 2u);
@@ -139,7 +139,7 @@ TEST_F(JoinGraphBuilderTest, Disjunction) {
         node_a)));
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
 
   ASSERT_EQ(join_graph->vertices.size(), 1u);
@@ -148,7 +148,8 @@ TEST_F(JoinGraphBuilderTest, Disjunction) {
   ASSERT_EQ(join_graph->edges.size(), 1u);
   EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(1, 0b1));
   EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 1u);
-  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0), *or_(equals_(a_a, 5), or_(greater_than_(a_b, 6), less_than_equals_(a_b, 12))));
+  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0),
+            *or_(equals_(a_a, 5), or_(greater_than_(a_b, 6), less_than_equals_(a_b, 12))));
 }
 
 TEST_F(JoinGraphBuilderTest, ComputedExpression) {
@@ -166,7 +167,7 @@ TEST_F(JoinGraphBuilderTest, ComputedExpression) {
     aggregate_node);
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
 
   join_graph->print();
@@ -202,7 +203,7 @@ TEST_F(JoinGraphBuilderTest, OuterJoin) {
     outer_join_node);
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
 
   ASSERT_EQ(join_graph->vertices.size(), 2u);
@@ -225,7 +226,7 @@ TEST_F(JoinGraphBuilderTest, MultipleComponents) {
     node_b);
   // clang-format on
 
-  const auto join_graph = JoinGraphBuilder{}(lqp);
+  const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
 
   ASSERT_EQ(join_graph->vertices.size(), 2u);

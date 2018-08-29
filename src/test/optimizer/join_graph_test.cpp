@@ -32,10 +32,7 @@ TEST_F(JoinGraphTest, FindPredicates) {
   const auto edge_b = JoinGraphEdge{JoinGraphVertexSet{4u, 0b0010}, {equals_(b_a, 3)}};
   const auto edge_c_d = JoinGraphEdge{JoinGraphVertexSet{4u, 0b1100}, {}};
 
-  const auto join_graph = JoinGraph{
-    {node_a, node_b, node_c, node_d},
-    {edge_a_b, edge_b_c, edge_c_d, edge_b}
-  };
+  const auto join_graph = JoinGraph{{node_a, node_b, node_c, node_d}, {edge_a_b, edge_b_c, edge_c_d, edge_b}};
 
   EXPECT_EQ(join_graph.find_local_predicates(0).size(), 0u);
   ASSERT_EQ(join_graph.find_local_predicates(1).size(), 1u);

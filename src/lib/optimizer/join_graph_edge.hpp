@@ -1,10 +1,10 @@
 #pragma once
 
-#include <memory>
 #include <iostream>
+#include <memory>
 
-#include "boost/functional/hash.hpp"
 #include "boost/dynamic_bitset.hpp"
+#include "boost/functional/hash.hpp"
 
 #include "utils/assert.hpp"
 
@@ -29,7 +29,8 @@ using JoinGraphVertexSet = boost::dynamic_bitset<>;
  */
 class JoinGraphEdge final {
  public:
-  explicit JoinGraphEdge(const JoinGraphVertexSet& vertex_set, const std::vector<std::shared_ptr<AbstractExpression>>& predicates = {});
+  explicit JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
+                         const std::vector<std::shared_ptr<AbstractExpression>>& predicates = {});
 
   void print(std::ostream& stream = std::cout) const;
 
