@@ -39,11 +39,13 @@ class PredicateReorderingTest : public StrategyBaseTest {
     _rule = std::make_shared<PredicateReorderingRule>();
 
     std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
-        {std::make_shared<ColumnStatistics<int32_t>>(0.5f, 20, 10, 100),
+        {std::make_shared<ColumnStatistics<int32_t>>(0.0f, 20, 10, 100),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 5, 50, 60),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 2, 110, 1100)});
 
     auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 100, column_statistics);
+    // Assumes 50% deleted rows
+    table_statistics->increment_invalid_row_count(50);
 
     node = StoredTableNode::make("a");
     table->set_table_statistics(table_statistics);
@@ -250,12 +252,12 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
   const auto input_lqp =
-    PredicateNode::make(greater_than_(a, 50),
+    PredicateNode::make(greater_than_(a, 60),
       ValidateNode::make(node));
 
   const auto expected_lqp =
     ValidateNode::make(
-      PredicateNode::make(greater_than_(a, 50),
+      PredicateNode::make(greater_than_(a, 60),
         node));
   // clang-format on
 
@@ -266,11 +268,11 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
 TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
   // clang-format off
   const auto input_lqp =
-    PredicateNode::make(greater_than_(a, 90),
+    PredicateNode::make(greater_than_(a, 30),
       ValidateNode::make(node));
 
   const auto expected_lqp =
-    PredicateNode::make(greater_than_(a, 90),
+    PredicateNode::make(greater_than_(a, 30),
       ValidateNode::make(node));
   // clang-format on
 

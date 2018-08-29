@@ -441,13 +441,13 @@ TEST_F(ColumnStatisticsTest, Dummy) {
 }
 
 TEST_F(ColumnStatisticsTest, EstimateEqualsNullPredicate) {
-  auto result = _column_statistics_int_null->estimate_predicate_with_value(PredicateCondition::Equals,
+  auto result = _column_statistics_int_null->estimate_predicate_with_value(PredicateCondition::IsNull,
                                                                            AllTypeVariant(NullValue{}));
   EXPECT_FLOAT_EQ(result.selectivity, 0.25f);
 }
 
 TEST_F(ColumnStatisticsTest, EstimateNotEqualsNullPredicate) {
-  auto result = _column_statistics_int_null->estimate_predicate_with_value(PredicateCondition::NotEquals,
+  auto result = _column_statistics_int_null->estimate_predicate_with_value(PredicateCondition::IsNotNull,
                                                                            AllTypeVariant(NullValue{}));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f);
 }

@@ -48,18 +48,17 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
   // TODO(anyone): Implement NULL handling properly
   if (variant_value.which() == detail::index_of(data_types_including_null, hana::type_c<NullValue>)) {
     switch (predicate_condition) {
-      case PredicateCondition::Equals:
-        auto column_statistics =
-          std::make_shared<ColumnStatistics<ColumnDataType>>(_null_value_ratio, 1, _min, _max);
+      case PredicateCondition::IsNull: {
+        auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(_null_value_ratio, 1, _min, _max);
         return {_null_value_ratio, column_statistics};
-      case PredicateCondition::NotEquals:
-        auto column_statistics =
-          std::make_shared<ColumnStatistics<ColumnDataType>>(0.f, _distinct_count, _min, _max);
+      }
+      case PredicateCondition::IsNotNull: {
+        auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.f, _distinct_count, _min, _max);
         return {1 - _null_value_ratio, column_statistics};
+      }
       default:
         Fail("Estimation not implemented for requested PredicateCondition on NULL values");
     }
-    
   }
 
   const auto value = type_cast<ColumnDataType>(variant_value);
