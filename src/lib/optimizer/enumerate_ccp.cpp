@@ -9,6 +9,9 @@ namespace opossum {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
 : _num_vertices(num_vertices), _edges(std::move(edges)) {
+
+  Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");
+
 #if IS_DEBUG
   // Test the input data for validity, i.e. whether all mentioned vertex indices in the edges are smaller than
   // _num_vertices
@@ -151,8 +154,6 @@ JoinGraphVertexSet EnumerateCcp::_single_vertex_neighborhood(const size_t vertex
 }
 
 std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraphVertexSet& vertex_set) const {
-  DebugAssert(vertex_set.size() <= sizeof(unsigned long) * 8, "To many bits to perform subset enumerations with this algorithm, since it relies on to_ulong()");
-
   if (vertex_set.none()) return {};
 
   std::vector<JoinGraphVertexSet> subsets;

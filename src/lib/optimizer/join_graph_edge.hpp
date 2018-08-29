@@ -6,6 +6,8 @@
 #include "boost/functional/hash.hpp"
 #include "boost/dynamic_bitset.hpp"
 
+#include "utils/assert.hpp"
+
 namespace opossum {
 
 class AbstractExpression;

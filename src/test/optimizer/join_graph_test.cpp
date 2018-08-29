@@ -20,11 +20,10 @@ class JoinGraphTest : public ::testing::Test {
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");
     c_a = node_c->get_column("a");
-    d_a = node_d->get_column("a");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  LQPColumnReference a_a, b_a, c_a, d_a;
+  LQPColumnReference a_a, b_a, c_a;
 };
 
 TEST_F(JoinGraphTest, FindPredicates) {
