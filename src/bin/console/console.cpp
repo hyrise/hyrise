@@ -746,7 +746,7 @@ int Console::_unload_plugin(const std::string& input) {
 
   const std::string& plugin_name = arguments[0];
 
-  PluginManager::get().stop_plugin(plugin_name);
+  PluginManager::get().unload_plugin(plugin_name);
 
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache.

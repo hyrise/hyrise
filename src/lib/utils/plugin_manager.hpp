@@ -19,7 +19,7 @@ class PluginManager : public Singleton<PluginManager> {
 
  public:
   void load_plugin(const std::string& path, const PluginName& name);
-  void stop_plugin(const PluginName& name);
+  void unload_plugin(const PluginName& name);
 
   ~PluginManager();
 
@@ -43,7 +43,7 @@ class PluginManager : public Singleton<PluginManager> {
   // This method is called during destruction and stops and unloads all currently loaded plugions.
   void _clean_up();
   bool _is_duplicate(AbstractPlugin* plugin) const;
-  const std::unordered_map<PluginName, PluginHandleWrapper>::iterator _stop_plugin(
+  const std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_erase_plugin(
       const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it);
 };
 }  // namespace opossum

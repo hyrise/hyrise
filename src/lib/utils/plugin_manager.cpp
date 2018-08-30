@@ -55,14 +55,14 @@ void PluginManager::load_plugin(const std::string& path, const PluginName& name)
 
 void PluginManager::reset() { get() = PluginManager(); }
 
-void PluginManager::stop_plugin(const PluginName& name) {
+void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);
   if (plugin != _plugins.cend()) {
-    _stop_plugin(plugin);
+    _unload_erase_plugin(plugin);
   }
 }
 
-const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_stop_plugin(
+const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
     const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it) {
   const PluginName name = it->first;
   auto plugin_handle_wrapper = it->second;
@@ -77,7 +77,7 @@ const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManage
 
 void PluginManager::_clean_up() {
   for (auto it = _plugins.begin(); it != _plugins.end();) {
-    it = _stop_plugin(it);
+    it = _unload_erase_plugin(it);
   }
 }
 

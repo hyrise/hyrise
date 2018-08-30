@@ -38,7 +38,7 @@ TEST_F(PluginManagerTest, LoadStopPlugin) {
   // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));
 
-  pm.stop_plugin("TestPlugin");
+  pm.unload_plugin("TestPlugin");
 
   // The test plugin removes the dummy table from the storage manager when it is stopped
   EXPECT_FALSE(sm.has_table("DummyTable"));
