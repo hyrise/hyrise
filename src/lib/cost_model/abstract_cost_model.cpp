@@ -20,11 +20,13 @@ Cost AbstractCostModel::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode
   while (!bfs_queue.empty()) {
     const auto current_node = bfs_queue.front();
     bfs_queue.pop();
-    if (!visited.emplace(current_node).second) {
+    if (!current_node || !visited.emplace(current_node).second) {
       continue;
     }
 
     cost += _estimate_node_cost(current_node);
+    bfs_queue.push(current_node->left_input());
+    bfs_queue.push(current_node->right_input());
   }
 
   return cost;

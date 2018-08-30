@@ -9,7 +9,6 @@ namespace opossum {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
     : _num_vertices(num_vertices), _edges(std::move(edges)) {
-
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons
   Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");  // NOLINT
 

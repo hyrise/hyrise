@@ -1,9 +1,9 @@
+#include <numa.h>
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <string>
-#include <numa.h>
 
 #include "SQLParser.h"
 #include "SQLParserResult.h"
@@ -37,7 +37,6 @@
  */
 
 int main(int argc, char* argv[]) {
-
   // Pin to the current node
   {
     const auto cpu = sched_getcpu();
@@ -48,7 +47,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Binding process to CPU " << cpu << " on Node " << node << std::endl;
 
-    auto * node_mask = numa_allocate_nodemask();
+    auto* node_mask = numa_allocate_nodemask();
     numa_bitmask_setbit(node_mask, node);
 
     numa_bind(node_mask);

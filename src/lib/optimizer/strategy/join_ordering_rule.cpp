@@ -36,7 +36,7 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
-const std::shared_ptr<AbstractLQPNode> &lqp) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp) const {
   /**
    * Try to build a JoinGraph starting from the current node
    *    -> if that fails, continue to try it with the node's inputs
@@ -59,7 +59,7 @@ const std::shared_ptr<AbstractLQPNode> &lqp) const {
   return result_lqp;
 }
 
-void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode> &lqp) const {
+void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   if (lqp->left_input()) lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input()));
   if (lqp->right_input()) lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input()));
 }

@@ -44,6 +44,12 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
     enumerate_ccp_edges.emplace_back(first_vertex_idx, second_vertex_idx);
   }
 
+  for (auto vertex_idx = size_t{0}; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
+    const auto& vertex = join_graph.vertices[vertex_idx];
+    std::cout << "Vertex " << vertex_idx << std::endl;
+    vertex->print();
+  }
+
   /**
    * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan
    */
@@ -60,11 +66,16 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
 
     const auto joined_vertex_set = csg_cmp_pair.first | csg_cmp_pair.second;
 
+    std::cout << joined_vertex_set << " = " << csg_cmp_pair.first << " + " << csg_cmp_pair.second << " | Cost: " << _cost_model->estimate_plan_cost(candidate_plan) << std::endl;
+
     const auto best_plan_iter = best_plan.find(joined_vertex_set);
     if (best_plan_iter == best_plan.end() ||
         _cost_model->estimate_plan_cost(candidate_plan) < _cost_model->estimate_plan_cost(best_plan_iter->second)) {
       best_plan.insert_or_assign(joined_vertex_set, candidate_plan);
+      std::cout << "-----> New best plan" << std::endl;
+      std::cout << std::endl;
     }
+
   }
 
   /**
@@ -80,9 +91,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
 }
 
 std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates_to_plan(
-const std::shared_ptr<AbstractLQPNode> &lqp,
-const std::vector<std::shared_ptr<AbstractExpression>> &predicates) const {
-
+    const std::shared_ptr<AbstractLQPNode>& lqp,
+    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
   /**
    * Add a number of predicates on top of a plan
    *
@@ -116,9 +126,9 @@ const std::vector<std::shared_ptr<AbstractExpression>> &predicates) const {
   return predicate_nodes_and_cost.back().first;
 }
 
-std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(const std::shared_ptr<AbstractLQPNode> &left_lqp,
-                                                          const std::shared_ptr<AbstractLQPNode> &right_lqp,
-                                                          std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const {
+std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(
+    const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
+    std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const {
   /**
    * Join two plans using a set of predicate.
    *
@@ -155,7 +165,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(const std::shared_ptr<
   auto primary_join_predicate = std::shared_ptr<AbstractExpression>{};
   for (auto predicate_iter = join_predicates_and_cost.begin(); predicate_iter != join_predicates_and_cost.end();
        ++predicate_iter) {
-
     // If a predicate can be converted into an OperatorJoinPredicate, it can be used as a primary predicate
     const auto operator_join_predicate =
         OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
