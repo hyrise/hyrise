@@ -133,7 +133,7 @@ class CxlumnMaterializer {
         auto chunk_offset = ChunkOffset{0u};
         auto value_id_it = attribute_vector.cbegin();
         for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
-          auto value_id = *value_id_it;
+          auto value_id = static_cast<ValueID>(*value_id_it);
 
           if (value_id != NULL_VALUE_ID) {
             rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
