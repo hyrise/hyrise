@@ -44,22 +44,22 @@ class CountingQuotientFilterTest : public BaseTest {
       }
     }
 
-    string_cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits2);
-    string_cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits4);
-    string_cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits8);
-    string_cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits16);
-    string_cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits32);
+    string_cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, 2);
+    string_cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, 4);
+    string_cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, 8);
+    string_cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, 16);
+    string_cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, 32);
     string_cqf2->populate(string_column);
     string_cqf4->populate(string_column);
     string_cqf8->populate(string_column);
     string_cqf16->populate(string_column);
     string_cqf32->populate(string_column);
 
-    int_cqf2 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits2);
-    int_cqf4 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits4);
-    int_cqf8 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits8);
-    int_cqf16 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits16);
-    int_cqf32 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits32);
+    int_cqf2 = std::make_shared<CountingQuotientFilter<int>>(4, 2);
+    int_cqf4 = std::make_shared<CountingQuotientFilter<int>>(4, 4);
+    int_cqf8 = std::make_shared<CountingQuotientFilter<int>>(4, 8);
+    int_cqf16 = std::make_shared<CountingQuotientFilter<int>>(4, 16);
+    int_cqf32 = std::make_shared<CountingQuotientFilter<int>>(4, 32);
     int_cqf2->populate(int_column);
     int_cqf4->populate(int_column);
     int_cqf8->populate(int_column);

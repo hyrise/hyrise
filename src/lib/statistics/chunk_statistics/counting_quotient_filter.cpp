@@ -11,54 +11,42 @@
 #include "storage/create_iterable_from_column.hpp"
 #include "types.hpp"
 
-
+using namespace gqf2;
+using namespace gqf4;
+using namespace gqf8;
+using namespace gqf16;
+using namespace gqf32;
 
 namespace opossum {
 
 template <typename ElementType>
-CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_size, RemainderSize remainder_size) {
-  DebugAssert(quotient_size > 0, "quotient size can not be zero.");
-  DebugAssert(quotient_size + static_cast<uint8_t>(remainder_size) <= 64, "The hash length can not exceed 64 bits.");
+CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size) {
+  Assert(quotient_size > 0, "quotient size can not be zero.");
+  Assert(quotient_size + static_cast<uint8_t>(remainder_size) <= 64, "The hash length can not exceed 64 bits.");
+  Assert(remainder_size == 2 || remainder_size == 4 || remainder_size == 8 || remainder_size == 16
+    || remainder_size == 32, "remainder size must be 2, 4, 8, 16, or 32");
 
   _remainder_size = remainder_size;
   _number_of_slots = std::pow(2, quotient_size);
-  _hash_bits = quotient_size + static_cast<uint8_t>(remainder_size);
+  _hash_bits = quotient_size + remainder_size;
 
-if (remainder_size == RemainderSize::bits2) {
-    _quotient_filter2 = gqf2::quotient_filter();
-    gqf2::qf_init(&_quotient_filter2.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_size == RemainderSize::bits4) {
-    _quotient_filter4 = gqf4::quotient_filter();
-    gqf4::qf_init(&_quotient_filter4.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_size == RemainderSize::bits8) {
-    _quotient_filter8 = gqf8::quotient_filter();
-    gqf8::qf_init(&_quotient_filter8.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_size == RemainderSize::bits16) {
-    _quotient_filter16 = gqf16::quotient_filter();
-    gqf16::qf_init(&_quotient_filter16.value(), _number_of_slots, _hash_bits, 0);
-  } else if (remainder_size == RemainderSize::bits32) {
-    _quotient_filter32 = gqf32::quotient_filter();
-    gqf32::qf_init(&_quotient_filter32.value(), _number_of_slots, _hash_bits, 0);
+if (remainder_size == 2) {
+    _quotient_filter = gqf2::quotient_filter();
+  } else if (remainder_size == 4) {
+    _quotient_filter = gqf4::quotient_filter();
+  } else if (remainder_size == 8) {
+    _quotient_filter = gqf8::quotient_filter();
+  } else if (remainder_size == 16) {
+    _quotient_filter = gqf16::quotient_filter();
+  } else if (remainder_size == 32) {
+    _quotient_filter = gqf32::quotient_filter();
   }
+  boost::apply_visitor([&](auto& filter) {qf_init(&filter, _number_of_slots, _hash_bits, 0);}, _quotient_filter);
 }
 
 template <typename ElementType>
 CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
-  if (_quotient_filter2.has_value()) {
-    gqf2::qf_destroy(&_quotient_filter2.value());
-  }
-  if (_quotient_filter4.has_value()) {
-    gqf4::qf_destroy(&_quotient_filter4.value());
-  }
-  if (_quotient_filter8.has_value()) {
-    gqf8::qf_destroy(&_quotient_filter8.value());
-  }
-  if (_quotient_filter16.has_value()) {
-    gqf16::qf_destroy(&_quotient_filter16.value());
-  }
-  if (_quotient_filter32.has_value()) {
-    gqf32::qf_destroy(&_quotient_filter32.value());
-  }
+  boost::apply_visitor([&](auto& filter) {qf_destroy(&filter);}, _quotient_filter);
 }
 
 template <typename ElementType>
@@ -66,17 +54,7 @@ void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t c
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
   for (size_t i = 0; i < count; i++) {
-    if (_remainder_size == RemainderSize::bits2) {
-      gqf2::qf_insert(&_quotient_filter2.value(), hash, 0, 1);
-    } else if (_remainder_size == RemainderSize::bits4) {
-      gqf4::qf_insert(&_quotient_filter4.value(), hash, 0, 1);
-    } else if (_remainder_size == RemainderSize::bits8) {
-      gqf8::qf_insert(&_quotient_filter8.value(), hash, 0, 1);
-    } else if (_remainder_size == RemainderSize::bits16) {
-      gqf16::qf_insert(&_quotient_filter16.value(), hash, 0, 1);
-    } else if (_remainder_size == RemainderSize::bits32) {
-      gqf32::qf_insert(&_quotient_filter32.value(), hash, 0, 1);
-    }
+    boost::apply_visitor([&](auto& filter) {qf_insert(&filter, hash, 0, 1);}, _quotient_filter);
   }
 }
 
@@ -102,17 +80,9 @@ template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::count(ElementType element) const {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
-  if (_remainder_size == RemainderSize::bits2) {
-    return gqf2::qf_count_key_value(&_quotient_filter2.value(), hash, 0);
-  } else if (_remainder_size == RemainderSize::bits4) {
-    return gqf4::qf_count_key_value(&_quotient_filter4.value(), hash, 0);
-  } else if (_remainder_size == RemainderSize::bits8) {
-    return gqf8::qf_count_key_value(&_quotient_filter8.value(), hash, 0);
-  } else if (_remainder_size == RemainderSize::bits16) {
-    return gqf16::qf_count_key_value(&_quotient_filter16.value(), hash, 0);
-  } else {
-    return gqf32::qf_count_key_value(&_quotient_filter32.value(), hash, 0);
-  }
+  uint64_t count;
+  boost::apply_visitor([&](auto& filter) {count = qf_count_key_value(&filter, hash, 0);}, _quotient_filter);
+  return count;
 }
 
 /**
@@ -145,35 +115,17 @@ void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseCol
 }
 
 template <typename ElementType>
-uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
-  uint64_t memory_consumption = 0;
-  if (_remainder_size == RemainderSize::bits2) {
-    memory_consumption += gqf2::memory_consumption(_quotient_filter2.value());
-  } else if (_remainder_size == RemainderSize::bits4) {
-    memory_consumption += gqf4::memory_consumption(_quotient_filter4.value());
-  } else if (_remainder_size == RemainderSize::bits8) {
-    memory_consumption += gqf8::memory_consumption(_quotient_filter8.value());
-  } else if (_remainder_size == RemainderSize::bits16) {
-    memory_consumption += gqf16::memory_consumption(_quotient_filter16.value());
-  } else {
-    memory_consumption += gqf32::memory_consumption(_quotient_filter32.value());
-  }
-  return memory_consumption;
+uint64_t CountingQuotientFilter<ElementType>::memory_consumptionn() const {
+  uint64_t consumption = 0;
+  boost::apply_visitor([&](auto& filter) {consumption += memory_consumption(filter);}, _quotient_filter);
+  return consumption;
 }
 
 template <typename ElementType>
 double CountingQuotientFilter<ElementType>::load_factor() const {
-  if (_remainder_size == RemainderSize::bits2) {
-    return _quotient_filter2.value().noccupied_slots / static_cast<double>(_quotient_filter2.value().nslots);
-  } else if (_remainder_size == RemainderSize::bits4) {
-    return _quotient_filter4.value().noccupied_slots / static_cast<double>(_quotient_filter4.value().nslots);
-  } else if (_remainder_size == RemainderSize::bits8) {
-    return _quotient_filter8.value().noccupied_slots / static_cast<double>(_quotient_filter8.value().nslots);
-  } else if (_remainder_size == RemainderSize::bits16) {
-    return _quotient_filter16.value().noccupied_slots / static_cast<double>(_quotient_filter16.value().nslots);
-  } else {
-    return _quotient_filter32.value().noccupied_slots / static_cast<double>(_quotient_filter32.value().nslots);
-  }
+  double load_factor = 0;
+  boost::apply_visitor([&](auto& filter) {load_factor = filter.noccupied_slots / static_cast<double>(filter.nslots);}, _quotient_filter);
+  return load_factor;
 }
 
 template <typename ElementType>
