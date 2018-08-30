@@ -18,98 +18,117 @@ namespace opossum {
 class CountingQuotientFilterTest : public BaseTest {
  protected:
   void SetUp() override {
-    value_counts["hotel"] = 1;
-    value_counts["delta"] = 6;
-    value_counts["frank"] = 2;
-    value_counts["apple"] = 9;
-    value_counts["charlie"] = 3;
-    value_counts["inbox"] = 1;
-    column = std::make_shared<ValueColumn<std::string>>();
-    for (auto value_count : value_counts) {
-      for (uint i = 0; i < value_count.second; i++) {
-        column->append(value_count.first);
+    string_value_counts["hotel"] = 1;
+    string_value_counts["delta"] = 6;
+    string_value_counts["frank"] = 2;
+    string_value_counts["apple"] = 9;
+    string_value_counts["charlie"] = 3;
+    string_value_counts["inbox"] = 1;
+    string_column = std::make_shared<ValueColumn<std::string>>();
+    for (auto value_and_count : string_value_counts) {
+      for (size_t i = 0; i < value_and_count.second; i++) {
+        string_column->append(value_and_count.first);
       }
     }
 
-    cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits2);
-    cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits4);
-    cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits8);
-    cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits16);
-    cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits32);
-    cqf2->populate(column);
-    cqf4->populate(column);
-    cqf8->populate(column);
-    cqf16->populate(column);
-    cqf32->populate(column);
+    int_value_counts[1] = 54;
+    int_value_counts[12] = 43;
+    int_value_counts[123] = 32;
+    int_value_counts[1234] = 21;
+    int_value_counts[12345] = 8;
+    int_value_counts[123456] = 6;
+    int_column = std::make_shared<ValueColumn<int>>();
+    for (auto value_and_count : int_value_counts) {
+      for (size_t i = 0; i < value_and_count.second; i++) {
+        int_column->append(value_and_count.first);
+      }
+    }
+
+    string_cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits2);
+    string_cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits4);
+    string_cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits8);
+    string_cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits16);
+    string_cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, RemainderSize::bits32);
+    string_cqf2->populate(string_column);
+    string_cqf4->populate(string_column);
+    string_cqf8->populate(string_column);
+    string_cqf16->populate(string_column);
+    string_cqf32->populate(string_column);
+
+    int_cqf2 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits2);
+    int_cqf4 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits4);
+    int_cqf8 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits8);
+    int_cqf16 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits16);
+    int_cqf32 = std::make_shared<CountingQuotientFilter<int>>(4, RemainderSize::bits32);
+    int_cqf2->populate(int_column);
+    int_cqf4->populate(int_column);
+    int_cqf8->populate(int_column);
+    int_cqf16->populate(int_column);
+    int_cqf32->populate(int_column);
   }
 
-  std::shared_ptr<CountingQuotientFilter<std::string>> cqf2;
-  std::shared_ptr<CountingQuotientFilter<std::string>> cqf4;
-  std::shared_ptr<CountingQuotientFilter<std::string>> cqf8;
-  std::shared_ptr<CountingQuotientFilter<std::string>> cqf16;
-  std::shared_ptr<CountingQuotientFilter<std::string>> cqf32;
-  std::shared_ptr<ValueColumn<std::string>> column;
-  std::map<std::string, uint> value_counts;
+  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf2;
+  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf4;
+  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf8;
+  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf16;
+  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf32;
+  std::shared_ptr<CountingQuotientFilter<int>> int_cqf2;
+  std::shared_ptr<CountingQuotientFilter<int>> int_cqf4;
+  std::shared_ptr<CountingQuotientFilter<int>> int_cqf8;
+  std::shared_ptr<CountingQuotientFilter<int>> int_cqf16;
+  std::shared_ptr<CountingQuotientFilter<int>> int_cqf32;
+  std::shared_ptr<ValueColumn<std::string>> string_column;
+  std::shared_ptr<ValueColumn<int>> int_column;
+  std::map<std::string, size_t> string_value_counts;
+  std::map<int, size_t> int_value_counts;
+
+  template <typename DataType>
+  void test_value_counts(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
+      value_counts) {
+    for (auto value_and_count : value_counts) {
+        EXPECT_TRUE(cqf->count(value_and_count.first) >= value_and_count.second);
+    }
+  }
+
+  template <typename DataType>
+  void test_can_prune(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
+      value_counts) {
+    for (auto value_and_count : value_counts) {
+        EXPECT_FALSE(cqf->can_prune(value_and_count.first, PredicateCondition::Equals));
+    }
+  }
 };
 
-TEST_F(CountingQuotientFilterTest, NoUndercounts2) {
-  for (auto value_count : value_counts) {
-      EXPECT_TRUE(cqf2->count(value_count.first) >= value_count.second);
-  }
+TEST_F(CountingQuotientFilterTest, NoUndercountsString) {
+  test_value_counts<std::string>(string_cqf2, string_value_counts);
+  test_value_counts<std::string>(string_cqf4, string_value_counts);
+  test_value_counts<std::string>(string_cqf8, string_value_counts);
+  test_value_counts<std::string>(string_cqf16, string_value_counts);
+  test_value_counts<std::string>(string_cqf32, string_value_counts);
 }
 
-TEST_F(CountingQuotientFilterTest, NoUndercounts4) {
-  for (auto value_count : value_counts) {
-      EXPECT_TRUE(cqf4->count(value_count.first) >= value_count.second);
-  }
+TEST_F(CountingQuotientFilterTest, NoUndercountsInt) {
+  test_value_counts<int>(int_cqf2, int_value_counts);
+  test_value_counts<int>(int_cqf4, int_value_counts);
+  test_value_counts<int>(int_cqf8, int_value_counts);
+  test_value_counts<int>(int_cqf16, int_value_counts);
+  test_value_counts<int>(int_cqf32, int_value_counts);
 }
 
-TEST_F(CountingQuotientFilterTest, NoUndercounts8) {
-  for (auto value_count : value_counts) {
-      EXPECT_TRUE(cqf8->count(value_count.first) >= value_count.second);
-  }
+TEST_F(CountingQuotientFilterTest, CanPruneString) {
+  test_can_prune<std::string>(string_cqf2, string_value_counts);
+  test_can_prune<std::string>(string_cqf4, string_value_counts);
+  test_can_prune<std::string>(string_cqf8, string_value_counts);
+  test_can_prune<std::string>(string_cqf16, string_value_counts);
+  test_can_prune<std::string>(string_cqf32, string_value_counts);
 }
 
-TEST_F(CountingQuotientFilterTest, NoUndercounts16) {
-  for (auto value_count : value_counts) {
-      EXPECT_TRUE(cqf16->count(value_count.first) >= value_count.second);
-  }
-}
-
-TEST_F(CountingQuotientFilterTest, NoUndercounts32) {
-  for (auto value_count : value_counts) {
-      EXPECT_TRUE(cqf32->count(value_count.first) >= value_count.second);
-  }
-}
-
-TEST_F(CountingQuotientFilterTest, CanPrune2) {
-  for (auto value_count : value_counts) {
-      EXPECT_FALSE(cqf2->can_prune(value_count.first, PredicateCondition::Equals));
-  }
-}
-
-TEST_F(CountingQuotientFilterTest, CanPrune4) {
-  for (auto value_count : value_counts) {
-      EXPECT_FALSE(cqf4->can_prune(value_count.first, PredicateCondition::Equals));
-  }
-}
-
-TEST_F(CountingQuotientFilterTest, CanPrune8) {
-  for (auto value_count : value_counts) {
-      EXPECT_FALSE(cqf8->can_prune(value_count.first, PredicateCondition::Equals));
-  }
-}
-
-TEST_F(CountingQuotientFilterTest, CanPrune16) {
-  for (auto value_count : value_counts) {
-      EXPECT_FALSE(cqf16->can_prune(value_count.first, PredicateCondition::Equals));
-  }
-}
-
-TEST_F(CountingQuotientFilterTest, CanPrune32) {
-  for (auto value_count : value_counts) {
-      EXPECT_FALSE(cqf32->can_prune(value_count.first, PredicateCondition::Equals));
-  }
+TEST_F(CountingQuotientFilterTest, CanPruneInt) {
+  test_can_prune<int>(int_cqf2, int_value_counts);
+  test_can_prune<int>(int_cqf4, int_value_counts);
+  test_can_prune<int>(int_cqf8, int_value_counts);
+  test_can_prune<int>(int_cqf16, int_value_counts);
+  test_can_prune<int>(int_cqf32, int_value_counts);
 }
 
 }  // namespace opossum

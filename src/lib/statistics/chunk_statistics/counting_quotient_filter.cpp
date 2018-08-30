@@ -65,7 +65,7 @@ template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t count) {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
-  for (uint64_t i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; i++) {
     if (_remainder_size == RemainderSize::bits2) {
       gqf2::qf_insert(&_quotient_filter2.value(), hash, 0, 1);
     } else if (_remainder_size == RemainderSize::bits4) {
