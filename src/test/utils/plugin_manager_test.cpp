@@ -28,7 +28,7 @@ TEST_F(PluginManagerTest, LoadStopPlugin) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
+  pm.load_plugin(build_dylib_path("libTestPlugin"));
 
   EXPECT_EQ(plugins.count("TestPlugin"), 1u);
   EXPECT_EQ(plugins["TestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
@@ -52,7 +52,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticStop) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
+  pm.load_plugin(build_dylib_path("libTestPlugin"));
 
   EXPECT_EQ(plugins.count("TestPlugin"), 1u);
   EXPECT_EQ(plugins["TestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
@@ -76,22 +76,22 @@ TEST_F(PluginManagerTest, LoadingSameName) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
+  pm.load_plugin(build_dylib_path("libTestPlugin"));
 
-  EXPECT_THROW(pm.load_plugin(std::string(TEST_PLUGIN_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin"),
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")),
                std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingNotExistingLibrary) {
   auto& pm = PluginManager::get();
 
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libNotExisting"), "NotExistingPlugin"), std::exception);
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libNotExisting")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingNonInstantiableLibrary) {
   auto& pm = PluginManager::get();
 
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libNonInstantiablePlugin"), "NonInstantiablePlugin"), std::exception);
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libNonInstantiablePlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
@@ -99,8 +99,8 @@ TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
   auto& plugins = get_plugins();
 
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin2"), std::exception);
+  pm.load_plugin(build_dylib_path("libTestPlugin"));
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")), std::exception);
 }
 
 }  // namespace opossum

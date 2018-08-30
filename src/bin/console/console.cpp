@@ -362,7 +362,8 @@ int Console::_help(const std::string&) {
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
   out("  pwd                              - Print current working directory\n");
-  out("  load_plugin FILE NAME            - Load and start plugin specified by filepath FILE, store it with NAME\n");
+  out("  load_plugin FILE                 - Load and start plugin specified by filepath FILE. It is stored under its\
+    name which is the filename without the \"lib\" prefix and without the file extension\n");
   out("  unload_plugin NAME               - Stop and unload plugin NAME (also clears the query cache)\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");
@@ -719,16 +720,18 @@ int Console::_print_current_working_directory(const std::string&) {
 int Console::_load_plugin(const std::string& args) {
   auto arguments = trim_and_split(args);
 
-  if (arguments.size() != 2) {
+  if (arguments.size() != 1) {
     out("Usage:\n");
-    out("  load_plugin PLUGINPATH PLUGINNAME\n");
+    out("  load_plugin PLUGINPATH\n");
     return ReturnCode::Error;
   }
 
-  const std::string& plugin_path = arguments[0];
-  const std::string& plugin_name = arguments[1];
+  const std::string& plugin_path_str = arguments[0];
 
-  PluginManager::get().load_plugin(plugin_path, plugin_name);
+  const filesystem::path plugin_path(plugin_path_str);
+  const auto plugin_name = plugin_name_from_path(plugin_path);
+
+  PluginManager::get().load_plugin(plugin_path);
 
   std::cout << "Plugin (" << plugin_name << ") successfully loaded." << std::endl;
 

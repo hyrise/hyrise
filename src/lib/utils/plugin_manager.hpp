@@ -4,7 +4,9 @@
 
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
+#include "utils/filesystem.hpp"
 #include "utils/singleton.hpp"
+#include "utils/string_utils.hpp"
 
 namespace opossum {
 
@@ -18,7 +20,7 @@ class PluginManager : public Singleton<PluginManager> {
   friend class SingletonTest;
 
  public:
-  void load_plugin(const std::string& path, const PluginName& name);
+  void load_plugin(const filesystem::path& path);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();

@@ -29,7 +29,9 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
   return false;
 }
 
-void PluginManager::load_plugin(const std::string& path, const PluginName& name) {
+void PluginManager::load_plugin(const filesystem::path& path) {
+  const auto name = plugin_name_from_path(path);
+
   Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name  " + name + " already exists.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
