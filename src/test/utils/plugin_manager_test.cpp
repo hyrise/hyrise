@@ -78,8 +78,7 @@ TEST_F(PluginManagerTest, LoadingSameName) {
   EXPECT_EQ(plugins.size(), 0u);
   pm.load_plugin(build_dylib_path("libTestPlugin"));
 
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")),
-               std::exception);
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingNotExistingLibrary) {
