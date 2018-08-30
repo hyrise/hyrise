@@ -7,6 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/logical_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
 #include "expression_result.hpp"
 #include "null_value.hpp"
 #include "types.hpp"
@@ -28,7 +29,6 @@ class UnaryMinusExpression;
 class InExpression;
 class IsNullExpression;
 class PQPColumnExpression;
-class PQPSelectExpression;
 
 /**
  * Computes a result (i.e., a Column or an ExpressionResult<Result>) from an Expression.
