@@ -11,11 +11,35 @@
 #include "storage/create_iterable_from_column.hpp"
 #include "types.hpp"
 
-using namespace gqf2;
-using namespace gqf4;
-using namespace gqf8;
-using namespace gqf16;
-using namespace gqf32;
+using gqf2::qf_init;
+using gqf4::qf_init;
+using gqf8::qf_init;
+using gqf16::qf_init;
+using gqf32::qf_init;
+
+using gqf2::qf_destroy;
+using gqf4::qf_destroy;
+using gqf8::qf_destroy;
+using gqf16::qf_destroy;
+using gqf32::qf_destroy;
+
+using gqf2::memory_consumption;
+using gqf4::memory_consumption;
+using gqf8::memory_consumption;
+using gqf16::memory_consumption;
+using gqf32::memory_consumption;
+
+using gqf2::qf_count_key_value;
+using gqf4::qf_count_key_value;
+using gqf8::qf_count_key_value;
+using gqf16::qf_count_key_value;
+using gqf32::qf_count_key_value;
+
+using gqf2::qf_insert;
+using gqf4::qf_insert;
+using gqf8::qf_insert;
+using gqf16::qf_insert;
+using gqf32::qf_insert;
 
 namespace opossum {
 
@@ -124,7 +148,8 @@ uint64_t CountingQuotientFilter<ElementType>::memory_consumptionn() const {
 template <typename ElementType>
 double CountingQuotientFilter<ElementType>::load_factor() const {
   double load_factor = 0;
-  boost::apply_visitor([&](auto& filter) {load_factor = filter.noccupied_slots / static_cast<double>(filter.nslots);}, _quotient_filter);
+  boost::apply_visitor([&](auto& filter) {load_factor = filter.noccupied_slots / static_cast<double>(filter.nslots);},
+                        _quotient_filter);
   return load_factor;
 }
 
