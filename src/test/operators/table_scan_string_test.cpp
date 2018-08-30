@@ -147,14 +147,14 @@ TEST_P(OperatorsTableScanStringTest, ScanLikeEmptyStringDict) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   auto scan = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like, "Dampf%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnReferencedDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnReferencedDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
@@ -171,7 +171,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeEnding) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
   auto scan =
       std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like, "%gesellschaft");
@@ -179,7 +179,7 @@ TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnDictCxlumn) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnReferencedDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnReferencedDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
@@ -229,7 +229,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeContaining) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
   auto scan = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like,
                                           "%schifffahrtsgesellschaft%");
@@ -237,7 +237,7 @@ TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnDictCxlumn) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnReferencedDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnReferencedDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
@@ -253,13 +253,13 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeNotFound) {
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnDictSegment) {
   auto scan = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like, "%not_there%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnReferencedDictCxlumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnReferencedDictSegment) {
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
   auto scan2 = std::make_shared<TableScan>(scan1, CxlumnID{1}, PredicateCondition::Like, "%not_there%");

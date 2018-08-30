@@ -524,7 +524,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
                          "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinRefCxlumn) {
+TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
   // scan that returns all rows
   auto scan_a =
       std::make_shared<TableScan>(this->_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -535,7 +535,7 @@ TYPED_TEST(JoinIndexTest, RightJoinRefCxlumn) {
                          "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinRefCxlumn) {
+TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
   // scan that returns all rows
   auto scan_b =
       std::make_shared<TableScan>(this->_table_wrapper_b, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -546,7 +546,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinRefCxlumn) {
                          1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinEmptyRefCxlumn) {
+TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
   // scan that returns no rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, CxlumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -556,7 +556,7 @@ TYPED_TEST(JoinIndexTest, RightJoinEmptyRefCxlumn) {
                          "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefCxlumn) {
+TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefSegment) {
   // scan that returns no rows
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, CxlumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();

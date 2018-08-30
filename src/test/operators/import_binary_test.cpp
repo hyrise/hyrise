@@ -40,7 +40,7 @@ TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatCxlumn) {
   EXPECT_EQ(importer->get_output()->chunk_count(), 2u);
 }
 
-TEST_F(OperatorsImportBinaryTest, StringValueCxlumn) {
+TEST_F(OperatorsImportBinaryTest, StringValueSegment) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 5);
@@ -49,13 +49,13 @@ TEST_F(OperatorsImportBinaryTest, StringValueCxlumn) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringValueColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringValueSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, StringDictionaryCxlumn) {
+TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10, UseMvcc::Yes);
@@ -68,13 +68,13 @@ TEST_F(OperatorsImportBinaryTest, StringDictionaryCxlumn) {
 
   StorageManager::get().add_table("table_a", expected_table);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringDictionaryColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringDictionarySegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, AllTypesValueCxlumn) {
+TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   cxlumn_definitions.emplace_back("b", DataType::Int);
@@ -88,13 +88,13 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueCxlumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryCxlumn) {
+TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   cxlumn_definitions.emplace_back("b", DataType::Int);
@@ -112,7 +112,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryCxlumn) {
 
   StorageManager::get().add_table("expected_table", expected_table);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionaryColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionarySegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -168,7 +168,7 @@ TEST_F(OperatorsImportBinaryTest, TwoCxlumnsNoValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, EmptyStringsValueCxlumn) {
+TEST_F(OperatorsImportBinaryTest, EmptyStringsValueSegment) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -180,13 +180,13 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsValueCxlumn) {
   expected_table->append({""});
   expected_table->append({""});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/EmptyStringsValueColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/EmptyStringsValueSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionaryCxlumn) {
+TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionarySegment) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -198,7 +198,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionaryCxlumn) {
   expected_table->append({""});
   expected_table->append({""});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/EmptyStringsDictionaryColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/EmptyStringsDictionarySegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);

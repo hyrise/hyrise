@@ -17,7 +17,7 @@ namespace opossum {
 
 class OperatorsImportCsvTest : public BaseTest {};
 
-TEST_F(OperatorsImportCsvTest, SingleFloatSegment) {
+TEST_F(OperatorsImportCsvTest, SingleFloatColumn) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);

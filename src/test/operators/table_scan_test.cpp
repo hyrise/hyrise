@@ -380,7 +380,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionar
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatSegmentWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -394,7 +394,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatSegmentWithNullValu
   ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatSegmentWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -408,7 +408,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatSegmentWi
   ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatSegmentWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -423,7 +423,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatSegmentWithNu
   ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatSegmentWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
