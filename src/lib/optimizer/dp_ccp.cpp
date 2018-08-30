@@ -26,7 +26,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
     auto single_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
     single_vertex_set.set(vertex_idx);
 
-    best_plan[single_vertex_set] = _add_predicates(vertex, vertex_predicates);
+    best_plan[single_vertex_set] = _add_predicates_to_plan(vertex, vertex_predicates);
   }
 
   /**
@@ -56,7 +56,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
 
     const auto join_predicates = join_graph.find_join_predicates(csg_cmp_pair.first, csg_cmp_pair.second);
 
-    auto candidate_plan = _join(best_plan_left_iter->second, best_plan_right_iter->second, join_predicates);
+    auto candidate_plan = _add_join_to_plan(best_plan_left_iter->second, best_plan_right_iter->second, join_predicates);
 
     const auto joined_vertex_set = csg_cmp_pair.first | csg_cmp_pair.second;
 
@@ -79,17 +79,21 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   return best_plan_iter->second;
 }
 
-std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(
-    const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
-  if (predicates.empty()) return lqp;
+std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates_to_plan(
+const std::shared_ptr<AbstractLQPNode> &lqp,
+const std::vector<std::shared_ptr<AbstractExpression>> &predicates) const {
 
   /**
+   * Add a number of predicates on top of a plan
+   *
+   *
    * The optimality-ensuring way to sort the scan operations would be to find the cheapest of the predicates.size()!
    * orders of them.
    * For now, we just execute the scan operations in the order of increasing cost that they would have when executed
    * directly on top of `lqp`
    */
+
+  if (predicates.empty()) return lqp;
 
   auto predicate_nodes_and_cost = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cost>>{};
   predicate_nodes_and_cost.reserve(predicates.size());
@@ -112,12 +116,13 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates(
   return predicate_nodes_and_cost.back().first;
 }
 
-std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPNode>& left_lqp,
-                                              const std::shared_ptr<AbstractLQPNode>& right_lqp,
-                                              std::vector<std::shared_ptr<AbstractExpression>> predicates) const {
-  if (predicates.empty()) return JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
-
+std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(const std::shared_ptr<AbstractLQPNode> &left_lqp,
+                                                          const std::shared_ptr<AbstractLQPNode> &right_lqp,
+                                                          std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const {
   /**
+   * Join two plans using a set of predicate.
+   *
+   *
    * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates) are executed as
    * column-to-column scans after the join.
    * The primary predicate needs to be a simple "<column> <operator> <column>" predicate, otherwise the join operators
@@ -129,43 +134,47 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_join(const std::shared_ptr<AbstractLQPN
    * directly on top of `lqp`, with the cheapest predicate becoming the primary predicate.
    */
 
+  if (join_predicates.empty()) return JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
+
   // Sort the predicates by increasing cost
-  auto predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
-  predicates_and_cost.reserve(predicates.size());
-  for (const auto& predicate : predicates) {
-    const auto join_node = JoinNode::make(JoinMode::Inner, predicate, left_lqp, right_lqp);
-    predicates_and_cost.emplace_back(predicate, _cost_model->estimate_plan_cost(join_node));
+  auto join_predicates_and_cost = std::vector<std::pair<std::shared_ptr<AbstractExpression>, Cost>>{};
+  join_predicates_and_cost.reserve(join_predicates.size());
+  for (const auto& join_predicate : join_predicates) {
+    const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
+    join_predicates_and_cost.emplace_back(join_predicate, _cost_model->estimate_plan_cost(join_node));
 
     // need to do this since nodes do not get properly (by design :(( ) removed from plan on their destruction
     join_node->set_left_input(nullptr);
     join_node->set_right_input(nullptr);
   }
 
-  std::sort(predicates_and_cost.begin(), predicates_and_cost.end(),
+  std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   // Find the simple predicate with the lowest cost (if any exists), which will act as the primary predicate
-  std::shared_ptr<AbstractExpression> primary_predicate;
-  for (auto predicate_iter = predicates_and_cost.begin(); predicate_iter != predicates_and_cost.end();
+  auto primary_join_predicate = std::shared_ptr<AbstractExpression>{};
+  for (auto predicate_iter = join_predicates_and_cost.begin(); predicate_iter != join_predicates_and_cost.end();
        ++predicate_iter) {
+
+    // If a predicate can be converted into an OperatorJoinPredicate, it can be used as a primary predicate
     const auto operator_join_predicate =
         OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
     if (operator_join_predicate) {
-      primary_predicate = predicate_iter->first;
-      predicates_and_cost.erase(predicate_iter);
+      primary_join_predicate = predicate_iter->first;
+      join_predicates_and_cost.erase(predicate_iter);
       break;
     }
   }
 
   // Build JoinNode (for primary predicate) and subsequent scans (for secondary predicates)
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
-  if (primary_predicate) {
-    lqp = JoinNode::make(JoinMode::Inner, primary_predicate, left_lqp, right_lqp);
+  if (primary_join_predicate) {
+    lqp = JoinNode::make(JoinMode::Inner, primary_join_predicate, left_lqp, right_lqp);
   } else {
     lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
   }
 
-  for (const auto& predicate_and_cost : predicates_and_cost) {
+  for (const auto& predicate_and_cost : join_predicates_and_cost) {
     lqp = PredicateNode::make(predicate_and_cost.first, lqp);
   }
 

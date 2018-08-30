@@ -16,7 +16,11 @@
 namespace opossum {
 
 /**
- * TODO(moritz) doc
+ * A JoinGraph contains
+ *      -> Vertices: output tables subplans
+ *      -> Edges: predicates clustered by the vertices that they access
+ *
+ * It is used by join ordering algorithms.
  */
 class JoinGraph final {
  public:
@@ -30,12 +34,12 @@ class JoinGraph final {
   JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, const std::vector<JoinGraphEdge>& edges);
 
   /**
-   * Find all predicates that use exactly the nodes in vertex set
+   * Find all predicates that reference to only the vertex at @param vertex_idx
    */
   std::vector<std::shared_ptr<AbstractExpression>> find_local_predicates(const size_t vertex_idx) const;
 
   /**
-   * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them
+   * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them and nowhere else
    */
   std::vector<std::shared_ptr<AbstractExpression>> find_join_predicates(const JoinGraphVertexSet& vertex_set_a,
                                                                         const JoinGraphVertexSet& vertex_set_b) const;
@@ -43,7 +47,7 @@ class JoinGraph final {
   void print(std::ostream& stream = std::cout) const;
 
   const std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
-  std::vector<JoinGraphEdge> edges;
+  const std::vector<JoinGraphEdge> edges;
 };
 
 }  // namespace opossum
