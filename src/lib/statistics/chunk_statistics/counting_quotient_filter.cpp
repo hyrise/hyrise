@@ -23,11 +23,11 @@ using gqf8::qf_destroy;
 using gqf16::qf_destroy;
 using gqf32::qf_destroy;
 
-using gqf2::memory_consumption;
-using gqf4::memory_consumption;
-using gqf8::memory_consumption;
-using gqf16::memory_consumption;
-using gqf32::memory_consumption;
+using gqf2::qf_memory_consumption;
+using gqf4::qf_memory_consumption;
+using gqf8::qf_memory_consumption;
+using gqf16::qf_memory_consumption;
+using gqf32::qf_memory_consumption;
 
 using gqf2::qf_count_key_value;
 using gqf4::qf_count_key_value;
@@ -139,9 +139,9 @@ void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseCol
 }
 
 template <typename ElementType>
-uint64_t CountingQuotientFilter<ElementType>::memory_consumptionn() const {
+uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
   uint64_t consumption = 0;
-  boost::apply_visitor([&](auto& filter) {consumption += memory_consumption(filter);}, _quotient_filter);
+  boost::apply_visitor([&](auto& filter) {consumption += qf_memory_consumption(filter);}, _quotient_filter);
   return consumption;
 }
 
