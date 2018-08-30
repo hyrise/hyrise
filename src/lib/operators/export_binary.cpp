@@ -171,10 +171,10 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); cxlumn_id++) {
     auto visitor =
         make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->cxlumn_data_type(cxlumn_id));
-    resolve_data_and_cxlumn_type(*chunk->get_segment(cxlumn_id),
-                                 [&](const auto data_type_t, const auto& resolved_segment) {
-                                   visitor->handle_segment(resolved_segment, context);
-                                 });
+    resolve_data_and_segment_type(*chunk->get_segment(cxlumn_id),
+                                  [&](const auto data_type_t, const auto& resolved_segment) {
+                                    visitor->handle_segment(resolved_segment, context);
+                                  });
   }
 }
 

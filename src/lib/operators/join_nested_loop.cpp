@@ -118,8 +118,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                                 const std::shared_ptr<const BaseSegment>& segment_right,
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
-  resolve_data_and_cxlumn_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
-    resolve_data_and_cxlumn_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
+  resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
+    resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
       using LeftType = typename decltype(left_type)::type;
       using RightType = typename decltype(right_type)::type;
 
@@ -210,7 +210,7 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_cxlumn_id);
 
-      resolve_data_and_cxlumn_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
+      resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
         using RightType = typename decltype(right_type)::type;
 
         auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);

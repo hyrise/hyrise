@@ -120,7 +120,7 @@ void JoinIndex::_perform_join() {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
         const auto segment_left = _left_in_table->get_chunk(chunk_id_left)->get_segment(_left_cxlumn_id);
 
-        resolve_data_and_cxlumn_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
+        resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
           using LeftType = typename decltype(left_type)::type;
 
           auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);

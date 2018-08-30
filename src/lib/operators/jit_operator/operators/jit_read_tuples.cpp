@@ -42,7 +42,7 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
     const auto cxlumn_id = input_cxlumn.cxlumn_id;
     const auto segment = in_chunk.get_segment(cxlumn_id);
     const auto is_nullable = in_table.cxlumn_is_nullable(cxlumn_id);
-    resolve_data_and_cxlumn_type(*segment, [&](auto type, auto& typed_segment) {
+    resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
       using CxlumnDataType = typename decltype(type)::type;
       create_iterable_from_segment<CxlumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);

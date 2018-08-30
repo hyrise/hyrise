@@ -1176,7 +1176,7 @@ TEST_F(SQLTranslatorTest, ShowTables) {
 }
 
 TEST_F(SQLTranslatorTest, ShowCxlumns) {
-  const auto actual_lqp = compile_query("SHOW CXLUMNS int_float");
+  const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
   const auto expected_lqp = ShowCxlumnsNode::make("int_float");
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

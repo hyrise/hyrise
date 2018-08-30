@@ -43,7 +43,7 @@ static std::shared_ptr<SegmentStatistics> build_statistics_from_dictionary(const
 std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
     DataType data_type, const std::shared_ptr<const BaseSegment>& segment) {
   std::shared_ptr<SegmentStatistics> statistics;
-  resolve_data_and_cxlumn_type(*segment, [&statistics](auto type, auto& typed_segment) {
+  resolve_data_and_segment_type(*segment, [&statistics](auto type, auto& typed_segment) {
     using SegmentType = typename std::decay<decltype(typed_segment)>::type;
     using DataTypeT = typename decltype(type)::type;
 

@@ -54,8 +54,8 @@ TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
-  // The Projection will forward segments from its input if all expressions are segment references. Why would you enforce
-  // something like this? E.g., Update relies on it.
+  // The Projection will forward segments from its input if all expressions are segment references.
+  // Why would you enforce something like this? E.g., Update relies on it.
 
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a));
   projection->execute();

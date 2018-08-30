@@ -26,7 +26,7 @@ std::shared_ptr<PosList> BaseSingleCxlumnTableScanImpl::scan_chunk(ChunkID chunk
   auto matches_out = std::make_shared<PosList>();
   auto context = std::make_shared<Context>(chunk_id, *matches_out);
 
-  resolve_data_and_cxlumn_type(*segment, [&](const auto data_type_t, const auto& resolved_segment) {
+  resolve_data_and_segment_type(*segment, [&](const auto data_type_t, const auto& resolved_segment) {
     static_cast<AbstractSegmentVisitor*>(this)->handle_segment(resolved_segment, context);
   });
 
@@ -53,7 +53,7 @@ void BaseSingleCxlumnTableScanImpl::handle_segment(const ReferenceSegment& segme
 
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
 
-    resolve_data_and_cxlumn_type(*referenced_segment, [&](const auto data_type_t, const auto& resolved_segment) {
+    resolve_data_and_segment_type(*referenced_segment, [&](const auto data_type_t, const auto& resolved_segment) {
       static_cast<AbstractSegmentVisitor*>(this)->handle_segment(resolved_segment, new_context);
     });
   }

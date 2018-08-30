@@ -230,13 +230,13 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
  *   template <typename T>
  *   void process_segment(hana::basic_type<T> type, ReferenceSegment& segment);
  *
- *   resolve_data_and_cxlumn_type(base_segment, [&](auto type, auto& typed_segment) {
+ *   resolve_data_and_segment_type(base_segment, [&](auto type, auto& typed_segment) {
  *     process_segment(type, typed_segment);
  *   });
  */
 template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
-/*void*/ resolve_data_and_cxlumn_type(BaseSegmentType& segment, const Functor& func) {
+/*void*/ resolve_data_and_segment_type(BaseSegmentType& segment, const Functor& func) {
   resolve_data_type(segment.data_type(), [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 

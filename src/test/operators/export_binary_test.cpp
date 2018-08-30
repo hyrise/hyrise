@@ -55,8 +55,8 @@ class OperatorsExportBinaryTest : public BaseTest {
 
 TEST_F(OperatorsExportBinaryTest, TwoCxlumnsNoValues) {
   TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("FirstCxlumn", DataType::Int);
-  cxlumn_definitions.emplace_back("SecondCxlumn", DataType::String);
+  cxlumn_definitions.emplace_back("FirstColumn", DataType::Int);
+  cxlumn_definitions.emplace_back("SecondColumn", DataType::String);
 
   table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -65,7 +65,7 @@ TEST_F(OperatorsExportBinaryTest, TwoCxlumnsNoValues) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/TwoCxlumnsNoValues.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/TwoColumnsNoValues.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatCxlumn) {
@@ -83,7 +83,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatCxlumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatCxlumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatColumn.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatCxlumn) {
@@ -101,10 +101,10 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatCxlumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/MultipleChunkSingleFloatCxlumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/MultipleChunkSingleFloatColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
+TEST_F(OperatorsExportBinaryTest, StringValueCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -120,10 +120,10 @@ TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringValueSegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringValueColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
+TEST_F(OperatorsExportBinaryTest, StringDictionaryCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -141,10 +141,10 @@ TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
+TEST_F(OperatorsExportBinaryTest, FixedStringDictionaryCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -162,10 +162,10 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
+TEST_F(OperatorsExportBinaryTest, AllTypesValueCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   cxlumn_definitions.emplace_back("b", DataType::Int);
@@ -186,10 +186,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueSegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
+TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   cxlumn_definitions.emplace_back("b", DataType::Int);
@@ -213,7 +213,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionaryColumn.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesMixCxlumn) {
@@ -239,13 +239,13 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixCxlumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesMixCxlumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesMixColumn.bin", filename));
 }
 
 // A table with reference segments is materialized while exporting. The content of the export file should not be
 // different from a exported table with ValueSegments and the same content.
 // They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
-TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
+TEST_F(OperatorsExportBinaryTest, AllTypesReferenceCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
   cxlumn_definitions.emplace_back("b", DataType::Int);
@@ -270,10 +270,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueSegmentMaxChunkSize.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnMaxChunkSize.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
+TEST_F(OperatorsExportBinaryTest, EmptyStringsValueCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -291,10 +291,10 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsValueSegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsValueColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
+TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryCxlumn) {
   TableCxlumnDefinitions cxlumn_definitions;
   cxlumn_definitions.emplace_back("a", DataType::String);
 
@@ -314,7 +314,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsDictionaryColumn.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
