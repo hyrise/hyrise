@@ -250,7 +250,12 @@ int Console::_eval_sql(const std::string& sql) {
   if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
   try {
-    _sql_pipeline->get_result_table();
+    _sql_pipeline->get_result_tables();
+    if (_sql_pipeline->failed_pipeline_statement()) {
+      Fail(
+          "The transaction has failed. This should never happen in the console, where only one statement gets "
+          "executed at a time.");
+    }
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&

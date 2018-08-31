@@ -4,6 +4,7 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
@@ -47,11 +48,21 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
           referenced_chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(
               expected, _transaction_id);
 
-      // the row is already locked and the transaction needs to be rolled back
-      if (!success) {
-        _mark_as_failed();
-        return nullptr;
+      if (success) continue;
+
+      // If the row has a set TID, it might be a row that our TX inserted
+      // No need to to compare-and-swap here, because we can only run into conflicts when two transactions try to
+      // change this row from the initial tid
+      if (auto tids = referenced_chunk->get_scoped_mvcc_columns_lock()->tids;
+          tids[row_id.chunk_offset] == _transaction_id) {
+        // Make sure that even we don't see it anymore
+        tids[row_id.chunk_offset] = TransactionManager::INVALID_TRANSACTION_ID;
+        continue;
       }
+
+      // the row is already locked by someone else and the transaction needs to be rolled back
+      _mark_as_failed();
+      return nullptr;
     }
   }
 
