@@ -12,7 +12,6 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/processing_unit.hpp"
 #include "scheduler/worker.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,
@@ -83,7 +82,6 @@ void OperatorTask::_on_execute() {
     }
   }
 
-  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
   _op->execute();
 
   /**

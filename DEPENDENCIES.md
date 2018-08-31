@@ -24,8 +24,6 @@
 | tbb/libtbb-dev   | any              |    All   |                                    No |
 | valgrind         | any              |    All   |            Yes, memory checking in CI |
 | libpq-dev        | >= 9             |    All   |                                    No |
-| systemtap        | any              |    Linux |                                    No |
-| systemtap-sdt-dev| any              |    Linux |                                    No |
 
 
 ## Dependencies that are integrated in our build process via git submodules

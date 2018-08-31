@@ -8,7 +8,6 @@
 #include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
 #include "task_queue.hpp"
-#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
@@ -92,7 +91,6 @@ void AbstractTask::_join_without_replacement_worker() {
 }
 
 void AbstractTask::execute() {
-  DTRACE_PROBE3(HYRISE, JOB_START, _id, _description.c_str(), reinterpret_cast<uintptr_t>(this));
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
@@ -109,7 +107,6 @@ void AbstractTask::execute() {
     _done = true;
   }
   _done_condition_variable.notify_all();
-  DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
 }
 
 void AbstractTask::_mark_as_scheduled() {

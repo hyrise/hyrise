@@ -8,7 +8,6 @@
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 
@@ -30,7 +29,6 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
-  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_micros.count());
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
