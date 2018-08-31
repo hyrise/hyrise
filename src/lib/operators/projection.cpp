@@ -60,21 +60,24 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
-   * Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk)
+   * Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk).
    */
 
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
-  for (const auto& expression : expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-      if (pqp_select_expression && pqp_select_expression->parameters.empty()) {
-        auto result = ExpressionEvaluator{}.evaluate_uncorrelated_select_expression(*pqp_select_expression);
-        uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
+  {
+    auto evaluator = ExpressionEvaluator{};
+    for (const auto& expression : expressions) {
+      visit_expression(expression, [&](const auto& sub_expression) {
+        const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+        if (pqp_select_expression && pqp_select_expression->parameters.empty()) {
+          auto result = evaluator.evaluate_uncorrelated_select_expression(*pqp_select_expression);
+          uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
 
-      return ExpressionVisitation::VisitArguments;
-    });
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
   }
 
   /**
