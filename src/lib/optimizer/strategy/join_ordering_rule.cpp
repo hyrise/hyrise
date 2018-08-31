@@ -8,7 +8,8 @@
 
 namespace opossum {
 
-JoinOrderingRule::JoinOrderingRule(const std::shared_ptr<AbstractCostModel>& cost_model) : _cost_model(cost_model) {}
+JoinOrderingRule::JoinOrderingRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
+    : _cost_estimator(cost_estimator) {}
 
 std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
@@ -51,7 +52,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     return lqp;
   }
 
-  auto result_lqp = DpCcp{_cost_model}(*join_graph);  // NOLINT - doesn't like `{}()`
+  auto result_lqp = DpCcp{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
 
   for (const auto& vertex : join_graph->vertices) {
     _recurse_to_inputs(vertex);

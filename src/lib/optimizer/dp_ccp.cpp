@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "cost_model/abstract_cost_model.hpp"
+#include "cost_model/abstract_cost_estimator.hpp"
 #include "enumerate_ccp.hpp"
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-DpCcp::DpCcp(const std::shared_ptr<AbstractCostModel>& cost_model) : _cost_model(cost_model) {}
+DpCcp::DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) {
   // No std::unordered_map, since hashing of JoinGraphVertexSet is not trivially possible because of hidden data
@@ -44,12 +44,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
     enumerate_ccp_edges.emplace_back(first_vertex_idx, second_vertex_idx);
   }
 
-  for (auto vertex_idx = size_t{0}; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
-    const auto& vertex = join_graph.vertices[vertex_idx];
-    std::cout << "Vertex " << vertex_idx << std::endl;
-    vertex->print();
-  }
-
   /**
    * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan
    */
@@ -66,16 +60,11 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
 
     const auto joined_vertex_set = csg_cmp_pair.first | csg_cmp_pair.second;
 
-    std::cout << joined_vertex_set << " = " << csg_cmp_pair.first << " + " << csg_cmp_pair.second << " | Cost: " << _cost_model->estimate_plan_cost(candidate_plan) << std::endl;
-
     const auto best_plan_iter = best_plan.find(joined_vertex_set);
-    if (best_plan_iter == best_plan.end() ||
-        _cost_model->estimate_plan_cost(candidate_plan) < _cost_model->estimate_plan_cost(best_plan_iter->second)) {
+    if (best_plan_iter == best_plan.end() || _cost_estimator->estimate_plan_cost(candidate_plan) <
+                                                 _cost_estimator->estimate_plan_cost(best_plan_iter->second)) {
       best_plan.insert_or_assign(joined_vertex_set, candidate_plan);
-      std::cout << "-----> New best plan" << std::endl;
-      std::cout << std::endl;
     }
-
   }
 
   /**
@@ -109,7 +98,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates_to_plan(
   predicate_nodes_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     const auto predicate_node = PredicateNode::make(predicate, lqp);
-    predicate_nodes_and_cost.emplace_back(predicate_node, _cost_model->estimate_plan_cost(predicate_node));
+    predicate_nodes_and_cost.emplace_back(predicate_node, _cost_estimator->estimate_plan_cost(predicate_node));
   }
 
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
@@ -151,7 +140,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(
   join_predicates_and_cost.reserve(join_predicates.size());
   for (const auto& join_predicate : join_predicates) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
-    join_predicates_and_cost.emplace_back(join_predicate, _cost_model->estimate_plan_cost(join_node));
+    join_predicates_and_cost.emplace_back(join_predicate, _cost_estimator->estimate_plan_cost(join_node));
 
     // need to do this since nodes do not get properly (by design :(( ) removed from plan on their destruction
     join_node->set_left_input(nullptr);

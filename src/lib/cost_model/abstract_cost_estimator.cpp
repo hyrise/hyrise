@@ -1,4 +1,4 @@
-#include "abstract_cost_model.hpp"
+#include "abstract_cost_estimator.hpp"
 
 #include <queue>
 #include <unordered_set>
@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-Cost AbstractCostModel::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Cost all operators in arbitrary order
 
   auto bfs_queue = std::queue<std::shared_ptr<AbstractLQPNode>>{};

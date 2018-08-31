@@ -11,9 +11,9 @@ class AbstractLQPNode;
 /**
  * Interface of an algorithm that predicts Cost for operators.
  */
-class AbstractCostModel {
+class AbstractCostEstimator {
  public:
-  virtual ~AbstractCostModel() = default;
+  virtual ~AbstractCostEstimator() = default;
 
   Cost estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 

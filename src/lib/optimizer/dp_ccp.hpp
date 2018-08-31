@@ -6,7 +6,7 @@
 namespace opossum {
 
 class AbstractExpression;
-class AbstractCostModel;
+class AbstractCostEstimator;
 class AbstractLQPNode;
 class JoinGraph;
 
@@ -15,7 +15,7 @@ class JoinGraph;
  */
 class DpCcp final {
  public:
-  explicit DpCcp(const std::shared_ptr<AbstractCostModel>& cost_model);
+  explicit DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 
   std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph);
 
@@ -23,11 +23,12 @@ class DpCcp final {
   std::shared_ptr<AbstractLQPNode> _add_predicates_to_plan(
       const std::shared_ptr<AbstractLQPNode>& lqp,
       const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const;
+
   std::shared_ptr<AbstractLQPNode> _add_join_to_plan(
       const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
       std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const;
 
-  std::shared_ptr<AbstractCostModel> _cost_model;
+  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 };
 
 }  // namespace opossum

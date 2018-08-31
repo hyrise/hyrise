@@ -6,11 +6,11 @@
 
 namespace opossum {
 
-class AbstractCostModel;
+class AbstractCostEstimator;
 
 class JoinOrderingRule : public AbstractRule {
  public:
-  explicit JoinOrderingRule(const std::shared_ptr<AbstractCostModel>& cost_model);
+  explicit JoinOrderingRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
@@ -20,7 +20,7 @@ class JoinOrderingRule : public AbstractRule {
       const std::shared_ptr<AbstractLQPNode>& lqp) const;
   void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 
-  std::shared_ptr<AbstractCostModel> _cost_model;
+  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 };
 
 }  // namespace opossum

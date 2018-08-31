@@ -19,8 +19,8 @@ namespace opossum {
 class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    cost_model = std::make_shared<CostModelLogical>();
-    rule = std::make_shared<JoinOrderingRule>(cost_model);
+    cost_estimator = std::make_shared<CostModelLogical>();
+    rule = std::make_shared<JoinOrderingRule>(cost_estimator);
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
@@ -45,7 +45,7 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
   LQPColumnReference a_a, b_a, c_a, d_a;
-  std::shared_ptr<AbstractCostModel> cost_model;
+  std::shared_ptr<AbstractCostEstimator> cost_estimator;
   std::shared_ptr<JoinOrderingRule> rule;
 };
 
@@ -78,8 +78,6 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
-
-  actual_lqp->print();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

@@ -74,8 +74,6 @@ TEST_F(JoinGraphBuilderTest, Basic) {
   EXPECT_EQ(join_graph->vertices.at(1), node_b);
   EXPECT_EQ(join_graph->vertices.at(2), node_c);
 
-  join_graph->print();
-
   ASSERT_EQ(join_graph->edges.size(), 2u);
 
   EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(3, 0b110));
@@ -169,9 +167,6 @@ TEST_F(JoinGraphBuilderTest, ComputedExpression) {
 
   const auto join_graph = JoinGraphBuilder()(lqp);
   ASSERT_TRUE(join_graph);
-
-  join_graph->print();
-
   ASSERT_EQ(join_graph->vertices.size(), 3u);
   EXPECT_EQ(join_graph->vertices.at(0), node_c);
   EXPECT_EQ(join_graph->vertices.at(1), node_a);

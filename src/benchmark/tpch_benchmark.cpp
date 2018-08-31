@@ -37,24 +37,6 @@
  */
 
 int main(int argc, char* argv[]) {
-  // Pin to the current node
-  {
-    const auto cpu = sched_getcpu();
-    Assert(cpu >= 0, "Couldn't determine CPU");
-
-    const auto node = numa_node_of_cpu(cpu);
-    Assert(node >= 0, "Couldn't determine Node");
-
-    std::cout << "Binding process to CPU " << cpu << " on Node " << node << std::endl;
-
-    auto* node_mask = numa_allocate_nodemask();
-    numa_bitmask_setbit(node_mask, node);
-
-    numa_bind(node_mask);
-
-    numa_free_nodemask(node_mask);
-  }
-
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCH Benchmark");
 
   // clang-format off

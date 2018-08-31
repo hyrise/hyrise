@@ -20,7 +20,7 @@ namespace opossum {
 class DpCcpTest : public ::testing::Test {
  public:
   void SetUp() override {
-    cost_model = std::make_shared<CostModelLogical>();
+    cost_estimator = std::make_shared<CostModelLogical>();
 
     const auto column_statistics_a_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
     const auto column_statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 40, 100);
@@ -46,7 +46,7 @@ class DpCcpTest : public ::testing::Test {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<AbstractCostModel> cost_model;
+  std::shared_ptr<AbstractCostEstimator> cost_estimator;
   LQPColumnReference a_a, b_a, c_a;
 };
 
@@ -60,7 +60,7 @@ TEST_F(DpCcpTest, Basic) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c}));
-  DpCcp dp_ccp{cost_model};
+  DpCcp dp_ccp{cost_estimator};
 
   const auto actual_lqp = dp_ccp(join_graph);
 
@@ -85,7 +85,7 @@ TEST_F(DpCcpTest, ComplexJoinPredicate) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b}));
-  DpCcp dp_ccp{cost_model};
+  DpCcp dp_ccp{cost_estimator};
 
   const auto actual_lqp = dp_ccp(join_graph);
 

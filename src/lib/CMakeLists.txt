@@ -82,8 +82,8 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
-    cost_model/abstract_cost_model.cpp
-    cost_model/abstract_cost_model.hpp
+    cost_model/abstract_cost_estimator.cpp
+    cost_model/abstract_cost_estimator.hpp
     cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
