@@ -18,8 +18,8 @@ constexpr bool is_valid_name(const char* name) {
 
 #if defined(__APPLE__) || defined(__MACOS__)
 
-#include "utils/tracing/probe_definitions.hpp"
-#include "utils/tracing/provider.h"
+#include "probe_definitions.hpp"
+#include "provider.hpp"
 
 // Construct the probe definition by provider and probe name
 #define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
