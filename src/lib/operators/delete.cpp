@@ -53,10 +53,10 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       // If the row has a set TID, it might be a row that our TX inserted
       // No need to to compare-and-swap here, because we can only run into conflicts when two transactions try to
       // change this row from the initial tid
-      if (auto tids = referenced_chunk->get_scoped_mvcc_columns_lock()->tids;
-          tids[row_id.chunk_offset] == _transaction_id) {
+      if (auto mvcc_data = referenced_chunk->get_scoped_mvcc_columns_lock();
+          mvcc_data->tids[row_id.chunk_offset] == _transaction_id) {
         // Make sure that even we don't see it anymore
-        tids[row_id.chunk_offset] = TransactionManager::INVALID_TRANSACTION_ID;
+        mvcc_data->tids[row_id.chunk_offset] = TransactionManager::INVALID_TRANSACTION_ID;
         continue;
       }
 
