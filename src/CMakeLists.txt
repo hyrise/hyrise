@@ -72,6 +72,7 @@ include_directories(
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
+    ${PROJECT_SOURCE_DIR}/src/plugin/
 
     ${TBB_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -97,6 +98,7 @@ endif()
 add_subdirectory(benchmarklib)
 add_subdirectory(bin)
 add_subdirectory(lib)
+add_subdirectory(plugin)
 
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")
