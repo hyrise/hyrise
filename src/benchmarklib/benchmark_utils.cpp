@@ -81,7 +81,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
-                                 const size_t available_cores, const uint clients,
+                                 const uint cores, const uint clients,
                                  const bool enable_visualization, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
@@ -92,7 +92,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       use_mvcc(use_mvcc),
       output_file_path(output_file_path),
       enable_scheduler(enable_scheduler),
-      available_cores(available_cores),
+      cores(cores),
       clients(clients),
       enable_visualization(enable_visualization),
       out(out) {}
@@ -141,11 +141,11 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
-  const auto available_cores = json_config.value("cores", default_config.available_cores);
+  const auto cores = json_config.value("cores", default_config.cores);
   const auto core_info =
       enable_scheduler
           ? std::string(" using " +
-                        std::string((available_cores == 0) ? "all available" : std::to_string(available_cores)) +
+                        std::string((cores == 0) ? "all available" : std::to_string(cores)) +
                         " cores")
           : "";
   out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
@@ -208,7 +208,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
                          use_mvcc,
                          output_file_path,
                          enable_scheduler,
-                         available_cores,
+                         cores,
                          clients,
                          enable_visualization,
                          out};
