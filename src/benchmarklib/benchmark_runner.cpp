@@ -104,46 +104,46 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 
-  if (_config.parallel_execution) {
-    for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
-      std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
+  // if (_config.parallel_execution) {
+  //   for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
+  //     std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
 
-      for (const auto& named_query : mutable_named_queries) {
-        const auto query_benchmark_begin = std::chrono::steady_clock::now();
+  //     for (const auto& named_query : mutable_named_queries) {
+  //       const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
-        auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
-        for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
-          auto query_tasks = _schedule_query_execution(named_query);
-          tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
-        }
-        CurrentScheduler::wait_for_tasks(tasks);
+  //       auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+  //       for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
+  //         auto query_tasks = _schedule_query_execution(named_query);
+  //         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
+  //       }
+  //       CurrentScheduler::wait_for_tasks(tasks);
 
-        const auto query_benchmark_end = std::chrono::steady_clock::now();
+  //       const auto query_benchmark_end = std::chrono::steady_clock::now();
 
-        auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
-        query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
-        query_benchmark_result.num_iterations++;
-      }
-    }
-  } else {
-    BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
-    while (state.keep_running()) {
-      std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
+  //       auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
+  //       query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
+  //       query_benchmark_result.num_iterations++;
+  //     }
+  //   }
+  // } else {
+    // BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
+    // while (state.keep_running()) {
+    //   std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
 
-      for (const auto& named_query : mutable_named_queries) {
-        const auto query_benchmark_begin = std::chrono::steady_clock::now();
+    //   for (const auto& named_query : mutable_named_queries) {
+    //     const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
-        // Execute the query, we don't care about the results
-        _execute_query(named_query);
+    //     // Execute the query, we don't care about the results
+    //     _execute_query(named_query);
 
-        const auto query_benchmark_end = std::chrono::steady_clock::now();
+    //     const auto query_benchmark_end = std::chrono::steady_clock::now();
 
-        auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
-        query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
-        query_benchmark_result.num_iterations++;
-      }
-    }
-  }
+    //     auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
+    //     query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
+    //     query_benchmark_result.num_iterations++;
+    //   }
+    // }
+  // }
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
@@ -151,34 +151,36 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     const auto& name = named_query.first;
     _config.out << "- Benchmarking Query " << name << std::endl;
 
-    QueryBenchmarkResult result;
-    if (_config.parallel_execution) {
-      const auto benchmark_begin = std::chrono::high_resolution_clock::now();
+    auto currently_running_queries = std::atomic_uint{0};
+    auto finished_query_runs = std::atomic_uint{0};
 
-      auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
-      for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
-        auto query_tasks = _schedule_query_execution(named_query);
+    auto on_query_run_done = [&currently_running_queries, &finished_query_runs](){
+      currently_running_queries--;
+      finished_query_runs++;
+    };
+
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    auto state = BenchmarkState{_config.max_num_query_runs, _config.max_duration};
+
+    while (state.keep_running(finished_query_runs.load(std::memory_order_relaxed))) {
+      if (currently_running_queries.load(std::memory_order_relaxed) < _config.clients) {
+        currently_running_queries++;
+        auto query_tasks = _schedule_query_execution(named_query, on_query_run_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
-      CurrentScheduler::wait_for_tasks(tasks);
-
-      const auto benchmark_end = std::chrono::high_resolution_clock::now();
-
-      result.num_iterations = _config.max_num_query_runs;
-      result.duration = benchmark_end - benchmark_begin;
-      result.iteration_durations = std::vector(_config.max_num_query_runs, Duration{});
-    } else {
-      BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
-      while (state.keep_running()) {
-        _execute_query(named_query);
-      }
-
-      result.num_iterations = state.num_iterations;
-      result.duration = state.benchmark_end - state.benchmark_begin;
-      result.iteration_durations = state.iteration_durations;
     }
-
+    auto result = QueryBenchmarkResult{};
+    result.num_iterations = finished_query_runs.load(std::memory_order_relaxed);
+    result.duration = state.benchmark_end - state.benchmark_begin;
+    // result.iteration_durations = state.iteration_durations;
     _query_results_by_query_name.emplace(name, result);
+
+    // Wait for the rest of the tasks that didn't make it in time to count towards the result
+    // TODO: To be replaced with something like CurrentScheduler::abort(), that properly removes all remaining tasks from all queues, without having to wait for them
+    CurrentScheduler::wait_for_tasks(tasks);
+    DebugAssert(currently_running_queries.load(std::memory_order_relaxed) == 0, "All query runs must be finished at this point");
   }
 }
 
@@ -202,7 +204,7 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   }
 }
 
-std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_execution(const NamedQuery& named_query) {
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_execution(const NamedQuery& named_query, const std::function<void()>& done_callback) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
 
@@ -212,6 +214,8 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_exec
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
   auto tasks_per_statement = pipeline.get_tasks();
+
+  tasks_per_statement.back().back()->set_done_callback(done_callback);
 
   for (auto tasks : tasks_per_statement) {
     CurrentScheduler::schedule_tasks(tasks);
@@ -235,8 +239,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
-    DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
-                "number of iterations and number of iteration durations does not match");
+    // TODO: Fix
+    // DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
+    //             "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
@@ -409,7 +414,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<size_t>()->default_value("0")) // NOLINT
-    ("parallel", "Execute queries in parallel (if scheduler is active), or one after another otherwise", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("clients", "Specify how many queries should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
@@ -438,7 +443,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
       {"using_scheduler", config.enable_scheduler},
       {"cores", config.available_cores},
-      {"parallel_execution", config.parallel_execution},
+      {"clients", config.clients},
       {"verbose", config.verbose},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }

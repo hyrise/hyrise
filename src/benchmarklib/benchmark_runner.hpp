@@ -39,7 +39,7 @@ class BenchmarkRunner {
   void _benchmark_individual_queries();
 
   void _execute_query(const NamedQuery& named_query);
-  std::vector<std::shared_ptr<AbstractTask>> _schedule_query_execution(const NamedQuery& named_query);
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_query_execution(const NamedQuery& named_query, const std::function<void()>& done_callback);
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;

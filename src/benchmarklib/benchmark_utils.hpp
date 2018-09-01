@@ -53,14 +53,13 @@ struct BenchmarkState {
 
   BenchmarkState(const size_t max_num_iterations, const Duration max_duration);
 
-  bool keep_running();
+  bool keep_running(const uint finished_query_runs);
 
   State state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
   TimePoint iteration_begin = TimePoint{};
   TimePoint benchmark_end = TimePoint{};
 
-  size_t num_iterations = 0;
   size_t max_num_iterations;
   Duration max_duration;
   std::vector<Duration> iteration_durations;
@@ -99,7 +98,7 @@ struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
-                  const bool enable_scheduler, const size_t available_cores, const bool parallel_execution,
+                  const bool enable_scheduler, const size_t available_cores, const uint clients,
                   const bool enable_visualization, std::ostream& out);
 
   static BenchmarkConfig get_default_config();
@@ -114,7 +113,7 @@ struct BenchmarkConfig {
   const std::optional<std::string> output_file_path = std::nullopt;
   const bool enable_scheduler = false;
   const size_t available_cores = 0;
-  const bool parallel_execution = false;
+  const uint clients = 1;
   const bool enable_visualization = false;
   std::ostream& out;
 

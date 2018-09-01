@@ -35,7 +35,7 @@ BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::D
   iteration_durations.reserve(max_num_iterations);
 }
 
-bool BenchmarkState::keep_running() {
+bool BenchmarkState::keep_running(const uint finished_query_runs) {
   bool is_first_iteration = false;
 
   switch (state) {
@@ -62,7 +62,7 @@ bool BenchmarkState::keep_running() {
   iteration_begin = now;
 
   // Stop execution if we reached the maximum number of iterations
-  if (num_iterations >= max_num_iterations) {
+  if (finished_query_runs >= max_num_iterations) {
     state = State::Over;
     return false;
   }
@@ -74,8 +74,6 @@ bool BenchmarkState::keep_running() {
     return false;
   }
 
-  num_iterations++;
-
   return true;
 }
 
@@ -83,7 +81,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
-                                 const size_t available_cores, const bool parallel_execution,
+                                 const size_t available_cores, const uint clients,
                                  const bool enable_visualization, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
@@ -95,7 +93,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       output_file_path(output_file_path),
       enable_scheduler(enable_scheduler),
       available_cores(available_cores),
-      parallel_execution(parallel_execution),
+      clients(clients),
       enable_visualization(enable_visualization),
       out(out) {}
 
@@ -153,10 +151,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
       << std::endl;
 
-  const auto parallel_execution = json_config.value("parallel", default_config.parallel_execution);
+  const auto clients = json_config.value("clients", default_config.clients);
   if (enable_scheduler) {
-    out << "- Queries are executed " + std::string(parallel_execution ? "in parallel" : "one after another")
-        << std::endl;
+    out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel"<< std::endl;
   }
 
   // Determine benchmark and display it
@@ -212,7 +209,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
                          output_file_path,
                          enable_scheduler,
                          available_cores,
-                         parallel_execution,
+                         clients,
                          enable_visualization,
                          out};
 }
@@ -233,7 +230,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
   json_config.emplace("cores", parse_result["cores"].as<size_t>());
-  json_config.emplace("parallel", parse_result["parallel"].as<bool>());
+  json_config.emplace("clients", parse_result["clients"].as<uint>());
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
