@@ -476,6 +476,16 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
      */
 
     visit_expression(pqp_expression, [&](auto& expression) {
+      // Try to resolve the Expression to a column from the input node
+      const auto column_id = node->find_column_id(*expression);
+      if (column_id) {
+        const auto referenced_expression = node->column_expressions()[*column_id];
+        expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
+                                                           referenced_expression->is_nullable(),
+                                                           referenced_expression->as_column_name());
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
       // Resolve SubSelectExpression
       if (expression->type == ExpressionType::LQPSelect) {
         const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
@@ -504,16 +514,6 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         } else {
           expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_parameters);
         }
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      // Try to resolve the Expression to a column from the input node
-      const auto column_id = node->find_column_id(*expression);
-      if (column_id) {
-        const auto referenced_expression = node->column_expressions()[*column_id];
-        expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                           referenced_expression->is_nullable(),
-                                                           referenced_expression->as_column_name());
         return ExpressionVisitation::DoNotVisitArguments;
       }
 
