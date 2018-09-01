@@ -154,7 +154,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     auto currently_running_queries = std::atomic_uint{0};
     auto finished_query_runs = std::atomic_uint{0};
 
-    auto on_query_run_done = [&currently_running_queries, &finished_query_runs](){
+    auto on_query_done = [&currently_running_queries, &finished_query_runs](){
       currently_running_queries--;
       finished_query_runs++;
     };
@@ -165,7 +165,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     while (state.keep_running(finished_query_runs.load(std::memory_order_relaxed))) {
       if (currently_running_queries.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_queries++;
-        auto query_tasks = _schedule_query_execution(named_query, on_query_run_done);
+        auto query_tasks = _schedule_query_execution(named_query, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
