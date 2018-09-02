@@ -249,7 +249,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   std::vector<bool> result_nulls;
 
   if (right_expression.type == ExpressionType::List) {
-    const auto &array_expression = static_cast<const ListExpression &>(right_expression);
+    const auto& array_expression = static_cast<const ListExpression&>(right_expression);
 
     /**
      * To keep the code simple for now, transform the InExpression like this:
@@ -261,7 +261,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
     std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-    for (const auto &element : array_expression.elements()) {
+    for (const auto& element : array_expression.elements()) {
       if ((element->data_type() == DataType::String) == left_is_string) {
         type_compatible_elements.emplace_back(element);
       }
@@ -273,7 +273,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     }
 
     std::shared_ptr<AbstractExpression> predicate_disjunction =
-    equals_(in_expression.value(), type_compatible_elements.front());
+        equals_(in_expression.value(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
       const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
       predicate_disjunction = or_(predicate_disjunction, equals_element);
