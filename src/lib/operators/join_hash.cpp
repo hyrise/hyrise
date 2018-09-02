@@ -187,7 +187,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return std::move(hashtables);
+  return hashtables;
 }
 
 /*
@@ -835,7 +835,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.back()->schedule();
     
     CurrentScheduler::wait_for_tasks(jobs);
-
 
     // Probe phase
     std::vector<PosList> left_pos_lists;
