@@ -249,7 +249,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   std::vector<bool> result_nulls;
 
   if (right_expression.type == ExpressionType::List) {
-    const auto& array_expression = static_cast<const ListExpression&>(right_expression);
+    const auto &array_expression = static_cast<const ListExpression &>(right_expression);
 
     /**
      * To keep the code simple for now, transform the InExpression like this:
@@ -261,7 +261,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
     std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-    for (const auto& element : array_expression.elements()) {
+    for (const auto &element : array_expression.elements()) {
       if ((element->data_type() == DataType::String) == left_is_string) {
         type_compatible_elements.emplace_back(element);
       }
@@ -273,7 +273,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     }
 
     std::shared_ptr<AbstractExpression> predicate_disjunction =
-        equals_(in_expression.value(), type_compatible_elements.front());
+    equals_(in_expression.value(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
       const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
       predicate_disjunction = or_(predicate_disjunction, equals_element);
@@ -336,7 +336,13 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     });
 
   } else {
-    Fail("Unsupported ExpressionType used in InExpression");
+    /**
+     * `<expression> IN <anything>` is not legal SQL, but on expression level we have to support it, since `<anything>`
+     * might be a column holding the result of a subselect.
+     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything>)`
+     */
+
+    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*in_(in_expression.value(), list_(in_expression.set())));
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),

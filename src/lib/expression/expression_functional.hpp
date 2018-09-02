@@ -19,6 +19,7 @@
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "parameter_expression.hpp"
+#include "pqp_column_expression.hpp"
 #include "pqp_select_expression.hpp"
 #include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
@@ -204,6 +205,8 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
 
 std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id);
 std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference);
+std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,
+                                             const std::string& column_name);
 
 template <typename ReferencedExpression>
 std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id,
