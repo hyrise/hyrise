@@ -1,4 +1,4 @@
-#include <type_traits>
+#pragma once
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -7,7 +7,6 @@
 #include "operators/table_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_hash.cpp"  // to access free functions build() etc.
-#include "operators/join_hash/hash_traits.hpp"
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
@@ -41,114 +40,56 @@ class JoinHashTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems, _table_with_nulls;
   std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
-};
 
-template <typename Iter> 
-size_t get_number_of_rows(Iter begin, Iter end) {
-  size_t row_count = 0;
-  for (Iter it = begin; it != end; ++it) {
-    auto value = it->second;
-    if (value.type() == typeid(RowID)) {
-      row_count += 1;
-    } else {
-      row_count += boost::get<PosList>(value).size();
+  template <typename Iter> 
+  size_t get_number_of_rows(Iter begin, Iter end) {
+    size_t row_count = 0;
+    for (Iter it = begin; it != end; ++it) {
+      auto value = it->second;
+      if (value.type() == typeid(RowID)) {
+        row_count += 1;
+      } else {
+        row_count += boost::get<PosList>(value).size();
+      }
+    }
+    return row_count;
+  }
+
+  template <typename T, typename HashType>
+  void test_hash_map(const std::vector<T>& values) {
+    std::vector<PartitionedElement<T>> elements;
+    for (size_t i = 0; i < values.size(); ++i) {
+      RowID row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(i)}};
+      elements.emplace_back(PartitionedElement<T>{row_id, 17, static_cast<T>(values.at(i))});
+    }
+
+    auto hash_map = build<T, HashType>(RadixContainer<T>{
+      std::make_shared<std::vector<PartitionedElement<T>>>(elements), std::vector<size_t>{elements.size()}});
+
+    // With only one offset value passed, one hash map will be created
+    EXPECT_EQ(hash_map.size(), 1);
+
+    auto row_count = get_number_of_rows(hash_map.at(0)->begin(), hash_map.at(0)->end());
+    EXPECT_EQ(row_count, elements.size());
+
+    ASSERT_TRUE(hash_map.at(0).has_value());  // hash map for first (and only) chunk exists
+
+    unsigned int counter = 0;
+    for (const auto& element : elements) {
+      auto probe_value = element.value;
+
+      auto result = hash_map.at(0).value().at(probe_value);
+      if (result.type() == typeid(RowID)) {
+        EXPECT_EQ(boost::get<RowID>(result), element.row_id);
+      } else {
+        auto result_list = boost::get<PosList>(result);
+        RowID probe_row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(counter)}};
+        EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
+      }
+      ++counter;
     }
   }
-  return row_count;
-}
-
-#define EXPECT_HASH_TYPE(left, right, hash) EXPECT_TRUE((std::is_same_v<hash, JoinHashTraits<left, right>::HashType>))
-#define EXPECT_LEXICAL_CAST(left, right, cast) EXPECT_EQ((JoinHashTraits<left, right>::needs_lexical_cast), (cast))
-
-TEST_F(JoinHashTest, IntegerTraits) {
-  // joining int and int
-  EXPECT_HASH_TYPE(int32_t, int32_t, int32_t);
-  EXPECT_LEXICAL_CAST(int32_t, int32_t, false);
-
-  // joining long and long
-  EXPECT_HASH_TYPE(int64_t, int64_t, int64_t);
-  EXPECT_LEXICAL_CAST(int64_t, int64_t, false);
-
-  // joining int and long
-  EXPECT_HASH_TYPE(int32_t, int64_t, int64_t);
-  EXPECT_HASH_TYPE(int64_t, int32_t, int64_t);
-  EXPECT_LEXICAL_CAST(int32_t, int64_t, false);
-  EXPECT_LEXICAL_CAST(int64_t, int32_t, false);
-}
-
-TEST_F(JoinHashTest, FloatingTraits) {
-  // joining float and float
-  EXPECT_HASH_TYPE(float, float, float);
-  EXPECT_LEXICAL_CAST(float, float, false);
-
-  // joining double and double
-  EXPECT_HASH_TYPE(double, double, double);
-  EXPECT_LEXICAL_CAST(double, double, false);
-
-  // joining float and double
-  EXPECT_HASH_TYPE(float, double, double);
-  EXPECT_HASH_TYPE(double, float, double);
-  EXPECT_LEXICAL_CAST(float, double, false);
-  EXPECT_LEXICAL_CAST(double, float, false);
-}
-
-TEST_F(JoinHashTest, StringTraits) {
-  // joining string and string
-  EXPECT_HASH_TYPE(std::string, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, std::string, true);
-}
-
-TEST_F(JoinHashTest, MixedNumberTraits) {
-  // joining int and float
-  EXPECT_HASH_TYPE(int32_t, float, float);
-  EXPECT_HASH_TYPE(float, int32_t, float);
-  EXPECT_LEXICAL_CAST(int32_t, float, false);
-  EXPECT_LEXICAL_CAST(float, int32_t, false);
-
-  // joining int and double
-  EXPECT_HASH_TYPE(int32_t, double, double);
-  EXPECT_HASH_TYPE(double, int32_t, double);
-  EXPECT_LEXICAL_CAST(int32_t, double, false);
-  EXPECT_LEXICAL_CAST(double, int32_t, false);
-
-  // joining long and float
-  EXPECT_HASH_TYPE(int64_t, float, float);
-  EXPECT_HASH_TYPE(float, int64_t, float);
-  EXPECT_LEXICAL_CAST(int64_t, float, false);
-  EXPECT_LEXICAL_CAST(float, int64_t, false);
-
-  // joining long and double
-  EXPECT_HASH_TYPE(int64_t, double, double);
-  EXPECT_HASH_TYPE(double, int64_t, double);
-  EXPECT_LEXICAL_CAST(int64_t, double, false);
-  EXPECT_LEXICAL_CAST(double, int64_t, false);
-}
-
-TEST_F(JoinHashTest, MixedStringTraits) {
-  // joining string and int
-  EXPECT_HASH_TYPE(std::string, int32_t, std::string);
-  EXPECT_HASH_TYPE(int32_t, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, int32_t, true);
-  EXPECT_LEXICAL_CAST(int32_t, std::string, true);
-
-  // joining string and long
-  EXPECT_HASH_TYPE(std::string, int64_t, std::string);
-  EXPECT_HASH_TYPE(int64_t, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, int64_t, true);
-  EXPECT_LEXICAL_CAST(int64_t, std::string, true);
-
-  // joining string and float
-  EXPECT_HASH_TYPE(std::string, float, std::string);
-  EXPECT_HASH_TYPE(float, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, float, true);
-  EXPECT_LEXICAL_CAST(float, std::string, true);
-
-  // joining string and double
-  EXPECT_HASH_TYPE(std::string, double, std::string);
-  EXPECT_HASH_TYPE(double, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, double, true);
-  EXPECT_LEXICAL_CAST(double, std::string, true);
-}
+};
 
 TEST_F(JoinHashTest, OperatorName) {
   auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
@@ -198,7 +139,7 @@ TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
   EXPECT_EQ(hash_map_without_nulls.size(), pow(2, radix_bit_count));
 
   // now that build removed the invalid values, map sizes should differ
-  auto row_count = get_number_of_rows(hash_map_without_nulls.at(0)->begin(), hash_map_without_nulls.at(0)->end());
+  auto row_count = this->get_number_of_rows(hash_map_without_nulls.at(0)->begin(), hash_map_without_nulls.at(0)->end());
   EXPECT_EQ(row_count, table_without_nulls_scanned->get_output()->row_count());
 }
 
@@ -215,4 +156,5 @@ TEST_F(JoinHashTest, MaterializeInputHistograms) {
 
   EXPECT_EQ(histogram_offset_sum, _table_tpch_lineitems_scanned->get_output()->row_count());
 }
+
 }  // namespace opossum
