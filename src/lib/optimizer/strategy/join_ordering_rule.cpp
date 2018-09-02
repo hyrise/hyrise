@@ -31,8 +31,8 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
 
   root->set_left_input(result_lqp);
 
-  // Figuring out whether JoinOrderingRule changed to LQP is hard, and it should be applied only once, anyway.
-  // So, return false.
+  // Figuring out whether the JoinOrderingRule changed the LQP is hard, and the rule should be applied only once,
+  // anyway. So, return false.
   return false;
 }
 

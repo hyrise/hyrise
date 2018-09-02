@@ -32,7 +32,7 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 
   /**
    * This loop corresponds to EnumerateCsg in the paper
-   * Iterate fro the highest to the lowest vertex index
+   * Iterate from the highest to the lowest vertex index
    */
   for (size_t reverse_vertex_idx = 0; reverse_vertex_idx < _num_vertices; ++reverse_vertex_idx) {
     const auto forward_vertex_idx = _num_vertices - reverse_vertex_idx - 1;
@@ -56,7 +56,8 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
   std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
 
   for (auto csg_cmp_pair : _csg_cmp_pairs) {
-    // Components must be either single-vertex or must have been enumerated as the vertex set of a previously CCP
+    // Components must be either single-vertex or must have been enumerated as the vertex set of a previously enumerated
+    // CCP
     Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
            "CSG not yet enumerated");
     Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,

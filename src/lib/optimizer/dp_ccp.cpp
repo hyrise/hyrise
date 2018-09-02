@@ -119,7 +119,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
     std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const {
   /**
-   * Join two plans using a set of predicate.
+   * Join two plans using a set of predicates.
    *
    *
    * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates) are executed as
