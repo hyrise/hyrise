@@ -251,34 +251,34 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_tables();
-    if (_sql_pipeline->failed_pipeline_statement()) {
-      Fail(
-          "The transaction has failed. This should never happen in the console, where only one statement gets "
-          "executed at a time.");
-    }
-  } catch (const InvalidInputException& exception) {
-    out(std::string(exception.what()) + "\n");
-    if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
-        _sql_pipeline->statement_count() > 1) {
-      out("All previous statements have been committed.\n");
-    }
-    return ReturnCode::Error;
+    Assert(!_sql_pipeline->failed_pipeline_statement(),
+           "The transaction has failed. This should never happen in the console, where only one statement gets "
+           "executed at a time.");
   }
-
-  const auto& table = _sql_pipeline->get_result_table();
-  auto row_count = table ? table->row_count() : 0;
-
-  // Print result (to Console and logfile)
-  if (table) {
-    out(table);
-  }
-
-  out("===\n");
-  out(std::to_string(row_count) + " rows total\n");
-  out(_sql_pipeline->metrics().to_string());
-
-  return ReturnCode::Ok;
 }
+catch (const InvalidInputException& exception) {
+  out(std::string(exception.what()) + "\n");
+  if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
+      _sql_pipeline->statement_count() > 1) {
+    out("All previous statements have been committed.\n");
+  }
+  return ReturnCode::Error;
+}
+
+const auto& table = _sql_pipeline -> get_result_table();
+auto row_count = table ? table -> row_count() : 0;
+
+// Print result (to Console and logfile)
+if (table) {
+  out(table);
+}
+
+out("===\n");
+out(std::to_string(row_count) + " rows total\n");
+out(_sql_pipeline->metrics().to_string());
+
+return ReturnCode::Ok;
+}  // namespace opossum
 
 void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
 
