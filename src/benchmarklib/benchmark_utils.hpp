@@ -57,12 +57,10 @@ struct BenchmarkState {
 
   State state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
-  TimePoint iteration_begin = TimePoint{};
   TimePoint benchmark_end = TimePoint{};
 
   size_t max_num_iterations;
   Duration max_duration;
-  std::vector<Duration> iteration_durations;
 };
 
 // View EncodingConfig::description to see format of encoding JSON

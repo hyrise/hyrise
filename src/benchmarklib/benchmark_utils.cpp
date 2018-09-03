@@ -31,35 +31,20 @@ std::ostream& get_out_stream(const bool verbose) {
 }
 
 BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {
-  iteration_durations.reserve(max_num_iterations);
-}
+    : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
 
 bool BenchmarkState::keep_running(const uint finished_query_runs) {
-  bool is_first_iteration = false;
-
   switch (state) {
     case State::NotStarted:
       benchmark_begin = std::chrono::high_resolution_clock::now();
       state = State::Running;
-      is_first_iteration = true;
       break;
     case State::Over:
       return false;
     default: {}
   }
 
-  const auto now = std::chrono::high_resolution_clock::now();
-
-  if (!is_first_iteration) {
-    // "Finish" the current iteration, i.e. get its duration
-    const auto iteration_duration = now - iteration_begin;
-    iteration_durations.push_back(iteration_duration);
-  }
-
-  // "Start" new iteration
-  benchmark_end = now;
-  iteration_begin = now;
+  benchmark_end = std::chrono::high_resolution_clock::now();
 
   // Stop execution if we reached the maximum number of iterations
   if (finished_query_runs >= max_num_iterations) {
@@ -68,7 +53,7 @@ bool BenchmarkState::keep_running(const uint finished_query_runs) {
   }
 
   // Stop execution if we reached the time limit
-  const auto benchmark_duration = now - benchmark_begin;
+  const auto benchmark_duration = benchmark_end - benchmark_begin;
   if (benchmark_duration >= max_duration) {
     state = State::Over;
     return false;
