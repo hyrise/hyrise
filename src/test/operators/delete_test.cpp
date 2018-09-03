@@ -168,6 +168,13 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
 }
 
 TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
+  // We are testing a couple of things here:
+  //   (1) When a transaction deletes a row that it inserted itself, it should no longer be visible to itself
+  //   (2) When that transaction rolls back, the row should be invisible to a second transaction
+  //   (3) The same should be the case if the transaction commits
+  // For that purpose, we run the insert, delete, scan routine twice, once where we abort the transaction (inserted
+  // value 456.7), and once where we commit it (inserted value 457.7)
+
   for (const auto value : {456.7, 457.7}) {
     auto context = TransactionManager::get().new_transaction_context();
 
