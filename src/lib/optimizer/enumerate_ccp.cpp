@@ -5,6 +5,16 @@
 
 #include "utils/assert.hpp"
 
+/**
+ * --- Glossary ---
+ *
+ * Csg                  Connected Sub Graph: a set of vertices connected by edges
+ * Cmp                  Complement: a connected subgraph which is connected to another connected sub graph by an edge
+ * CsgCmpPair           or CCP: a pair of connected subgraphs which are connected by an edge
+ * Neighborhood         of a vertex: all vertices connected to this vertex by an edge
+ * Exclusion Set        of a vertex: all vertices with a lower index than this vertex
+ */
+
 namespace opossum {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
@@ -23,7 +33,7 @@ EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size
 
 std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::operator()() {
   /**
-   * Initialize vertex neighborhood lookup table
+   * Initialize vertex neighborhood lookup table by computing and storing the neighborhood of each vertex
    */
   _vertex_neighborhoods.resize(_num_vertices);
   for (auto vertex_idx = size_t{0}; vertex_idx < _num_vertices; ++vertex_idx) {
@@ -32,7 +42,10 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 
   /**
    * This loop corresponds to EnumerateCsg in the paper
-   * Iterate from the highest to the lowest vertex index
+   *
+   * It iterate from the highest to the lowest vertex index and starts a search for connected subgraphs from
+   * each vertex (_enumerate_csg_recursive()).
+   * For each subgraph, a search for complement subgraphs is started (_enumerate_cmp()).
    */
   for (size_t reverse_vertex_idx = 0; reverse_vertex_idx < _num_vertices; ++reverse_vertex_idx) {
     const auto forward_vertex_idx = _num_vertices - reverse_vertex_idx - 1;
@@ -50,7 +63,7 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 
 #if IS_DEBUG
   // Assert that the algorithm didn't create duplicates and that all created ccps contain only previously enumerated
-  // subsets
+  // subsets, i.e., that the enumeration order is correct
 
   std::set<JoinGraphVertexSet> enumerated_subsets;
   std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
@@ -76,6 +89,11 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
 
 void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csgs, const JoinGraphVertexSet& vertex_set,
                                             const JoinGraphVertexSet& exclusion_set) {
+  /**
+   * Extend `csgs` with subsets of its neighborhood, thereby forming new connected subgraphs.
+   * For each newly found connected subgraph, calls itself recursively.
+   */
+
   const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
   const auto neighborhood_subsets = _non_empty_subsets(neighborhood);
   const auto extended_exclusion_set = exclusion_set | neighborhood;
@@ -89,9 +107,13 @@ void EnumerateCcp::_enumerate_csg_recursive(std::vector<JoinGraphVertexSet>& csg
   }
 }
 
-void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& vertex_set) {
-  const auto exclusion_set = _exclusion_set(vertex_set.find_first()) | vertex_set;
-  const auto neighborhood = _neighborhood(vertex_set, exclusion_set);
+void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) {
+  /**
+   * Find complements to the connected subgraph `primary_vertex_set`
+   */
+
+  const auto exclusion_set = _exclusion_set(primary_vertex_set.find_first()) | primary_vertex_set;
+  const auto neighborhood = _neighborhood(primary_vertex_set, exclusion_set);
 
   if (neighborhood.none()) return;
 
@@ -106,7 +128,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& vertex_set) {
     auto cmp_vertex_set = JoinGraphVertexSet(_num_vertices);
     cmp_vertex_set.set(*iter);
 
-    _csg_cmp_pairs.emplace_back(std::make_pair(vertex_set, cmp_vertex_set));
+    _csg_cmp_pairs.emplace_back(std::make_pair(primary_vertex_set, cmp_vertex_set));
 
     const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighborhood);
 
@@ -114,12 +136,16 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& vertex_set) {
     _enumerate_csg_recursive(csgs, cmp_vertex_set, extended_exclusion_set);
 
     for (const auto& csg : csgs) {
-      _csg_cmp_pairs.emplace_back(std::make_pair(vertex_set, csg));
+      _csg_cmp_pairs.emplace_back(std::make_pair(primary_vertex_set, csg));
     }
   }
 }
 
 JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
+  /**
+   * All vertices with an index lower than `vertex_idx`
+   */
+
   JoinGraphVertexSet exclusion_set(_num_vertices);
   for (size_t exclusion_vertex_idx = 0; exclusion_vertex_idx < vertex_idx; ++exclusion_vertex_idx) {
     exclusion_set.set(exclusion_vertex_idx);
@@ -129,6 +155,10 @@ JoinGraphVertexSet EnumerateCcp::_exclusion_set(const size_t vertex_idx) const {
 
 JoinGraphVertexSet EnumerateCcp::_neighborhood(const JoinGraphVertexSet& vertex_set,
                                                const JoinGraphVertexSet& exclusion_set) const {
+  /**
+   * Use the lookup table `_vertex_neighborhoods[]` to find the neighborhood of a connected subgraph `vertex_set`
+   */
+
   JoinGraphVertexSet neighborhood(_num_vertices);
 
   for (auto current_vertex_idx = size_t{0}; current_vertex_idx < _num_vertices; ++current_vertex_idx) {
@@ -141,6 +171,10 @@ JoinGraphVertexSet EnumerateCcp::_neighborhood(const JoinGraphVertexSet& vertex_
 }
 
 JoinGraphVertexSet EnumerateCcp::_single_vertex_neighborhood(const size_t vertex_idx) const {
+  /**
+   * Return the neighborhood of a single vertex
+   */
+
   JoinGraphVertexSet neighbourhood(_num_vertices);
   for (const auto& edge : _edges) {
     if (vertex_idx == edge.first && vertex_idx != edge.second) {
@@ -155,6 +189,13 @@ JoinGraphVertexSet EnumerateCcp::_single_vertex_neighborhood(const size_t vertex
 }
 
 std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraphVertexSet& vertex_set) const {
+  /**
+   * Returns all proper subsets of `vertex_set`, e.g., for 01101 return {00001, 00100, 01000, 01001, 01100}
+   *
+   * The algorithm listed here is from stackoverflow, but I can't find the link to it anymore, hard as I tried.
+   * Neither can I convincingly explain the bit-magic here, but it works nicely.
+   */
+
   if (vertex_set.none()) return {};
 
   std::vector<JoinGraphVertexSet> subsets;

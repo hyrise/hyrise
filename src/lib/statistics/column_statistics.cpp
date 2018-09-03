@@ -114,7 +114,7 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
       return estimate_not_equals_with_value(casted_value);
     }
     // TODO(anybody) implement other table-scan operators for string.
-    default: { return {non_null_value_ratio() * 0.1f, without_null_values()}; }
+    default: { return {non_null_value_ratio(), without_null_values()}; }
   }
 }
 
@@ -373,7 +373,7 @@ FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predica
     return {0.f, without_null_values(), right_column_statistics.without_null_values()};
   }
 
-  return {non_null_value_ratio() * right_column_statistics.non_null_value_ratio() * 0.1f, without_null_values(),
+  return {non_null_value_ratio() * right_column_statistics.non_null_value_ratio(), without_null_values(),
           right_column_statistics.without_null_values()};
 }
 

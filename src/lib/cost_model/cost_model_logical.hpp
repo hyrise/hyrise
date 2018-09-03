@@ -14,7 +14,6 @@ class CostModelLogical : public AbstractCostEstimator {
   Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  // Number of operations +  number of different columns accessed to factor in expression complexity
   static float _get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression);
 };
 

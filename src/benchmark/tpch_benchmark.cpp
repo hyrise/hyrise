@@ -1,4 +1,3 @@
-#include <numa.h>
 #include <chrono>
 #include <fstream>
 #include <iostream>

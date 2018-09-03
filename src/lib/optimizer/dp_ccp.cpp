@@ -13,7 +13,8 @@ namespace opossum {
 DpCcp::DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) {
-  // No std::unordered_map, since hashing of JoinGraphVertexSet is not trivially possible because of hidden data
+  // No std::unordered_map, since hashing of JoinGraphVertexSet is not (efficiently) possible because
+  // boost::dynamic_bitset hides the data necessary for doing so efficiently.
   auto best_plan = std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>{};
 
   /**
@@ -45,7 +46,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   }
 
   /**
-   * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan
+   * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan if the candidate plan
+   *                            is cheaper than the cheapest currently known plan for a particular subset of vertices.
    */
   const auto csg_cmp_pairs = EnumerateCcp{join_graph.vertices.size(), enumerate_ccp_edges}();  // NOLINT
   for (const auto& csg_cmp_pair : csg_cmp_pairs) {
@@ -68,7 +70,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   }
 
   /**
-   * 4. Build vertex set with all vertices and return the plan for it
+   * 4. Build vertex set with all vertices and return the plan for it - this will be the best plan for the entire join
+   *    graph.
    */
   boost::dynamic_bitset<> all_vertices_set{join_graph.vertices.size()};
   all_vertices_set.flip();  // Turns all bits to '1'

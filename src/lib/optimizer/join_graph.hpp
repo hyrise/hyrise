@@ -26,7 +26,7 @@ class JoinGraph final {
  public:
   /**
    * Tries to turn the subplan rooted at @lqp into a JoinGraph.
-   * @return nullptr, it this is impossible (e.g., lqp is a Sort/AggregateNode)
+   * @return nullopt, if the root node would already be a vertex and thus the JoinGraph wouldn't be meaningful
    */
   static std::optional<JoinGraph> from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 

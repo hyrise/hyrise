@@ -22,21 +22,21 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
   // No need to create a join graph consisting of just one vertex and no predicates
   if (_lqp_node_type_is_vertex(lqp->type)) return std::nullopt;
 
-  traverse(lqp);
+  _traverse(lqp);
 
   /**
    * Turn the predicates into JoinEdges and build the JoinGraph
    */
-  auto edges = join_edges_from_predicates(_vertices, _predicates);
-  auto cross_edges = cross_edges_between_components(_vertices, edges);
+  auto edges = _join_edges_from_predicates(_vertices, _predicates);
+  auto cross_edges = _cross_edges_between_components(_vertices, edges);
 
   edges.insert(edges.end(), cross_edges.begin(), cross_edges.end());
 
   return JoinGraph{_vertices, edges};
 }
 
-void JoinGraphBuilder::traverse(const std::shared_ptr<AbstractLQPNode>& node) {
-  // Makes it possible to call traverse() on inputs without checking whether they exist first.
+void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
+  // Makes it possible to call _traverse() on inputs without checking whether they exist first.
   if (!node) return;
 
   if (_lqp_node_type_is_vertex(node->type)) {
@@ -58,8 +58,8 @@ void JoinGraphBuilder::traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       }
 
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
-        traverse(node->left_input());
-        traverse(node->right_input());
+        _traverse(node->left_input());
+        _traverse(node->right_input());
       } else {
         _vertices.emplace_back(node);
       }
@@ -69,7 +69,7 @@ void JoinGraphBuilder::traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
       _predicates.emplace_back(predicate_node->predicate);
 
-      traverse(node->left_input());
+      _traverse(node->left_input());
     } break;
 
     case LQPNodeType::Union: {
@@ -83,7 +83,7 @@ void JoinGraphBuilder::traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       if (union_node->union_mode == UnionMode::Positions) {
         const auto parse_result = _parse_union(union_node);
 
-        traverse(parse_result.base_node);
+        _traverse(parse_result.base_node);
         _predicates.emplace_back(parse_result.predicate);
       } else {
         _vertices.emplace_back(node);
@@ -142,9 +142,9 @@ bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) con
   return node_type != LQPNodeType::Join && node_type != LQPNodeType::Union && node_type != LQPNodeType::Predicate;
 }
 
-std::vector<JoinGraphEdge> JoinGraphBuilder::join_edges_from_predicates(
-    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
-    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
+std::vector<JoinGraphEdge> JoinGraphBuilder::_join_edges_from_predicates(
+const std::vector<std::shared_ptr<AbstractLQPNode>> &vertices,
+const std::vector<std::shared_ptr<AbstractExpression>> &predicates) {
   std::map<JoinGraphVertexSet, size_t> vertices_to_edge_idx;
   std::vector<JoinGraphEdge> edges;
 
@@ -161,8 +161,8 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::join_edges_from_predicates(
   return edges;
 }
 
-std::vector<JoinGraphEdge> JoinGraphBuilder::cross_edges_between_components(
-    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges) {
+std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
+const std::vector<std::shared_ptr<AbstractLQPNode>> &vertices, std::vector<JoinGraphEdge> edges) {
   /**
    * Create edges from the gathered JoinPlanPredicates. We can't directly create the JoinGraph from this since we want
    * the JoinGraph to be connected and there might be edges from CrossJoins still missing.
