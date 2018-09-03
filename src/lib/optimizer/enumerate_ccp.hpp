@@ -49,7 +49,6 @@ class EnumerateCcp final {
 
   // Lookup table
   std::vector<JoinGraphVertexSet> _vertex_neighborhoods;
-
 };
 
 }  // namespace opossum

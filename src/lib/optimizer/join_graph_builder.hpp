@@ -35,11 +35,11 @@ class JoinGraphBuilder final {
   std::optional<JoinGraph> operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
 
   static std::vector<JoinGraphEdge> _join_edges_from_predicates(
-  const std::vector<std::shared_ptr<AbstractLQPNode>> &vertices,
-  const std::vector<std::shared_ptr<AbstractExpression>> &predicates);
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+      const std::vector<std::shared_ptr<AbstractExpression>>& predicates);
 
   static std::vector<JoinGraphEdge> _cross_edges_between_components(
-  const std::vector<std::shared_ptr<AbstractLQPNode>> &vertices, std::vector<JoinGraphEdge> edges);
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges);
 
   /**
    * Traverse the LQP recursively identifying predicates and vertices along the way

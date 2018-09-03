@@ -143,8 +143,8 @@ bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) con
 }
 
 std::vector<JoinGraphEdge> JoinGraphBuilder::_join_edges_from_predicates(
-const std::vector<std::shared_ptr<AbstractLQPNode>> &vertices,
-const std::vector<std::shared_ptr<AbstractExpression>> &predicates) {
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
   std::map<JoinGraphVertexSet, size_t> vertices_to_edge_idx;
   std::vector<JoinGraphEdge> edges;
 
@@ -162,7 +162,7 @@ const std::vector<std::shared_ptr<AbstractExpression>> &predicates) {
 }
 
 std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
-const std::vector<std::shared_ptr<AbstractLQPNode>> &vertices, std::vector<JoinGraphEdge> edges) {
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<JoinGraphEdge> edges) {
   /**
    * Create edges from the gathered JoinPlanPredicates. We can't directly create the JoinGraph from this since we want
    * the JoinGraph to be connected and there might be edges from CrossJoins still missing.
