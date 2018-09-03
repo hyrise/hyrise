@@ -153,11 +153,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 
     auto currently_running_queries = std::atomic_uint{0};
     auto finished_query_runs = std::atomic_uint{0};
-
-    auto on_query_done = [&currently_running_queries, &finished_query_runs](){
-      currently_running_queries--;
-      finished_query_runs++;
-    };
+    auto iteration_durations = std::vector<Duration>{};
+    auto durations_mutex = std::mutex{};
 
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     auto state = BenchmarkState{_config.max_num_query_runs, _config.max_duration};
@@ -165,6 +162,19 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     while (state.keep_running(finished_query_runs.load(std::memory_order_relaxed))) {
       if (currently_running_queries.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_queries++;
+
+        const auto query_run_begin = std::chrono::steady_clock::now();
+        auto on_query_done = [query_run_begin, &currently_running_queries, &finished_query_runs, &iteration_durations, &durations_mutex](){
+          const auto query_run_end = std::chrono::steady_clock::now();
+          currently_running_queries--;
+          finished_query_runs++;
+
+          {
+            auto lock = std::lock_guard<std::mutex>(durations_mutex);
+            iteration_durations.push_back(query_run_end - query_run_begin);
+          }
+        };
+
         auto query_tasks = _schedule_query_execution(named_query, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
@@ -174,10 +184,10 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     auto result = QueryBenchmarkResult{};
     result.num_iterations = finished_query_runs.load(std::memory_order_relaxed);
     result.duration = state.benchmark_end - state.benchmark_begin;
-    // result.iteration_durations = state.iteration_durations;
+    result.iteration_durations = iteration_durations;
     _query_results_by_query_name.emplace(name, result);
 
-    // Wait for the rest of the tasks that didn't make it in time to count towards the result
+    // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     // TODO: To be replaced with something like CurrentScheduler::abort(), that properly removes all remaining tasks from all queues, without having to wait for them
     CurrentScheduler::wait_for_tasks(tasks);
     DebugAssert(currently_running_queries.load(std::memory_order_relaxed) == 0, "All query runs must be finished at this point");
@@ -239,9 +249,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
-    // TODO: Fix
-    // DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
-    //             "number of iterations and number of iteration durations does not match");
+    DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
+                "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
