@@ -105,22 +105,28 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
   std::mt19937 random_generator(random_device());
 
   const auto number_of_queries_per_set = mutable_named_queries.size();
+
+  // The atomic uints are modified by other threads when finishing a query set, to keep track of when we can
+  // let a simulated client schedule the next set, as well as the total number of finished query sets so far
   auto currently_running_query_sets = std::atomic_uint{0};
   auto finished_query_set_runs = std::atomic_uint{0};
   auto finished_queries_total = std::atomic_uint{0};
+  // For the iteration durations vector, we need a mutex
   auto result_mutex = std::mutex{};
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto state = BenchmarkState{_config.max_num_query_runs, _config.max_duration};
 
   while (state.keep_running(finished_query_set_runs.load(std::memory_order_relaxed))) {
+    // We want to only schedule as many query sets simultaneously as we have simulated clients
     if (currently_running_query_sets.load(std::memory_order_relaxed) < _config.clients) {
       currently_running_query_sets++;
       std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
 
       for (const auto& named_query : mutable_named_queries) {
+        // The on_query_done callback will be appended to the last Task of the query,
+        // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-
         auto on_query_done = [query_run_begin, named_query, number_of_queries_per_set, &currently_running_query_sets,
                               &finished_query_set_runs, &finished_queries_total, &result_mutex, this]() {
           const auto duration = std::chrono::steady_clock::now() - query_run_begin;
@@ -159,8 +165,11 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     const auto& name = named_query.first;
     _config.out << "- Benchmarking Query " << name << std::endl;
 
+    // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
+    // let a simulated client schedule the next query, as well as the total number of finished queries so far
     auto currently_running_queries = std::atomic_uint{0};
     auto finished_query_runs = std::atomic_uint{0};
+    // For the iteration durations vector, we need a mutex
     auto iteration_durations = std::vector<Duration>{};
     auto durations_mutex = std::mutex{};
 
@@ -168,9 +177,12 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     auto state = BenchmarkState{_config.max_num_query_runs, _config.max_duration};
 
     while (state.keep_running(finished_query_runs.load(std::memory_order_relaxed))) {
+      // We want to only schedule as many queries simultaneously as we have simulated clients
       if (currently_running_queries.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_queries++;
 
+        // The on_query_done callback will be appended to the last Task of the query,
+        // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
         auto on_query_done = [query_run_begin, &currently_running_queries, &finished_query_runs, &iteration_durations,
                               &durations_mutex]() {
