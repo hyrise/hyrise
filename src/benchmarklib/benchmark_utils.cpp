@@ -142,18 +142,15 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
   const auto cores = json_config.value("cores", default_config.cores);
-  const auto core_info =
-      enable_scheduler
-          ? std::string(" using " +
-                        std::string((cores == 0) ? "all available" : std::to_string(cores)) +
-                        " cores")
-          : "";
-  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
-      << std::endl;
+  const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
+  const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
+  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info << std::endl;
 
   const auto clients = json_config.value("clients", default_config.clients);
-  if (enable_scheduler) {
-    out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel"<< std::endl;
+  out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel"<< std::endl;
+
+  if (cores != default_config.cores || clients != default_config.clients) {
+    Assert(enable_scheduler, "Can't specify '--cores' or '--clients' without '--scheduler'");
   }
 
   // Determine benchmark and display it
