@@ -204,14 +204,16 @@ void BenchmarkRunner::_benchmark_individual_queries() {
   }
 }
 
-std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback) {
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
+    const NamedQuery& named_query, const std::function<void()>& done_callback) {
   if (_config.enable_scheduler) {
     return _schedule_query(named_query, done_callback);
   }
   _execute_query(named_query, done_callback);
   return {};
 }
-std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(const NamedQuery& named_query, const std::function<void()>& done_callback) {
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
+    const NamedQuery& named_query, const std::function<void()>& done_callback) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
 
