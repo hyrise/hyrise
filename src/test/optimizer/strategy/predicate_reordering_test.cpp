@@ -45,7 +45,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
 
     auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 100, column_statistics);
     // Assumes 50% deleted rows
-    table_statistics->increment_invalid_row_count(50);
+    table_statistics->increase_invalid_row_count(50);
 
     node = StoredTableNode::make("a");
     table->set_table_statistics(table_statistics);

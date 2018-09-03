@@ -262,7 +262,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   return join_table_stats;
 }
 
-void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
+void TableStatistics::increase_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
   // TODO(anybody) this is just a dummy implementation
