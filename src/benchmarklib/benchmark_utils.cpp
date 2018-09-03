@@ -81,8 +81,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
-                                 const uint cores, const uint clients,
-                                 const bool enable_visualization, std::ostream& out)
+                                 const uint cores, const uint clients, const bool enable_visualization,
+                                 std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
@@ -144,10 +144,11 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   const auto cores = json_config.value("cores", default_config.cores);
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
   const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
-  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info << std::endl;
+  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
+      << std::endl;
 
   const auto clients = json_config.value("clients", default_config.clients);
-  out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel"<< std::endl;
+  out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
     Assert(enable_scheduler, "Can't specify '--cores' or '--clients' without '--scheduler'");

@@ -121,7 +121,8 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
       for (const auto& named_query : mutable_named_queries) {
         const auto query_run_begin = std::chrono::steady_clock::now();
 
-        auto on_query_done = [query_run_begin, named_query, number_of_queries_per_set, &currently_running_query_sets, &finished_query_set_runs, &finished_queries_total, &result_mutex, this](){
+        auto on_query_done = [query_run_begin, named_query, number_of_queries_per_set, &currently_running_query_sets,
+                              &finished_query_set_runs, &finished_queries_total, &result_mutex, this]() {
           const auto duration = std::chrono::steady_clock::now() - query_run_begin;
           finished_queries_total++;
           if (finished_queries_total.load(std::memory_order_relaxed) % number_of_queries_per_set == 0) {
@@ -148,7 +149,8 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
   // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
   // TODO: To be replaced with something like CurrentScheduler::abort(), that properly removes all remaining tasks from all queues, without having to wait for them
   CurrentScheduler::wait_for_tasks(tasks);
-  DebugAssert(currently_running_query_sets.load(std::memory_order_relaxed) == 0, "All query set runs must be finished at this point");
+  DebugAssert(currently_running_query_sets.load(std::memory_order_relaxed) == 0,
+              "All query set runs must be finished at this point");
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
@@ -169,7 +171,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
         currently_running_queries++;
 
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, &currently_running_queries, &finished_query_runs, &iteration_durations, &durations_mutex](){
+        auto on_query_done = [query_run_begin, &currently_running_queries, &finished_query_runs, &iteration_durations,
+                              &durations_mutex]() {
           const auto query_run_end = std::chrono::steady_clock::now();
           currently_running_queries--;
           finished_query_runs++;
@@ -194,7 +197,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     // TODO: To be replaced with something like CurrentScheduler::abort(), that properly removes all remaining tasks from all queues, without having to wait for them
     CurrentScheduler::wait_for_tasks(tasks);
-    DebugAssert(currently_running_queries.load(std::memory_order_relaxed) == 0, "All query runs must be finished at this point");
+    DebugAssert(currently_running_queries.load(std::memory_order_relaxed) == 0,
+                "All query runs must be finished at this point");
   }
 }
 
@@ -218,7 +222,8 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   }
 }
 
-std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_execution(const NamedQuery& named_query, const std::function<void()>& done_callback) {
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_execution(
+    const NamedQuery& named_query, const std::function<void()>& done_callback) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
 
