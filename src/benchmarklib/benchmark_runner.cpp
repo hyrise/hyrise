@@ -138,7 +138,7 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
           }
         };
 
-        auto query_tasks = _schedule_query_execution(named_query, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       }
     } else {
@@ -183,7 +183,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
           }
         };
 
-        auto query_tasks = _schedule_query_execution(named_query, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -204,28 +204,14 @@ void BenchmarkRunner::_benchmark_individual_queries() {
   }
 }
 
-void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
-  const auto& name = named_query.first;
-  const auto& sql = named_query.second;
-
-  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
-  auto pipeline = pipeline_builder.create_pipeline();
-  // Execute the query, we don't care about the results
-  pipeline.get_result_table();
-
-  // If necessary, keep plans for visualization
-  if (_config.enable_visualization) {
-    const auto query_plans_iter = _query_plans.find(name);
-    if (query_plans_iter == _query_plans.end()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
-      _query_plans.emplace(name, plans);
-    }
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback) {
+  if (_config.enable_scheduler) {
+    return _schedule_query(named_query, done_callback);
   }
+  _execute_query(named_query, done_callback);
+  return {};
 }
-
-std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_execution(
-    const NamedQuery& named_query, const std::function<void()>& done_callback) {
+std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(const NamedQuery& named_query, const std::function<void()>& done_callback) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
 
@@ -234,8 +220,8 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_exec
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
-  auto tasks_per_statement = pipeline.get_tasks();
 
+  auto tasks_per_statement = pipeline.get_tasks();
   tasks_per_statement.back().back()->set_done_callback(done_callback);
 
   for (auto tasks : tasks_per_statement) {
@@ -252,6 +238,28 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query_exec
     }
   }
   return query_tasks;
+}
+
+void BenchmarkRunner::_execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback) {
+  const auto& name = named_query.first;
+  const auto& sql = named_query.second;
+
+  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
+  auto pipeline = pipeline_builder.create_pipeline();
+  // Execute the query, we don't care about the results
+  pipeline.get_result_table();
+
+  if (done_callback) done_callback();
+
+  // If necessary, keep plans for visualization
+  if (_config.enable_visualization) {
+    const auto query_plans_iter = _query_plans.find(name);
+    if (query_plans_iter == _query_plans.end()) {
+      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+      _query_plans.emplace(name, plans);
+    }
+  }
 }
 
 void BenchmarkRunner::_create_report(std::ostream& stream) const {
