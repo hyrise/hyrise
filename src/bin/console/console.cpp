@@ -276,7 +276,7 @@ int Console::_eval_sql(const std::string& sql) {
   out(_sql_pipeline->metrics().to_string());
 
   return ReturnCode::Ok;
-}  // namespace opossum
+}
 
 void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
 
