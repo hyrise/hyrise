@@ -212,6 +212,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute
   _execute_query(named_query, done_callback);
   return {};
 }
+
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     const NamedQuery& named_query, const std::function<void()>& done_callback) {
   const auto& name = named_query.first;
