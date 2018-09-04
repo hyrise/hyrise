@@ -29,9 +29,9 @@ class DpCcpTest : public ::testing::Test {
     const auto table_statistics_a = std::make_shared<TableStatistics>(
         TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_a_a});
     const auto table_statistics_b = std::make_shared<TableStatistics>(
-        TableType::Data, 3, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
+        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
     const auto table_statistics_c = std::make_shared<TableStatistics>(
-        TableType::Data, 5, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
+        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_statistics(table_statistics_a);
@@ -50,23 +50,56 @@ class DpCcpTest : public ::testing::Test {
   LQPColumnReference a_a, b_a, c_a;
 };
 
-TEST_F(DpCcpTest, Basic) {
+TEST_F(DpCcpTest, JoinOrdering) {
   /**
-   * Test two vertices and a single join predicate
+   * Test that three vertices with three join predicates are turned into two join operations and a scan operation that
+   * are efficiently ordered.
+   *
+   * In this case, joining A and B first is the best option, since have the lowest overlapping range.
+   * For joining C in afterwards, `c_a = a_a` is the best choice for the primary join predicate, since `c_a = b_a`
+   * yields more rows and is therefore more expensive.
    */
 
   const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
   const auto join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, expression_vector(equals_(a_a, c_a))};
+  const auto join_edge_b_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b110}, expression_vector(equals_(b_a, c_a))};
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
-                                    std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c}));
+                                    std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c, join_edge_b_c}));
   DpCcp dp_ccp{cost_estimator};
 
   const auto actual_lqp = dp_ccp(join_graph);
 
   // clang-format off
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, equals_(a_a, c_a),
+  PredicateNode::make(equals_(b_a, c_a),
+    JoinNode::make(JoinMode::Inner, equals_(a_a, c_a),
+      JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+        node_a,
+        node_b),
+      node_c));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected_lqp, actual_lqp);
+}
+
+TEST_F(DpCcpTest, CrossJoin) {
+  /**
+   * Test that if there is a non-predicated edge, a cross join is created
+   */
+
+  const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
+  const auto cross_join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, {}};
+
+  const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
+                                    std::vector<JoinGraphEdge>({join_edge_a_b, cross_join_edge_a_c}));
+  DpCcp dp_ccp{cost_estimator};
+
+  const auto actual_lqp = dp_ccp(join_graph);
+
+  // clang-format off
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Cross,
     JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
       node_a,
       node_b),
@@ -76,9 +109,49 @@ TEST_F(DpCcpTest, Basic) {
   EXPECT_LQP_EQ(expected_lqp, actual_lqp);
 }
 
+TEST_F(DpCcpTest, LocalPredicateOrdering) {
+  /**
+   * Test that local predicates are brought into an optimal order
+   */
+
+  const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b11}, expression_vector(equals_(a_a, b_a))};
+
+  const auto local_predicate_a_0 = equals_(a_a, add_(5, 6)); // medium complexity
+  const auto local_predicate_a_1 = equals_(a_a, 5); // low complexity
+  const auto local_predicate_a_2 = equals_(mul_(a_a, 2), add_(5, 6));  // high complexity
+
+  const auto local_predicate_b_0 = equals_(b_a, add_(5, 6)); // medium complexity
+  const auto local_predicate_b_1 = equals_(b_a, 5); // low complexity
+
+  const auto self_edge_a = JoinGraphEdge{JoinGraphVertexSet{2, 0b01}, expression_vector(local_predicate_a_0, local_predicate_a_1, local_predicate_a_2)};
+  const auto self_edge_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b10}, expression_vector(local_predicate_b_0, local_predicate_b_1)};
+
+  const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
+                                    std::vector<JoinGraphEdge>({join_edge_a_b, self_edge_a, self_edge_b}));
+  DpCcp dp_ccp{cost_estimator};
+
+  const auto actual_lqp = dp_ccp(join_graph);
+
+  // clang-format off
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+    PredicateNode::make(local_predicate_a_2,
+      PredicateNode::make(local_predicate_a_0,
+        PredicateNode::make(local_predicate_a_1,
+          node_a))),
+    PredicateNode::make(local_predicate_b_0,
+      PredicateNode::make(local_predicate_b_1,
+        node_b)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected_lqp, actual_lqp);
+}
+
 TEST_F(DpCcpTest, ComplexJoinPredicate) {
-  // Test that complex predicates will not be considered for the join operation (since our join operators can't execute
-  // them)
+  /**
+   * Test that complex predicates will not be considered for the join operation (since our join operators can't execute
+   * them)
+   */
 
   const auto complex_predicate = equals_(add_(a_a, 2), b_a);
   auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b11}, expression_vector(complex_predicate)};

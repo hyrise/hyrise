@@ -120,6 +120,37 @@ TEST(EnumerateCcpTest, Clique) {
   EXPECT_TRUE(equals(pairs[24], std::make_pair(0b1101ul, 0b0010ul)));
 }
 
+
+TEST(EnumerateCcpTest, RandomJoinGraphShape) {
+  /**
+   *    0
+   *   / \
+   *  2 - 1 - 3
+   */
+
+  std::vector<std::pair<size_t, size_t>> edges{{0, 2}, {0, 1}, {1, 3}, {2, 1}};
+
+  const auto pairs = EnumerateCcp{5, edges}();  // NOLINT - {}()
+
+  ASSERT_EQ(pairs.size(), 15u);
+
+  EXPECT_TRUE(equals(pairs[1], std::make_pair(0b00010ul, 0b01000ul)));
+  EXPECT_TRUE(equals(pairs[2], std::make_pair(0b00010ul, 0b00100ul)));
+  EXPECT_TRUE(equals(pairs[3], std::make_pair(0b00110ul, 0b01000ul)));
+  EXPECT_TRUE(equals(pairs[4], std::make_pair(0b01010ul, 0b00100ul)));
+  EXPECT_TRUE(equals(pairs[5], std::make_pair(0b00001ul, 0b00100ul)));
+  EXPECT_TRUE(equals(pairs[6], std::make_pair(0b00001ul, 0b00010ul)));
+  EXPECT_TRUE(equals(pairs[7], std::make_pair(0b00001ul, 0b00110ul)));
+  EXPECT_TRUE(equals(pairs[8], std::make_pair(0b00001ul, 0b01010ul)));
+  EXPECT_TRUE(equals(pairs[9], std::make_pair(0b00001ul, 0b01110ul)));
+  EXPECT_TRUE(equals(pairs[10], std::make_pair(0b00011ul, 0b01000ul)));
+  EXPECT_TRUE(equals(pairs[11], std::make_pair(0b00011ul, 0b00100ul)));
+  EXPECT_TRUE(equals(pairs[12], std::make_pair(0b00101ul, 0b00010ul)));
+  EXPECT_TRUE(equals(pairs[13], std::make_pair(0b00101ul, 0b01010ul)));
+  EXPECT_TRUE(equals(pairs[14], std::make_pair(0b00111ul, 0b01000ul)));
+  EXPECT_TRUE(equals(pairs[15], std::make_pair(0b01011ul, 0b00100ul)));
+}
+
 TEST(EnumerateCcpTest, ArbitraryVertexNumbering) {
   std::vector<std::pair<size_t, size_t>> edges{{0, 2}, {2, 1}};
 
