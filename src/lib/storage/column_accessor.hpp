@@ -8,6 +8,7 @@
 #include "storage/base_column_accessor.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -32,12 +33,18 @@ class ColumnAccessor : public BaseColumnAccessor<T> {
 /**
  * Partial template specialization for ReferenceColumns.
  * Since ReferenceColumns don't know their 'T', this uses the subscript operator as a fallback.
+ *
+ * Under normal circumstances, using a ColumnAccessor on a ReferenceColumn does not make sense, as
+ * it is not faster (potentially even slower) than using operator[] directly on the ReferenceColumn.
+ * However, this spezialization is still useful in the case that the underlying column type
+ * is not directly known to the calling code and extra code paths for ReferenceColumns should be avoided.
  */
 template <typename T>
 class ColumnAccessor<T, ReferenceColumn> : public BaseColumnAccessor<T> {
  public:
   explicit ColumnAccessor(const ReferenceColumn& column) : _column{column} {}
   const std::optional<T> access(ChunkOffset offset) const final {
+    PerformanceWarning("ColumnAccessor used on ReferenceColumn");
     const auto all_type_variant = _column[offset];
     if (variant_is_null(all_type_variant)) {
       return std::nullopt;
