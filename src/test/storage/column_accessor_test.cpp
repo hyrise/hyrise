@@ -41,20 +41,20 @@ class ColumnAccessorTest : public BaseTest {
     rc_str = std::make_shared<ReferenceColumn>(tbl, ColumnID{1}, pos_list);
   }
 
-  std::shared_ptr<BaseValueColumn> vc_int = nullptr;
-  std::shared_ptr<BaseValueColumn> vc_str = nullptr;
-  std::shared_ptr<BaseColumn> dc_int = nullptr;
-  std::shared_ptr<BaseColumn> dc_str = nullptr;
-  std::shared_ptr<BaseColumn> rc_int = nullptr;
-  std::shared_ptr<BaseColumn> rc_str = nullptr;
+  std::shared_ptr<BaseValueColumn> vc_int;
+  std::shared_ptr<BaseValueColumn> vc_str;
+  std::shared_ptr<BaseColumn> dc_int;
+  std::shared_ptr<BaseColumn> dc_str;
+  std::shared_ptr<BaseColumn> rc_int;
+  std::shared_ptr<BaseColumn> rc_str;
 
-  std::shared_ptr<Table> tbl = nullptr;
-  std::shared_ptr<Chunk> chunk = nullptr;
-  std::shared_ptr<PosList> pos_list = nullptr;
+  std::shared_ptr<Table> tbl;
+  std::shared_ptr<Chunk> chunk;
+  std::shared_ptr<PosList> pos_list;
 };
 
 TEST_F(ColumnAccessorTest, TestValueColumnInt) {
-  auto vc_int_base_accessor = get_column_accessor<int>(vc_int);
+  auto vc_int_base_accessor = create_column_accessor<int>(vc_int);
   ASSERT_NE(vc_int_base_accessor, nullptr);
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), 4);
   EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 6);
@@ -62,7 +62,7 @@ TEST_F(ColumnAccessorTest, TestValueColumnInt) {
 }
 
 TEST_F(ColumnAccessorTest, TestValueColumnString) {
-  auto vc_str_accessor = get_column_accessor<std::string>(vc_str);
+  auto vc_str_accessor = create_column_accessor<std::string>(vc_str);
   ASSERT_NE(vc_str_accessor, nullptr);
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{0}), "Hello,");
   EXPECT_EQ(vc_str_accessor->access(ChunkOffset{1}), "world");
@@ -70,7 +70,7 @@ TEST_F(ColumnAccessorTest, TestValueColumnString) {
 }
 
 TEST_F(ColumnAccessorTest, TestDictionaryColumnInt) {
-  auto dc_int_accessor = get_column_accessor<int>(dc_int);
+  auto dc_int_accessor = create_column_accessor<int>(dc_int);
   ASSERT_NE(dc_int_accessor, nullptr);
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{0}), 4);
   EXPECT_EQ(dc_int_accessor->access(ChunkOffset{1}), 6);
@@ -78,7 +78,7 @@ TEST_F(ColumnAccessorTest, TestDictionaryColumnInt) {
 }
 
 TEST_F(ColumnAccessorTest, TestDictionaryColumnString) {
-  auto dc_str_accessor = get_column_accessor<std::string>(dc_str);
+  auto dc_str_accessor = create_column_accessor<std::string>(dc_str);
   ASSERT_NE(dc_str_accessor, nullptr);
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{0}), "Hello,");
   EXPECT_EQ(dc_str_accessor->access(ChunkOffset{1}), "world");
@@ -86,7 +86,7 @@ TEST_F(ColumnAccessorTest, TestDictionaryColumnString) {
 }
 
 TEST_F(ColumnAccessorTest, TestReferenceColumnToValueColumnInt) {
-  auto rc_int_accessor = get_column_accessor<int>(rc_int);
+  auto rc_int_accessor = create_column_accessor<int>(rc_int);
   ASSERT_NE(rc_int_accessor, nullptr);
   EXPECT_EQ(rc_int_accessor->access(ChunkOffset{0}), 6);
   EXPECT_EQ(rc_int_accessor->access(ChunkOffset{1}), 3);
@@ -94,7 +94,7 @@ TEST_F(ColumnAccessorTest, TestReferenceColumnToValueColumnInt) {
 }
 
 TEST_F(ColumnAccessorTest, TestReferenceColumnToDictionaryColumnString) {
-  auto rc_str_accessor = get_column_accessor<std::string>(rc_str);
+  auto rc_str_accessor = create_column_accessor<std::string>(rc_str);
   ASSERT_NE(rc_str_accessor, nullptr);
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{0}), "world");
   EXPECT_EQ(rc_str_accessor->access(ChunkOffset{1}), "!");

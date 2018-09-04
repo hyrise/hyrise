@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/column_accessor.hpp"
+#include "storage/base_column_accessor.hpp"
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
@@ -105,7 +105,7 @@ class Sort::SortImplMaterializeOutput {
 
           if (!base_column) {
             base_column = _table_in->get_chunk(chunk_id)->get_column(column_id);
-            accessor = get_column_accessor<ColumnDataType>(base_column);
+            accessor = create_column_accessor<ColumnDataType>(base_column);
           }
 
           // If the input column is not a ReferenceColumn, we can take a fast(er) path

@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/column_accessor.hpp"
+#include "storage/base_column_accessor.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
@@ -76,7 +76,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
    private:
     void _create_accessor(const ChunkID chunk_id) const {
       auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
-      auto accessor = std::move(get_column_accessor<T>(column));
+      auto accessor = std::move(create_column_accessor<T>(column));
       _accessors[chunk_id] = std::move(accessor);
     }
 

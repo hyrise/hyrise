@@ -5,21 +5,11 @@
 #include <type_traits>
 
 #include "resolve_type.hpp"
+#include "storage/base_column_accessor.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-/**
- * This is the base class for all ColumnAccessor types.
- * It provides the common interface to access individual values of a column.
- */
-template <typename T>
-class BaseColumnAccessor {
- public:
-  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
-  virtual ~BaseColumnAccessor() {}
-};
 
 /**
  * A ColumnAccessor is templated per ColumnType and DataType (T).
@@ -58,18 +48,5 @@ class ColumnAccessor<T, ReferenceColumn> : public BaseColumnAccessor<T> {
  protected:
   const ReferenceColumn& _column;
 };
-
-/**
- * Utility method to create a ColumnAccessor for a given BaseColumn.
- */
-template <typename T>
-std::unique_ptr<BaseColumnAccessor<T>> get_column_accessor(const std::shared_ptr<const BaseColumn>& column) {
-  std::unique_ptr<BaseColumnAccessor<T>> accessor;
-  resolve_column_type<T>(*column, [&](const auto& typed_column) {
-    using ColumnType = std::decay_t<decltype(typed_column)>;
-    accessor = std::make_unique<ColumnAccessor<T, ColumnType>>(typed_column);
-  });
-  return accessor;
-}
 
 }  // namespace opossum
