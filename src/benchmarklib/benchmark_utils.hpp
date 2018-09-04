@@ -51,7 +51,7 @@ using BenchmarkResults = std::unordered_map<std::string, QueryBenchmarkResult>;
 struct BenchmarkState {
   enum class State { NotStarted, Running, Over };
 
-  BenchmarkState(const Duration max_duration);
+  explicit BenchmarkState(const Duration max_duration);
 
   bool keep_running();
 
