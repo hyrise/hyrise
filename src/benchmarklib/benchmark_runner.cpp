@@ -115,9 +115,9 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
   auto result_mutex = std::mutex{};
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  auto state = BenchmarkState{_config.max_num_query_runs, _config.max_duration};
+  auto state = BenchmarkState{_config.max_duration};
 
-  while (state.keep_running(finished_query_set_runs.load(std::memory_order_relaxed))) {
+  while (state.keep_running() && finished_query_set_runs.load(std::memory_order_relaxed) < _config.max_num_query_runs) {
     // We want to only schedule as many query sets simultaneously as we have simulated clients
     if (currently_running_query_sets.load(std::memory_order_relaxed) < _config.clients) {
       currently_running_query_sets++;
@@ -174,9 +174,9 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     auto durations_mutex = std::mutex{};
 
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-    auto state = BenchmarkState{_config.max_num_query_runs, _config.max_duration};
+    auto state = BenchmarkState{_config.max_duration};
 
-    while (state.keep_running(finished_query_runs.load(std::memory_order_relaxed))) {
+    while (state.keep_running() && finished_query_runs.load(std::memory_order_relaxed) < _config.max_num_query_runs) {
       // We want to only schedule as many queries simultaneously as we have simulated clients
       if (currently_running_queries.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_queries++;
@@ -203,7 +203,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     }
     auto result = QueryBenchmarkResult{};
     result.num_iterations = finished_query_runs.load(std::memory_order_relaxed);
-    result.duration = state.benchmark_end - state.benchmark_begin;
+    result.duration = state.benchmark_duration;
     result.iteration_durations = iteration_durations;
     _query_results_by_query_name.emplace(name, result);
 

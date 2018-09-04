@@ -30,10 +30,10 @@ std::ostream& get_out_stream(const bool verbose) {
   return null_stream;
 }
 
-BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
+BenchmarkState::BenchmarkState(const opossum::Duration max_duration)
+    : max_duration(max_duration) {}
 
-bool BenchmarkState::keep_running(const uint finished_query_runs) {
+bool BenchmarkState::keep_running() {
   switch (state) {
     case State::NotStarted:
       benchmark_begin = std::chrono::high_resolution_clock::now();
@@ -44,16 +44,9 @@ bool BenchmarkState::keep_running(const uint finished_query_runs) {
     default: {}
   }
 
-  benchmark_end = std::chrono::high_resolution_clock::now();
-
-  // Stop execution if we reached the maximum number of iterations
-  if (finished_query_runs >= max_num_iterations) {
-    state = State::Over;
-    return false;
-  }
+  benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;
 
   // Stop execution if we reached the time limit
-  const auto benchmark_duration = benchmark_end - benchmark_begin;
   if (benchmark_duration >= max_duration) {
     state = State::Over;
     return false;

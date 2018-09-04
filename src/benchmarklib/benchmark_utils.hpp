@@ -51,15 +51,14 @@ using BenchmarkResults = std::unordered_map<std::string, QueryBenchmarkResult>;
 struct BenchmarkState {
   enum class State { NotStarted, Running, Over };
 
-  BenchmarkState(const size_t max_num_iterations, const Duration max_duration);
+  BenchmarkState(const Duration max_duration);
 
-  bool keep_running(const uint finished_query_runs);
+  bool keep_running();
 
   State state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
-  TimePoint benchmark_end = TimePoint{};
+  Duration benchmark_duration = Duration{};
 
-  size_t max_num_iterations;
   Duration max_duration;
 };
 
