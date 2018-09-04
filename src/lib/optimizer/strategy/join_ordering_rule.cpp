@@ -15,7 +15,8 @@ std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
 bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   /**
-   * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards
+   * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
+   * have changed it
    */
 
   Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
@@ -39,7 +40,7 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   /**
-   * Try to build a JoinGraph starting from the current node
+   * Try to build a JoinGraph starting for the current subplan
    *    -> if that fails, continue to try it with the node's inputs
    *    -> if that works
    *        -> call DpCcp on that JoinGraph
@@ -52,6 +53,8 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     return lqp;
   }
 
+  // Currently, we apply DpCcp to any JoinGraph we encounter.
+  // TODO(anybody) in the future we should use, e.g., a different algorithm for very complex JoinGraphs
   auto result_lqp = DpCcp{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
 
   for (const auto& vertex : join_graph->vertices) {

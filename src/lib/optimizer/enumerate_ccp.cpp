@@ -191,7 +191,7 @@ JoinGraphVertexSet EnumerateCcp::_single_vertex_neighborhood(const size_t vertex
 std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraphVertexSet& vertex_set) const {
   /**
    * Returns all subsets of `vertex_set`, ordered in a subsets-first order, e.g., for 01101 returns
-   * {00001, 00100, 01000, 01001, 01100, 01101}
+   * {00001, 00100, 00101, 01000, 01001, 01100, 01101}
    *
    * The algorithm listed here is from stackoverflow, but I can't find the link to it anymore, hard as I tried.
    * Neither can I convincingly explain the bit-magic here, but it works nicely.
@@ -210,7 +210,7 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
   while (s1 != s) {
     subsets.emplace_back(_num_vertices, s1);
     // This assigns to s1 the next subset of s. Somehow, this bit magic is binary incrementing s1, but only within the
-    // bits set in s. So, if s is 01101 and s1 is 00101, s1 will be update to 01000.
+    // bits set in s. So, if s is 01101 and s1 is 00101, s1 will be updated to 01000.
     s1 = s & (s1 - s);
   }
   subsets.emplace_back(vertex_set);

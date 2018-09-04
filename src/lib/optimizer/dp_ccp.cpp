@@ -86,7 +86,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates_to_plan(
     const std::shared_ptr<AbstractLQPNode>& lqp,
     const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
   /**
-   * Add a number of predicates on top of a plan
+   * Add a number of predicates on top of a plan; try to bring them into an efficient order
    *
    *
    * The optimality-ensuring way to sort the scan operations would be to find the cheapest of the predicates.size()!
@@ -122,7 +122,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
     std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const {
   /**
-   * Join two plans using a set of predicates.
+   * Join two plans using a set of predicates; try to bring them into an efficient order
    *
    *
    * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates) are executed as

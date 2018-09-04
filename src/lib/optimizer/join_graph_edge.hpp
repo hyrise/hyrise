@@ -27,7 +27,7 @@ using JoinGraphVertexSet = boost::dynamic_bitset<>;
  * from all vertices in vertex_set and no columns from vertices not in vertex_set. If the predicate wouldn't, then it
  * would belong to another edge.
  */
-class JoinGraphEdge final {
+struct JoinGraphEdge final {
  public:
   explicit JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
                          const std::vector<std::shared_ptr<AbstractExpression>>& predicates = {});

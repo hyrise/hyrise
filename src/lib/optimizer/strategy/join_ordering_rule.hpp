@@ -9,8 +9,8 @@ namespace opossum {
 class AbstractCostEstimator;
 
 /**
- * A rule that orders join operations.
- * Currently only the order of inner joins is modified using a single underlying algorithm, DPccp.
+ * A rule that brings join operations into a (supposedly) efficient order.
+ * Currently only the order of inner joins is modified using a single underlying algorithm, DpCcp.
  *
  * TODO(anybody) Use a different join ordering algorithm, such as GreedyOperatorOrdering, if there are too many join
  *               operations for DPccp to handle efficiently.
