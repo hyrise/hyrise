@@ -156,8 +156,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
   // TODO(leander/anyone): To be replaced with something like CurrentScheduler::abort(),
   // that properly removes all remaining tasks from all queues, without having to wait for them
   CurrentScheduler::wait_for_tasks(tasks);
-  DebugAssert(currently_running_query_sets.load(std::memory_order_relaxed) == 0,
-              "All query set runs must be finished at this point");
+  DebugAssert(currently_running_query_sets == 0, "All query set runs must be finished at this point");
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
@@ -202,7 +201,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
       }
     }
     auto result = QueryBenchmarkResult{};
-    result.num_iterations = finished_query_runs.load(std::memory_order_relaxed);
+    result.num_iterations = finished_query_runs;
     result.duration = state.benchmark_duration;
     result.iteration_durations = iteration_durations;
     _query_results_by_query_name.emplace(name, result);
@@ -211,8 +210,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     // TODO(leander/anyone): To be replaced with something like CurrentScheduler::abort(),
     // that properly removes all remaining tasks from all queues, without having to wait for them
     CurrentScheduler::wait_for_tasks(tasks);
-    DebugAssert(currently_running_queries.load(std::memory_order_relaxed) == 0,
-                "All query runs must be finished at this point");
+    DebugAssert(currently_running_queries == 0, "All query runs must be finished at this point");
   }
 }
 
