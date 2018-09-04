@@ -82,14 +82,11 @@ class Sort::SortImplMaterializeOutput {
       resolve_data_type(column_data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
 
-        // Initialize value columns
-        auto columns_out = std::vector<std::shared_ptr<ValueColumn<ColumnDataType>>>(chunk_count_out);
-        std::generate(columns_out.begin(), columns_out.end(),
-                      []() { return std::make_shared<ValueColumn<ColumnDataType>>(true); });
-
-        auto column_it = columns_out.begin();
         auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
+
+        auto value_column_value_vector = pmr_concurrent_vector<ColumnDataType>();
+        auto value_column_null_vector = pmr_concurrent_vector<bool>();
 
         auto column_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseColumn>,
@@ -111,12 +108,14 @@ class Sort::SortImplMaterializeOutput {
           // If the input column is not a ReferenceColumn, we can take a fast(er) path
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
-            (*column_it)->append_typed_value(typed_value);
+            const auto is_null = !typed_value.has_value();
+            value_column_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
+            value_column_null_vector.push_back(is_null);
           } else {
-            // Previously the value was retrieved by calling a virtual method,
-            // which was just as slow as using the subscript operator.
             const auto value = (*base_column)[chunk_offset];
-            (*column_it)->append(value);
+            const auto is_null = variant_is_null(value);
+            value_column_value_vector.push_back(is_null ? ColumnDataType{} : type_cast<ColumnDataType>(value));
+            value_column_null_vector.push_back(is_null);
           }
 
           ++chunk_offset_out;
@@ -124,15 +123,20 @@ class Sort::SortImplMaterializeOutput {
           // Check if value column is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            chunk_it->push_back(*column_it);
-            ++column_it;
+            auto value_column = std::make_shared<ValueColumn<ColumnDataType>>(std::move(value_column_value_vector),
+                                                                              std::move(value_column_null_vector));
+            chunk_it->push_back(value_column);
+            value_column_value_vector = pmr_concurrent_vector<ColumnDataType>();
+            value_column_null_vector = pmr_concurrent_vector<bool>();
             ++chunk_it;
           }
         }
 
         // Last column has not been added
         if (chunk_offset_out > 0u) {
-          chunk_it->push_back(*column_it);
+          auto value_column = std::make_shared<ValueColumn<ColumnDataType>>(std::move(value_column_value_vector),
+                                                                            std::move(value_column_null_vector));
+          chunk_it->push_back(value_column);
         }
       });
     }
