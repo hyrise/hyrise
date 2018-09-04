@@ -20,17 +20,4 @@ class BaseColumnAccessor {
   virtual ~BaseColumnAccessor() {}
 };
 
-/**
- * Utility method to create a ColumnAccessor for a given BaseColumn.
- */
-template <typename T>
-std::unique_ptr<BaseColumnAccessor<T>> create_column_accessor(const std::shared_ptr<const BaseColumn>& column) {
-  std::unique_ptr<BaseColumnAccessor<T>> accessor;
-  resolve_column_type<T>(*column, [&](const auto& typed_column) {
-    using ColumnType = std::decay_t<decltype(typed_column)>;
-    accessor = std::make_unique<ColumnAccessor<T, ColumnType>>(typed_column);
-  });
-  return accessor;
-}
-
 }  // namespace opossum

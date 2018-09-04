@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_column_accessor.hpp"
+#include "storage/column_accessor.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
