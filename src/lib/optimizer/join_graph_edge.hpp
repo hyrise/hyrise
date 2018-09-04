@@ -29,6 +29,8 @@ using JoinGraphVertexSet = boost::dynamic_bitset<>;
  */
 struct JoinGraphEdge final {
  public:
+  // Doesn't check that the predicates actually only reference the vertex_set, since it has no knowledge of
+  // LQPNode -> vertex index mapping. Thus, the caller has to ensure validity.
   explicit JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
                          const std::vector<std::shared_ptr<AbstractExpression>>& predicates = {});
 
