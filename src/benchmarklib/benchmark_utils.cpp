@@ -144,8 +144,8 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   auto benchmark_mode = BenchmarkMode::IndividualQueries;  // Just to init it deterministically
   if (benchmark_mode_str == "IndividualQueries") {
     benchmark_mode = BenchmarkMode::IndividualQueries;
-  } else if (benchmark_mode_str == "PermutedQuerySets") {
-    benchmark_mode = BenchmarkMode::PermutedQuerySets;
+  } else if (benchmark_mode_str == "PermutedQuerySet") {
+    benchmark_mode = BenchmarkMode::PermutedQuerySet;
   } else {
     throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
   }

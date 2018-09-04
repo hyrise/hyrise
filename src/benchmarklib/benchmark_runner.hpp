@@ -32,8 +32,8 @@ class BenchmarkRunner {
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
  private:
-  // Run benchmark in BenchmarkMode::PermutedQuerySets mode
-  void _benchmark_permuted_query_sets();
+  // Run benchmark in BenchmarkMode::PermutedQuerySet mode
+  void _benchmark_permuted_query_set();
 
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries();

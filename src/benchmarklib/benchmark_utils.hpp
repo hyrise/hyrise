@@ -15,9 +15,9 @@ namespace opossum {
 
 /**
  * IndividualQueries runs each query a number of times and then the next one
- * PermutedQuerySets runs the queries as sets permuting their order after each run (this exercises caches)
+ * PermutedQuerySet runs the queries as set permuting their order after each run (this exercises caches)
  */
-enum class BenchmarkMode { IndividualQueries, PermutedQuerySets };
+enum class BenchmarkMode { IndividualQueries, PermutedQuerySet };
 
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;

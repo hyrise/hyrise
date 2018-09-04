@@ -49,8 +49,8 @@ void BenchmarkRunner::run() {
       _benchmark_individual_queries();
       break;
     }
-    case BenchmarkMode::PermutedQuerySets: {
-      _benchmark_permuted_query_sets();
+    case BenchmarkMode::PermutedQuerySet: {
+      _benchmark_permuted_query_set();
       break;
     }
   }
@@ -91,7 +91,7 @@ void BenchmarkRunner::run() {
   }
 }
 
-void BenchmarkRunner::_benchmark_permuted_query_sets() {
+void BenchmarkRunner::_benchmark_permuted_query_set() {
   // Init results
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
@@ -104,7 +104,7 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 
-  const auto number_of_queries_per_set = mutable_named_queries.size();
+  const auto number_of_queries = mutable_named_queries.size();
 
   // The atomic uints are modified by other threads when finishing a query set, to keep track of when we can
   // let a simulated client schedule the next set, as well as the total number of finished query sets so far
@@ -127,11 +127,11 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, named_query, number_of_queries_per_set, &currently_running_query_sets,
+        auto on_query_done = [query_run_begin, named_query, number_of_queries, &currently_running_query_sets,
                               &finished_query_set_runs, &finished_queries_total, &result_mutex, this]() {
           const auto duration = std::chrono::steady_clock::now() - query_run_begin;
 
-          if (finished_queries_total++ % number_of_queries_per_set == 0) {
+          if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_query_sets--;
             finished_query_set_runs++;
           }
@@ -455,7 +455,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
     ("t,time", "Maximum seconds that a query (set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
-    ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
+    ("m,mode", "IndividualQueries or PermutedQuerySet, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see below). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
@@ -481,7 +481,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"build_type", IS_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"benchmark_mode",
-       config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"},
+       config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
       {"max_duration (s)", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
