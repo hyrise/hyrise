@@ -167,14 +167,14 @@ FilterByCxlumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
     const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both cxlumns are in the overlapping value
-   * range of both cxlumns. 
-   * 
-   * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping 
+   * range of both cxlumns.
+   *
+   * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping
    * range from both cxlumns are taken to compute the selectivity.
    *
    * Example estimation:
    *
-   * |  Cxlumn name     |  colxmn_left  |  colxmn_right  |
+   * |  Cxlumn name     |  cxlumn_left  |  cxlumn_right  |
    * |  Min value       |  1            |  11            |
    * |  Max value       |  20           |  40            |
    * |  Distinct count  |  20           |  15            |
@@ -184,9 +184,9 @@ FilterByCxlumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
    * right_overlapping_ratio = (20 - 11 + 1) / (40 - 11 + 1) = 1 / 3
    *
    * left_below_overlapping_ratio = (10 - 1 + 1) / (20 - 1 + 1) = 1 / 2
-   * left_above_overlapping_ratio = 0 as colxmn_left max value within overlapping range
+   * left_above_overlapping_ratio = 0 as cxlumn_left max value within overlapping range
    * right_below_overlapping_ratio = (40 - 21 + 1) / (40 - 11 + 1) = 2 / 3
-   * right_above_overlapping_ratio = 0 as colxmn_right min value within overlapping range
+   * right_above_overlapping_ratio = 0 as cxlumn_right min value within overlapping range
    *
    * left_overlapping_distinct_count = (1 / 2) * 20 = 10
    * right_overlapping_distinct_count = (1 / 3) * 15 = 5
@@ -194,7 +194,7 @@ FilterByCxlumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
    * For predicate condition equals only the ratios of values in the overlapping range is considered as values. If values could
    * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
    * equal value ratio, the cxlumn with fewer distinct values within the overlapping range is determined. In this case
-   * this is colxmn_right. Statistics component assumes that for two value sets for the same range the smaller set is
+   * this is cxlumn_right. Statistics component assumes that for two value sets for the same range the smaller set is
    * part of the bigger set. Therefore, it assumes that the 5 distinct values within the overlapping range of the right
    * cxlumn also exist in the left cxlumn. The equal value ratio is then calculated by multiplying
    * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left cxlumn (= 1 / 20):
@@ -202,9 +202,9 @@ FilterByCxlumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
    * This is also the selectivity for the predicate condition equals: (1 / 40) = 2.5 %
    *
    * For predicate condition less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
-   * table entries where the colxmn_left value is below the common range or the colxmn_right value is above it will always be
-   * in the result. The probability that both values are within the overlapping range and that colxmn_left < colxmn_right is
-   * (probability of colxmn_left != colxmn_right where left and right values are in overlapping range) / 2
+   * table entries where the cxlumn_left value is below the common range or the cxlumn_right value is above it will always be
+   * in the result. The probability that both values are within the overlapping range and that cxlumn_left < cxlumn_right is
+   * (probability of cxlumn_left != cxlumn_right where left and right values are in overlapping range) / 2
    *
    * The selectivity for predicate condition less is the sum of different probabilities: // NOLINT
    *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT

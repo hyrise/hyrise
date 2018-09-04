@@ -125,7 +125,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   // Turn 'pos_lists' into a new chunk and append it to the table
   const auto emit_chunk = [&]() {
-    Segments output_columns;
+    Segments output_segments;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_cxlumn_id_begin = _column_segment_offsets[pos_lists_idx];
@@ -135,11 +135,11 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
       for (auto cxlumn_id = segment_cxlumn_id_begin; cxlumn_id < segment_cxlumn_id_end; ++cxlumn_id) {
         auto ref_segment = std::make_shared<ReferenceSegment>(
             _referenced_tables[pos_lists_idx], _referenced_cxlumn_ids[cxlumn_id], pos_lists[pos_lists_idx]);
-        output_columns.push_back(ref_segment);
+        output_segments.push_back(ref_segment);
       }
     }
 
-    out_table->append_chunk(output_columns);
+    out_table->append_chunk(output_segments);
   };
 
   /**
@@ -225,8 +225,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
     auto current_pos_list = std::shared_ptr<const PosList>();
     const auto first_chunk = table->get_chunk(ChunkID{0});
     for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-      const auto column = first_chunk->get_segment(cxlumn_id);
-      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(column);
+      const auto segment = first_chunk->get_segment(cxlumn_id);
+      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
       auto pos_list = ref_segment->pos_list();
 
       if (current_pos_list != pos_list) {
@@ -248,8 +248,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
   for (const auto& segment_begin : _column_segment_offsets) {
-    const auto column = first_chunk_left->get_segment(segment_begin);
-    const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(column);
+    const auto segment = first_chunk_left->get_segment(segment_begin);
+    const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
     _referenced_tables.emplace_back(ref_segment->referenced_table());
   }
 
@@ -258,8 +258,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * in the #if IS_DEBUG block below)
    */
   for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
-    const auto column = first_chunk_left->get_segment(cxlumn_id);
-    const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(column);
+    const auto segment = first_chunk_left->get_segment(cxlumn_id);
+    const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
     _referenced_cxlumn_ids.emplace_back(ref_segment->referenced_cxlumn_id());
   }
 
@@ -279,8 +279,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           current_pos_list = nullptr;
         }
 
-        const auto column = chunk->get_segment(cxlumn_id);
-        const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(column);
+        const auto segment = chunk->get_segment(cxlumn_id);
+        const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
         auto pos_list = ref_segment->pos_list();
 
         if (current_pos_list == nullptr) {
@@ -290,12 +290,12 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
         Assert(ref_segment->referenced_table() == _referenced_tables[next_segment_id - 1],
                "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(cxlumn_id) +
                    ") "
-                   "doesn't reference the same table as the column at the same index in the first chunk "
+                   "doesn't reference the same table as the segment at the same index in the first chunk "
                    "of the left input table does");
         Assert(ref_segment->referenced_cxlumn_id() == _referenced_cxlumn_ids[cxlumn_id],
                "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(cxlumn_id) +
                    ")"
-                   " doesn't reference the same table as the column at the same index in the first chunk "
+                   " doesn't reference the same cxlumn as the segment at the same index in the first chunk "
                    "of the left input table does");
         Assert(current_pos_list == pos_list, "Different PosLists in column segment");
       }
@@ -321,8 +321,8 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 
     for (size_t segment_id = 0; segment_id < _column_segment_offsets.size(); ++segment_id) {
       const auto cxlumn_id = _column_segment_offsets[segment_id];
-      const auto column = chunk->get_segment(cxlumn_id);
-      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(column);
+      const auto segment = chunk->get_segment(cxlumn_id);
+      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
 
       auto& out_pos_list = reference_matrix[segment_id];
       auto in_pos_list = ref_segment->pos_list();

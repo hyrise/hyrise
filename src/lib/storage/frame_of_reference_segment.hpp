@@ -35,7 +35,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
   /**
    * The segment is divided into fixed-size blocks.
    * Each block has its own minimum from which the
-   * offsets are calculated. Theoretically, it would be 
+   * offsets are calculated. Theoretically, it would be
    * possible to make the block size dependent on the
    * data’s properties. Determining the optimal size
    * is however not trivial.
