@@ -42,9 +42,6 @@ class ValueColumn : public BaseValueColumn {
   // Add a value to the end of the column.
   void append(const AllTypeVariant& val) final;
 
-  // Add a value (or NULL) to the end of the column.
-  void append_typed_value(const std::optional<T> value_or_null);
-
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.
   // e.g. auto& values = col.values(); and then: values.at(i); in your loop.

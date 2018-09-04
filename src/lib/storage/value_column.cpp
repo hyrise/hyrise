@@ -98,21 +98,6 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
-void ValueColumn<T>::append_typed_value(const std::optional<T> value_or_null) {
-  const bool is_null = !value_or_null.has_value();
-
-  if (is_nullable()) {
-    (*_null_values).push_back(is_null);
-    _values.push_back(is_null ? T{} : *value_or_null);
-    return;
-  }
-
-  Assert(!is_null, "ValueColumn is not nullable but value passed is null.");
-
-  _values.push_back(*value_or_null);
-}
-
-template <typename T>
 const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;
 }
