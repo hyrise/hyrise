@@ -11,7 +11,9 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
@@ -25,7 +27,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
+    _table = load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE);
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
@@ -44,7 +46,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = std::make_shared<TableScan>(_gt, CxlumnID{0}, PredicateCondition::GreaterThan, "456.7");
+  auto table_scan = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::GreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -97,9 +99,9 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::Equals, "123");
-  auto expected_result = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::NotEquals, "123");
-  auto table_scan2 = std::make_shared<TableScan>(_gt, CxlumnID{1}, PredicateCondition::LessThan, "1234");
+  auto table_scan1 = std::make_shared<TableScan>(_gt, CxlumnID{0}, PredicateCondition::Equals, "123");
+  auto expected_result = std::make_shared<TableScan>(_gt, CxlumnID{0}, PredicateCondition::NotEquals, "123");
+  auto table_scan2 = std::make_shared<TableScan>(_gt, CxlumnID{0}, PredicateCondition::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
@@ -163,6 +165,77 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   EXPECT_TRUE(update_op->execute_failed());
 
   t2_context->rollback();
+}
+
+TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
+  // We are testing a couple of things here:
+  //   (1) When a transaction deletes a row that it inserted itself, it should no longer be visible to itself
+  //   (2) When that transaction rolls back, the row should be invisible to a second transaction
+  //   (3) The same should be the case if the transaction commits
+  // For that purpose, we run the insert, delete, scan routine twice, once where we abort the transaction (inserted
+  // and deleted value 456.7), and once where we commit it (inserted and deleted value 457.7)
+
+  for (const auto value : {456.7, 457.7}) {
+    auto context = TransactionManager::get().new_transaction_context();
+
+    auto values_to_insert = load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE);
+    auto table_name_for_insert = "bla";
+    StorageManager::get().add_table(table_name_for_insert, values_to_insert);
+    auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
+    insert_get_table->execute();
+
+    auto insert = std::make_shared<Insert>(_table_name, insert_get_table);
+    insert->set_transaction_context(context);
+    insert->execute();
+
+    auto validate1 = std::make_shared<Validate>(_gt);
+    validate1->set_transaction_context(context);
+    validate1->execute();
+
+    auto table_scan1 = std::make_shared<TableScan>(validate1, CxlumnID{1}, PredicateCondition::Equals, value);
+    table_scan1->execute();
+    EXPECT_EQ(table_scan1->get_output()->row_count(), 2);
+
+    auto delete_op = std::make_shared<Delete>(_table_name, table_scan1);
+    delete_op->set_transaction_context(context);
+    delete_op->execute();
+
+    auto gt = std::make_shared<GetTable>(_table_name);
+    gt->execute();
+
+    auto validate2 = std::make_shared<Validate>(_gt);
+    validate2->set_transaction_context(context);
+    validate2->execute();
+
+    auto table_scan2 = std::make_shared<TableScan>(validate2, CxlumnID{1}, PredicateCondition::Equals, value);
+    table_scan2->execute();
+    EXPECT_EQ(table_scan2->get_output()->row_count(), 0);
+
+    if (value == 456.7) {
+      context->rollback();
+    } else {
+      context->commit();
+    }
+
+    StorageManager::get().drop_table(table_name_for_insert);
+  }
+
+  {
+    auto context = TransactionManager::get().new_transaction_context();
+
+    auto gt = std::make_shared<GetTable>(_table_name);
+    gt->execute();
+
+    auto validate1 = std::make_shared<Validate>(_gt);
+    validate1->set_transaction_context(context);
+    validate1->execute();
+
+    auto expected_result = load_table("src/test/tables/int_float_deleted.tbl", Chunk::MAX_SIZE);
+
+    EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
+
+    context->rollback();
+  }
 }
 
 }  // namespace opossum

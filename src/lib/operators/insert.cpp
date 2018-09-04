@@ -70,6 +70,9 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(source)) {
       // We use the segment type of the Dummy table used to insert a single null value.
       // A few asserts are needed to guarantee correct behaviour.
+
+      // You may also end up here if the data types of the input and the target column mismatch. Usually, this gets
+      // caught way earlier, but if you build your own tests, this might happen.
       Assert(length == 1, "Cannot insert multiple unknown null values at once.");
       Assert(casted_dummy_source->size() == 1, "Source segment is of wrong type.");
       Assert(casted_dummy_source->null_values().front() == true, "Only value in dummy table must be NULL!");
