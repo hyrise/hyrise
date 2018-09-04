@@ -12,6 +12,11 @@
 
 #include "strategy_base_test.hpp"
 
+/**
+ * We can't actually test much about the JoinOrderingRule, since it is highly dependent on the underlying algorithms
+ * which are separately tested.
+ */
+
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {

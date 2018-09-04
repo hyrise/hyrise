@@ -13,6 +13,13 @@
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
+/**
+ * The number of tests in here might seem few, but actually all main parts of DpCcp are covered: Join order, Join
+ * predicate order, local predicate order, complex predicate treatment and cross join treatment.
+ *
+ * Note, also, that EnumerateCcp is tested separately.
+ */
+
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
