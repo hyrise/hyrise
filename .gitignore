@@ -23,7 +23,6 @@ compile_times.txt
 exported_table_statistics.json
 version.hpp
 provider.hpp
-probe_definitions.hpp
 
 # Ignore cmake user files
 *.txt.user

@@ -18,10 +18,7 @@ constexpr bool is_valid_name(const char* name) {
 
 #if defined(__APPLE__) || defined(__MACOS__)
 
-// clang-format off
 #include "provider.hpp"
-#include "probe_definitions.hpp"
-// clang-format on
 
 // Construct the probe definition by provider and probe name
 #define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
