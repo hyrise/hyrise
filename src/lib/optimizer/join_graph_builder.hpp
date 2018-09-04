@@ -34,6 +34,7 @@ class JoinGraphBuilder final {
    */
   std::optional<JoinGraph> operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
 
+ private:
   static std::vector<JoinGraphEdge> _join_edges_from_predicates(
       const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
       const std::vector<std::shared_ptr<AbstractExpression>>& predicates);
@@ -45,8 +46,6 @@ class JoinGraphBuilder final {
    * Traverse the LQP recursively identifying predicates and vertices along the way
    */
   void _traverse(const std::shared_ptr<AbstractLQPNode>& node);
-
- private:
   /**
    * A subgraph in the LQP consisting of UnionNodes and PredicateNodes can be translated into a single complex predicate
    *
