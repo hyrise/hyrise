@@ -38,10 +38,15 @@ class BenchmarkRunner {
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries();
 
+  // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
   std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const NamedQuery& named_query,
                                                                         const std::function<void()>& done_callback);
+
+  // Schedule and return all tasks for named_query
   std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const NamedQuery& named_query,
                                                              const std::function<void()>& done_callback);
+
+  // Execute named_query
   void _execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback);
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json

@@ -218,6 +218,9 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
     const NamedQuery& named_query, const std::function<void()>& done_callback) {
+  // Some queries (like TPC-H 15) require execution before we can call get_tasks() on the pipeline.
+  // These queries can't be scheduled yet, therefore we fall back to "just" executing the query
+  // when we don't use the scheduler anyway, so that they can be executed.
   if (_config.enable_scheduler) {
     return _schedule_query(named_query, done_callback);
   }
