@@ -130,8 +130,8 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
         auto on_query_done = [query_run_begin, named_query, number_of_queries_per_set, &currently_running_query_sets,
                               &finished_query_set_runs, &finished_queries_total, &result_mutex, this]() {
           const auto duration = std::chrono::steady_clock::now() - query_run_begin;
-          finished_queries_total++;
-          if (finished_queries_total.load(std::memory_order_relaxed) % number_of_queries_per_set == 0) {
+
+          if (finished_queries_total++ % number_of_queries_per_set == 0) {
             currently_running_query_sets--;
             finished_query_set_runs++;
           }
