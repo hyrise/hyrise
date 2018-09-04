@@ -116,15 +116,17 @@ TEST_F(DpCcpTest, LocalPredicateOrdering) {
 
   const auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b11}, expression_vector(equals_(a_a, b_a))};
 
-  const auto local_predicate_a_0 = equals_(a_a, add_(5, 6)); // medium complexity
-  const auto local_predicate_a_1 = equals_(a_a, 5); // low complexity
+  const auto local_predicate_a_0 = equals_(a_a, add_(5, 6));           // medium complexity
+  const auto local_predicate_a_1 = equals_(a_a, 5);                    // low complexity
   const auto local_predicate_a_2 = equals_(mul_(a_a, 2), add_(5, 6));  // high complexity
 
-  const auto local_predicate_b_0 = equals_(b_a, add_(5, 6)); // medium complexity
-  const auto local_predicate_b_1 = equals_(b_a, 5); // low complexity
+  const auto local_predicate_b_0 = equals_(b_a, add_(5, 6));  // medium complexity
+  const auto local_predicate_b_1 = equals_(b_a, 5);           // low complexity
 
-  const auto self_edge_a = JoinGraphEdge{JoinGraphVertexSet{2, 0b01}, expression_vector(local_predicate_a_0, local_predicate_a_1, local_predicate_a_2)};
-  const auto self_edge_b = JoinGraphEdge{JoinGraphVertexSet{2, 0b10}, expression_vector(local_predicate_b_0, local_predicate_b_1)};
+  const auto self_edge_a = JoinGraphEdge{
+      JoinGraphVertexSet{2, 0b01}, expression_vector(local_predicate_a_0, local_predicate_a_1, local_predicate_a_2)};
+  const auto self_edge_b =
+      JoinGraphEdge{JoinGraphVertexSet{2, 0b10}, expression_vector(local_predicate_b_0, local_predicate_b_1)};
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, self_edge_a, self_edge_b}));
