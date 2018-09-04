@@ -89,7 +89,6 @@ int main(int argc, char* argv[]) {
   config->out << "]" << std::endl;
 
   // TODO(leander): Enable support for queries that contain multiple statements requiring execution
-  // TODO(leander): Currently TPC-H 15 also breaks without scheduler, because we call get_tasks() there as well now.
   if (config->enable_scheduler) {
     Assert(std::find(query_ids.begin(), query_ids.end(), opossum::QueryID{15}) == query_ids.end(),
            "TPC-H query 15 is not supported for multithreaded benchmarking.");
