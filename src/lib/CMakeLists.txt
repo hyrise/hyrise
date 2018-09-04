@@ -158,7 +158,8 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/base_operator_performance_data.hpp
+    operators/operator_performance_data.cpp
+    operators/operator_performance_data.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
     operators/delete.cpp

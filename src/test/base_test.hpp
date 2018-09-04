@@ -24,7 +24,7 @@ namespace opossum {
 class AbstractLQPNode;
 class Table;
 
-static std::string test_data_path;  // NOLINT
+extern std::string test_data_path;
 
 template <typename ParamType>
 class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,

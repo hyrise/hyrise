@@ -171,10 +171,9 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
     auto visitor =
         make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
-    resolve_data_and_column_type(*chunk->get_column(column_id),
-                                 [&](const auto data_type_t, const auto& resolved_column) {
-                                   visitor->handle_column(resolved_column, context);
-                                 });
+    resolve_data_and_column_type(
+        *chunk->get_column(column_id),
+        [&](const auto data_type_t, const auto& resolved_column) { visitor->handle_column(resolved_column, context); });
   }
 }
 

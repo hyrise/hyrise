@@ -74,7 +74,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
     ColumnIteratorValue<T> dereference() const {
-      const auto value_id = *_attribute_it;
+      const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
       if (is_null) return ColumnIteratorValue<T>{T{}, true, _chunk_offset};

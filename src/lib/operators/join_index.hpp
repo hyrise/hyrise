@@ -27,6 +27,13 @@ class JoinIndex : public AbstractJoinOperator {
 
   const std::string name() const override;
 
+  struct PerformanceData : public OperatorPerformanceData {
+    size_t chunks_scanned_with_index{0};
+    size_t chunks_scanned_without_index{0};
+
+    std::string to_string(DescriptionMode description_mode = DescriptionMode::SingleLine) const override;
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 

@@ -1,10 +1,10 @@
 #include "console.hpp"
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include <chrono>
 #include <csetjmp>
@@ -250,7 +250,10 @@ int Console::_eval_sql(const std::string& sql) {
   if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
   try {
-    _sql_pipeline->get_result_table();
+    _sql_pipeline->get_result_tables();
+    Assert(!_sql_pipeline->failed_pipeline_statement(),
+           "The transaction has failed. This should never happen in the console, where only one statement gets "
+           "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&

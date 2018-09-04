@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "base_operator_performance_data.hpp"
 #include "expression/parameter_expression.hpp"
+#include "operator_performance_data.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -69,8 +69,10 @@ enum class OperatorType {
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                   const std::shared_ptr<const AbstractOperator>& right = nullptr);
+  AbstractOperator(
+      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+      const std::shared_ptr<const AbstractOperator>& right = nullptr,
+      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   virtual ~AbstractOperator() = default;
 
@@ -118,8 +120,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> input_table_right() const;
 
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
-  // Derived operators may produce more finely grained performance data (e.g. JoinHash::join_hash_performance_data())
-  const BaseOperatorPerformanceData& base_performance_data() const;
+  const OperatorPerformanceData& performance_data() const;
 
   void print(std::ostream& stream = std::cout) const;
 
@@ -167,7 +168,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
-  BaseOperatorPerformanceData _base_performance_data;
+  const std::unique_ptr<OperatorPerformanceData> _performance_data;
 };
 
 }  // namespace opossum
