@@ -52,7 +52,13 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
 
   const auto left_operand_column_statistics = _column_statistics[column_id];
 
-  if (is_column_id(value)) {
+  if (predicate_condition == PredicateCondition::IsNotNull) {
+    predicated_column_statistics[column_id] = left_operand_column_statistics->without_null_values();
+    predicated_row_count *= 1.0 - left_operand_column_statistics->non_null_value_ratio();
+  } else if (predicate_condition == PredicateCondition::IsNull) {
+    predicated_column_statistics[column_id] = left_operand_column_statistics->only_null_values();
+    predicated_row_count *= left_operand_column_statistics->non_null_value_ratio();
+  } else if (is_column_id(value)) {
     const auto value_column_id = boost::get<ColumnID>(value);
 
     const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(

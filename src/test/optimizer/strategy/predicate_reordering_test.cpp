@@ -179,8 +179,10 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   auto table_statistics = std::make_shared<TableStatistics>(
       TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
-  auto table_0 = MockNode::make(table_statistics);
-  auto table_1 = MockNode::make(table_statistics);
+  auto table_0 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  table_0->set_statistics(table_statistics);
+  auto table_1 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  table_1->set_statistics(table_statistics);
   auto cross_node = JoinNode::make(JoinMode::Cross);
   auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
   auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
@@ -230,7 +232,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto table_statistics = std::make_shared<TableStatistics>(
       TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
-  auto table_node = MockNode::make(table_statistics);
+  auto table_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  table_node->set_statistics(table_statistics);
   auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));

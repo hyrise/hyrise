@@ -43,4 +43,15 @@ do
 	done
 done
 
+let "exitcode |= $?"
+
+# Check if all probes are defined in provider.d
+for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provider.hpp -h '^\s*DTRACE_PROBE' src | sed -E 's/^ *DTRACE_PROBE[0-9]{0,2}\(HYRISE, *([A-Z_]+).*$/\1/'); do
+    grep -i $probe src/lib/utils/tracing/provider.d > /dev/null
+    if [ $? -ne 0 ]; then
+        echo "Probe $probe is not defined in provider.d"
+        exitcode=1
+    fi
+done
+
 exit $exitcode
