@@ -129,25 +129,25 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   Segments output_segments;
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     output_segments.push_back(
-        _import_cxlumn(file, row_count, table->cxlumn_data_type(cxlumn_id), table->cxlumn_is_nullable(cxlumn_id)));
+            _import_segment(file, row_count, table->cxlumn_data_type(cxlumn_id), table->cxlumn_is_nullable(cxlumn_id)));
   }
   table->append_chunk(output_segments);
 }
 
-std::shared_ptr<BaseSegment> ImportBinary::_import_cxlumn(std::ifstream& file, ChunkOffset row_count,
-                                                          DataType data_type, bool is_nullable) {
+std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, ChunkOffset row_count,
+                                                           DataType data_type, bool is_nullable) {
   std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
-    result = _import_cxlumn<CxlumnDataType>(file, row_count, is_nullable);
+    result = _import_segment<CxlumnDataType>(file, row_count, is_nullable);
   });
 
   return result;
 }
 
 template <typename CxlumnDataType>
-std::shared_ptr<BaseSegment> ImportBinary::_import_cxlumn(std::ifstream& file, ChunkOffset row_count,
-                                                          bool is_nullable) {
+std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, ChunkOffset row_count,
+                                                           bool is_nullable) {
   const auto cxlumn_type = _read_value<BinarySegmentType>(file);
 
   switch (cxlumn_type) {

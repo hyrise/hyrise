@@ -194,7 +194,7 @@ void JoinIndex::_perform_join() {
   }
 }
 
-// join loop that joins two chunks of two segments using an iterator for the left, and an index for the right
+// join loop that joins two segments of two columns using an iterator for the left, and an index for the right
 template <typename LeftIterator>
 void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
                                                const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index) {
@@ -251,7 +251,7 @@ void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterato
   }
 }
 
-// join loop that joins two chunks of two segments via their iterators
+// join loop that joins two segments of two columns via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                                                RightIterator right_begin, RightIterator right_end,
@@ -346,7 +346,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
         segment = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
                                                      reference_segment->referenced_cxlumn_id(), new_pos_list);
       } else {
-        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
+        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.

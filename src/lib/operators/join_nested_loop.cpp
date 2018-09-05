@@ -124,14 +124,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
       using RightType = typename decltype(right_type)::type;
 
       // make sure that we do not compile invalid versions of these lambdas
-      constexpr auto LEFT_IS_STRING_SEGMENT = (std::is_same<LeftType, std::string>{});
-      constexpr auto RIGHT_IS_STRING_SEGMENT = (std::is_same<RightType, std::string>{});
+      constexpr auto LEFT_IS_STRING_CXLUMN = (std::is_same<LeftType, std::string>{});
+      constexpr auto RIGHT_IS_STRING_CXLUMN = (std::is_same<RightType, std::string>{});
 
-      constexpr auto NEITHER_IS_STRING_SEGMENT = !LEFT_IS_STRING_SEGMENT && !RIGHT_IS_STRING_SEGMENT;
-      constexpr auto BOTH_ARE_STRING_SEGMENTS = LEFT_IS_STRING_SEGMENT && RIGHT_IS_STRING_SEGMENT;
+      constexpr auto NEITHER_IS_STRING_CXLUMN = !LEFT_IS_STRING_CXLUMN && !RIGHT_IS_STRING_CXLUMN;
+      constexpr auto BOTH_ARE_STRING_CXLUMN = LEFT_IS_STRING_CXLUMN && RIGHT_IS_STRING_CXLUMN;
 
       // clang-format off
-      if constexpr (NEITHER_IS_STRING_SEGMENT || BOTH_ARE_STRING_SEGMENTS) {
+      if constexpr (NEITHER_IS_STRING_CXLUMN || BOTH_ARE_STRING_CXLUMN) {
         auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
 
@@ -267,7 +267,7 @@ void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_
         segment = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
                                                      reference_segment->referenced_cxlumn_id(), new_pos_list);
       } else {
-        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
+        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.

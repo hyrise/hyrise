@@ -20,7 +20,7 @@ class ReferenceSegment;
  *
  * Additionally to the main csv file, which contains the contents of the table,
  * a meta file is generated. This meta file contains further information,
- * such as the types of the cslumns in the table.
+ * such as the types of the cxlumns in the table.
  *
  * Note: ExportCsv does not support null values at the moment
  */
