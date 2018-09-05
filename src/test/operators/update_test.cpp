@@ -82,7 +82,8 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto updated_table = std::make_shared<GetTable>("updateTestTable");
   updated_table->execute();
   ASSERT_NE(updated_table->get_output()->table_statistics(), nullptr);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 0u);
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 3u);
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->approx_valid_row_count(), 0u);
   EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 

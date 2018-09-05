@@ -85,9 +85,7 @@ void Delete::_on_commit_records(const CommitID cid) {
 void Delete::_finish_commit() {
   const auto table_statistics = _table->table_statistics();
   if (table_statistics) {
-    _table->set_table_statistics(std::make_shared<TableStatistics>(table_statistics->table_type(),
-                                                                   table_statistics->row_count() - _num_rows_deleted,
-                                                                   table_statistics->column_statistics()));
+    table_statistics->increase_invalid_row_count(_num_rows_deleted);
   }
 }
 

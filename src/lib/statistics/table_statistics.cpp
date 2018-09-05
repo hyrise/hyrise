@@ -16,6 +16,8 @@ TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
+uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
+
 const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
 }
@@ -265,6 +267,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
 
   return join_table_stats;
 }
+
+void TableStatistics::increase_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
   // TODO(anybody) this is just a dummy implementation
