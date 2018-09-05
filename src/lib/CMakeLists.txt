@@ -583,10 +583,12 @@ if (${ENABLE_NUMA_SUPPORT})
 endif()
 
 # Generate header file in order to define probes needed for dtrace
+set(DTRACE_SOURCES ${sources})
+list(REMOVE_ITEM DTRACE_SOURCES ${CMAKE_BINARY_DIR}/version.hpp)
 set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
 add_custom_command (
     OUTPUT ${PROVIDER_FILE}
-    DEPENDS ${SOURCES}
+    DEPENDS ${DTRACE_SOURCES}
     COMMAND dtrace -h -s ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
