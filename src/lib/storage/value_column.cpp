@@ -57,8 +57,16 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   if (is_nullable() && _null_values->at(chunk_offset)) {
     return NULL_VALUE;
   }
-
   return _values.at(chunk_offset);
+}
+
+template <typename T>
+const std::optional<T> ValueColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  // Column supports null values and value is null
+  if (is_nullable() && (*_null_values)[chunk_offset]) {
+    return std::nullopt;
+  }
+  return _values[chunk_offset];
 }
 
 template <typename T>
@@ -84,7 +92,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+  Assert(!is_null, "ValueColumn is not nullable but value passed is null.");
 
   _values.push_back(type_cast<T>(val));
 }

@@ -36,6 +36,9 @@ class ValueColumn : public BaseValueColumn {
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
+  // return the value at a certain position.
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+
   // Add a value to the end of the column.
   void append(const AllTypeVariant& val) final;
 

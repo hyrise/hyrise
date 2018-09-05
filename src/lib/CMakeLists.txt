@@ -352,6 +352,7 @@ set(
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column.cpp
+    storage/base_column_accessor.hpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
     storage/base_dictionary_column.hpp
@@ -364,6 +365,7 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
+    storage/column_accessor.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
     storage/column_iterables/any_column_iterable.hpp
@@ -587,10 +589,12 @@ if (${ENABLE_NUMA_SUPPORT})
 endif()
 
 # Generate header file in order to define probes needed for dtrace
+set(DTRACE_SOURCES ${SOURCES})
+list(REMOVE_ITEM DTRACE_SOURCES ${CMAKE_BINARY_DIR}/version.hpp)
 set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
 add_custom_command (
     OUTPUT ${PROVIDER_FILE}
-    DEPENDS ${SOURCES}
+    DEPENDS ${DTRACE_SOURCES}
     COMMAND dtrace -h -s ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
