@@ -514,6 +514,7 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    utils/tracing/probes.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -580,6 +581,16 @@ endif()
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
+
+# Generate header file in order to define probes needed for dtrace
+set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
+add_custom_command (
+    OUTPUT ${PROVIDER_FILE}
+    DEPENDS ${SOURCES}
+    COMMAND dtrace -h -s ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/provider.d -o ${PROVIDER_FILE}
+)
+
+set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
