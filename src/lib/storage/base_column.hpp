@@ -22,7 +22,8 @@ class BaseColumn : private Noncopyable {
   // the type of the data contained in this column
   DataType data_type() const;
 
-  // returns the value at a given position
+  // Returns the value at a given position. This is considerably slow since it returns an AllTypeVariant.
+  // If you know the column type and its stored data type, consider using get_typed_value(chunk_offset) instead.
   virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
   // appends the value at the end of the column

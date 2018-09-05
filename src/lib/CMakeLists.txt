@@ -352,6 +352,7 @@ set(
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column.cpp
+    storage/base_column_accessor.hpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
     storage/base_dictionary_column.hpp
@@ -364,6 +365,7 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
+    storage/column_accessor.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
     storage/column_iterables/any_column_iterable.hpp
