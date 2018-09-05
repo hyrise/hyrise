@@ -34,7 +34,7 @@ std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_re
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
-std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,
+std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
                                              const std::string& column_name) {
   return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
 }
