@@ -34,17 +34,22 @@ const BaseCompressedVector& FrameOfReferenceColumn<T, U>::offset_values() const 
 template <typename T, typename U>
 const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
-
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
-  if (_null_values[chunk_offset]) {
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (!typed_value.has_value()) {
     return NULL_VALUE;
   }
+  return *typed_value;
+}
 
+template <typename T, typename U>
+const std::optional<T> FrameOfReferenceColumn<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
+  if (_null_values[chunk_offset]) {
+    return std::nullopt;
+  }
   const auto minimum = _block_minima[chunk_offset / block_size];
-
   const auto value = static_cast<T>(_decoder->get(chunk_offset)) + minimum;
-
   return value;
 }
 

@@ -12,7 +12,7 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
-    cost_model/cost_feature_proxy_test.cpp
+    cost_model/cost_estimator_test.cpp
     import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
@@ -88,13 +88,18 @@ set(
     statistics/column_statistics_test.cpp
     statistics/table_statistics_join_test.cpp
     statistics/table_statistics_test.cpp
+    optimizer/enumerate_ccp_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/join_graph_test.cpp
+    optimizer/join_graph_builder_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/dp_ccp_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
+    optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
@@ -124,6 +129,7 @@ set(
     storage/any_column_iterable_test.cpp
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
+    storage/column_accessor_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
     storage/fixed_string_dictionary_column_test.cpp
