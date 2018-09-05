@@ -71,14 +71,13 @@ const char* const tpch_query_1 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Changed ordering in the FROM clause for better join ordering while we are still working on the ordering.
  */
 const char* const tpch_query_2 =
     R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
-       FROM "part", partsupp, supplier, nation, region
+       FROM "part", supplier, partsupp, nation, region
        WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type like '%BRASS' AND
        s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE' AND
-       ps_supplycost = (SELECT min(ps_supplycost) FROM supplier, partsupp, nation, region
+       ps_supplycost = (SELECT min(ps_supplycost) FROM partsupp, supplier, nation, region
        WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND s_nationkey = n_nationkey
        AND n_regionkey = r_regionkey AND r_name = 'EUROPE') ORDER BY s_acctbal DESC, n_name, s_name, p_partkey;)";
 
@@ -174,8 +173,6 @@ const char* const tpch_query_4 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  3. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_5 =
     R"(SELECT n_name, SUM(l_extendedprice * (1 - l_discount)) as revenue
@@ -367,15 +364,11 @@ const char* const tpch_query_8 =
  *  1. Random values are hardcoded
  *  2. Extract is not supported
  *    a. Use SUBSTR instead
- *  3. Changed ordering in the FROM clause for better join ordering while we are still working on the ordering.
  */
-// TODO(anyone): change order of:
-// FROM supplier, lineitem, partsupp, orders, nation, "part"   back to original
-// FROM "part", supplier, lineitem, partsupp, orders, nation   as soon as join ordering is fixed
 const char* const tpch_query_9 =
     R"(SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 0, 4) as o_year,
       l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount
-      FROM supplier, lineitem, partsupp, orders, nation, "part" WHERE s_suppkey = l_suppkey
+      FROM "part", supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey
       AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey
       AND s_nationkey = n_nationkey AND p_name like '%green%') as profit
       GROUP BY nation, o_year ORDER BY nation, o_year DESC;)";
@@ -595,7 +588,6 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
  *  3. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
- *  4. Removed "drop view revenue[STREAM_ID];" because with it SQLiteWrapper doesn't return a result.
  */
 const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
