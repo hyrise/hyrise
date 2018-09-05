@@ -18,8 +18,8 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 
   if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression)) {
     value = value_expression->value;
-  } else if (const auto value_segment_id = node.find_cxlumn_id(expression)) {
-    value = *value_segment_id;
+  } else if (const auto value_cxlumn_id = node.find_cxlumn_id(expression)) {
+    value = *value_cxlumn_id;
   } else if (const auto parameter_expression = dynamic_cast<const ParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
   } else {
