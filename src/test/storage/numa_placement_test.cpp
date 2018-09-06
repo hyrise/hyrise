@@ -7,20 +7,20 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/scheduler/current_scheduler.hpp"
-#include "../lib/scheduler/node_queue_scheduler.hpp"
-#include "../lib/scheduler/topology.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/chunk_encoder.hpp"
-#include "../lib/storage/numa_placement_manager.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/storage/value_segment.hpp"
-#include "../lib/tasks/migration_preparation_task.hpp"
-#include "../lib/types.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/numa_placement_manager.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "tasks/migration_preparation_task.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

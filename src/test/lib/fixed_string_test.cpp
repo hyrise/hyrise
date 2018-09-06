@@ -1,7 +1,7 @@
 #include <memory>
 #include <string_view>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "storage/fixed_string_dictionary_segment/fixed_string.hpp"
 

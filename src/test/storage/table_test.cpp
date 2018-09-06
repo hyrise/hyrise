@@ -4,11 +4,11 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/resolve_type.hpp"
-#include "../lib/storage/table.hpp"
+#include "resolve_type.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

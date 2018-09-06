@@ -2,10 +2,10 @@
 #include <string>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/value_segment.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

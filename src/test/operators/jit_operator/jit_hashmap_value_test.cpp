@@ -1,4 +1,4 @@
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "operators/jit_operator/jit_types.hpp"
 
 namespace opossum {

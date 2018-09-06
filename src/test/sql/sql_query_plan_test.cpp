@@ -2,7 +2,7 @@
 #include <string>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "SQLParser.h"
 #include "gtest/gtest.h"
 
