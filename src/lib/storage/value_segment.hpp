@@ -44,7 +44,7 @@ class ValueSegment : public BaseValueSegment {
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.
-  // e.g. auto& values = cxlumn.values(); and then: values.at(i); in your loop.
+  // e.g. auto& values = segment.values(); and then: values.at(i); in your loop.
   const pmr_concurrent_vector<T>& values() const;
   pmr_concurrent_vector<T>& values();
 
