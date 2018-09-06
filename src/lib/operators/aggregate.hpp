@@ -111,18 +111,6 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   void _on_cleanup() override;
 
-  template <typename CxlumnType>
-  static void _create_aggregate_context(boost::hana::basic_type<CxlumnType> type,
-                                        std::shared_ptr<SegmentVisitorContext>& aggregate_context,
-                                        AggregateFunction function);
-
-  template <typename CxlumnType, typename AggregateKey>
-  static void _create_aggregate_visitor(boost::hana::basic_type<CxlumnType> type,
-                                        std::shared_ptr<AbstractSegmentVisitor>& builder,
-                                        std::shared_ptr<SegmentVisitorContext> context,
-                                        std::shared_ptr<GroupByContext<AggregateKey>> groupby_context,
-                                        AggregateFunction function);
-
   template <typename AggregateKey, typename CxlumnType>
   void _write_aggregate_output(boost::hana::basic_type<CxlumnType> type, CxlumnID cxlumn_index,
                                AggregateFunction function);

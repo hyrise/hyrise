@@ -289,17 +289,17 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
       using SelectDataType = typename decltype(select_data_type_t)::type;
 
       const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
-      const auto select_result_segments = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
+      const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
 
-      Assert(select_result_segments.size() == 1 || select_result_segments.size() == _output_row_count,
+      Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
              "Unexpected number of lists returned from Select. "
-             "Should be one (if the Select is uncorrelated), or one per row (if it is)");
+             "Should be one (if the Select is not correlated), or one per row (if it is)");
 
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
         if constexpr (EqualsEvaluator::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
-          const auto result_size = _result_size(left_view.size(), select_result_segments.size());
+          const auto result_size = _result_size(left_view.size(), select_results.size());
 
           result_values.resize(result_size, 0);
           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
@@ -309,7 +309,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             // If the SELECT returned just one list, always perform the IN check with that one list
             // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
             // against the list of the current row
-            const auto& list = *select_result_segments[select_result_segments.size() == 1 ? 0 : chunk_offset];
+            const auto& list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
 
             auto list_contains_null = false;
 
@@ -407,7 +407,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predica
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cxlumn_expression(
     const PQPCxlumnExpression& cxlumn_expression) {
-  Assert(_chunk, "Cannot access segments in this Expression as it doesn't operate on a Table/Chunk");
+  Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
 
   const auto& segment = *_chunk->get_segment(cxlumn_expression.cxlumn_id);
   Assert(segment.data_type() == data_type_from_type<Result>(), "Can't evaluate segment to different type");
@@ -654,22 +654,22 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_select_
     const PQPSelectExpression& select_expression) {
   const auto select_result_tables = _evaluate_select_expression_to_tables(select_expression);
 
-  // The single segments returned from invoking the SelectExpression on each row. So: one segment per row.
-  const auto select_result_segments = _prune_tables_to_expression_results<Result>(select_result_tables);
+  // The single column returned from invoking the SelectExpression on each row. So: one column per row.
+  const auto select_results = _prune_tables_to_expression_results<Result>(select_result_tables);
 
-  std::vector<Result> result_values(select_result_segments.size());
+  std::vector<Result> result_values(select_results.size());
 
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_segments.size(); ++chunk_offset) {
-    Assert(select_result_segments[chunk_offset]->size() == 1,
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
+    Assert(select_results[chunk_offset]->size() == 1,
            "Expected precisely one row to be returned from SelectExpression");
-    result_values[chunk_offset] = select_result_segments[chunk_offset]->value(0);
+    result_values[chunk_offset] = select_results[chunk_offset]->value(0);
   }
 
   if (select_expression.is_nullable()) {
-    std::vector<bool> result_nulls(select_result_segments.size());
+    std::vector<bool> result_nulls(select_results.size());
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_segments.size(); ++chunk_offset) {
-      result_nulls[chunk_offset] = select_result_segments[chunk_offset]->is_null(0);
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_results.size(); ++chunk_offset) {
+      result_nulls[chunk_offset] = select_results[chunk_offset]->is_null(0);
     }
     return std::make_shared<ExpressionResult<Result>>(std::move(result_values), std::move(result_nulls));
   } else {
@@ -684,7 +684,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
     return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
   }
 
-  // Make sure all segments that are parameters are materialized
+  // Make sure all columns (i.e. segments) that are parameters are materialized
   for (const auto& parameter : expression.parameters) {
     _materialize_segment_if_not_yet_materialized(parameter.second);
   }
@@ -954,7 +954,7 @@ std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::v
 }
 
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const CxlumnID cxlumn_id) {
-  Assert(_chunk, "Cannot access segments in this Expression as it doesn't operate on a Table/Chunk");
+  Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
 
   if (_segment_materializations[cxlumn_id]) return;
 
@@ -1112,7 +1112,7 @@ template <typename Result>
 std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_prune_tables_to_expression_results(
     const std::vector<std::shared_ptr<const Table>>& tables) {
   /**
-   * Makes sure each Table in @param tables has only a single segment. Materialize this single segment into
+   * Makes sure each Table in @param tables has only a single column. Materialize this single column into
    * an ExpressionResult and return the vector of resulting ExpressionResults.
    */
 
@@ -1121,7 +1121,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {
     const auto& table = tables[table_idx];
 
-    Assert(table->cxlumn_count() == 1, "Expected precisely one segment from SubSelect");
+    Assert(table->cxlumn_count() == 1, "Expected precisely one column from SubSelect");
     Assert(table->cxlumn_data_type(CxlumnID{0}) == data_type_from_type<Result>(),
            "Expected different DataType from SubSelect");
 

@@ -11,7 +11,7 @@
 namespace opossum {
 
 // operator to join two tables using one cxlumn of each table
-// output is a table with reference segments
+// output is a table with ReferenceSegments
 // to filter by multiple criteria, you can chain the operator
 
 // As with most operators, we do not guarantee a stable operation with regards
