@@ -43,22 +43,24 @@ class ExpressionEvaluator final {
   using Bool = int32_t;
   static constexpr auto DataTypeBool = DataType::Int;
 
-  // For PQPSelectExpressions that are not correlated (i.e., that have no parameters), we pass previously
-  // calculated results into the per-chunk evaluator so that they are only evaluated once, not per-chunk.
+  // Performance Hack:
+  //   For PQPSelectExpressions that are not correlated (i.e., that have no parameters), we pass previously
+  //   calculated results into the per-chunk evaluator so that they are only evaluated once, not per-chunk.
   using UncorrelatedSelectResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
 
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 
   // For Expressions that reference Columns from a single table
-  explicit ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
-                               const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results);
+  ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+                      const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
 
   std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
-
+  
+  // Utility to populate a cache of UncorrelatedSelectResults
   std::shared_ptr<const Table> evaluate_uncorrelated_select_expression(const PQPSelectExpression& expression);
 
  private:
