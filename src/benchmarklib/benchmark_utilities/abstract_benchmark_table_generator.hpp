@@ -61,7 +61,7 @@ class AbstractBenchmarkTableGenerator {
     cxlumn_definitions.emplace_back(name, data_type);
 
     /**
-     * Calculate the total row count for this segment based on the cardinalities of the influencing tables.
+     * Calculate the total row count for this column based on the cardinalities of the influencing tables.
      * For the CUSTOMER table this calculates 1*10*3000
      */
     auto loop_count =
@@ -71,7 +71,7 @@ class AbstractBenchmarkTableGenerator {
     data.reserve(_chunk_size);
 
     /**
-     * The loop over all records that the final segment of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
+     * The loop over all records that the final column of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
      */
     size_t row_index = 0;
 
