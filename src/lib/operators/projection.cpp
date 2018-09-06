@@ -60,9 +60,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
-   * Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk).
+   * Performance hack:
+   *  Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk).
    */
-
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
   {
     auto evaluator = ExpressionEvaluator{};
