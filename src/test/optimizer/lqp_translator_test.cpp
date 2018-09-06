@@ -14,6 +14,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -737,6 +738,72 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   ASSERT_NE(pqp->input_right()->input_left(), nullptr);
   EXPECT_EQ(pqp->input_left()->input_left(), pqp->input_right()->input_left());
   EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
+}
+
+TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
+  // If the result of a (sub)expression is available in an input column, the expression should not be redundantly
+  // evaluated
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than_(add_(add_(int_float_a, int_float_b), 3), 2),
+    ProjectionNode::make(expression_vector(add_(add_(int_float_a, int_float_b), 3)),
+      ProjectionNode::make(expression_vector(5, add_(int_float_a, int_float_b)),
+        int_float_node)));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
+
+  const auto table_scan = std::dynamic_pointer_cast<const TableScan>(pqp);
+  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp->input_left());
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->input_left()->input_left());
+
+  ASSERT_NE(table_scan, nullptr);
+  ASSERT_NE(projection_a, nullptr);
+  ASSERT_NE(projection_b, nullptr);
+
+  const auto a_plus_b_in_temporary_column = column_(ColumnID{1}, DataType::Float, false, "a + b");
+
+  EXPECT_EQ(table_scan->left_column_id(), ColumnID{0});
+  EXPECT_EQ(*projection_a->expressions.at(0), *add_(a_plus_b_in_temporary_column, 3));
+}
+
+TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
+  // Test that select expressions whose result is available in an output column of the input operator are not evaluated
+  // redundantly
+
+  // clang-format off
+  const auto select_lqp =
+  ProjectionNode::make(expression_vector(add_(1, 2)),
+    DummyTableNode::make());
+
+  const auto select_a = select_(select_lqp);
+  const auto select_b = select_(select_lqp);
+
+  const auto lqp =
+  ProjectionNode::make(expression_vector(add_(select_a, 3)),
+    ProjectionNode::make(expression_vector(5, select_b),
+      int_float_node));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+
+  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp);
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->input_left());
+
+  ASSERT_NE(projection_a, nullptr);
+  ASSERT_NE(projection_b, nullptr);
+
+  const auto select_in_temporary_column = column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
+
+  EXPECT_EQ(*projection_a->expressions.at(0), *add_(select_in_temporary_column, 3));
 }
 
 }  // namespace opossum

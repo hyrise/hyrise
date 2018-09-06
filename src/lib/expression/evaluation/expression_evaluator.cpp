@@ -336,7 +336,13 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     });
 
   } else {
-    Fail("Unsupported ExpressionType used in InExpression");
+    /**
+     * `<expression> IN <anything>` is not legal SQL, but on expression level we have to support it, since `<anything>`
+     * might be a column holding the result of a subselect.
+     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything>)`
+     */
+
+    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*in_(in_expression.value(), list_(in_expression.set())));
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
