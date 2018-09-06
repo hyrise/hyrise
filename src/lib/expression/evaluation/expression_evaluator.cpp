@@ -339,11 +339,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
   } else {
     /**
-     * `<expression> IN <anything>` is not legal SQL, but on expression level we have to support it, since `<anything>`
-     * might be a column holding the result of a subselect.
-     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything>)`.
-     * This does not cover the case where <anything> is a subselect, which is handled above, so once we are here,
-     * <anything> (i.e, in_expression.set()) holds a single value.
+     * `<expression> IN <anything_but_list_or_select>` is not legal SQL, but on expression level we have to support
+     * it, since `<anything_but_list_or_select>` might be a column holding the result of a subselect.
+     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
      */
 
     return _evaluate_in_expression<ExpressionEvaluator::Bool>(*in_(in_expression.value(), list_(in_expression.set())));
