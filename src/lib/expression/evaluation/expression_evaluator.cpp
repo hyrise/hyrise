@@ -691,10 +691,10 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   if (expression.parameters.empty()) {
     if (_uncorrelated_select_results) {
       // This was already evaluated before
-      auto it = _uncorrelated_select_results->find(expression.pqp);
-      DebugAssert(it != _uncorrelated_select_results->cend(),
-                  "Uncorrelated PQPSelectExpression should have been evaluated before");
-      return {it->second};
+      const auto table_iter = _uncorrelated_select_results->find(expression.pqp);
+      DebugAssert(table_iter != _uncorrelated_select_results->cend(),
+                  "All uncorrelated PQPSelectExpression should be cached, if cache is present");
+      return {table_iter->second};
     } else {
       return {evaluate_uncorrelated_select_expression(expression)};
     }
