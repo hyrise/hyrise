@@ -181,7 +181,8 @@ node {
           } else {
             Utils.markStageSkippedForConditional("memcheckReleaseTest")
           }
-        }, memcheckReleaseSystemTest1: {
+        }
+      }, memcheckReleaseSystemTest1: {
           stage("memcheck-release-systemtest1") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir ./clang-release-memcheck-systemtest1"
@@ -190,7 +191,8 @@ node {
               Utils.markStageSkippedForConditional("memcheckReleaseSystemTest1")
             }
           },
-        }, memcheckReleaseSystemTest2: {
+        }
+      }, memcheckReleaseSystemTest2: {
           stage("memcheck-release-systemtest2") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir ./clang-release-memcheck-systemtest2"
