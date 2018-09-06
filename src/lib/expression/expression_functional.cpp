@@ -34,6 +34,11 @@ std::shared_ptr<LQPCxlumnExpression> cxlumn_(const LQPCxlumnReference& cxlumn_re
   return std::make_shared<LQPCxlumnExpression>(cxlumn_reference);
 }
 
+std::shared_ptr<PQPCxlumnExpression> cxlumn_(const CxlumnID cxlumn_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
+                                             const std::string& cxlumn_name) {
+  return std::make_shared<PQPCxlumnExpression>(cxlumn_id, data_type, nullable, cxlumn_name);
+}
+
 std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<AggregateExpression>(AggregateFunction::Count);
 }

@@ -453,6 +453,13 @@ TEST_F(ExpressionEvaluatorTest, InListSeries) {
       test_expression<int32_t>(table_a, *in_(sub_(mul_(a, 2), 2), list_(b, 6, null_(), 0)), {1, std::nullopt, 1, 1}));
 }
 
+TEST_F(ExpressionEvaluatorTest, InArbitraryExpression) {
+  // We support `<expression_a> IN <expression_b>`, even though it looks weird, because <expression_b> might be a column
+  // storing the pre-computed result a subselect
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, div_(b, 2.0f)), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, sub_(c, 31)), {0, std::nullopt, 1, std::nullopt}));
+}
+
 TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   // PQP that returns the cxlumn "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);

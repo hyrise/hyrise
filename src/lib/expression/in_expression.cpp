@@ -6,11 +6,7 @@ namespace opossum {
 
 InExpression::InExpression(const std::shared_ptr<AbstractExpression>& value,
                            const std::shared_ptr<AbstractExpression>& set)
-    : AbstractPredicateExpression(PredicateCondition::In, {value, set}) {
-  Assert(set->type == ExpressionType::List || set->type == ExpressionType::LQPSelect ||
-             set->type == ExpressionType::PQPSelect,
-         "Can only apply IN to List and Select");
-}
+    : AbstractPredicateExpression(PredicateCondition::In, {value, set}) {}
 
 const std::shared_ptr<AbstractExpression>& InExpression::value() const { return arguments[0]; }
 
