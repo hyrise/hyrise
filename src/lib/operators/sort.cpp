@@ -3,10 +3,12 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "storage/reference_segment.hpp"
+#include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables/chunk_offset_mapping.hpp"
 #include "storage/value_segment.hpp"
 
@@ -80,38 +82,61 @@ class Sort::SortImplMaterializeOutput {
       resolve_data_type(cxlumn_data_type, [&](auto type) {
         using CxlumnDataType = typename decltype(type)::type;
 
-        // Initialize value segments
-        auto segments_out = std::vector<std::shared_ptr<ValueSegment<CxlumnDataType>>>(chunk_count_out);
-        std::generate(segments_out.begin(), segments_out.end(),
-                      []() { return std::make_shared<ValueSegment<CxlumnDataType>>(true); });
-
-        auto segment_it = segments_out.begin();
         auto chunk_it = output_segments_by_chunk.begin();
         auto chunk_offset_out = 0u;
+
+        auto value_segment_value_vector = pmr_concurrent_vector<CxlumnDataType>();
+        auto value_segment_null_vector = pmr_concurrent_vector<bool>();
+
+        auto segment_ptr_and_accessor_by_chunk_id =
+            std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
+                                                  std::shared_ptr<BaseSegmentAccessor<CxlumnDataType>>>>();
+        segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
+
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
-          const auto segment = _table_in->get_chunk(chunk_id)->get_segment(cxlumn_id);
+          auto& segment_ptr_and_typed_ptr_pair = segment_ptr_and_accessor_by_chunk_id[chunk_id];
+          auto& base_segment = segment_ptr_and_typed_ptr_pair.first;
+          auto& accessor = segment_ptr_and_typed_ptr_pair.second;
 
-          // Previously the value was retrieved by calling a virtual method,
-          // which was just as slow as using the subscript operator.
-          const auto value = (*segment)[chunk_offset];
-          (*segment_it)->append(value);
+          if (!base_segment) {
+            base_segment = _table_in->get_chunk(chunk_id)->get_segment(cxlumn_id);
+            accessor = create_segment_accessor<CxlumnDataType>(base_segment);
+          }
+
+          // If the input segment is not a ReferenceSegment, we can take a fast(er) path
+          if (accessor) {
+            const auto typed_value = accessor->access(chunk_offset);
+            const auto is_null = !typed_value.has_value();
+            value_segment_value_vector.push_back(is_null ? CxlumnDataType{} : typed_value.value());
+            value_segment_null_vector.push_back(is_null);
+          } else {
+            const auto value = (*base_segment)[chunk_offset];
+            const auto is_null = variant_is_null(value);
+            value_segment_value_vector.push_back(is_null ? CxlumnDataType{} : type_cast<CxlumnDataType>(value));
+            value_segment_null_vector.push_back(is_null);
+          }
 
           ++chunk_offset_out;
 
           // Check if value segment is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            chunk_it->push_back(*segment_it);
-            ++segment_it;
+            auto value_segment = std::make_shared<ValueSegment<CxlumnDataType>>(std::move(value_segment_value_vector),
+                                                                                std::move(value_segment_null_vector));
+            chunk_it->push_back(value_segment);
+            value_segment_value_vector = pmr_concurrent_vector<CxlumnDataType>();
+            value_segment_null_vector = pmr_concurrent_vector<bool>();
             ++chunk_it;
           }
         }
 
         // Last segment has not been added
         if (chunk_offset_out > 0u) {
-          chunk_it->push_back(*segment_it);
+          auto value_segment = std::make_shared<ValueSegment<CxlumnDataType>>(std::move(value_segment_value_vector),
+                                                                              std::move(value_segment_null_vector));
+          chunk_it->push_back(value_segment);
         }
       });
     }

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "storage/reference_segment.hpp"
+#include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables.hpp"
 
 namespace opossum {
@@ -43,10 +44,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _table{table},
           _cxlumn_id{cxlumn_id},
-          _cached_chunk_id{INVALID_CHUNK_ID},
-          _cached_segment{nullptr},
           _begin_pos_list_it{begin_pos_list_it},
-          _pos_list_it{pos_list_it} {}
+          _pos_list_it{pos_list_it},
+          _accessors{_table->chunk_count()} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -62,42 +62,32 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      if (chunk_id != _cached_chunk_id) {
-        _cached_chunk_id = chunk_id;
-        const auto chunk = _table->get_chunk(chunk_id);
-        _cached_segment = chunk->get_segment(_cxlumn_id);
-      }
-
-      /**
-       * This is just a temporary solution to supporting encoded segment type.
-       * It’s very slow and is going to be replaced very soon!
-       */
-      return _value_from_any_segment(*_cached_segment, chunk_offset);
-    }
-
-   private:
-    auto _value_from_any_segment(const BaseSegment& segment, const ChunkOffset& chunk_offset) const {
-      const auto variant_value = segment[chunk_offset];
-
       const auto chunk_offset_into_ref_segment =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      if (variant_is_null(variant_value)) {
-        return SegmentIteratorValue<T>{T{}, true, chunk_offset_into_ref_segment};
+      if (!_accessors[chunk_id]) {
+        _create_accessor(chunk_id);
       }
+      const auto typed_value = _accessors[chunk_id]->access(chunk_offset);
 
-      return SegmentIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_segment};
+      return SegmentIteratorValue<T>{typed_value.value_or(T{}), !typed_value.has_value(),
+                                     chunk_offset_into_ref_segment};
+    }
+
+    void _create_accessor(const ChunkID chunk_id) const {
+      auto segment = _table->get_chunk(chunk_id)->get_segment(_cxlumn_id);
+      auto accessor = std::move(create_segment_accessor<T>(segment));
+      _accessors[chunk_id] = std::move(accessor);
     }
 
    private:
     const std::shared_ptr<const Table> _table;
     const CxlumnID _cxlumn_id;
 
-    mutable ChunkID _cached_chunk_id;
-    mutable std::shared_ptr<const BaseSegment> _cached_segment;
-
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
+
+    mutable std::vector<std::shared_ptr<BaseSegmentAccessor<T>>> _accessors;
   };
 };
 
