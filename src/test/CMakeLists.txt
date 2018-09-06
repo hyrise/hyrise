@@ -12,7 +12,7 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
-    cost_model/cost_feature_proxy_test.cpp
+    cost_model/cost_estimator_test.cpp
     expression/expression_evaluator_test.cpp
     expression/expression_result_test.cpp
     expression/expression_test.cpp
@@ -86,13 +86,18 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
+    optimizer/enumerate_ccp_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/join_graph_test.cpp
+    optimizer/join_graph_builder_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/dp_ccp_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/cxlumn_pruning_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
+    optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
@@ -112,15 +117,12 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
-    statistics/chunk_statistics/pruning_filters_test.cpp
     statistics/cxlumn_statistics_test.cpp
     statistics/cxlumn_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
     statistics/statistics_test_utils.hpp
     statistics/table_statistics_join_test.cpp
-    statistics/table_statistics_join_test.cpp
-    statistics/table_statistics_test.cpp
     statistics/table_statistics_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/any_segment_iterable_test.cpp
@@ -129,10 +131,10 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
-    storage/dictionary_cxlumn_test.cpp
+    storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
     storage/encoding_test.hpp
-    storage/fixed_string_dictionary_cxlumn_test.cpp
+    storage/fixed_string_dictionary_segment_test.cpp
     storage/fixed_string_vector_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
@@ -140,6 +142,7 @@ set(
     storage/multi_cxlumn_index_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_segment_test.cpp
+    storage/segment_accessor_test.cpp
     storage/simd_bp128_test.cpp
     storage/single_cxlumn_index_test.cpp
     storage/storage_manager_test.cpp

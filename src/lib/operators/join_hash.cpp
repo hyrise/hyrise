@@ -598,7 +598,7 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         output_segments.push_back(std::make_shared<ReferenceSegment>(
             reference_segment->referenced_table(), reference_segment->referenced_cxlumn_id(), iter->second));
       } else {
-        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
+        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.

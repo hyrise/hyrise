@@ -598,7 +598,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                                     ref_segment->referenced_cxlumn_id(), new_pos_list);
           output_segments.push_back(new_ref_segment);
         } else {
-          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
+          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
           // it.

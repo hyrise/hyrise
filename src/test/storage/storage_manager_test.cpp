@@ -2,12 +2,12 @@
 #include <string>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/logical_query_plan/stored_table_node.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

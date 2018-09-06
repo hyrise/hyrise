@@ -33,6 +33,7 @@ class TableStatistics final {
    */
   TableType table_type() const;
   float row_count() const;
+  uint64_t approx_valid_row_count() const;
   const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>& cxlumn_statistics() const;
   /** @} */
 
@@ -52,12 +53,20 @@ class TableStatistics final {
   TableStatistics estimate_disjunction(const TableStatistics& right_table_statistics) const;
   /** @} */
 
+  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
+  void increase_invalid_row_count(uint64_t count);
+
   std::string description() const;
 
  private:
   TableType _table_type;
   float _row_count;
   std::vector<std::shared_ptr<const BaseCxlumnStatistics>> _cxlumn_statistics;
+
+  // Stores the number of invalid (deleted) rows.
+  // This is currently not an atomic due to performance considerations.
+  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
+  uint64_t _approx_invalid_row_count{0};
 };
 
 }  // namespace opossum

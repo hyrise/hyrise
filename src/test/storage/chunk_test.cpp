@@ -1,15 +1,15 @@
 #include <memory>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/resolve_type.hpp"
-#include "../lib/storage/base_segment.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/index/group_key/composite_group_key_index.hpp"
-#include "../lib/storage/index/group_key/group_key_index.hpp"
-#include "../lib/storage/segment_encoding_utils.hpp"
-#include "../lib/types.hpp"
+#include "resolve_type.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/segment_encoding_utils.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

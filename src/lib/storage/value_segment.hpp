@@ -36,12 +36,15 @@ class ValueSegment : public BaseValueSegment {
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
+  // return the value at a certain position.
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+
   // Add a value to the end of the segment.
   void append(const AllTypeVariant& val) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.
-  // e.g. auto& values = cxlumn.values(); and then: values.at(i); in your loop.
+  // e.g. auto& values = segment.values(); and then: values.at(i); in your loop.
   const pmr_concurrent_vector<T>& values() const;
   pmr_concurrent_vector<T>& values();
 

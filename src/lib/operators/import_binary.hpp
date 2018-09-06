@@ -74,7 +74,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * ----------------
    * |  Row count   |
    * |--------------|
-   * |   Cxlumns¹   |
+   * |  Segments¹   |
    * ----------------
    *
    * ¹Number of cxlumns is provided in the binary header
@@ -82,12 +82,12 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
   // Calls the right _import_cxlumn<CxlumnDataType> depending on the given data_type.
-  static std::shared_ptr<BaseSegment> _import_cxlumn(std::ifstream& file, ChunkOffset row_count, DataType data_type,
-                                                     bool is_nullable);
+  static std::shared_ptr<BaseSegment> _import_segment(std::ifstream &file, ChunkOffset row_count, DataType data_type,
+                                                      bool is_nullable);
 
-  // Reads the cxlumn type from the given file and chooses a cxlumn import function from it.
   template <typename CxlumnDataType>
-  static std::shared_ptr<BaseSegment> _import_cxlumn(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  // Reads the cxlumn type from the given file and chooses a segment import function from it.
+  static std::shared_ptr<BaseSegment> _import_segment(std::ifstream &file, ChunkOffset row_count, bool is_nullable);
 
   /*
    * Imports a serialized ValueSegment from the given file.

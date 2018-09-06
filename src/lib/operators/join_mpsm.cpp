@@ -422,10 +422,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Adds the cxlumns from an input table to the output table
+  * Adds the segments from an input table to the output table
   **/
-  void _add_output_cxlumns(Segments& output_segments, std::shared_ptr<const Table> input_table,
-                           std::shared_ptr<const PosList> pos_list) {
+  void _add_output_segments(Segments &output_segments, std::shared_ptr<const Table> input_table,
+                            std::shared_ptr<const PosList> pos_list) {
     auto cxlumn_count = input_table->cxlumn_count();
     for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
       // Add the segment data (in the form of a poslist)
@@ -441,7 +441,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
                                                                     ref_segment->referenced_cxlumn_id(), new_pos_list);
           output_segments.push_back(new_ref_segment);
         } else {
-          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
+          // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
           // it.
@@ -522,8 +522,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Add the segments from both input tables to the output
     Segments output_segments;
-    _add_output_cxlumns(output_segments, _mpsm_join.input_table_left(), output_left);
-    _add_output_cxlumns(output_segments, _mpsm_join.input_table_right(), output_right);
+    _add_output_segments(output_segments, _mpsm_join.input_table_left(), output_left);
+    _add_output_segments(output_segments, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
     auto output_cxlumn_definitions = concatenated(_mpsm_join.input_table_left()->cxlumn_definitions(),

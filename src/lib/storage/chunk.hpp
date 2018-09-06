@@ -55,7 +55,7 @@ class Chunk : private Noncopyable {
   // Atomically replaces the current segment at cxlumn_id with the passed segment
   void replace_segment(size_t cxlumn_id, const std::shared_ptr<BaseSegment>& segment);
 
-  // returns the number of segments (cannot exceed CxlumnID (uint16_t))
+  // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
   uint16_t cxlumn_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))

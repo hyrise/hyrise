@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"

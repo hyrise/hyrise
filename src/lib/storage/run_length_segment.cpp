@@ -36,15 +36,24 @@ std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthSegment<T>::end_position
 template <typename T>
 const AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (!typed_value.has_value()) {
+    return NULL_VALUE;
+  }
+  return *typed_value;
+}
 
+template <typename T>
+const std::optional<T> RunLengthSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
   const auto is_null = (*_null_values)[index];
-  if (is_null) return NULL_VALUE;
+  if (is_null) {
+    return std::nullopt;
+  }
 
-  const auto value = (*_values)[index];
-  return AllTypeVariant{value};
+  return (*_values)[index];
 }
 
 template <typename T>

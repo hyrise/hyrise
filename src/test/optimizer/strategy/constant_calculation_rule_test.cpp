@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "expression/abstract_expression.hpp"

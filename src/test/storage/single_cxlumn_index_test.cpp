@@ -4,22 +4,22 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/base_segment.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "../lib/storage/index/group_key/composite_group_key_index.hpp"
-#include "../lib/storage/index/group_key/group_key_index.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
-#include "../lib/resolve_type.hpp"
-#include "../lib/types.hpp"
+#include "resolve_type.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 template <typename DerivedIndex>
-class SingleSegmentIndexTest : public BaseTest {
+class SingleCxlumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
@@ -49,9 +49,9 @@ class SingleSegmentIndexTest : public BaseTest {
 // List of indices to test
 typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
     DerivedIndices;
-TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices);
+TYPED_TEST_CASE(SingleCxlumnIndexTest, DerivedIndices);
 
-TYPED_TEST(SingleSegmentIndexTest, FullRange) {
+TYPED_TEST(SingleCxlumnIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
   auto end_int = this->index_int->cend();
   auto result_values_int = this->result_as_vector(this->dict_segment_int, begin_int, end_int);
@@ -65,7 +65,7 @@ TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   EXPECT_EQ(expected_values_str, result_values_str);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, PointQueryWithSingleReturnValue) {
+TYPED_TEST(SingleCxlumnIndexTest, PointQueryWithSingleReturnValue) {
   auto begin = this->index_int->lower_bound({3});
   auto end = this->index_int->upper_bound({3});
 
@@ -75,7 +75,7 @@ TYPED_TEST(SingleSegmentIndexTest, PointQueryWithSingleReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, PointQueryWithNoReturnValue) {
+TYPED_TEST(SingleCxlumnIndexTest, PointQueryWithNoReturnValue) {
   auto begin = this->index_int->lower_bound({5});
   auto end = this->index_int->upper_bound({5});
 
@@ -84,7 +84,7 @@ TYPED_TEST(SingleSegmentIndexTest, PointQueryWithNoReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, PointQueryWithMultipleReturnValues) {
+TYPED_TEST(SingleCxlumnIndexTest, PointQueryWithMultipleReturnValues) {
   auto begin = this->index_int->lower_bound({4});
   auto end = this->index_int->upper_bound({4});
 
@@ -93,7 +93,7 @@ TYPED_TEST(SingleSegmentIndexTest, PointQueryWithMultipleReturnValues) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQuery) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQuery) {
   auto begin = this->index_int->lower_bound({1});
   auto end = this->index_int->upper_bound({3});
 
@@ -107,7 +107,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQuery) {
   EXPECT_EQ(expected_values, result_values);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQueryBelow) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQueryBelow) {
   auto begin = this->index_int->lower_bound({-3});
   auto end = this->index_int->upper_bound({-1});
 
@@ -116,7 +116,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyBelow) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQueryPartiallyBelow) {
   auto begin = this->index_int->lower_bound({-3});
   auto end = this->index_int->upper_bound({1});
 
@@ -125,7 +125,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQueryAbove) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQueryAbove) {
   auto begin = this->index_int->lower_bound({10});
   auto end = this->index_int->upper_bound({13});
 
@@ -134,7 +134,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyAbove) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQueryPartiallyAbove) {
   auto begin = this->index_int->lower_bound({8});
   auto end = this->index_int->upper_bound({13});
 
@@ -143,7 +143,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenEnd) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQueryOpenEnd) {
   auto begin = this->index_int->lower_bound({8});
   auto end = this->index_int->cend();
 
@@ -152,7 +152,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenEnd) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
+TYPED_TEST(SingleCxlumnIndexTest, RangeQueryOpenBegin) {
   auto begin = this->index_int->cbegin();
   auto end = this->index_int->upper_bound({1});
 
@@ -161,7 +161,7 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
+TYPED_TEST(SingleCxlumnIndexTest, IsIndexForTest) {
   EXPECT_TRUE(this->index_int->is_index_for({this->dict_segment_int}));
   EXPECT_TRUE(this->index_str->is_index_for({this->dict_segment_str}));
 
@@ -171,7 +171,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
   EXPECT_FALSE(this->index_str->is_index_for({}));
 }
 
-TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
+TYPED_TEST(SingleCxlumnIndexTest, IndexOnNonDictionaryThrows) {
   if (!IS_DEBUG) return;
   auto vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
   vs_int->append(4);

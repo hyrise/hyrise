@@ -17,17 +17,9 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    cost_model/abstract_cost_feature_proxy.cpp
-    cost_model/abstract_cost_feature_proxy.hpp
-    cost_model/abstract_cost_model.cpp
-    cost_model/abstract_cost_model.hpp
+    cost_model/abstract_cost_estimator.cpp
+    cost_model/abstract_cost_estimator.hpp
     cost_model/cost.hpp
-    cost_model/cost_feature.cpp
-    cost_model/cost_feature.hpp
-    cost_model/cost_feature_lqp_node_proxy.cpp
-    cost_model/cost_feature_lqp_node_proxy.hpp
-    cost_model/cost_feature_operator_proxy.cpp
-    cost_model/cost_feature_operator_proxy.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
     expression/abstract_expression.cpp
@@ -241,8 +233,18 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/dp_ccp.cpp
+    optimizer/dp_ccp.hpp
+    optimizer/enumerate_ccp.cpp
+    optimizer/enumerate_ccp.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
+    optimizer/join_graph.cpp
+    optimizer/join_graph.hpp
+    optimizer/join_graph_builder.cpp
+    optimizer/join_graph_builder.hpp
+    optimizer/join_graph_edge.cpp
+    optimizer/join_graph_edge.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
@@ -255,6 +257,8 @@ set(
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
+    optimizer/strategy/join_ordering_rule.cpp
+    optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/predicate_pushdown_rule.cpp
     optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -348,6 +352,7 @@ set(
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     storage/abstract_segment_visitor.hpp
+    storage/base_segment_accessor.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
@@ -420,6 +425,7 @@ set(
     storage/run_length_segment.hpp
     storage/run_length_segment/run_length_encoder.hpp
     storage/run_length_segment/run_length_segment_iterable.hpp
+    storage/segment_accessor.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
     storage/segment_iterables.hpp
@@ -514,6 +520,7 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    utils/tracing/probes.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -580,6 +587,18 @@ endif()
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
+
+# Generate header file in order to define probes needed for dtrace
+set(DTRACE_SOURCES ${SOURCES})
+list(REMOVE_ITEM DTRACE_SOURCES ${CMAKE_BINARY_DIR}/version.hpp)
+set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
+add_custom_command (
+    OUTPUT ${PROVIDER_FILE}
+    DEPENDS ${DTRACE_SOURCES}
+    COMMAND dtrace -h -s ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/provider.d -o ${PROVIDER_FILE}
+)
+
+set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})

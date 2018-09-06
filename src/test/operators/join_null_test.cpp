@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "join_test.hpp"
 

@@ -2,7 +2,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"

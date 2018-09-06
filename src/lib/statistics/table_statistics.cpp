@@ -16,6 +16,8 @@ TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
+uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
+
 const std::vector<std::shared_ptr<const BaseCxlumnStatistics>>& TableStatistics::cxlumn_statistics() const {
   return _cxlumn_statistics;
 }
@@ -50,9 +52,14 @@ TableStatistics TableStatistics::estimate_predicate(const CxlumnID cxlumn_id,
 
   const auto left_operand_cxlumn_statistics = _cxlumn_statistics[cxlumn_id];
 
-  if (is_cxlumn_id(value)) {
+  if (predicate_condition == PredicateCondition::IsNotNull) {
+    predicated_cxlumn_statistics[cxlumn_id] = left_operand_cxlumn_statistics->without_null_values();
+    predicated_row_count *= 1.0 - left_operand_cxlumn_statistics->non_null_value_ratio();
+  } else if (predicate_condition == PredicateCondition::IsNull) {
+    predicated_cxlumn_statistics[cxlumn_id] = left_operand_cxlumn_statistics->only_null_values();
+    predicated_row_count *= left_operand_cxlumn_statistics->non_null_value_ratio();
+  } else if (is_cxlumn_id(value)) {
     const auto cxlumn_id = boost::get<CxlumnID>(value);
-
     const auto estimation = left_operand_cxlumn_statistics->estimate_predicate_with_cxlumn(
         predicate_condition, *_cxlumn_statistics[cxlumn_id]);
 
@@ -260,6 +267,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
 
   return join_table_stats;
 }
+
+void TableStatistics::increase_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
   // TODO(anybody) this is just a dummy implementation

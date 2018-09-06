@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/base_segment.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/index/b_tree/b_tree_index.hpp"
-#include "../lib/types.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
