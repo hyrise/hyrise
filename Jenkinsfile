@@ -183,23 +183,21 @@ node {
           }
         }
       }, memcheckReleaseSystemTest1: {
-          stage("memcheck-release-systemtest1") {
-            if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir ./clang-release-memcheck-systemtest1"
-              sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseSystemTest clang-release-memcheck-systemtest1 --gtest_filter=TPCHTestInstances/TPCHTest.TPCHQueryTest/20"
-            } else {
-              Utils.markStageSkippedForConditional("memcheckReleaseSystemTest1")
-            }
-          },
+        stage("memcheck-release-systemtest1") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-release-memcheck-systemtest1"
+            sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseSystemTest clang-release-memcheck-systemtest1 --gtest_filter=TPCHTestInstances/TPCHTest.TPCHQueryTest/20"
+          } else {
+            Utils.markStageSkippedForConditional("memcheckReleaseSystemTest1")
+          }
         }
       }, memcheckReleaseSystemTest2: {
-          stage("memcheck-release-systemtest2") {
-            if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir ./clang-release-memcheck-systemtest2"
-              sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseSystemTest clang-release-memcheck-systemtest2 --gtest_filter=-TPCHTestInstances/TPCHTest.TPCHQueryTest/20"
-            } else {
-              Utils.markStageSkippedForConditional("memcheckReleaseSystemTest2")
-            }
+        stage("memcheck-release-systemtest2") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-release-memcheck-systemtest2"
+            sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseSystemTest clang-release-memcheck-systemtest2 --gtest_filter=-TPCHTestInstances/TPCHTest.TPCHQueryTest/20"
+          } else {
+            Utils.markStageSkippedForConditional("memcheckReleaseSystemTest2")
           }
         }
       }
