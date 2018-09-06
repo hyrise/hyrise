@@ -51,7 +51,11 @@ class ExpressionEvaluator final {
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 
-  // For Expressions that reference Columns from a single table
+  /*
+   * For Expressions that reference Columns from a single table
+   * @param uncorrelated_select_results  Results from pre-computed uncorrelated selects, so they do not need to be
+   *                                     evaluated for every chunk. Solely for performance.
+   */
   ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
                       const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
 
@@ -59,7 +63,7 @@ class ExpressionEvaluator final {
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
-  
+
   // Utility to populate a cache of UncorrelatedSelectResults
   std::shared_ptr<const Table> evaluate_uncorrelated_select_expression(const PQPSelectExpression& expression);
 
