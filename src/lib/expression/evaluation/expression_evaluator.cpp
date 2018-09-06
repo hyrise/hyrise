@@ -38,8 +38,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id)
-    : _table(table), _chunk(_table->get_chunk(chunk_id)) {
+ExpressionEvaluator::ExpressionEvaluator(
+    const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+    const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
+    : _table(table), _chunk(_table->get_chunk(chunk_id)), _uncorrelated_select_results(uncorrelated_select_results) {
   _output_row_count = _chunk->size();
   _column_materializations.resize(_chunk->column_count());
 }
@@ -339,7 +341,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     /**
      * `<expression> IN <anything>` is not legal SQL, but on expression level we have to support it, since `<anything>`
      * might be a column holding the result of a subselect.
-     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything>)`
+     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything>)`.
+     * This does not cover the case where <anything> is a subselect, which is handled above, so once we are here,
+     * <anything> (i.e, in_expression.set()) holds a single value.
      */
 
     return _evaluate_in_expression<ExpressionEvaluator::Bool>(*in_(in_expression.value(), list_(in_expression.set())));
@@ -687,7 +691,15 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
     const PQPSelectExpression& expression) {
   // If the SelectExpression is uncorrelated, evaluating it once is sufficient
   if (expression.parameters.empty()) {
-    return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
+    if (_uncorrelated_select_results) {
+      // This was already evaluated before
+      auto it = _uncorrelated_select_results->find(expression.pqp);
+      DebugAssert(it != _uncorrelated_select_results->cend(),
+                  "Uncorrelated PQPSelectExpression should have been evaluated before");
+      return {it->second};
+    } else {
+      return {evaluate_uncorrelated_select_expression(expression)};
+    }
   }
 
   // Make sure all Columns that are parameters are materialized
@@ -702,6 +714,12 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   }
 
   return results;
+}
+
+std::shared_ptr<const Table> ExpressionEvaluator::evaluate_uncorrelated_select_expression(
+    const PQPSelectExpression& expression) {
+  DebugAssert(expression.parameters.empty(), "called with correlated select expression");
+  return _evaluate_select_expression_for_row(expression, ChunkOffset{0});
 }
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_for_row(
