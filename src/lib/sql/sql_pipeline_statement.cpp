@@ -279,9 +279,10 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   _result_table = tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->translate_time_micros, _metrics->optimize_time_micros,
-                _metrics->compile_time_micros, _metrics->execution_time_micros, _metrics->query_plan_cache_hit,
-                get_tasks().size(), reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->translate_time_micros.count(),
+                _metrics->optimize_time_micros.count(), _metrics->compile_time_micros.count(),
+                _metrics->execution_time_micros.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
+                reinterpret_cast<uintptr_t>(this));
   return _result_table;
 }
 
