@@ -33,17 +33,17 @@ std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
   }
 }
 
-std::string AggregateExpression::as_cxlumn_name() const {
+std::string AggregateExpression::as_column_name() const {
   std::stringstream stream;
 
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
-    stream << "COUNT(DISTINCT " << argument()->as_cxlumn_name() << ")";
+    stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
   } else if (aggregate_function == AggregateFunction::Count && !argument()) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
-    if (argument()) stream << argument()->as_cxlumn_name();
+    if (argument()) stream << argument()->as_column_name();
     stream << ")";
   }
 

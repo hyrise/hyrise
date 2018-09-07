@@ -21,12 +21,12 @@ namespace opossum {
 class OperatorsExportCsvTest : public BaseTest {
  protected:
   void SetUp() override {
-    TableCxlumnDefinitions cxlumn_definitions;
-    cxlumn_definitions.emplace_back("a", DataType::Int);
-    cxlumn_definitions.emplace_back("b", DataType::String);
-    cxlumn_definitions.emplace_back("c", DataType::Float);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("b", DataType::String);
+    column_definitions.emplace_back("c", DataType::Float);
 
-    table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+    table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
   void TearDown() override {
@@ -133,10 +133,10 @@ TEST_F(OperatorsExportCsvTest, FixedStringDictionarySegmentFixedSizeByteAligned)
   const auto filename_string_table = test_data_path + "string.tbl";
   const auto meta_filename_string_table = filename_string_table + CsvMeta::META_FILE_EXTENSION;
 
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto string_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 4);
+  auto string_table = std::make_shared<Table>(column_definitions, TableType::Data, 4);
   string_table->append({"a"});
   string_table->append({"string"});
   string_table->append({"xxx"});
@@ -176,7 +176,7 @@ TEST_F(OperatorsExportCsvTest, ReferenceSegment) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto scan = std::make_shared<TableScan>(table_wrapper, CxlumnID{0}, PredicateCondition::LessThan, 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();
@@ -190,14 +190,14 @@ TEST_F(OperatorsExportCsvTest, ReferenceSegment) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Int);
-  cxlumn_definitions.emplace_back("b", DataType::String);
-  cxlumn_definitions.emplace_back("c", DataType::Float);
-  cxlumn_definitions.emplace_back("d", DataType::Long);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int);
+  column_definitions.emplace_back("b", DataType::String);
+  column_definitions.emplace_back("c", DataType::Float);
+  column_definitions.emplace_back("d", DataType::Long);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  std::shared_ptr<Table> new_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(new_table));
@@ -261,8 +261,8 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
   EXPECT_TRUE(file_exists(meta_filename));
 
   auto meta_information = process_csv_meta_file(meta_filename);
-  EXPECT_TRUE(meta_information.cxlumns.at(0).nullable);
-  EXPECT_TRUE(meta_information.cxlumns.at(1).nullable);
+  EXPECT_TRUE(meta_information.columns.at(0).nullable);
+  EXPECT_TRUE(meta_information.columns.at(1).nullable);
 }
 
 }  // namespace opossum

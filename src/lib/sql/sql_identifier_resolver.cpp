@@ -7,20 +7,20 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-void SQLIdentifierResolver::set_cxlumn_name(const std::shared_ptr<AbstractExpression>& expression,
-                                            const std::string& cxlumn_name) {
+void SQLIdentifierResolver::set_column_name(const std::shared_ptr<AbstractExpression>& expression,
+                                            const std::string& column_name) {
   auto& entry = _find_or_create_expression_entry(expression);
   if (entry.identifier) {
-    entry.identifier->cxlumn_name = cxlumn_name;
+    entry.identifier->column_name = column_name;
   } else {
-    entry.identifier.emplace(cxlumn_name);
+    entry.identifier.emplace(column_name);
   }
 }
 
 void SQLIdentifierResolver::set_table_name(const std::shared_ptr<AbstractExpression>& expression,
                                            const std::string& table_name) {
   auto& entry = _find_or_create_expression_entry(expression);
-  if (!entry.identifier) entry.identifier.emplace(expression->as_cxlumn_name());
+  if (!entry.identifier) entry.identifier.emplace(expression->as_column_name());
 
   entry.identifier->table_name = table_name;
 }
@@ -33,11 +33,11 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
 
     if (identifier.table_name) {
       if (identifier.table_name == entry.identifier->table_name &&
-          identifier.cxlumn_name == entry.identifier->cxlumn_name) {
+          identifier.column_name == entry.identifier->column_name) {
         matching_expressions.emplace_back(entry.expression);
       }
     } else {
-      if (identifier.cxlumn_name == entry.identifier->cxlumn_name) {
+      if (identifier.column_name == entry.identifier->column_name) {
         matching_expressions.emplace_back(entry.expression);
       }
     }

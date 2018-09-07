@@ -24,25 +24,25 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
     _table_a = std::make_shared<StoredTableNode>("a");
-    _a_a = LQPCxlumnReference(_table_a, CxlumnID{0});
-    _a_b = LQPCxlumnReference(_table_a, CxlumnID{1});
+    _a_a = LQPColumnReference(_table_a, ColumnID{0});
+    _a_b = LQPColumnReference(_table_a, ColumnID{1});
 
     StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
     _table_b = std::make_shared<StoredTableNode>("b");
-    _b_a = LQPCxlumnReference(_table_b, CxlumnID{0});
-    _b_b = LQPCxlumnReference(_table_b, CxlumnID{1});
+    _b_a = LQPColumnReference(_table_b, ColumnID{0});
+    _b_b = LQPColumnReference(_table_b, ColumnID{1});
 
     StorageManager::get().add_table("c", load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE));
     _table_c = std::make_shared<StoredTableNode>("c");
-    _c_a = LQPCxlumnReference(_table_c, CxlumnID{0});
-    _c_b = LQPCxlumnReference(_table_c, CxlumnID{1});
+    _c_a = LQPColumnReference(_table_c, ColumnID{0});
+    _c_b = LQPColumnReference(_table_c, ColumnID{1});
 
     _rule = std::make_shared<PredicatePushdownRule>();
 
     {
       // Initialization of projection pushdown LQP
       auto int_float_node_a = StoredTableNode::make("a");
-      auto a = LQPCxlumnReference{int_float_node_a, CxlumnID{0}};
+      auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
 
       auto parameter_c = parameter_(ParameterID{0}, a);
       auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
@@ -56,7 +56,7 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<PredicatePushdownRule> _rule;
   std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;
-  LQPCxlumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
+  LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
   std::shared_ptr<ProjectionNode> _projection_pushdown_node;
   std::shared_ptr<opossum::LQPSelectExpression> _select_c;
 };
@@ -169,7 +169,7 @@ TEST_F(PredicatePushdownRuleTest, AllowedValuePredicatePushdownThroughProjection
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, AllowedCxlumnPredicatePushdownThroughProjectionTest) {
+TEST_F(PredicatePushdownRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
   // We can push `a > b` under the projection because it does not depend on the subselect.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));

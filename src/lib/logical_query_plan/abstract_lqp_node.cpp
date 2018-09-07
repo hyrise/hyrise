@@ -176,25 +176,25 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
   return _on_shallow_equals(rhs, node_mapping);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::cxlumn_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
-  return left_input()->cxlumn_expressions();
+  return left_input()->column_expressions();
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressions() const { return {}; }
 
-std::optional<CxlumnID> AbstractLQPNode::find_cxlumn_id(const AbstractExpression& expression) const {
-  const auto& cxlumn_expressions = this->cxlumn_expressions();  // Avoid redundant retrieval in loop below
-  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_expressions.size(); ++cxlumn_id) {
-    if (*cxlumn_expressions[cxlumn_id] == expression) return cxlumn_id;
+std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
+  const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+    if (*column_expressions[column_id] == expression) return column_id;
   }
   return std::nullopt;
 }
 
-CxlumnID AbstractLQPNode::get_cxlumn_id(const AbstractExpression& expression) const {
-  const auto cxlumn_id = find_cxlumn_id(expression);
-  Assert(cxlumn_id, "This node has no cxlumn '"s + expression.as_cxlumn_name() + "'");
-  return *cxlumn_id;
+ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
+  const auto column_id = find_column_id(expression);
+  Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
+  return *column_id;
 }
 
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {

@@ -16,9 +16,9 @@ class Table;
  */
 class BaseTableScanImpl {
  public:
-  BaseTableScanImpl(std::shared_ptr<const Table> in_table, const CxlumnID left_cxlumn_id,
+  BaseTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                     const PredicateCondition predicate_condition)
-      : _in_table{in_table}, _left_cxlumn_id{left_cxlumn_id}, _predicate_condition{predicate_condition} {}
+      : _in_table{in_table}, _left_column_id{left_column_id}, _predicate_condition{predicate_condition} {}
 
   virtual ~BaseTableScanImpl() = default;
 
@@ -81,7 +81,7 @@ class BaseTableScanImpl {
 
  protected:
   const std::shared_ptr<const Table> _in_table;
-  const CxlumnID _left_cxlumn_id;
+  const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
 };
 

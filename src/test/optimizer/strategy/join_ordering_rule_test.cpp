@@ -7,7 +7,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
-#include "statistics/cxlumn_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
 #include "strategy_base_test.hpp"
@@ -29,27 +29,27 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
-    const auto cxlumn_statistics = std::make_shared<CxlumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
+    const auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
     const auto table_statistics = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseCxlumnStatistics>>{cxlumn_statistics});
+        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
-    node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "a");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_statistics(table_statistics);
-    node_b = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "b");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
     node_b->set_statistics(table_statistics);
-    node_c = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "c");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
     node_c->set_statistics(table_statistics);
-    node_d = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "d");
+    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
     node_d->set_statistics(table_statistics);
 
-    a_a = node_a->get_cxlumn("a");
-    b_a = node_b->get_cxlumn("a");
-    c_a = node_c->get_cxlumn("a");
-    d_a = node_d->get_cxlumn("a");
+    a_a = node_a->get_column("a");
+    b_a = node_b->get_column("a");
+    c_a = node_c->get_column("a");
+    d_a = node_d->get_column("a");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  LQPCxlumnReference a_a, b_a, c_a, d_a;
+  LQPColumnReference a_a, b_a, c_a, d_a;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
   std::shared_ptr<JoinOrderingRule> rule;
 };

@@ -15,7 +15,7 @@ class InExpression : public AbstractPredicateExpression {
   const std::shared_ptr<AbstractExpression>& set() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_cxlumn_name() const override;
+  std::string as_column_name() const override;
 };
 
 }  // namespace opossum

@@ -19,20 +19,20 @@
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_scan/cxlumn_comparison_table_scan_impl.hpp"
+#include "table_scan/column_comparison_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_cxlumn_table_scan_impl.hpp"
+#include "table_scan/single_column_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, CxlumnID left_cxlumn_id,
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, ColumnID left_column_id,
                      const PredicateCondition predicate_condition, const AllParameterVariant& right_parameter)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in},
-      _left_cxlumn_id{left_cxlumn_id},
+      _left_column_id{left_column_id},
       _predicate_condition{predicate_condition},
       _right_parameter{right_parameter} {}
 
@@ -40,7 +40,7 @@ TableScan::~TableScan() = default;
 
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
-CxlumnID TableScan::left_cxlumn_id() const { return _left_cxlumn_id; }
+ColumnID TableScan::left_column_id() const { return _left_column_id; }
 
 PredicateCondition TableScan::predicate_condition() const { return _predicate_condition; }
 
@@ -49,14 +49,14 @@ const AllParameterVariant& TableScan::right_parameter() const { return _right_pa
 const std::string TableScan::name() const { return "TableScan"; }
 
 const std::string TableScan::description(DescriptionMode description_mode) const {
-  std::string cxlumn_name = std::string("Cxlumn #") + std::to_string(_left_cxlumn_id);
+  std::string column_name = std::string("Column #") + std::to_string(_left_column_id);
 
-  if (input_table_left()) cxlumn_name = input_table_left()->cxlumn_name(_left_cxlumn_id);
+  if (input_table_left()) column_name = input_table_left()->column_name(_left_column_id);
 
   std::string predicate_string = to_string(_right_parameter);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  return name() + separator + "(" + cxlumn_name + " " + predicate_condition_to_string.left.at(_predicate_condition) +
+  return name() + separator + "(" + column_name + " " + predicate_condition_to_string.left.at(_predicate_condition) +
          " " + predicate_string + ")";
 }
 
@@ -72,7 +72,7 @@ void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<TableScan>(copied_input_left, _left_cxlumn_id, _predicate_condition, _right_parameter);
+  return std::make_shared<TableScan>(copied_input_left, _left_column_id, _predicate_condition, _right_parameter);
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
@@ -80,7 +80,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   _init_scan();
 
-  _output_table = std::make_shared<Table>(_in_table->cxlumn_definitions(), TableType::References);
+  _output_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
   std::mutex output_mutex;
 
@@ -117,8 +117,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
-        for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
-          auto segment_in = chunk_in->get_segment(cxlumn_id);
+        for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
+          auto segment_in = chunk_in->get_segment(column_id);
 
           auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
           DebugAssert(ref_segment_in != nullptr, "All segments should be of type ReferenceSegment.");
@@ -126,7 +126,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           const auto pos_list_in = ref_segment_in->pos_list();
 
           const auto table_out = ref_segment_in->referenced_table();
-          const auto cxlumn_id_out = ref_segment_in->referenced_cxlumn_id();
+          const auto column_id_out = ref_segment_in->referenced_column_id();
 
           auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
@@ -140,12 +140,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             }
           }
 
-          auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, cxlumn_id_out, filtered_pos_list);
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
           out_segments.push_back(ref_segment_out);
         }
       } else {
-        for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
-          auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
+        for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
           out_segments.push_back(ref_segment_out);
         }
       }
@@ -167,8 +167,8 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 
 void TableScan::_init_scan() {
   if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
-    const auto left_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
-    Assert((left_cxlumn_type == DataType::String), "LIKE operator only applicable on string cxlumns.");
+    const auto left_column_type = _in_table->column_data_type(_left_column_id);
+    Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
     DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
 
@@ -178,25 +178,25 @@ void TableScan::_init_scan() {
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
-    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition, right_wildcard);
+    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_wildcard);
 
     return;
   }
 
   if (_predicate_condition == PredicateCondition::IsNull || _predicate_condition == PredicateCondition::IsNotNull) {
-    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition);
+    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _predicate_condition);
     return;
   }
 
   if (is_variant(_right_parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
 
-    _impl = std::make_unique<SingleCxlumnTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition, right_value);
-  } else /* is_cxlumn_name(_right_parameter) */ {
-    const auto right_cxlumn_id = boost::get<CxlumnID>(_right_parameter);
+    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_value);
+  } else /* is_column_name(_right_parameter) */ {
+    const auto right_column_id = boost::get<ColumnID>(_right_parameter);
 
-    _impl = std::make_unique<CxlumnComparisonTableScanImpl>(_in_table, _left_cxlumn_id, _predicate_condition,
-                                                            right_cxlumn_id);
+    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _predicate_condition,
+                                                            right_column_id);
   }
 }
 

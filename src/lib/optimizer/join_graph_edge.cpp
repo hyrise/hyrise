@@ -11,7 +11,7 @@ JoinGraphEdge::JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
 void JoinGraphEdge::print(std::ostream& stream) const {
   stream << "Vertices: " << vertex_set << "; " << predicates.size() << " predicates" << std::endl;
   for (const auto& predicate : predicates) {
-    stream << predicate->as_cxlumn_name();
+    stream << predicate->as_column_name();
     stream << std::endl;
   }
 }

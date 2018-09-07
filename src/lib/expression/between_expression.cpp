@@ -22,11 +22,11 @@ std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
                                              upper_bound()->deep_copy());
 }
 
-std::string BetweenExpression::as_cxlumn_name() const {
+std::string BetweenExpression::as_column_name() const {
   std::stringstream stream;
-  stream << _enclose_argument_as_cxlumn_name(*value()) << " BETWEEN "
-         << _enclose_argument_as_cxlumn_name(*lower_bound()) << " AND "
-         << _enclose_argument_as_cxlumn_name(*upper_bound());
+  stream << _enclose_argument_as_column_name(*value()) << " BETWEEN "
+         << _enclose_argument_as_column_name(*lower_bound()) << " AND "
+         << _enclose_argument_as_column_name(*upper_bound());
   return stream.str();
 }
 

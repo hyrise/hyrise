@@ -29,16 +29,16 @@ class SegmentAccessorTest : public BaseTest {
     dc_str = encode_segment(EncodingType::Dictionary, DataType::String, vc_str);
 
     chunk = std::make_shared<Chunk>(Segments{{vc_int, dc_str}});
-    tbl = std::make_shared<Table>(TableCxlumnDefinitions{TableCxlumnDefinition{"vc_int", DataType::Int},
-                                                         TableCxlumnDefinition{"dc_str", DataType::String}},
+    tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int},
+                                                         TableColumnDefinition{"dc_str", DataType::String}},
                                   TableType::Data);
     tbl->append_chunk(chunk);
 
     pos_list = std::make_shared<PosList>(PosList{
         {RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{0}}}});
 
-    rc_int = std::make_shared<ReferenceSegment>(tbl, CxlumnID{0}, pos_list);
-    rc_str = std::make_shared<ReferenceSegment>(tbl, CxlumnID{1}, pos_list);
+    rc_int = std::make_shared<ReferenceSegment>(tbl, ColumnID{0}, pos_list);
+    rc_str = std::make_shared<ReferenceSegment>(tbl, ColumnID{1}, pos_list);
   }
 
   std::shared_ptr<BaseValueSegment> vc_int;

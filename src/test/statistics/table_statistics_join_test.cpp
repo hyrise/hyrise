@@ -30,20 +30,20 @@ class TableStatisticsJoinTest : public BaseTest {
   }
 
   /**
-   * For a table with statistics, all possible cxlumn join combinations are tested and actual result row count is
+   * For a table with statistics, all possible column join combinations are tested and actual result row count is
    * compared to predicted row count.
    */
   void predict_join_row_counts_and_compare(const TableWithStatistics& table_with_statistics, const JoinMode mode,
                                            const PredicateCondition predicate_condition) {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
-    for (CxlumnID::base_type cxlumn_1 = 0; cxlumn_1 < table_with_statistics.table->cxlumn_count(); ++cxlumn_1) {
-      for (CxlumnID::base_type cxlumn_2 = 0; cxlumn_2 < table_with_statistics.table->cxlumn_count(); ++cxlumn_2) {
-        auto cxlumn_ids = std::make_pair(CxlumnID{cxlumn_1}, CxlumnID{cxlumn_2});
+    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
+        auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
-            *table_with_statistics.statistics, mode, cxlumn_ids, predicate_condition));
+            *table_with_statistics.statistics, mode, column_ids, predicate_condition));
         auto join =
-            std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, cxlumn_ids, predicate_condition);
+            std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, predicate_condition);
         join->execute();
         auto result = join->get_output();
         EXPECT_FLOAT_EQ(result->row_count(), join_stats->row_count());
@@ -52,18 +52,18 @@ class TableStatisticsJoinTest : public BaseTest {
   }
 
   /**
-   * For a table with statistics, all possible cxlumn join combinations are tested and cached result row count is
+   * For a table with statistics, all possible column join combinations are tested and cached result row count is
    * compared to predicted row count.
    */
   void predict_join_row_counts_and_compare(const TableWithStatistics& table_with_statistics, const JoinMode mode,
                                            const PredicateCondition predicate_condition,
                                            const std::vector<uint32_t> row_counts) {
-    for (CxlumnID::base_type cxlumn_1 = 0; cxlumn_1 < table_with_statistics.table->cxlumn_count(); ++cxlumn_1) {
-      for (CxlumnID::base_type cxlumn_2 = 0; cxlumn_2 < table_with_statistics.table->cxlumn_count(); ++cxlumn_2) {
-        auto cxlumn_ids = std::make_pair(CxlumnID{cxlumn_1}, CxlumnID{cxlumn_2});
+    for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
+      for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
+        auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
         auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
-            *table_with_statistics.statistics, mode, cxlumn_ids, predicate_condition));
-        auto cached_row_count = row_counts.at(table_with_statistics.table->cxlumn_count() * cxlumn_1 + cxlumn_2);
+            *table_with_statistics.statistics, mode, column_ids, predicate_condition));
+        auto cached_row_count = row_counts.at(table_with_statistics.table->column_count() * column_1 + column_2);
         EXPECT_FLOAT_EQ(cached_row_count, join_stats->row_count());
       }
     }
@@ -74,14 +74,14 @@ class TableStatisticsJoinTest : public BaseTest {
 
 TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
   // test selectivity calculations for join_modes which do not produce null values in the result, predicate conditions
-  // and cxlumn combinations of int_equal_distribution.tbl
+  // and column combinations of int_equal_distribution.tbl
   std::vector<JoinMode> join_modes{JoinMode::Inner};
   std::vector<PredicateCondition> predicate_conditions{
       PredicateCondition::Equals,         PredicateCondition::NotEquals,   PredicateCondition::LessThan,
       PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals};
 
   // 3 dimensional table of cached row count results
-  // [ join_modes index ][ predicate_conditions index ][ cxlumn combination index = 4 * cxlumn1_index + cxlumn2_index ]
+  // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * column1_index + column2_index ]
   const std::vector<std::vector<std::vector<uint32_t>>> row_counts{{
       {5400, 5400, 5400, 5400, 5400, 10800, 10800, 4320, 5400, 10800, 16200, 6480, 5400, 4320, 6480, 6480},
       {27000, 27000, 27000, 27000, 27000, 21600, 21600, 28080, 27000, 21600, 16200, 25920, 27000, 28080, 25920, 25920},
@@ -104,7 +104,7 @@ TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
 // This is what InnerJoinTest would look like without cached join result size:
 // TEST_F(TableStatisticsJoinTest, InnerJoinRealDataTest) {
 //   // test selectivity calculations for join_modes which do not produce null values in the result, predicate
-// conditions and cxlumn combinations of int_equal_distribution.tbl
+// conditions and column combinations of int_equal_distribution.tbl
 //   std::vector<JoinMode> join_modes{JoinMode::Inner, JoinMode::Self};
 //   std::vector<PredicateCondition> predicate_conditions{PredicateCondition::Equals, PredicateCondition::NotEquals,
 //                                    PredicateCondition::LessThan, PredicateCondition::LessThanEquals,
@@ -126,12 +126,12 @@ TEST_F(TableStatisticsJoinTest, CrossJoinTest) {
 
 TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
   // Test selectivity calculations for all join_modes which can produce null values in the result, predicate conditions
-  // and cxlumn combinations of int_equal_distribution.tbl
+  // and column combinations of int_equal_distribution.tbl
 
-  // Currently, the statistics component produces in some cases for a two cxlumn predicate with
-  // PredicateCondition::LessThan and PredicateCondition::GreaterThan a cxlumn statistics with a too high distinct
-  // count. (See comment cxlumn_statistics.hpp for details). Null value calculations depend on the calculated distinct
-  // counts of the cxlumns. Therefore, tests for the mentioned predicate conditions with null values are skipped.
+  // Currently, the statistics component produces in some cases for a two column predicate with
+  // PredicateCondition::LessThan and PredicateCondition::GreaterThan a column statistics with a too high distinct
+  // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated distinct
+  // counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are skipped.
 
   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};
   std::vector<PredicateCondition> predicate_conditions{
@@ -139,7 +139,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
       PredicateCondition::GreaterThanEquals};  // PredicateCondition::LessThan, PredicateCondition::GreaterThan,
 
   // 3 dimensional table of cached row count results
-  // [ join_modes index ][ predicate_conditions index ][ cxlumn combination index = 4 * cxlumn1_index + cxlumn2_index ]
+  // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * column1_index + column2_index ]
   const std::vector<std::vector<std::vector<uint32_t>>> row_counts{
       {
           {5400, 5400, 5400, 5400, 5490, 10800, 10800, 4428, 5520, 10860, 16200, 6588, 5430, 4380, 6480, 6480},
@@ -182,12 +182,12 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
 // This is what OuterJoinsTest would look like without cached join result size:
 // TEST_F(TableStatisticsJoinTest, OuterJoinsRealDataTest) {
 //   // Test selectivity calculations for all join_modes which can produce null values in the result, predicate
-//   // conditions and cxlumn combinations of int_equal_distribution.tbl
+//   // conditions and column combinations of int_equal_distribution.tbl
 
-//   // Currently, the statistics component produces in some cases for a two cxlumn predicate with
-//   // PredicateCondition::LessThan and PredicateCondition::GreaterThan a cxlumn statistics with a too high distinct
-//   // count. (See comment cxlumn_statistics.hpp for details). Null value calculations depend on the calculated
-//   // distinct counts of the cxlumns. Therefore, tests for the mentioned predicate conditions with null values are
+//   // Currently, the statistics component produces in some cases for a two column predicate with
+//   // PredicateCondition::LessThan and PredicateCondition::GreaterThan a column statistics with a too high distinct
+//   // count. (See comment column_statistics.hpp for details). Null value calculations depend on the calculated
+//   // distinct counts of the columns. Therefore, tests for the mentioned predicate conditions with null values are
 //   // skipped.
 
 //   std::vector<JoinMode> join_modes{JoinMode::Right, JoinMode::Outer, JoinMode::Left};

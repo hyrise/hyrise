@@ -33,7 +33,7 @@ class CsvWriter {
   void _write_string_value(const std::string& value);
 
   std::ofstream _stream;
-  CxlumnID _current_cxlumn_count{0};
+  ColumnID _current_column_count{0};
   ParseConfig _config;
 };
 

@@ -16,10 +16,10 @@
 #include "is_null_expression.hpp"
 #include "list_expression.hpp"
 #include "logical_expression.hpp"
-#include "lqp_cxlumn_expression.hpp"
+#include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "parameter_expression.hpp"
-#include "pqp_cxlumn_expression.hpp"
+#include "pqp_column_expression.hpp"
 #include "pqp_select_expression.hpp"
 #include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
@@ -52,7 +52,7 @@
 namespace opossum {
 
 class AbstractOperator;
-class LQPCxlumnReference;
+class LQPColumnReference;
 
 /**
  * expression_"functional", since it supplies a functional-programming like interface to build nested expressions
@@ -60,14 +60,14 @@ class LQPCxlumnReference;
 namespace expression_functional {
 
 /**
- * @defgroup Turn expression-like things (Values, LQPCxlumnReferences, Expressions themselves) into expressions
+ * @defgroup Turn expression-like things (Values, LQPColumnReferences, Expressions themselves) into expressions
  *
  * Mostly used internally in this file
  *
  * @{
  */
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression);
-std::shared_ptr<LQPCxlumnExpression> to_expression(const LQPCxlumnReference& cxlumn_reference);
+std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& column_reference);
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 /** @} */
 
@@ -157,13 +157,13 @@ std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNo
 
 template <typename... Args>
 std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                             const bool nullable, Args&&... parameter_id_cxlumn_id_pairs) {
+                                             const bool nullable, Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<PQPSelectExpression>(
         pqp, data_type, nullable,
-        std::vector<std::pair<ParameterID, CxlumnID>>{
-            {std::make_pair(parameter_id_cxlumn_id_pairs.first, parameter_id_cxlumn_id_pairs.second)...}});
+        std::vector<std::pair<ParameterID, ColumnID>>{
+            {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
   } else {
     // Not correlated
     return std::make_shared<PQPSelectExpression>(pqp, data_type, nullable);
@@ -204,9 +204,9 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
 }
 
 std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id);
-std::shared_ptr<LQPCxlumnExpression> cxlumn_(const LQPCxlumnReference& cxlumn_reference);
-std::shared_ptr<PQPCxlumnExpression> cxlumn_(const CxlumnID cxlumn_id, const DataType data_type, const bool nullable,
-                                             const std::string& cxlumn_name);
+std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference);
+std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,
+                                             const std::string& column_name);
 
 template <typename ReferencedExpression>
 std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id,

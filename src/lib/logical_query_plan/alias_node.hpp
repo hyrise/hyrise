@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * Assign cxlumn names to expressions
+ * Assign column names to expressions
  */
 class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode {
  public:
@@ -17,7 +17,7 @@ class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode
             const std::vector<std::string>& aliases);
 
   std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& cxlumn_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
   const std::vector<std::string> aliases;
 

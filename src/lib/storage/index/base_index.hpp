@@ -16,9 +16,9 @@ class BaseSegment;
  * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indices.
- * I.e. the index is sorted based on the cxlumn order. To check whether a key is less than another
- * key, the comparison is performed for the first cxlumn. If and only if they are equal, a check is
- * executed for the part of the next cxlumn. If needed, this step is repeated for all cxlumn
+ * I.e. the index is sorted based on the column order. To check whether a key is less than another
+ * key, the comparison is performed for the first column. If and only if they are equal, a check is
+ * executed for the part of the next column. If needed, this step is repeated for all column
  * parts of both keys.
  * Since all indices have to support range queries, we chose to use iterators as means to get all
  * values that are requested from an index.
@@ -51,14 +51,14 @@ class BaseIndex : private Noncopyable {
   virtual ~BaseIndex() = default;
 
   /**
-   * Checks whether the given segments are covered by the index. This is the case when the order of the given cxlumns
-   * and the cxlumns of the index match, and the given segments are either exactly or a subset of the indexed segments.
+   * Checks whether the given segments are covered by the index. This is the case when the order of the given columns
+   * and the columns of the index match, and the given segments are either exactly or a subset of the indexed segments.
    *
    * For example:
-   * We have an index on cxlumns DAB.
-   * The index is considered to be applicable for cxlumns D, DA and DAB.
-   * The index is NOT considered to be applicable for cxlumns A, DABC, BAD etc.
-   * @return true if the given cxlumns are covered by the index.
+   * We have an index on columns DAB.
+   * The index is considered to be applicable for columns D, DA and DAB.
+   * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
+   * @return true if the given columns are covered by the index.
    */
   bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
 

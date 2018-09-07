@@ -1,5 +1,5 @@
 {
-    "cxlumns": [
+    "columns": [
         {
             "name": "b",
             "type": "float"

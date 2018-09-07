@@ -3,7 +3,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -27,24 +27,24 @@ class LogicalQueryPlanTest : public ::testing::Test {
     StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl"));
 
     node_int_int = StoredTableNode::make("int_int");
-    a1 = node_int_int->get_cxlumn("a");
-    b1 = node_int_int->get_cxlumn("b");
+    a1 = node_int_int->get_column("a");
+    b1 = node_int_int->get_column("b");
 
     node_int_int_int = StoredTableNode::make("int_int_int");
-    a2 = node_int_int_int->get_cxlumn("a");
-    b2 = node_int_int_int->get_cxlumn("b");
-    c2 = node_int_int_int->get_cxlumn("c");
+    a2 = node_int_int_int->get_column("a");
+    b2 = node_int_int_int->get_column("b");
+    c2 = node_int_int_int->get_column("c");
 
     /**
      * Init some nodes for the tests to use
      */
-    _mock_node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
-    _mock_node_b = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
+    _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_a");
+    _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "t_b");
 
-    _t_a_a = LQPCxlumnReference{_mock_node_a, CxlumnID{0}};
-    _t_a_b = LQPCxlumnReference{_mock_node_a, CxlumnID{1}};
-    _t_b_a = LQPCxlumnReference{_mock_node_b, CxlumnID{0}};
-    _t_b_b = LQPCxlumnReference{_mock_node_b, CxlumnID{1}};
+    _t_a_a = LQPColumnReference{_mock_node_a, ColumnID{0}};
+    _t_a_b = LQPColumnReference{_mock_node_a, ColumnID{1}};
+    _t_b_a = LQPColumnReference{_mock_node_b, ColumnID{0}};
+    _t_b_b = LQPColumnReference{_mock_node_b, ColumnID{1}};
 
     _predicate_node_a = PredicateNode::make(equals_(_t_a_a, 42));
     _predicate_node_b = PredicateNode::make(equals_(_t_a_b, 1337));
@@ -66,11 +66,11 @@ class LogicalQueryPlanTest : public ::testing::Test {
      *     \_Recurring Node --> [3]
      *     \_Recurring Node --> [5]
      */
-    _nodes[6] = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "a"}}});
-    _nodes[7] = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "b"}}});
+    _nodes[6] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}}});
+    _nodes[7] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
     _nodes[0] = JoinNode::make(JoinMode::Cross);
     _nodes[1] = JoinNode::make(JoinMode::Cross);
-    _nodes[2] = PredicateNode::make(equals_(LQPCxlumnReference{_nodes[6], CxlumnID{0}}, 42));
+    _nodes[2] = PredicateNode::make(equals_(LQPColumnReference{_nodes[6], ColumnID{0}}, 42));
     _nodes[3] = JoinNode::make(JoinMode::Cross);
     _nodes[4] = JoinNode::make(JoinMode::Cross);
     _nodes[5] = JoinNode::make(JoinMode::Cross);
@@ -92,8 +92,8 @@ class LogicalQueryPlanTest : public ::testing::Test {
 
   std::shared_ptr<Table> table_int_int;
   std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
-  LQPCxlumnReference a1, b1;
-  LQPCxlumnReference a2, b2, c2;
+  LQPColumnReference a1, b1;
+  LQPColumnReference a2, b2, c2;
 
   std::array<std::shared_ptr<AbstractLQPNode>, 8> _nodes;
 
@@ -104,10 +104,10 @@ class LogicalQueryPlanTest : public ::testing::Test {
   std::shared_ptr<ProjectionNode> _projection_node;
   std::shared_ptr<JoinNode> _join_node;
 
-  LQPCxlumnReference _t_a_a;
-  LQPCxlumnReference _t_a_b;
-  LQPCxlumnReference _t_b_a;
-  LQPCxlumnReference _t_b_b;
+  LQPColumnReference _t_a_a;
+  LQPColumnReference _t_a_b;
+  LQPColumnReference _t_b_a;
+  LQPColumnReference _t_b_b;
 };
 
 TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
@@ -237,7 +237,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
   lqp_replace_node(_nodes[5], new_node);
 
@@ -263,8 +263,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
-  auto new_node_a = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "x"}}});
-  auto new_node_b = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
   lqp_replace_node(_nodes[6], new_node_a);
   lqp_replace_node(_nodes[7], new_node_b);
@@ -285,7 +285,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
-  const auto projection_node = ProjectionNode::make(node_int_int->cxlumn_expressions(), node_int_int);
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -299,10 +299,10 @@ TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
-  const auto expression_a = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{node_int_int, CxlumnID{0}});
-  const auto expression_b = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{node_int_int, CxlumnID{1}});
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{0}});
+  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{1}});
 
-  const auto projection_node = ProjectionNode::make(node_int_int->cxlumn_expressions(), node_int_int);
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -318,12 +318,12 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
 
   // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
   const auto copied_expression_a =
-      std::dynamic_pointer_cast<LQPCxlumnExpression>(copied_projection_node->expressions.at(0));
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
   const auto copied_expression_b =
-      std::dynamic_pointer_cast<LQPCxlumnExpression>(copied_projection_node->expressions.at(1));
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
 
-  EXPECT_EQ(copied_expression_a->cxlumn_reference.original_node(), copied_node_int_int);
-  EXPECT_EQ(copied_expression_b->cxlumn_reference.original_node(), copied_node_int_int);
+  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
+  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
 }
 
 TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
@@ -412,7 +412,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->left_input());
 
   const auto copied_sub_select_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->cxlumn_expressions().at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
   const auto copied_sub_select_b =
       std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate->arguments.at(1));
 

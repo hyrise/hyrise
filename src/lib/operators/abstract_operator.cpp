@@ -72,7 +72,7 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
       }(),
       "Empty chunk returned from operator " + description());
 
-  DebugAssert(!_output || _output->cxlumn_count() > 0, "Operator " + description() + " did not output any cxlumns");
+  DebugAssert(!_output || _output->column_count() > 0, "Operator " + description() + " did not output any columns");
 
   return _output;
 }
@@ -139,7 +139,7 @@ void AbstractOperator::print(std::ostream& stream) const {
     const auto output = op->get_output();
     if (output) {
       stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
-             << output->cxlumn_count() << " cxlumn(s)/";
+             << output->column_count() << " column(s)/";
 
       stream << format_bytes(output->estimate_memory_usage());
       stream << "/";

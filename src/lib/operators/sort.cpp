@@ -14,14 +14,14 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const CxlumnID cxlumn_id, const OrderByMode order_by_mode,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
-      _cxlumn_id(cxlumn_id),
+      _column_id(column_id),
       _order_by_mode(order_by_mode),
       _output_chunk_size(output_chunk_size) {}
 
-CxlumnID Sort::cxlumn_id() const { return _cxlumn_id; }
+ColumnID Sort::column_id() const { return _column_id; }
 
 OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
@@ -30,14 +30,14 @@ const std::string Sort::name() const { return "Sort"; }
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Sort>(copied_input_left, _cxlumn_id, _order_by_mode, _output_chunk_size);
+  return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
 
 void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->cxlumn_data_type(_cxlumn_id), input_table_left(), _cxlumn_id, _order_by_mode,
+      input_table_left()->column_data_type(_column_id), input_table_left(), _column_id, _order_by_mode,
       _output_chunk_size);
   return _impl->_on_execute();
 }
@@ -45,25 +45,25 @@ std::shared_ptr<const Table> Sort::_on_execute() {
 void Sort::_on_cleanup() { _impl.reset(); }
 
 // This class fulfills only the materialization task for a sorted row_id_value_vector.
-template <typename SortCxlumnType>
+template <typename SortColumnType>
 class Sort::SortImplMaterializeOutput {
  public:
   // creates a new table with reference segments
   SortImplMaterializeOutput(const std::shared_ptr<const Table>& in,
-                            const std::shared_ptr<std::vector<std::pair<RowID, SortCxlumnType>>>& id_value_map,
+                            const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>>& id_value_map,
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
-    auto output = std::make_shared<Table>(_table_in->cxlumn_definitions(), TableType::Data, _output_chunk_size);
+    auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
     // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
 
-    // After we created the output table and initialized the cxlumn structure, we can start adding values. Because the
+    // After we created the output table and initialized the column structure, we can start adding values. Because the
     // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are
-    // copied cxlumn by cxlumn for each output row. For each cxlumn in a row we visit the input segment with a reference
-    // to the output segment. This enables for the SortImplMaterializeOutput class to ignore the cxlumn types during the
+    // copied column by column for each output row. For each column in a row we visit the input segment with a reference
+    // to the output segment. This enables for the SortImplMaterializeOutput class to ignore the column types during the
     // copying of the values.
     const auto row_count_out = _row_id_value_vector->size();
 
@@ -76,21 +76,21 @@ class Sort::SortImplMaterializeOutput {
     std::vector<Segments> output_segments_by_chunk(chunk_count_out);
 
     // Materialize segment-wise
-    for (CxlumnID cxlumn_id{0u}; cxlumn_id < output->cxlumn_count(); ++cxlumn_id) {
-      const auto cxlumn_data_type = output->cxlumn_data_type(cxlumn_id);
+    for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
+      const auto column_data_type = output->column_data_type(column_id);
 
-      resolve_data_type(cxlumn_data_type, [&](auto type) {
-        using CxlumnDataType = typename decltype(type)::type;
+      resolve_data_type(column_data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
 
         auto chunk_it = output_segments_by_chunk.begin();
         auto chunk_offset_out = 0u;
 
-        auto value_segment_value_vector = pmr_concurrent_vector<CxlumnDataType>();
+        auto value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
         auto value_segment_null_vector = pmr_concurrent_vector<bool>();
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                  std::shared_ptr<BaseSegmentAccessor<CxlumnDataType>>>>();
+                                                  std::shared_ptr<BaseSegmentAccessor<ColumnDataType>>>>();
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
@@ -101,20 +101,20 @@ class Sort::SortImplMaterializeOutput {
           auto& accessor = segment_ptr_and_typed_ptr_pair.second;
 
           if (!base_segment) {
-            base_segment = _table_in->get_chunk(chunk_id)->get_segment(cxlumn_id);
-            accessor = create_segment_accessor<CxlumnDataType>(base_segment);
+            base_segment = _table_in->get_chunk(chunk_id)->get_segment(column_id);
+            accessor = create_segment_accessor<ColumnDataType>(base_segment);
           }
 
           // If the input segment is not a ReferenceSegment, we can take a fast(er) path
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
             const auto is_null = !typed_value.has_value();
-            value_segment_value_vector.push_back(is_null ? CxlumnDataType{} : typed_value.value());
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             value_segment_null_vector.push_back(is_null);
           } else {
             const auto value = (*base_segment)[chunk_offset];
             const auto is_null = variant_is_null(value);
-            value_segment_value_vector.push_back(is_null ? CxlumnDataType{} : type_cast<CxlumnDataType>(value));
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast<ColumnDataType>(value));
             value_segment_null_vector.push_back(is_null);
           }
 
@@ -123,10 +123,10 @@ class Sort::SortImplMaterializeOutput {
           // Check if value segment is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            auto value_segment = std::make_shared<ValueSegment<CxlumnDataType>>(std::move(value_segment_value_vector),
+            auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                                 std::move(value_segment_null_vector));
             chunk_it->push_back(value_segment);
-            value_segment_value_vector = pmr_concurrent_vector<CxlumnDataType>();
+            value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
             value_segment_null_vector = pmr_concurrent_vector<bool>();
             ++chunk_it;
           }
@@ -134,7 +134,7 @@ class Sort::SortImplMaterializeOutput {
 
         // Last segment has not been added
         if (chunk_offset_out > 0u) {
-          auto value_segment = std::make_shared<ValueSegment<CxlumnDataType>>(std::move(value_segment_value_vector),
+          auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                               std::move(value_segment_null_vector));
           chunk_it->push_back(value_segment);
         }
@@ -151,19 +151,19 @@ class Sort::SortImplMaterializeOutput {
  protected:
   const std::shared_ptr<const Table> _table_in;
   const size_t _output_chunk_size;
-  const std::shared_ptr<std::vector<std::pair<RowID, SortCxlumnType>>> _row_id_value_vector;
+  const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
 
-// we need to use the impl pattern because the scan operator of the sort depends on the type of the cxlumn
-template <typename SortCxlumnType>
+// we need to use the impl pattern because the scan operator of the sort depends on the type of the column
+template <typename SortColumnType>
 class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  using RowIDValuePair = std::pair<RowID, SortCxlumnType>;
+  using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  SortImpl(const std::shared_ptr<const Table>& table_in, const CxlumnID cxlumn_id,
+  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
-        _cxlumn_id(cxlumn_id),
+        _column_id(column_id),
         _order_by_mode(order_by_mode),
         _output_chunk_size(output_chunk_size) {
     // initialize a structure which can be sorted by std::sort
@@ -174,7 +174,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  protected:
   std::shared_ptr<const Table> _on_execute() override {
     // 1. Prepare Sort: Creating rowid-value-Structure
-    _materialize_sort_cxlumn();
+    _materialize_sort_column();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
@@ -196,13 +196,13 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     // 3. Materialization of the result: We take the sorted ValueRowID Vector, create chunks fill them until they are
     // full and create the next one. Each chunk is filled row by row.
-    auto materialization = std::make_shared<SortImplMaterializeOutput<SortCxlumnType>>(_table_in, _row_id_value_vector,
+    auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
     return materialization->execute();
   }
 
-  // completely materializes the sort cxlumn to create a vector of RowID-Value pairs
-  void _materialize_sort_cxlumn() {
+  // completely materializes the sort column to create a vector of RowID-Value pairs
+  void _materialize_sort_column() {
     auto& row_id_value_vector = *_row_id_value_vector;
     row_id_value_vector.reserve(_table_in->row_count());
 
@@ -211,14 +211,14 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
       auto chunk = _table_in->get_chunk(chunk_id);
 
-      auto base_segment = chunk->get_segment(_cxlumn_id);
+      auto base_segment = chunk->get_segment(_column_id);
 
-      resolve_segment_type<SortCxlumnType>(*base_segment, [&](auto& typed_segment) {
-        auto iterable = create_iterable_from_segment<SortCxlumnType>(typed_segment);
+      resolve_segment_type<SortColumnType>(*base_segment, [&](auto& typed_segment) {
+        auto iterable = create_iterable_from_segment<SortColumnType>(typed_segment);
 
         iterable.for_each([&](const auto& value) {
           if (value.is_null()) {
-            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortCxlumnType{});
+            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
           } else {
             row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
           }
@@ -236,8 +236,8 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
   const std::shared_ptr<const Table> _table_in;
 
-  // cxlumn to sort by
-  const CxlumnID _cxlumn_id;
+  // column to sort by
+  const ColumnID _column_id;
   const OrderByMode _order_by_mode;
   // chunk size of the materialized output
   const size_t _output_chunk_size;

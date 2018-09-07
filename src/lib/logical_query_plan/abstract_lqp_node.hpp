@@ -25,7 +25,7 @@ enum class LQPNodeType {
   Predicate,
   Projection,
   Root,
-  ShowCxlumns,
+  ShowColumns,
   ShowTables,
   Sort,
   StoredTable,
@@ -116,9 +116,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const;
 
   /**
-   * @return The Expressions defining each cxlumn that this node outputs
+   * @return The Expressions defining each column that this node outputs
    */
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& cxlumn_expressions() const;
+  virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
   /**
    * @return    All expressions that this node USES (and doesn't just forward)
@@ -129,14 +129,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const;
 
   /**
-   * @return The CxlumnID of the @param expression, or std::nullopt if it can't be found
+   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
    */
-  std::optional<CxlumnID> find_cxlumn_id(const AbstractExpression& expression) const;
+  std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 
   /**
-   * @return The CxlumnID of the @param expression. Assert()s that it can be found
+   * @return The ColumnID of the @param expression. Assert()s that it can be found
    */
-  CxlumnID get_cxlumn_id(const AbstractExpression& expression) const;
+  ColumnID get_column_id(const AbstractExpression& expression) const;
 
   // @{
   /**

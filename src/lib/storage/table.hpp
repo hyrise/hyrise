@@ -10,7 +10,7 @@
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
-#include "storage/table_cxlumn_definition.hpp"
+#include "storage/table_column_definition.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -25,30 +25,30 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
  public:
-  static std::shared_ptr<Table> create_dummy_table(const TableCxlumnDefinitions& cxlumn_definitions);
+  static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
-  explicit Table(const TableCxlumnDefinitions& cxlumn_definitions, const TableType type,
+  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
                  const uint32_t max_chunk_size = Chunk::MAX_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
   /**
-   * @defgroup Getter and convenience functions for the cxlumn definitions
+   * @defgroup Getter and convenience functions for the column definitions
    * @{
    */
 
-  const TableCxlumnDefinitions& cxlumn_definitions() const;
+  const TableColumnDefinitions& column_definitions() const;
 
-  size_t cxlumn_count() const;
+  size_t column_count() const;
 
-  const std::string& cxlumn_name(const CxlumnID cxlumn_id) const;
-  std::vector<std::string> cxlumn_names() const;
+  const std::string& column_name(const ColumnID column_id) const;
+  std::vector<std::string> column_names() const;
 
-  DataType cxlumn_data_type(const CxlumnID cxlumn_id) const;
-  std::vector<DataType> cxlumn_data_types() const;
+  DataType column_data_type(const ColumnID column_id) const;
+  std::vector<DataType> column_data_types() const;
 
-  bool cxlumn_is_nullable(const CxlumnID cxlumn_id) const;
-  std::vector<bool> cxlumns_are_nullable() const;
+  bool column_is_nullable(const ColumnID column_id) const;
+  std::vector<bool> columns_are_nullable() const;
 
-  // Fail()s, if there is no cxlumn of that name
-  CxlumnID cxlumn_id_by_name(const std::string& cxlumn_name) const;
+  // Fail()s, if there is no column of that name
+  ColumnID column_id_by_name(const std::string& column_name) const;
 
   /** @} */
 
@@ -120,17 +120,17 @@ class Table : private Noncopyable {
   // - table needs to be validated before by Validate operator
   // If you want to write efficient operators, back off!
   template <typename T>
-  T get_value(const CxlumnID cxlumn_id, const size_t row_number) const {
+  T get_value(const ColumnID column_id, const size_t row_number) const {
     PerformanceWarning("get_value() used");
 
-    Assert(cxlumn_id < cxlumn_count(), "cxlumn_id invalid");
+    Assert(column_id < column_count(), "column_id invalid");
 
     size_t row_counter = 0u;
     for (auto& chunk : _chunks) {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk->get_segment(cxlumn_id))[row_number + current_size - row_counter]);
+        return get<T>((*chunk->get_segment(column_id))[row_number + current_size - row_counter]);
       }
     }
     Fail("Row does not exist.");
@@ -148,13 +148,13 @@ class Table : private Noncopyable {
   std::vector<IndexInfo> get_indexes() const;
 
   template <typename Index>
-  void create_index(const std::vector<CxlumnID>& cxlumn_ids, const std::string& name = "") {
+  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     SegmentIndexType index_type = get_index_type_of<Index>();
 
     for (auto& chunk : _chunks) {
-      chunk->create_index<Index>(cxlumn_ids);
+      chunk->create_index<Index>(column_ids);
     }
-    IndexInfo i = {cxlumn_ids, name, index_type};
+    IndexInfo i = {column_ids, name, index_type};
     _indexes.emplace_back(i);
   }
 
@@ -164,7 +164,7 @@ class Table : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  protected:
-  const TableCxlumnDefinitions _cxlumn_definitions;
+  const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;

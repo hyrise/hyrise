@@ -257,17 +257,17 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
 
     for (const auto& table : nlohmann::json::iterator_wrapper(custom_encoding)) {
       const auto& table_name = table.key();
-      const auto& cxlumns = table.value();
+      const auto& columns = table.value();
 
-      Assert(cxlumns.is_object(), "The custom encoding for cxlumn types needs to be specified as a json object.");
+      Assert(columns.is_object(), "The custom encoding for column types needs to be specified as a json object.");
       custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, SegmentEncodingSpec>());
 
-      for (const auto& cxlumn : nlohmann::json::iterator_wrapper(cxlumns)) {
-        const auto& cxlumn_name = cxlumn.key();
-        const auto& encoding_info = cxlumn.value();
+      for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
+        const auto& column_name = column.key();
+        const auto& encoding_info = column.value();
         Assert(encoding_info.is_object(),
-               "The custom encoding for cxlumn types needs to be specified as a json object.");
-        custom_encoding_mapping[table_name][cxlumn_name] = encoding_spec_from_json(encoding_info);
+               "The custom encoding for column types needs to be specified as a json object.");
+        custom_encoding_mapping[table_name][column_name] = encoding_spec_from_json(encoding_info);
       }
     }
   }
@@ -339,12 +339,12 @@ nlohmann::json EncodingConfig::to_json() const {
   }
 
   nlohmann::json table_mapping{};
-  for (const auto& [table, cxlumn_config] : custom_encoding_mapping) {
-    nlohmann::json cxlumn_mapping{};
-    for (const auto& [cxlumn, spec] : cxlumn_config) {
-      cxlumn_mapping[cxlumn] = encoding_spec_to_string_map(spec);
+  for (const auto& [table, column_config] : custom_encoding_mapping) {
+    nlohmann::json column_mapping{};
+    for (const auto& [column, spec] : column_config) {
+      column_mapping[column] = encoding_spec_to_string_map(spec);
     }
-    table_mapping[table] = cxlumn_mapping;
+    table_mapping[table] = column_mapping;
   }
 
   if (!table_mapping.empty()) {
@@ -359,27 +359,27 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   const auto& type_mapping = config.type_encoding_mapping;
   const auto& custom_mapping = config.custom_encoding_mapping;
 
-  const auto& cxlumn_mapping_it = custom_mapping.find(table_name);
-  const auto table_has_custom_encoding = cxlumn_mapping_it != custom_mapping.end();
+  const auto& column_mapping_it = custom_mapping.find(table_name);
+  const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
   ChunkEncodingSpec chunk_spec;
 
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     if (table_has_custom_encoding) {
-      const auto& cxlumn_name = table->cxlumn_name(cxlumn_id);
-      const auto& encoding_by_cxlumn_name = cxlumn_mapping_it->second;
-      const auto& segment_encoding = encoding_by_cxlumn_name.find(cxlumn_name);
-      if (segment_encoding != encoding_by_cxlumn_name.end()) {
-        // The cxlumn type has a custom encoding
+      const auto& column_name = table->column_name(column_id);
+      const auto& encoding_by_column_name = column_mapping_it->second;
+      const auto& segment_encoding = encoding_by_column_name.find(column_name);
+      if (segment_encoding != encoding_by_column_name.end()) {
+        // The column type has a custom encoding
         chunk_spec.push_back(segment_encoding->second);
         continue;
       }
     }
 
-    const auto& cxlumn_type = table->cxlumn_data_type(cxlumn_id);
-    const auto& encoding_by_data_type = type_mapping.find(cxlumn_type);
+    const auto& column_type = table->column_data_type(column_id);
+    const auto& encoding_by_data_type = type_mapping.find(column_type);
     if (encoding_by_data_type != type_mapping.end()) {
-      // The cxlumn type has a specific encoding
+      // The column type has a specific encoding
       chunk_spec.push_back(encoding_by_data_type->second);
       continue;
     }
@@ -422,10 +422,10 @@ const char* EncodingConfig::description = R"(
 Encoding Configuration
 ======================
 The encoding config represents the segment encodings specified for a benchmark.
-All segments of a given share cxlumn the same encoding.
+All segments of a given share column the same encoding.
 If encoding (and vector compression) were specified via command line args,
 all segments are compressed using the default encoding.
-If a JSON config was provided, a cxlumn- and/or type-specific
+If a JSON config was provided, a column- and/or type-specific
 encoding/compression can be chosen (same in each chunk). The JSON config must
 look like this:
 
@@ -451,16 +451,16 @@ The encoding is always required, the compression is optional.
 
   "custom": {
     <TABLE_NAME>: {
-      <cxlumn_name>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       },
-      <cxlumn_name>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>
       }
     },
     <TABLE_NAME>: {
-      <cxlumn_name>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       }

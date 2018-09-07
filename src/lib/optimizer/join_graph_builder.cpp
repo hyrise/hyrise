@@ -6,7 +6,7 @@
 #include <stack>
 
 #include "expression/expression_functional.hpp"
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -245,7 +245,7 @@ JoinGraphVertexSet JoinGraphBuilder::_get_vertex_set_accessed_by_expression(
     const AbstractExpression& expression, const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) {
   auto vertex_set = JoinGraphVertexSet{vertices.size()};
   for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
-    if (vertices[vertex_idx]->find_cxlumn_id(expression)) {
+    if (vertices[vertex_idx]->find_column_id(expression)) {
       vertex_set.set(vertex_idx);
     }
   }

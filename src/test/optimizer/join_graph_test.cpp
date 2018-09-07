@@ -14,18 +14,18 @@ namespace opossum {
 class JoinGraphTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_b = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_c = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_d = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "d");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
+    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
 
-    a_a = node_a->get_cxlumn("a");
-    b_a = node_b->get_cxlumn("a");
-    c_a = node_c->get_cxlumn("a");
+    a_a = node_a->get_column("a");
+    b_a = node_b->get_column("a");
+    c_a = node_c->get_column("a");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
-  LQPCxlumnReference a_a, b_a, c_a;
+  LQPColumnReference a_a, b_a, c_a;
 };
 
 TEST_F(JoinGraphTest, FindPredicates) {

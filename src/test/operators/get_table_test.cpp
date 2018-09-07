@@ -12,7 +12,7 @@ namespace opossum {
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table = std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data, 2);
+    _test_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     auto& manager = StorageManager::get();
     manager.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));
   }
@@ -48,8 +48,8 @@ TEST_F(OperatorsGetTableTest, ExcludedChunks) {
   auto original_table = StorageManager::get().get_table("tableWithValues");
   auto table = gt->get_output();
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
-  EXPECT_EQ(table->get_value<int>(CxlumnID(0), 0u), original_table->get_value<int>(CxlumnID(0), 1u));
-  EXPECT_EQ(table->get_value<int>(CxlumnID(0), 1u), original_table->get_value<int>(CxlumnID(0), 3u));
+  EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
+  EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
 }
 
 }  // namespace opossum

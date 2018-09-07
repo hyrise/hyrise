@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_cxlumn_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/difference.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
@@ -45,8 +45,8 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
-  const auto a = PQPCxlumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
-  const auto b = PQPCxlumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
+  const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
+  const auto b = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
 
   auto projection1 = std::make_shared<Projection>(_table_wrapper_a, expression_vector(a, b));
   projection1->execute();
@@ -60,7 +60,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   EXPECT_TABLE_EQ_UNORDERED(difference->get_output(), expected_result);
 }
 
-TEST_F(OperatorsDifferenceTest, ThrowWrongCxlumnNumberException) {
+TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
   if (!IS_DEBUG) return;
   auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 2));
   table_wrapper_c->execute();
@@ -70,7 +70,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongCxlumnNumberException) {
   EXPECT_THROW(difference->execute(), std::exception);
 }
 
-TEST_F(OperatorsDifferenceTest, ThrowWrongCxlumnOrderException) {
+TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
   if (!IS_DEBUG) return;
 
   auto table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/float_int.tbl", 2));

@@ -17,35 +17,35 @@ extern seed_t seed[];
 namespace {
 
 // clang-format off
-const auto customer_cxlumn_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
-const auto customer_cxlumn_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
+const auto customer_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
+const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
 
-const auto order_cxlumn_types = boost::hana::tuple      <int32_t,     int32_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
-const auto order_cxlumn_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
+const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     std::string,     float,          std::string,   std::string,       std::string, int32_t,          std::string>();  // NOLINT
+const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
 
-const auto lineitem_cxlumn_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
-const auto lineitem_cxlumn_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
+const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
+const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
-const auto part_cxlumn_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   int32_t,        std::string>();  // NOLINT
-const auto part_cxlumn_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
+const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   int32_t,        std::string>();  // NOLINT
+const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
 
-const auto partsupp_cxlumn_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           std::string>();  // NOLINT
-const auto partsupp_cxlumn_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
+const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           std::string>();  // NOLINT
+const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
 
-const auto supplier_cxlumn_types = boost::hana::tuple<     int32_t,     std::string, std::string, int32_t,       std::string, float,       std::string>();  // NOLINT
-const auto supplier_cxlumn_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
+const auto supplier_column_types = boost::hana::tuple<     int32_t,     std::string, std::string, int32_t,       std::string, float,       std::string>();  // NOLINT
+const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
 
-const auto nation_cxlumn_types = boost::hana::tuple<     int32_t,       std::string, int32_t,       std::string>();  // NOLINT
-const auto nation_cxlumn_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
+const auto nation_column_types = boost::hana::tuple<     int32_t,       std::string, int32_t,       std::string>();  // NOLINT
+const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
 
-const auto region_cxlumn_types = boost::hana::tuple<     int32_t,       std::string, std::string>();  // NOLINT
-const auto region_cxlumn_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
+const auto region_column_types = boost::hana::tuple<     int32_t,       std::string, std::string>();  // NOLINT
+const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 
 // clang-format on
 
 /**
- * Helper to build a table with a static (specified by template args `CxlumnTypes`) cxlumn type layout. Keeps a vector
- * for each cxlumn and appends values to them in append_row(). Automatically creates chunks in accordance with the
+ * Helper to build a table with a static (specified by template args `ColumnTypes`) column type layout. Keeps a vector
+ * for each column and appends values to them in append_row(). Automatically creates chunks in accordance with the
  * specified chunk size.
  *
  * No real need to tie this to TPCH, but atm it is only used here so that's where it resides.
@@ -54,30 +54,30 @@ template <typename... DataTypes>
 class TableBuilder {
  public:
   template <typename... Strings>
-  TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& cxlumn_types,
-               const boost::hana::tuple<Strings...>& cxlumn_names, opossum::UseMvcc use_mvcc)
+  TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
+               const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc)
       : _use_mvcc(use_mvcc) {
     /**
-     * Create a tuple ((cxlumn_name0, cxlumn_type0), (cxlumn_name1, cxlumn_type1), ...) so we can iterate over the
-     * cxlumns.
+     * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
+     * columns.
      * fold_left as below does this in order, I think boost::hana::zip_with() doesn't, which is why I'm doing two steps
      * here.
      */
-    const auto cxlumn_names_and_data_types = boost::hana::zip_with(
-        [&](auto cxlumn_type, auto cxlumn_name) {
-          return boost::hana::make_tuple(cxlumn_name, opossum::data_type_from_type<decltype(cxlumn_type)>());
+    const auto column_names_and_data_types = boost::hana::zip_with(
+        [&](auto column_type, auto column_name) {
+          return boost::hana::make_tuple(column_name, opossum::data_type_from_type<decltype(column_type)>());
         },
-        cxlumn_types, cxlumn_names);
+        column_types, column_names);
 
-    // Iterate over the cxlumn types/names and create the cxlumns.
-    opossum::TableCxlumnDefinitions cxlumn_definitions;
-    boost::hana::fold_left(cxlumn_names_and_data_types, cxlumn_definitions,
-                           [](auto& cxlumn_definitions, auto cxlumn_name_and_type) -> decltype(auto) {
-                             cxlumn_definitions.emplace_back(cxlumn_name_and_type[boost::hana::llong_c<0>],
-                                                             cxlumn_name_and_type[boost::hana::llong_c<1>]);
-                             return cxlumn_definitions;
+    // Iterate over the column types/names and create the columns.
+    opossum::TableColumnDefinitions column_definitions;
+    boost::hana::fold_left(column_names_and_data_types, column_definitions,
+                           [](auto& column_definitions, auto column_name_and_type) -> decltype(auto) {
+                             column_definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
+                                                             column_name_and_type[boost::hana::llong_c<1>]);
+                             return column_definitions;
                            });
-    _table = std::make_shared<opossum::Table>(cxlumn_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
+    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
   }
 
   std::shared_ptr<opossum::Table> finish_table() {
@@ -88,11 +88,11 @@ class TableBuilder {
     return _table;
   }
 
-  void append_row(DataTypes&&... cxlumn_values) {
+  void append_row(DataTypes&&... column_values) {
     // Create a tuple ([&data_vector0, value0], ...)
     auto vectors_and_values = boost::hana::zip_with(
         [](auto& vector, auto&& value) { return boost::hana::make_tuple(std::reference_wrapper(vector), value); },
-        _data_vectors, boost::hana::make_tuple(std::forward<DataTypes>(cxlumn_values)...));
+        _data_vectors, boost::hana::make_tuple(std::forward<DataTypes>(column_values)...));
 
     // Add the values to their respective data vector
     boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
@@ -191,14 +191,14 @@ TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
     : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
-  TableBuilder customer_builder{_chunk_size, customer_cxlumn_types, customer_cxlumn_names, UseMvcc::Yes};
-  TableBuilder order_builder{_chunk_size, order_cxlumn_types, order_cxlumn_names, UseMvcc::Yes};
-  TableBuilder lineitem_builder{_chunk_size, lineitem_cxlumn_types, lineitem_cxlumn_names, UseMvcc::Yes};
-  TableBuilder part_builder{_chunk_size, part_cxlumn_types, part_cxlumn_names, UseMvcc::Yes};
-  TableBuilder partsupp_builder{_chunk_size, partsupp_cxlumn_types, partsupp_cxlumn_names, UseMvcc::Yes};
-  TableBuilder supplier_builder{_chunk_size, supplier_cxlumn_types, supplier_cxlumn_names, UseMvcc::Yes};
-  TableBuilder nation_builder{_chunk_size, nation_cxlumn_types, nation_cxlumn_names, UseMvcc::Yes};
-  TableBuilder region_builder{_chunk_size, region_cxlumn_types, region_cxlumn_names, UseMvcc::Yes};
+  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes};
+  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes};
+  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes};
+  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, UseMvcc::Yes};
+  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names, UseMvcc::Yes};
+  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names, UseMvcc::Yes};
+  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes};
+  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names, UseMvcc::Yes};
 
   dbgen_reset_seeds();
 

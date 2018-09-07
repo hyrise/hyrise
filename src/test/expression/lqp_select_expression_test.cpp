@@ -24,8 +24,8 @@ class LQPSelectExpressionTest : public ::testing::Test {
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
-    a = {int_float_node_a, CxlumnID{0}};
-    b = {int_float_node_a, CxlumnID{1}};
+    a = {int_float_node_a, ColumnID{0}};
+    b = {int_float_node_a, ColumnID{1}};
 
     // clang-format off
     lqp_a =
@@ -50,7 +50,7 @@ class LQPSelectExpressionTest : public ::testing::Test {
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
   std::shared_ptr<ParameterExpression> parameter_c;
   std::shared_ptr<LQPSelectExpression> select_a, select_c;
-  LQPCxlumnReference a, b;
+  LQPColumnReference a, b;
 };
 
 TEST_F(LQPSelectExpressionTest, DeepEquals) {
@@ -65,7 +65,7 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
       int_float_node_a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");
-  const auto a2 = int_float_node_b->get_cxlumn("a");
+  const auto a2 = int_float_node_b->get_column("a");
   const auto parameter_d = parameter_(ParameterID{0}, a2);
   const auto lqp_d =
   AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_d))),
@@ -130,13 +130,13 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
   EXPECT_TRUE(select_(lqp_c)->is_nullable());
 }
 
-TEST_F(LQPSelectExpressionTest, AsCxlumnName) {
-  EXPECT_TRUE(std::regex_search(select_a->as_cxlumn_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(select_c->as_cxlumn_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
+TEST_F(LQPSelectExpressionTest, AsColumnName) {
+  EXPECT_TRUE(std::regex_search(select_a->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
+  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
 
   // Test IN and EXISTS here as well, since they need subselects to function
-  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_cxlumn_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));  // NOLINT
-  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_cxlumn_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
 }
 
 }  // namespace opossum

@@ -107,18 +107,18 @@ void ImportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstream& file) {
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
-  const auto cxlumn_count = _read_value<CxlumnID>(file);
-  const auto data_types = _read_values<std::string>(file, cxlumn_count);
-  const auto cxlumn_nullables = _read_values<bool>(file, cxlumn_count);
-  const auto cxlumn_names = _read_string_values(file, cxlumn_count);
+  const auto column_count = _read_value<ColumnID>(file);
+  const auto data_types = _read_values<std::string>(file, column_count);
+  const auto column_nullables = _read_values<bool>(file, column_count);
+  const auto column_names = _read_string_values(file, column_count);
 
-  TableCxlumnDefinitions output_cxlumn_definitions;
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
-    const auto data_type = data_type_to_string.right.at(data_types[cxlumn_id]);
-    output_cxlumn_definitions.emplace_back(cxlumn_names[cxlumn_id], data_type, cxlumn_nullables[cxlumn_id]);
+  TableColumnDefinitions output_column_definitions;
+  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+    const auto data_type = data_type_to_string.right.at(data_types[column_id]);
+    output_column_definitions.emplace_back(column_names[column_id], data_type, column_nullables[column_id]);
   }
 
-  auto table = std::make_shared<Table>(output_cxlumn_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   return std::make_pair(table, chunk_count);
 }
@@ -127,9 +127,9 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   const auto row_count = _read_value<ChunkOffset>(file);
 
   Segments output_segments;
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     output_segments.push_back(
-            _import_segment(file, row_count, table->cxlumn_data_type(cxlumn_id), table->cxlumn_is_nullable(cxlumn_id)));
+            _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
   table->append_chunk(output_segments);
 }
@@ -138,26 +138,26 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, 
                                                            DataType data_type, bool is_nullable) {
   std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
-    using CxlumnDataType = typename decltype(type)::type;
-    result = _import_segment<CxlumnDataType>(file, row_count, is_nullable);
+    using ColumnDataType = typename decltype(type)::type;
+    result = _import_segment<ColumnDataType>(file, row_count, is_nullable);
   });
 
   return result;
 }
 
-template <typename CxlumnDataType>
+template <typename ColumnDataType>
 std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, ChunkOffset row_count,
                                                            bool is_nullable) {
-  const auto cxlumn_type = _read_value<BinarySegmentType>(file);
+  const auto column_type = _read_value<BinarySegmentType>(file);
 
-  switch (cxlumn_type) {
+  switch (column_type) {
     case BinarySegmentType::value_segment:
-      return _import_value_segment<CxlumnDataType>(file, row_count, is_nullable);
+      return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
     case BinarySegmentType::dictionary_segment:
-      return _import_dictionary_segment<CxlumnDataType>(file, row_count);
+      return _import_dictionary_segment<ColumnDataType>(file, row_count);
     default:
-      // This case happens if the read cxlumn type is not a valid BinarySegmentType.
-      Fail("Cannot import cxlumn: invalid cxlumn type");
+      // This case happens if the read column type is not a valid BinarySegmentType.
+      Fail("Cannot import column: invalid column type");
   }
 }
 

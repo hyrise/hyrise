@@ -41,20 +41,20 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t fl
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _cxlumn_string_widths(_min_cell_width, _max_cell_width, input_table_left());
+  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, input_table_left());
 
-  // print cxlumn headers
-  _out << "=== Cxlumns" << std::endl;
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
-    _out << "|" << std::setw(widths[cxlumn_id]) << input_table_left()->cxlumn_name(cxlumn_id) << std::setw(0);
+  // print column headers
+  _out << "=== Columns" << std::endl;
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_name(column_id) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->cxlumn_data_type(cxlumn_id));
-    _out << "|" << std::setw(widths[cxlumn_id]) << data_type << std::setw(0);
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(column_id));
+    _out << "|" << std::setw(widths[column_id]) << data_type << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -78,12 +78,12 @@ std::shared_ptr<const Table> Print::_on_execute() {
     // print the rows in the chunk
     for (size_t row = 0; row < chunk->size(); ++row) {
       _out << "|";
-      for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
-        auto cxlumn_width = widths[cxlumn_id];
-        auto cell = _truncate_cell((*chunk->get_segment(cxlumn_id))[row], cxlumn_width);
-        _out << std::setw(cxlumn_width) << cell << "|" << std::setw(0);
+        auto column_width = widths[column_id];
+        auto cell = _truncate_cell((*chunk->get_segment(column_id))[row], column_width);
+        _out << std::setw(column_width) << cell << "|" << std::setw(0);
       }
 
       if (_flags & PrintMvcc && chunk->has_mvcc_data()) {
@@ -109,25 +109,25 @@ std::shared_ptr<const Table> Print::_on_execute() {
   return input_table_left();
 }
 
-// In order to print the table as an actual table, with cxlumns being aligned, we need to calculate the
-// number of characters in the printed representation of each cxlumn
-// `min` and `max` can be used to limit the width of the cxlumns - however, every cxlumn fits at least the cxlumn's name
-std::vector<uint16_t> Print::_cxlumn_string_widths(uint16_t min, uint16_t max,
+// In order to print the table as an actual table, with columns being aligned, we need to calculate the
+// number of characters in the printed representation of each column
+// `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
+std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
                                                    const std::shared_ptr<const Table>& table) const {
-  std::vector<uint16_t> widths(table->cxlumn_count());
-  // calculate the length of the cxlumn name
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    widths[cxlumn_id] = std::max(min, static_cast<uint16_t>(table->cxlumn_name(cxlumn_id).size()));
+  std::vector<uint16_t> widths(table->column_count());
+  // calculate the length of the column name
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    widths[column_id] = std::max(min, static_cast<uint16_t>(table->column_name(column_id).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
 
-    for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
+    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (size_t row = 0; row < chunk->size(); ++row) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(cxlumn_id))[row]).size());
-        widths[cxlumn_id] = std::max({min, widths[cxlumn_id], std::min(max, cell_length)});
+        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[row]).size());
+        widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }
   }

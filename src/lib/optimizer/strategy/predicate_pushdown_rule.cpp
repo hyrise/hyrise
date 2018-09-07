@@ -76,7 +76,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     push_down(node, input);
     return true;
   } else if (input->type == LQPNodeType::Projection) {
-    // push below projection if the projection does not generate the cxlumn(s) that we are scanning on
+    // push below projection if the projection does not generate the column(s) that we are scanning on
     if (OperatorScanPredicate::from_expression(*predicate_node->predicate, *input->left_input()) != std::nullopt) {
       push_down(node, input);
       return true;

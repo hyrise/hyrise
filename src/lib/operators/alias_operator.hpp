@@ -6,11 +6,11 @@
 namespace opossum {
 
 /**
- * Forward the input cxlumns in the specified order with updated cxlumn names
+ * Forward the input columns in the specified order with updated column names
  */
 class AliasOperator : public AbstractReadOnlyOperator {
  public:
-  AliasOperator(const std::shared_ptr<const AbstractOperator>& input, const std::vector<CxlumnID>& cxlumn_ids,
+  AliasOperator(const std::shared_ptr<const AbstractOperator>& input, const std::vector<ColumnID>& column_ids,
                 const std::vector<std::string>& aliases);
 
   const std::string name() const override;
@@ -25,7 +25,7 @@ class AliasOperator : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
  private:
-  const std::vector<CxlumnID> _cxlumn_ids;
+  const std::vector<ColumnID> _column_ids;
   const std::vector<std::string> _aliases;
 };
 

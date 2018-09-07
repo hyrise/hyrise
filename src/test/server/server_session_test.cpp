@@ -73,7 +73,7 @@ class ServerSessionTest : public BaseTest {
     ON_CALL(*_connection, send_status_message(_)).WillByDefault(Invoke([](const NetworkMessageType&) {
       return boost::make_ready_future();
     }));
-    ON_CALL(*_connection, send_row_description(_)).WillByDefault(Invoke([](const std::vector<CxlumnDescription>&) {
+    ON_CALL(*_connection, send_row_description(_)).WillByDefault(Invoke([](const std::vector<ColumnDescription>&) {
       return boost::make_ready_future();
     }));
     ON_CALL(*_connection, send_data_row(_)).WillByDefault(Invoke([](const std::vector<std::string>&) {

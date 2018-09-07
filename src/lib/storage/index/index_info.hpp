@@ -8,7 +8,7 @@
 namespace opossum {
 
 struct IndexInfo {
-  std::vector<CxlumnID> cxlumn_ids;
+  std::vector<ColumnID> column_ids;
   std::string name;
   SegmentIndexType type;
 };

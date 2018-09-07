@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "base_single_cxlumn_table_scan_impl.hpp"
+#include "base_single_column_table_scan_impl.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -13,9 +13,9 @@ namespace opossum {
 class Table;
 class BaseValueSegment;
 
-class IsNullTableScanImpl : public BaseSingleCxlumnTableScanImpl {
+class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
+  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
                       const PredicateCondition& predicate_condition);
 
   void handle_segment(const ReferenceSegment& base_segment,
@@ -30,7 +30,7 @@ class IsNullTableScanImpl : public BaseSingleCxlumnTableScanImpl {
   void handle_segment(const BaseEncodedSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleCxlumnTableScanImpl::handle_segment;
+  using BaseSingleColumnTableScanImpl::handle_segment;
 
  private:
   /**

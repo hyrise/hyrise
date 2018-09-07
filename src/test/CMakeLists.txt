@@ -42,7 +42,7 @@ set(
     logical_query_plan/mock_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
-    logical_query_plan/show_cxlumns_node_test.cpp
+    logical_query_plan/show_columns_node_test.cpp
     logical_query_plan/show_tables_node_test.cpp
     logical_query_plan/sort_node_test.cpp
     logical_query_plan/stored_table_node_test.cpp
@@ -70,7 +70,7 @@ set(
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/drop_view_test.cpp
-    operators/maintenance/show_cxlumns_test.cpp
+    operators/maintenance/show_columns_test.cpp
     operators/maintenance/show_tables_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/operator_join_predicate_test.cpp
@@ -94,7 +94,7 @@ set(
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
-    optimizer/strategy/cxlumn_pruning_rule_test.cpp
+    optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
@@ -117,8 +117,8 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
-    statistics/cxlumn_statistics_test.cpp
-    statistics/cxlumn_statistics_test.cpp
+    statistics/column_statistics_test.cpp
+    statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
     statistics/statistics_test_utils.hpp
@@ -144,7 +144,7 @@ set(
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp
     storage/simd_bp128_test.cpp
-    storage/single_cxlumn_index_test.cpp
+    storage/single_column_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp
     storage/value_segment_test.cpp

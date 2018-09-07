@@ -11,12 +11,12 @@
 namespace opossum {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
-                                   const CxlumnID referenced_cxlumn_id, const std::shared_ptr<const PosList>& pos)
-    : BaseSegment(referenced_table->cxlumn_data_type(referenced_cxlumn_id)),
+                                   const ColumnID referenced_column_id, const std::shared_ptr<const PosList>& pos)
+    : BaseSegment(referenced_table->column_data_type(referenced_column_id)),
       _referenced_table(referenced_table),
-      _referenced_cxlumn_id(referenced_cxlumn_id),
+      _referenced_column_id(referenced_column_id),
       _pos_list(pos) {
-  Assert(_referenced_cxlumn_id < _referenced_table->cxlumn_count(), "CxlumnID out of range")
+  Assert(_referenced_column_id < _referenced_table->column_count(), "ColumnID out of range")
       DebugAssert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
 }
 
@@ -29,14 +29,14 @@ const AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset
 
   auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
-  return (*chunk->get_segment(_referenced_cxlumn_id))[row_id.chunk_offset];
+  return (*chunk->get_segment(_referenced_column_id))[row_id.chunk_offset];
 }
 
 void ReferenceSegment::append(const AllTypeVariant&) { Fail("ReferenceSegment is immutable"); }
 
 const std::shared_ptr<const PosList> ReferenceSegment::pos_list() const { return _pos_list; }
 const std::shared_ptr<const Table> ReferenceSegment::referenced_table() const { return _referenced_table; }
-CxlumnID ReferenceSegment::referenced_cxlumn_id() const { return _referenced_cxlumn_id; }
+ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
 
 size_t ReferenceSegment::size() const { return _pos_list->size(); }
 

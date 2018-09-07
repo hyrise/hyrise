@@ -1,6 +1,6 @@
 response_table {
-  cxlumn_type: "float"
-  cxlumn_name: "a"
+  column_type: "float"
+  column_name: "a"
   row {
     value {
       value_float: 1.1

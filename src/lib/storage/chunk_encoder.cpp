@@ -18,32 +18,32 @@ namespace opossum {
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert((data_types.size() == chunk->cxlumn_count()), "Number of cxlumn types must match the chunk’s cxlumn count.");
-  Assert((chunk_encoding_spec.size() == chunk->cxlumn_count()),
-         "Number of cxlumn encoding specs must match the chunk’s cxlumn count.");
+  Assert((data_types.size() == chunk->column_count()), "Number of column types must match the chunk’s column count.");
+  Assert((chunk_encoding_spec.size() == chunk->column_count()),
+         "Number of column encoding specs must match the chunk’s column count.");
 
-  std::vector<std::shared_ptr<SegmentStatistics>> cxlumn_statistics;
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-    const auto spec = chunk_encoding_spec[cxlumn_id];
+  std::vector<std::shared_ptr<SegmentStatistics>> column_statistics;
+  for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+    const auto spec = chunk_encoding_spec[column_id];
 
-    const auto data_type = data_types[cxlumn_id];
-    const auto base_segment = chunk->get_segment(cxlumn_id);
+    const auto data_type = data_types[column_id];
+    const auto base_segment = chunk->get_segment(column_id);
     const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(base_segment);
 
     Assert(value_segment != nullptr, "All segments of the chunk need to be of type ValueSegment<T>");
 
     if (spec.encoding_type == EncodingType::Unencoded) {
       // No need to encode, but we still want to have statistics for the now immutable value segment
-      cxlumn_statistics.push_back(SegmentStatistics::build_statistics(data_type, value_segment));
+      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, value_segment));
     } else {
       auto encoded_segment = encode_segment(spec.encoding_type, data_type, value_segment, spec.vector_compression_type);
-      chunk->replace_segment(cxlumn_id, encoded_segment);
-      cxlumn_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
+      chunk->replace_segment(column_id, encoded_segment);
+      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
     }
   }
 
   chunk->mark_immutable();
-  chunk->set_statistics(std::make_shared<ChunkStatistics>(cxlumn_statistics));
+  chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_data()) {
     chunk->get_scoped_mvcc_data_lock()->shrink();
@@ -52,13 +52,13 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
                                 const SegmentEncodingSpec& segment_encoding_spec) {
-  const auto chunk_encoding_spec = ChunkEncodingSpec{chunk->cxlumn_count(), segment_encoding_spec};
+  const auto chunk_encoding_spec = ChunkEncodingSpec{chunk->column_count(), segment_encoding_spec};
   encode_chunk(chunk, data_types, chunk_encoding_spec);
 }
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
-  const auto data_types = table->cxlumn_data_types();
+  const auto data_types = table->column_data_types();
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -72,7 +72,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const SegmentEncodingSpec& segment_encoding_spec) {
-  const auto data_types = table->cxlumn_data_types();
+  const auto data_types = table->column_data_types();
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -84,7 +84,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const std::vector<ChunkEncodingSpec>& chunk_encoding_specs) {
-  const auto cxlumn_types = table->cxlumn_data_types();
+  const auto column_types = table->column_data_types();
   const auto chunk_count = static_cast<size_t>(table->chunk_count());
   Assert(chunk_encoding_specs.size() == chunk_count, "Number of encoding specs must match table’s chunk count.");
 
@@ -92,30 +92,30 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
     auto chunk = table->get_chunk(chunk_id);
     const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
 
-    encode_chunk(chunk, cxlumn_types, chunk_encoding_spec);
+    encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert(chunk_encoding_spec.size() == table->cxlumn_count(),
-         "Number of encoding specs must match table’s cxlumn count.");
-  const auto cxlumn_types = table->cxlumn_data_types();
+  Assert(chunk_encoding_spec.size() == table->column_count(),
+         "Number of encoding specs must match table’s column count.");
+  const auto column_types = table->column_data_types();
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
-    encode_chunk(chunk, cxlumn_types, chunk_encoding_spec);
+    encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const SegmentEncodingSpec& segment_encoding_spec) {
-  const auto cxlumn_types = table->cxlumn_data_types();
+  const auto column_types = table->column_data_types();
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
 
-    encode_chunk(chunk, cxlumn_types, segment_encoding_spec);
+    encode_chunk(chunk, column_types, segment_encoding_spec);
   }
 }
 

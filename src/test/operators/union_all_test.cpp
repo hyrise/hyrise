@@ -6,7 +6,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression/pqp_cxlumn_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
@@ -41,8 +41,8 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
 TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
 
-  const auto a = PQPCxlumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
-  const auto b = PQPCxlumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
+  const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
+  const auto b = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
 
   auto projection =
       std::make_shared<Projection>(_table_wrapper_a, std::vector<std::shared_ptr<AbstractExpression>>{{a, b}});
@@ -54,7 +54,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   EXPECT_TABLE_EQ_UNORDERED(union_all->get_output(), expected_result);
 }
 
-TEST_F(OperatorsUnionAllTest, ThrowWrongCxlumnNumberException) {
+TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
   if (!IS_DEBUG) return;
   std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
   auto gt_c = std::make_shared<TableWrapper>(std::move(test_table_c));
@@ -65,7 +65,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongCxlumnNumberException) {
   EXPECT_THROW(union_all->execute(), std::exception);
 }
 
-TEST_F(OperatorsUnionAllTest, ThrowWrongCxlumnOrderException) {
+TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
   if (!IS_DEBUG) return;
   std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
   auto gt_d = std::make_shared<TableWrapper>(std::move(test_table_d));

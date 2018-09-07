@@ -64,14 +64,14 @@ set(
     expression/list_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
-    expression/lqp_cxlumn_expression.cpp
-    expression/lqp_cxlumn_expression.hpp
+    expression/lqp_column_expression.cpp
+    expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
     expression/parameter_expression.cpp
     expression/parameter_expression.hpp
-    expression/pqp_cxlumn_expression.cpp
-    expression/pqp_cxlumn_expression.hpp
+    expression/pqp_column_expression.cpp
+    expression/pqp_column_expression.hpp
     expression/pqp_select_expression.cpp
     expression/pqp_select_expression.hpp
     expression/unary_minus_expression.cpp
@@ -112,8 +112,8 @@ set(
     logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
-    logical_query_plan/lqp_cxlumn_reference.cpp
-    logical_query_plan/lqp_cxlumn_reference.hpp
+    logical_query_plan/lqp_column_reference.cpp
+    logical_query_plan/lqp_column_reference.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
@@ -124,8 +124,8 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
-    logical_query_plan/show_cxlumns_node.cpp
-    logical_query_plan/show_cxlumns_node.hpp
+    logical_query_plan/show_columns_node.cpp
+    logical_query_plan/show_columns_node.hpp
     logical_query_plan/show_tables_node.cpp
     logical_query_plan/show_tables_node.hpp
     logical_query_plan/sort_node.cpp
@@ -177,13 +177,13 @@ set(
     operators/join_index.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
-    operators/join_mpsm/cxlumn_materializer_numa.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
-    operators/join_sort_merge/cxlumn_materializer.hpp
+    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
@@ -191,8 +191,8 @@ set(
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/show_cxlumns.cpp
-    operators/maintenance/show_cxlumns.hpp
+    operators/maintenance/show_columns.cpp
+    operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
@@ -212,17 +212,17 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
-    operators/table_scan/base_single_cxlumn_table_scan_impl.cpp
-    operators/table_scan/base_single_cxlumn_table_scan_impl.hpp
+    operators/table_scan/base_single_column_table_scan_impl.cpp
+    operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/cxlumn_comparison_table_scan_impl.cpp
-    operators/table_scan/cxlumn_comparison_table_scan_impl.hpp
+    operators/table_scan/column_comparison_table_scan_impl.cpp
+    operators/table_scan/column_comparison_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
     operators/table_scan/like_table_scan_impl.hpp
-    operators/table_scan/single_cxlumn_table_scan_impl.cpp
-    operators/table_scan/single_cxlumn_table_scan_impl.hpp
+    operators/table_scan/single_column_table_scan_impl.cpp
+    operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -251,8 +251,8 @@ set(
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/constant_calculation_rule.cpp
     optimizer/strategy/constant_calculation_rule.hpp
-    optimizer/strategy/cxlumn_pruning_rule.cpp
-    optimizer/strategy/cxlumn_pruning_rule.hpp
+    optimizer/strategy/column_pruning_rule.cpp
+    optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
@@ -332,8 +332,8 @@ set(
     sql/sql_query_plan.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/base_cxlumn_statistics.cpp
-    statistics/base_cxlumn_statistics.hpp
+    statistics/base_column_statistics.cpp
+    statistics/base_column_statistics.hpp
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
@@ -341,10 +341,10 @@ set(
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
-    statistics/cxlumn_statistics.cpp
-    statistics/cxlumn_statistics.cpp
-    statistics/generate_cxlumn_statistics.cpp
-    statistics/generate_cxlumn_statistics.hpp
+    statistics/column_statistics.cpp
+    statistics/column_statistics.cpp
+    statistics/generate_column_statistics.cpp
+    statistics/generate_column_statistics.hpp
     statistics/generate_table_statistics.cpp
     statistics/generate_table_statistics.hpp
     statistics/statistics_import_export.cpp
@@ -440,8 +440,8 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
-    storage/table_cxlumn_definition.cpp
-    storage/table_cxlumn_definition.hpp
+    storage/table_column_definition.cpp
+    storage/table_column_definition.hpp
     storage/value_segment.cpp
     storage/value_segment.hpp
     storage/value_segment/null_value_vector_iterable.hpp

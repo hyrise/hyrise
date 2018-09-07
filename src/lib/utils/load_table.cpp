@@ -17,35 +17,35 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
   std::string line;
   std::getline(infile, line);
-  std::vector<std::string> cxlumn_names = _split<std::string>(line, '|');
+  std::vector<std::string> column_names = _split<std::string>(line, '|');
   std::getline(infile, line);
-  std::vector<std::string> cxlumn_types = _split<std::string>(line, '|');
+  std::vector<std::string> column_types = _split<std::string>(line, '|');
 
-  auto cxlumn_nullable = std::vector<bool>{};
-  for (auto& type : cxlumn_types) {
+  auto column_nullable = std::vector<bool>{};
+  for (auto& type : column_types) {
     auto type_nullable = _split<std::string>(type, '_');
     type = type_nullable[0];
 
     auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
-    cxlumn_nullable.push_back(nullable);
+    column_nullable.push_back(nullable);
   }
 
-  TableCxlumnDefinitions cxlumn_definitions;
-  for (size_t i = 0; i < cxlumn_names.size(); i++) {
-    const auto data_type = data_type_to_string.right.find(cxlumn_types[i]);
+  TableColumnDefinitions column_definitions;
+  for (size_t i = 0; i < column_names.size(); i++) {
+    const auto data_type = data_type_to_string.right.find(column_types[i]);
     Assert(data_type != data_type_to_string.right.end(),
-           std::string("Invalid data type ") + cxlumn_types[i] + " for cxlumn " + cxlumn_names[i]);
-    cxlumn_definitions.emplace_back(cxlumn_names[i], data_type->second, cxlumn_nullable[i]);
+           std::string("Invalid data type ") + column_types[i] + " for column " + column_names[i]);
+    column_definitions.emplace_back(column_names[i], data_type->second, column_nullable[i]);
   }
   std::shared_ptr<Table> test_table =
-      std::make_shared<Table>(cxlumn_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
+      std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   while (std::getline(infile, line)) {
     std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
 
-    for (auto cxlumn_id = 0u; cxlumn_id < values.size(); ++cxlumn_id) {
-      auto& value = values[cxlumn_id];
-      auto nullable = cxlumn_nullable[cxlumn_id];
+    for (auto column_id = 0u; column_id < values.size(); ++column_id) {
+      auto& value = values[column_id];
+      auto nullable = column_nullable[column_id];
 
       if (nullable && (value == AllTypeVariant{"null"})) {
         value = NULL_VALUE;

@@ -7,7 +7,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_cxlumn_reference.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
@@ -16,21 +16,21 @@ class TableStatistics;
 /**
  * Node that represents a table that has no data backing it, but may provide
  *  - (mocked) statistics
- *  - or just a cxlumn layout. It will pretend it created the cxlumns.
+ *  - or just a column layout. It will pretend it created the columns.
  * It is useful in tests (e.g. general LQP tests, optimizer tests that just rely on statistics and not actual data) and
  * the playground
  */
 class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
-  using CxlumnDefinitions = std::vector<std::pair<DataType, std::string>>;
+  using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const CxlumnDefinitions& cxlumn_definitions, const std::optional<std::string>& name = {});
+  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
 
-  LQPCxlumnReference get_cxlumn(const std::string& name) const;
+  LQPColumnReference get_column(const std::string& name) const;
 
-  const CxlumnDefinitions& cxlumn_definitions() const;
+  const ColumnDefinitions& column_definitions() const;
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& cxlumn_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
   std::string description() const override;
 
@@ -46,10 +46,10 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
  private:
   std::optional<std::string> _name;
-  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _cxlumn_expressions;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 
   // Constructor args to keep around for deep_copy()
-  CxlumnDefinitions _cxlumn_definitions;
+  ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
 };
 }  // namespace opossum

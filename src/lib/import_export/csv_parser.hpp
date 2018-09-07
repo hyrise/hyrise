@@ -39,7 +39,7 @@ class CsvParser {
 
  protected:
   /*
-   * Use the meta information stored in _meta to create a new table with according cxlumn description.
+   * Use the meta information stored in _meta to create a new table with according column description.
    */
   std::shared_ptr<Table> _create_table_from_meta();
 
@@ -67,7 +67,7 @@ class CsvParser {
    */
   void _sanitize_field(std::string& field);
 
-  // CSV meta information like chunk_size, cxlumn information, delimitor/seperator characters, etc.
+  // CSV meta information like chunk_size, column information, delimitor/seperator characters, etc.
   CsvMeta _meta;
 };
 }  // namespace opossum

@@ -47,11 +47,11 @@ DataType ArithmeticExpression::data_type() const {
   return expression_common_type(left_operand()->data_type(), right_operand()->data_type());
 }
 
-std::string ArithmeticExpression::as_cxlumn_name() const {
+std::string ArithmeticExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << _enclose_argument_as_cxlumn_name(*left_operand()) << " " << arithmetic_operator << " "
-         << _enclose_argument_as_cxlumn_name(*right_operand());
+  stream << _enclose_argument_as_column_name(*left_operand()) << " " << arithmetic_operator << " "
+         << _enclose_argument_as_column_name(*right_operand());
 
   return stream.str();
 }

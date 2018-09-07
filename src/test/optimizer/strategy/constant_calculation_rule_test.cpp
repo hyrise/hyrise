@@ -36,13 +36,13 @@ class ConstantCalculationRuleTest : public StrategyBaseTest {
     rule = std::make_shared<ConstantCalculationRule>();
 
     stored_table_node = StoredTableNode::make("table_a");
-    a = stored_table_node->get_cxlumn("a");
-    b = stored_table_node->get_cxlumn("b");
+    a = stored_table_node->get_column("a");
+    b = stored_table_node->get_column("b");
   }
 
   std::shared_ptr<ConstantCalculationRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
-  LQPCxlumnReference a, b;
+  LQPColumnReference a, b;
 };
 
 TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
@@ -53,8 +53,8 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
 
   /**
    * NOTE
-   * The ProjectionNode will still contain a Cxlumn calculating 1233+1
-   *    * Because it is not the job of the ConstantCalculationRule to remove redundant cxlumns
+   * The ProjectionNode will still contain a Column calculating 1233+1
+   *    * Because it is not the job of the ConstantCalculationRule to remove redundant columns
    *    * It isn't pruned because the Optimizer (TODO(anybody)!) can't rewrite root expressions, because
    *        AbstractLQPNode::node_expressions() returns them by value.
    */

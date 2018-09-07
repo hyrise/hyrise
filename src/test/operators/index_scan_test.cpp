@@ -37,16 +37,16 @@ class OperatorsIndexScanTest : public BaseTest {
     _chunk_ids_partly_compressed = std::vector<ChunkID>(int_int_5->chunk_count());
     std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0u});
 
-    _cxlumn_ids = std::vector<CxlumnID>{CxlumnID{0u}};
+    _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
       auto chunk = int_int_7->get_chunk(chunk_id);
-      chunk->template create_index<DerivedIndex>(_cxlumn_ids);
+      chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
     for (const auto& chunk_id : _chunk_ids_partly_compressed) {
       auto chunk = int_int_5->get_chunk(chunk_id);
-      chunk->template create_index<DerivedIndex>(_cxlumn_ids);
+      chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
     _int_int = std::make_shared<TableWrapper>(std::move(int_int_7));
@@ -55,13 +55,13 @@ class OperatorsIndexScanTest : public BaseTest {
     _int_int_small_chunk->execute();
   }
 
-  void ASSERT_CXLUMN_EQ(std::shared_ptr<const Table> table, const CxlumnID& cxlumn_id,
+  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
-        const auto& segment = *chunk->get_segment(cxlumn_id);
+        const auto& segment = *chunk->get_segment(column_id);
 
         const auto found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
@@ -84,7 +84,7 @@ class OperatorsIndexScanTest : public BaseTest {
   std::shared_ptr<TableWrapper> _int_int_small_chunk;
   std::vector<ChunkID> _chunk_ids;
   std::vector<ChunkID> _chunk_ids_partly_compressed;
-  std::vector<CxlumnID> _cxlumn_ids;
+  std::vector<ColumnID> _column_ids;
   SegmentIndexType _index_type;
 };
 
@@ -94,7 +94,7 @@ typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKe
 
 TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
 
-TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanOnDataTable) {
+TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
@@ -110,22 +110,22 @@ TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanOnDataTable) {
   tests[PredicateCondition::Between] = {104, 106, 108, 104, 106, 108};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_cxlumn_ids, test.first,
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
                                             right_values, right_values2);
 
     scan->execute();
 
     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-                                                        this->_cxlumn_ids, test.first, right_values, right_values2);
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
     scan_small_chunk->execute();
 
-    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
-    this->ASSERT_CXLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanValueGreaterThanMaxDictionaryValue) {
+TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -142,22 +142,22 @@ TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanValueGreaterThanMaxDictionary
   tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_cxlumn_ids, test.first,
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
                                             right_values, right_values2);
 
     scan->execute();
 
     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-                                                        this->_cxlumn_ids, test.first, right_values, right_values2);
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
     scan_small_chunk->execute();
 
-    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
-    this->ASSERT_CXLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanValueLessThanMinDictionaryValue) {
+TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -174,22 +174,22 @@ TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanValueLessThanMinDictionaryVal
   tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_cxlumn_ids, test.first,
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
                                             right_values, right_values2);
 
     scan->execute();
 
     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-                                                        this->_cxlumn_ids, test.first, right_values, right_values2);
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
     scan_small_chunk->execute();
 
-    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
-    this->ASSERT_CXLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanOnlySomeChunks) {
+TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
 
@@ -203,30 +203,30 @@ TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanOnlySomeChunks) {
   tests[PredicateCondition::Between] = {106, 106, 108};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_cxlumn_ids,
+    auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
                                             test.first, right_values, right_values2);
 
     scan->set_included_chunk_ids({ChunkID{0}, ChunkID{2}});
 
     scan->execute();
 
-    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
   }
 }
 
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
-  const auto right_values = std::vector<AllTypeVariant>(this->_cxlumn_ids.size(), AllTypeVariant{0});
+  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, this->_index_type, this->_cxlumn_ids,
+  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
                                                    PredicateCondition::GreaterThanEquals, right_values);
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
-  const auto right_values = std::vector<AllTypeVariant>(this->_cxlumn_ids.size(), AllTypeVariant{0});
+  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_cxlumn_ids,
+  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_column_ids,
                                                    PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
 }

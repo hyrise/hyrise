@@ -20,7 +20,7 @@ namespace opossum {
 /*
  * CsvConverter is a helper class that creates a ValueSegment by converting the given null terminated strings and placing
  * them at the given position.
- * The base class BaseCsvConverter allows us to handle different types of cxlumns uniformly.
+ * The base class BaseCsvConverter allows us to handle different types of columns uniformly.
  */
 
 class BaseCsvConverter {
@@ -72,7 +72,7 @@ class CsvConverter : public BaseCsvConverter {
       // clang-format on
       if (_config.reject_quoted_nonstrings) {
         Assert(value == unescape_copy(value, _config),
-               "Unexpected quoted string " + value + " encountered in non-string cxlumn");
+               "Unexpected quoted string " + value + " encountered in non-string column");
       } else {
         unescape(value, _config);
       }

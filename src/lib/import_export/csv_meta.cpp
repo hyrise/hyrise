@@ -55,14 +55,14 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
     assign_if_exists(config.rfc_mode, config_json, "rfc_mode");
   }
 
-  if (json.find("cxlumns") != json.end()) {
-    Assert(json.at("cxlumns").is_array(), "CSV meta file,\"Cxlumns\" field has to be a json array.");
-    for (const auto& cxlumn : json.at("cxlumns")) {
-      CxlumnMeta cxlumn_meta;
-      cxlumn_meta.name = cxlumn.at("name");
-      cxlumn_meta.type = cxlumn.at("type");
-      assign_if_exists(cxlumn_meta.nullable, cxlumn, "nullable");
-      meta.cxlumns.push_back(cxlumn_meta);
+  if (json.find("columns") != json.end()) {
+    Assert(json.at("columns").is_array(), "CSV meta file,\"Columns\" field has to be a json array.");
+    for (const auto& column : json.at("columns")) {
+      ColumnMeta column_meta;
+      column_meta.name = column.at("name");
+      column_meta.type = column.at("type");
+      assign_if_exists(column_meta.nullable, column, "nullable");
+      meta.columns.push_back(column_meta);
     }
   }
 
@@ -78,23 +78,23 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
                                          {"rfc_mode", meta.config.rfc_mode}};
 
-  auto cxlumns = nlohmann::json::parse("[]");
-  for (const auto& cxlumn_meta : meta.cxlumns) {
-    cxlumns.emplace_back(
-        nlohmann::json{{"name", cxlumn_meta.name}, {"type", cxlumn_meta.type}, {"nullable", cxlumn_meta.nullable}});
+  auto columns = nlohmann::json::parse("[]");
+  for (const auto& column_meta : meta.columns) {
+    columns.emplace_back(
+        nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
   if (meta.chunk_size == Chunk::MAX_SIZE) {
-    json = nlohmann::json{{"auto_compress", meta.auto_compress}, {"config", config}, {"cxlumns", cxlumns}};
+    json = nlohmann::json{{"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
   } else {
     json = nlohmann::json{{"chunk_size", meta.chunk_size},
                           {"auto_compress", meta.auto_compress},
                           {"config", config},
-                          {"cxlumns", cxlumns}};
+                          {"columns", columns}};
   }
 }
 
-bool operator==(const CxlumnMeta& left, const CxlumnMeta& right) {
+bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
   return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);
 }
 
@@ -106,8 +106,8 @@ bool operator==(const ParseConfig& left, const ParseConfig& right) {
 }
 
 bool operator==(const CsvMeta& left, const CsvMeta& right) {
-  return std::tie(left.chunk_size, left.auto_compress, left.config, left.cxlumns) ==
-         std::tie(right.chunk_size, right.auto_compress, right.config, right.cxlumns);
+  return std::tie(left.chunk_size, left.auto_compress, left.config, left.columns) ==
+         std::tie(right.chunk_size, right.auto_compress, right.config, right.columns);
 }
 
 }  // namespace opossum

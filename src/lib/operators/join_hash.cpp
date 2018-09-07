@@ -29,9 +29,9 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const CxlumnIDPair& cxlumn_ids, const PredicateCondition predicate_condition,
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                    const size_t radix_bits)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, cxlumn_ids, predicate_condition),
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
       _radix_bits(radix_bits) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
@@ -41,7 +41,7 @@ const std::string JoinHash::name() const { return "JoinHash"; }
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _cxlumn_ids, _predicate_condition);
+  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -49,8 +49,8 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
   std::shared_ptr<const AbstractOperator> probe_operator;
-  CxlumnID build_cxlumn_id;
-  CxlumnID probe_cxlumn_id;
+  ColumnID build_column_id;
+  ColumnID probe_column_id;
 
   // This is the expected implementation for swapping tables:
   // (1) if left or right outer join, outer relation becomes probe relation (we have to swap only for left outer)
@@ -66,23 +66,23 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
     // luckily we don't have to swap the operation itself here, because we only support the commutative Equi Join.
     build_operator = _input_right;
     probe_operator = _input_left;
-    build_cxlumn_id = _cxlumn_ids.second;
-    probe_cxlumn_id = _cxlumn_ids.first;
+    build_column_id = _column_ids.second;
+    probe_column_id = _column_ids.first;
   } else {
     build_operator = _input_left;
     probe_operator = _input_right;
-    build_cxlumn_id = _cxlumn_ids.first;
-    probe_cxlumn_id = _cxlumn_ids.second;
+    build_column_id = _column_ids.first;
+    probe_column_id = _column_ids.second;
   }
 
-  auto adjusted_cxlumn_ids = std::make_pair(build_cxlumn_id, probe_cxlumn_id);
+  auto adjusted_column_ids = std::make_pair(build_column_id, probe_column_id);
 
   auto build_input = build_operator->get_output();
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->cxlumn_data_type(build_cxlumn_id), probe_input->cxlumn_data_type(probe_cxlumn_id), build_operator,
-      probe_operator, _mode, adjusted_cxlumn_ids, _predicate_condition, inputs_swapped, _radix_bits);
+      build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
   return _impl->_on_execute();
 }
 
@@ -201,7 +201,7 @@ constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
 }
 
 template <typename T, typename HashedType>
-std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, CxlumnID cxlumn_id,
+std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
                                                 bool keep_nulls = false) {
@@ -221,7 +221,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   // fill work queue
   size_t output_offset = 0;
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-    auto segment = in_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
+    auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
     chunk_offsets[chunk_id] = output_offset;
     output_offset += segment->size();
@@ -239,7 +239,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       // Get information from work queue
       auto output_offset = chunk_offsets[chunk_id];
       auto output_iterator = elements->begin() + output_offset;
-      auto segment = in_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
+      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
       // prepare histogram
       histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
@@ -535,18 +535,18 @@ PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const Table>&
 
   std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
 
-  PosListsBySegment pos_lists_by_segment(input_table->cxlumn_count());
+  PosListsBySegment pos_lists_by_segment(input_table->column_count());
   auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
 
   const auto& input_chunks = input_table->chunks();
 
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {
+  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto pos_list_ptrs = std::make_shared<PosLists>(input_table->chunk_count());
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
-      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[cxlumn_id];
+      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[column_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
       *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;
@@ -570,10 +570,10 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
   std::shared_ptr<Table> dummy_table;
 
   // Add segments from input table to output chunk
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); ++cxlumn_id) {
+  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
-        const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[cxlumn_id];
+        const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[column_id];
 
         auto iter = output_pos_list_cache.find(input_table_pos_lists);
         if (iter == output_pos_list_cache.end()) {
@@ -594,19 +594,19 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         }
 
         auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
-            input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
+            input_table->get_chunk(ChunkID{0})->get_segment(column_id));
         output_segments.push_back(std::make_shared<ReferenceSegment>(
-            reference_segment->referenced_table(), reference_segment->referenced_cxlumn_id(), iter->second));
+            reference_segment->referenced_table(), reference_segment->referenced_column_id(), iter->second));
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
-        if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
-        output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
+        if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
+        output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {
-      output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list));
+      output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
     }
   }
 }
@@ -616,12 +616,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-               const CxlumnIDPair& cxlumn_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
+               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
                const size_t radix_bits)
       : _left(left),
         _right(right),
         _mode(mode),
-        _cxlumn_ids(cxlumn_ids),
+        _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped) {
     /*
@@ -670,7 +670,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const JoinMode _mode;
-  const CxlumnIDPair _cxlumn_ids;
+  const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
 
@@ -684,9 +684,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<const Table> _on_execute() override {
     /*
-    Preparing output table by adding cxlumns from left table.
+    Preparing output table by adding columns from left table.
     */
-    TableCxlumnDefinitions output_cxlumn_definitions;
+    TableColumnDefinitions output_column_definitions;
 
     auto right_in_table = _right->get_output();
     auto left_in_table = _left->get_output();
@@ -694,17 +694,17 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     if (_inputs_swapped) {
       // Semi/Anti joins are always swapped but do not need the outer relation
       if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
-        output_cxlumn_definitions = right_in_table->cxlumn_definitions();
+        output_column_definitions = right_in_table->column_definitions();
       } else {
-        output_cxlumn_definitions =
-            concatenated(right_in_table->cxlumn_definitions(), left_in_table->cxlumn_definitions());
+        output_column_definitions =
+            concatenated(right_in_table->column_definitions(), left_in_table->column_definitions());
       }
     } else {
-      output_cxlumn_definitions =
-          concatenated(left_in_table->cxlumn_definitions(), right_in_table->cxlumn_definitions());
+      output_column_definitions =
+          concatenated(left_in_table->column_definitions(), right_in_table->column_definitions());
     }
 
-    _output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
+    _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 
     /*
      * This flag is used in the materialization and probing phases.
@@ -748,11 +748,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     This helps choosing a scheduler node for the radix phase (see below).
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _cxlumn_ids.first, histograms_left,
+    auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
                                                                      _radix_bits, _partitioning_seed);
     // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
     auto materialized_right = materialize_input<RightType, HashedType>(
-        right_in_table, _cxlumn_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
+        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
 
     // Radix Partitioning phase
     /*
@@ -802,7 +802,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
-     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and cxlumns (>50 seen), this speeds up
+     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
      *  write_output_chunks a lot.
      *
      * They do two things:
@@ -810,7 +810,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *          PosLists Chunk by Chunk
      *      - Avoid creating the std::vector<const PosList*> for each Partition over and over again.
      *
-     * They hold one entry per cxlumn in the table, not per BaseSegment in a single chunk
+     * They hold one entry per column in the table, not per BaseSegment in a single chunk
      */
     PosListsBySegment left_pos_lists_by_segment;
     PosListsBySegment right_pos_lists_by_segment;
@@ -837,7 +837,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       Segments output_segments;
 
-      // we need to swap back the inputs, so that the order of the output cxlumns is not harmed
+      // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
         write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
 

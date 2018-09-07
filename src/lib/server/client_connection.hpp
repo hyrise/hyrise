@@ -15,8 +15,8 @@ struct ParsePacket;
 struct BindPacket;
 enum class NetworkMessageType : unsigned char;
 
-struct CxlumnDescription {
-  std::string cxlumn_name;
+struct ColumnDescription {
+  std::string column_name;
   uint64_t object_id;
   int64_t type_width;
 };
@@ -47,7 +47,7 @@ class ClientConnection : public std::enable_shared_from_this<ClientConnection> {
   boost::future<void> send_error(const std::string& message);
   boost::future<void> send_notice(const std::string& notice);
   boost::future<void> send_status_message(const NetworkMessageType& type);
-  boost::future<void> send_row_description(const std::vector<CxlumnDescription>& row_description);
+  boost::future<void> send_row_description(const std::vector<ColumnDescription>& row_description);
   boost::future<void> send_data_row(const std::vector<std::string>& row_strings);
   boost::future<void> send_command_complete(const std::string& message);
 

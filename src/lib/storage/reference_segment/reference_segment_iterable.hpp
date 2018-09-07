@@ -19,13 +19,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     const auto table = _segment.referenced_table();
-    const auto cxlumn_id = _segment.referenced_cxlumn_id();
+    const auto column_id = _segment.referenced_column_id();
 
     const auto begin_it = _segment.pos_list()->begin();
     const auto end_it = _segment.pos_list()->end();
 
-    auto begin = Iterator{table, cxlumn_id, begin_it, begin_it};
-    auto end = Iterator{table, cxlumn_id, begin_it, end_it};
+    auto begin = Iterator{table, column_id, begin_it, begin_it};
+    auto end = Iterator{table, column_id, begin_it, end_it};
     functor(begin, end);
   }
 
@@ -40,10 +40,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     using PosListIterator = PosList::const_iterator;
 
    public:
-    explicit Iterator(const std::shared_ptr<const Table> table, const CxlumnID cxlumn_id,
+    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _table{table},
-          _cxlumn_id{cxlumn_id},
+          _column_id{column_id},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it},
           _accessors{_table->chunk_count()} {}
@@ -75,14 +75,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
     void _create_accessor(const ChunkID chunk_id) const {
-      auto segment = _table->get_chunk(chunk_id)->get_segment(_cxlumn_id);
+      auto segment = _table->get_chunk(chunk_id)->get_segment(_column_id);
       auto accessor = std::move(create_segment_accessor<T>(segment));
       _accessors[chunk_id] = std::move(accessor);
     }
 
    private:
     const std::shared_ptr<const Table> _table;
-    const CxlumnID _cxlumn_id;
+    const ColumnID _column_id;
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;

@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "logical_query_plan/lqp_cxlumn_reference.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -16,7 +16,7 @@ class AbstractLQPNode;
 class JoinNode;
 class PredicateNode;
 
-struct CxlumnID;
+struct ColumnID;
 
 /**
  * This optimizer rule tries to find join conditions for cross join.
@@ -33,11 +33,11 @@ struct CxlumnID;
  * The rule traverses the LQP recursively searching for JoinNodes with JoinMode::Cross.
  * For each Cross Join Node it will look for an appropriate join condition
  * by searching the output nodes for PredicateNodes. Each PredicateNode is a potential candidate
- * but only those that compare two cxlumns are interesting enough to check.
- * When such a PredicateNode is found, the rule will check whether each CxlumnID comes from the left/right input.
+ * but only those that compare two columns are interesting enough to check.
+ * When such a PredicateNode is found, the rule will check whether each ColumnID comes from the left/right input.
  *
  * Note: Limited first iteration. This will only work on subtrees consisting of Joins and Predicates, so we don't
- * have to deal with CxlumnID re-mappings for now. Projections, Aggregates, etc. amidst Joins and Predicates
+ * have to deal with ColumnID re-mappings for now. Projections, Aggregates, etc. amidst Joins and Predicates
  * should be rare anyway.
  */
 class JoinDetectionRule : public AbstractRule {

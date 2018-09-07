@@ -15,17 +15,17 @@
 namespace opossum {
 
 /**
- * Operator to sort a table by a single cxlumn. This implements a stable sort, i.e., rows that share the same value will
+ * Operator to sort a table by a single column. This implements a stable sort, i.e., rows that share the same value will
  * maintain their relative order.
- * Multi-cxlumn sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
+ * Multi-column sort is not supported yet. For now, you will have to sort by the secondary criterion, then by the first
  */
 class Sort : public AbstractReadOnlyOperator {
  public:
   // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const CxlumnID cxlumn_id,
+  Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id,
        const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = Chunk::MAX_SIZE);
 
-  CxlumnID cxlumn_id() const;
+  ColumnID column_id() const;
   OrderByMode order_by_mode() const;
 
   const std::string name() const override;
@@ -41,13 +41,13 @@ class Sort : public AbstractReadOnlyOperator {
   // The operator is separated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain
   // task during the Sort process, as described later on.
-  template <typename SortCxlumnType>
+  template <typename SortColumnType>
   class SortImpl;
-  template <typename SortCxlumnType>
+  template <typename SortColumnType>
   class SortImplMaterializeOutput;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  const CxlumnID _cxlumn_id;
+  const ColumnID _column_id;
   const OrderByMode _order_by_mode;
   const size_t _output_chunk_size;
 };

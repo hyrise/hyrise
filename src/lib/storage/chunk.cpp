@@ -36,8 +36,8 @@ bool Chunk::is_mutable() const { return _is_mutable; }
 
 void Chunk::mark_immutable() { _is_mutable = false; }
 
-void Chunk::replace_segment(size_t cxlumn_id, const std::shared_ptr<BaseSegment>& segment) {
-  std::atomic_store(&_segments.at(cxlumn_id), segment);
+void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
+  std::atomic_store(&_segments.at(column_id), segment);
 }
 
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
@@ -58,17 +58,17 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseSegment> Chunk::get_segment(CxlumnID cxlumn_id) const {
-  return std::atomic_load(&_segments.at(cxlumn_id));
+std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
+  return std::atomic_load(&_segments.at(column_id));
 }
 
 const Segments& Chunk::segments() const { return _segments; }
 
-uint16_t Chunk::cxlumn_count() const { return _segments.size(); }
+uint16_t Chunk::column_count() const { return _segments.size(); }
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
-  auto first_segment = get_segment(CxlumnID{0});
+  auto first_segment = get_segment(ColumnID{0});
   return first_segment->size();
 }
 
@@ -99,8 +99,8 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<CxlumnID>& cxlumn_ids) const {
-  auto segments = _get_segments_for_ids(cxlumn_ids);
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID>& column_ids) const {
+  auto segments = _get_segments_for_ids(column_ids);
   return get_indices(segments);
 }
 
@@ -114,8 +114,8 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<CxlumnID>& cxlumn_ids) const {
-  auto segments = _get_segments_for_ids(cxlumn_ids);
+                                            const std::vector<ColumnID>& column_ids) const {
+  auto segments = _get_segments_for_ids(column_ids);
   return get_index(index_type, segments);
 }
 
@@ -126,15 +126,15 @@ void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
 }
 
 bool Chunk::references_exactly_one_table() const {
-  if (cxlumn_count() == 0) return false;
+  if (column_count() == 0) return false;
 
-  auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(CxlumnID{0}));
+  auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(ColumnID{0}));
   if (first_segment == nullptr) return false;
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
-  for (CxlumnID cxlumn_id{1}; cxlumn_id < cxlumn_count(); ++cxlumn_id) {
-    const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(cxlumn_id));
+  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
+    const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
     if (segment == nullptr) return false;
 
     if (first_referenced_table != segment->referenced_table()) return false;
@@ -182,18 +182,18 @@ size_t Chunk::estimate_memory_usage() const {
 }
 
 std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
-    const std::vector<CxlumnID>& cxlumn_ids) const {
+    const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
-                for (auto cxlumn_id : cxlumn_ids)
-                  if (cxlumn_id >= cxlumn_count()) return false;
+                for (auto column_id : column_ids)
+                  if (column_id >= column_count()) return false;
                 return true;
               }()),
-              "cxlumn ids not within range [0, cxlumn_count()).");
+              "column ids not within range [0, column_count()).");
 
   auto segments = std::vector<std::shared_ptr<const BaseSegment>>{};
-  segments.reserve(cxlumn_ids.size());
-  std::transform(cxlumn_ids.cbegin(), cxlumn_ids.cend(), std::back_inserter(segments),
-                 [&](const auto& cxlumn_id) { return get_segment(cxlumn_id); });
+  segments.reserve(column_ids.size());
+  std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(segments),
+                 [&](const auto& column_id) { return get_segment(column_id); });
   return segments;
 }
 
@@ -201,7 +201,7 @@ std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics;
 
 void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics) {
   Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
-  DebugAssert(chunk_statistics->statistics().size() == cxlumn_count(),
+  DebugAssert(chunk_statistics->statistics().size() == column_count(),
               "ChunkStatistics must have same number of segments as Chunk");
   _statistics = chunk_statistics;
 }

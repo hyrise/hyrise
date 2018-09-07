@@ -13,9 +13,9 @@
 
 namespace opossum {
 
-IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
+IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
                                          const PredicateCondition& predicate_condition)
-    : BaseSingleCxlumnTableScanImpl{in_table, base_cxlumn_id, predicate_condition} {
+    : BaseSingleColumnTableScanImpl{in_table, base_column_id, predicate_condition} {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
@@ -23,7 +23,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_
 void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  BaseSingleCxlumnTableScanImpl::handle_segment(base_segment, base_context);
+  BaseSingleColumnTableScanImpl::handle_segment(base_segment, base_context);
 
   const auto pos_list = *base_segment.pos_list();
 
@@ -50,7 +50,7 @@ void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   }
 
   DebugAssert(base_segment.is_nullable(),
-              "Cxlumns that are not nullable should have been caught by edge case handling.");
+              "Columns that are not nullable should have been caught by edge case handling.");
 
   auto base_segment_iterable = NullValueVectorIterable{base_segment.null_values()};
 
@@ -74,9 +74,9 @@ void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  const auto base_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
+  const auto base_column_type = _in_table->column_data_type(_left_column_id);
 
-  resolve_data_type(base_cxlumn_type, [&](auto type) {
+  resolve_data_type(base_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
     resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {

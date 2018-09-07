@@ -34,7 +34,7 @@ class AbstractBenchmarkTableGenerator {
    * However, this makes it hard to take care of a certain chunk_size. With nested loops
    * chunks only contain as many rows as there are iterations in the most inner loop.
    *
-   * In this method we basically generate the whole cxlumn in a single loop,
+   * In this method we basically generate the whole column in a single loop,
    * so that we can easily split when a Chunk is full. To do that we have all the cardinalities of the influencing
    * tables:
    * E.g. for the CUSTOMER table we have the following cardinalities:
@@ -43,22 +43,22 @@ class AbstractBenchmarkTableGenerator {
    * indices[2] = customer_size = 3000
    * So in total we have to generate 1*10*3000 = 30 000 customers.
    *
-   * @tparam T                  the type of the cxlumn
-   * @param table               the cxlumn shall be added to this table as well as cxlumn metadata
-   * @param name                the name of the cxlumn
+   * @tparam T                  the type of the column
+   * @param table               the column shall be added to this table as well as column metadata
+   * @param name                the name of the column
    * @param cardinalities       the cardinalities of the different 'nested loops',
    *                            e.g. 10 districts per warehouse results in {1, 10}
-   * @param generator_function  a lambda function to generate a vector of values for this cxlumn
+   * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_cxlumn(std::vector<opossum::Segments>& segments_by_chunk,
-                  opossum::TableCxlumnDefinitions& cxlumn_definitions, std::string name,
+  void add_column(std::vector<opossum::Segments>& segments_by_chunk,
+                  opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
-    bool is_first_cxlumn = cxlumn_definitions.size() == 0;
+    bool is_first_column = column_definitions.size() == 0;
 
     auto data_type = opossum::data_type_from_type<T>();
-    cxlumn_definitions.emplace_back(name, data_type);
+    column_definitions.emplace_back(name, data_type);
 
     /**
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
@@ -110,7 +110,7 @@ class AbstractBenchmarkTableGenerator {
         if (row_index % _chunk_size == _chunk_size - 1) {
           auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(data));
 
-          if (is_first_cxlumn) {
+          if (is_first_column) {
             segments_by_chunk.emplace_back();
             segments_by_chunk.back().push_back(value_segment);
           } else {
@@ -130,8 +130,8 @@ class AbstractBenchmarkTableGenerator {
     if (row_index % _chunk_size != 0) {
       auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(data));
 
-      // add Chunk if it is the first cxlumn, e.g. WAREHOUSE_ID in the example above
-      if (is_first_cxlumn) {
+      // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
+      if (is_first_column) {
         segments_by_chunk.emplace_back();
         segments_by_chunk.back().push_back(value_segment);
       } else {
@@ -142,24 +142,24 @@ class AbstractBenchmarkTableGenerator {
   }
 
   /**
-   * This method simplifies the interface for cxlumns
+   * This method simplifies the interface for columns
    * where only a single element is added in the inner loop.
    *
-   * @tparam T                  the type of the cxlumn
-   * @param table               the cxlumn shall be added to this table as well as cxlumn metadata
-   * @param name                the name of the cxlumn
+   * @tparam T                  the type of the column
+   * @param table               the column shall be added to this table as well as column metadata
+   * @param name                the name of the column
    * @param cardinalities       the cardinalities of the different 'nested loops',
    *                            e.g. 10 districts per warehouse results in {1, 10}
-   * @param generator_function  a lambda function to generate a value for this cxlumn
+   * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_cxlumn(std::vector<opossum::Segments>& segments_by_chunk,
-                  opossum::TableCxlumnDefinitions& cxlumn_definitions, std::string name,
+  void add_column(std::vector<opossum::Segments>& segments_by_chunk,
+                  opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
-    add_cxlumn(segments_by_chunk, cxlumn_definitions, name, cardinalities, wrapped_generator_function);
+    add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
 }  // namespace opossum

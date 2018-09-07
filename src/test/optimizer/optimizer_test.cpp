@@ -17,13 +17,13 @@ namespace opossum {
 class OptimizerTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    a = node_a->get_cxlumn("a");
-    b = node_a->get_cxlumn("b");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+    a = node_a->get_column("a");
+    b = node_a->get_column("b");
 
-    node_b = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-    x = node_b->get_cxlumn("x");
-    y = node_b->get_cxlumn("y");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    x = node_b->get_column("x");
+    y = node_b->get_column("y");
 
     select_lqp_a = LimitNode::make(to_expression(1), node_b);
     select_a = select_(select_lqp_a);
@@ -32,7 +32,7 @@ class OptimizerTest : public ::testing::Test {
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPCxlumnReference a, b, x, y;
+  LQPColumnReference a, b, x, y;
   std::shared_ptr<AbstractLQPNode> select_lqp_a, select_lqp_b;
   std::shared_ptr<LQPSelectExpression> select_a, select_b;
 };
@@ -68,7 +68,7 @@ TEST_F(OptimizerTest, RuleBatches) {
   optimizer.add_rule_batch(iterative_batch);
   optimizer.add_rule_batch(once_batch);
 
-  auto lqp = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}});
+  auto lqp = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
 
   optimizer.optimize(lqp);
 

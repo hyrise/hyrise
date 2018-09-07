@@ -53,12 +53,12 @@ class OperatorsExportBinaryTest : public BaseTest {
   const std::string filename = test_data_path + "export_test.bin";
 };
 
-TEST_F(OperatorsExportBinaryTest, TwoCxlumnsNoValues) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("FirstColumn", DataType::Int);
-  cxlumn_definitions.emplace_back("SecondColumn", DataType::String);
+TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("FirstColumn", DataType::Int);
+  column_definitions.emplace_back("SecondColumn", DataType::String);
 
-  table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 30000);
+  table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
@@ -68,11 +68,11 @@ TEST_F(OperatorsExportBinaryTest, TwoCxlumnsNoValues) {
   EXPECT_TRUE(compare_files("src/test/binary/TwoColumnsNoValues.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatCxlumn) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Float);
+TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Float);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 5);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -86,11 +86,11 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatCxlumn) {
   EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatCxlumn) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Float);
+TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Float);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -105,10 +105,10 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatCxlumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 5);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -124,10 +124,10 @@ TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -145,10 +145,10 @@ TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -166,14 +166,14 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -190,14 +190,14 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -216,15 +216,15 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionarySegment.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, AllTypesMixCxlumn) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -246,14 +246,14 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixCxlumn) {
 // different from a exported table with ValueSegments and the same content.
 // They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
 TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
@@ -263,7 +263,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(table_wrapper, CxlumnID{1}, PredicateCondition::NotEquals, 5);
+  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
   scan->execute();
 
   auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);
@@ -274,10 +274,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -295,10 +295,10 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -318,14 +318,14 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Int, true);
-  cxlumn_definitions.emplace_back("b", DataType::Float, true);
-  cxlumn_definitions.emplace_back("c", DataType::Long, true);
-  cxlumn_definitions.emplace_back("d", DataType::String, true);
-  cxlumn_definitions.emplace_back("e", DataType::Double, true);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -344,14 +344,14 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Int, true);
-  cxlumn_definitions.emplace_back("b", DataType::Float, true);
-  cxlumn_definitions.emplace_back("c", DataType::Long, true);
-  cxlumn_definitions.emplace_back("d", DataType::String, true);
-  cxlumn_definitions.emplace_back("e", DataType::Double, true);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

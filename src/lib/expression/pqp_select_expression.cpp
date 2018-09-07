@@ -10,7 +10,7 @@ namespace opossum {
 
 PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
                                          const bool nullable,
-                                         const std::vector<std::pair<ParameterID, CxlumnID>>& parameters)
+                                         const std::vector<std::pair<ParameterID, ColumnID>>& parameters)
     : AbstractExpression(ExpressionType::PQPSelect, {}),
       pqp(pqp),
       parameters(parameters),
@@ -30,17 +30,17 @@ std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
 
 DataType PQPSelectExpression::data_type() const {
   Assert(_data_type_info,
-         "Can't determine the DataType of this SelectExpression, probably because it returns multiple cxlumns");
+         "Can't determine the DataType of this SelectExpression, probably because it returns multiple columns");
   return _data_type_info->data_type;
 }
 
 bool PQPSelectExpression::is_nullable() const {
   Assert(_data_type_info,
-         "Can't determine the nullability of this SelectExpression, probably because it returns multiple cxlumns");
+         "Can't determine the nullability of this SelectExpression, probably because it returns multiple columns");
   return _data_type_info->nullable;
 }
 
-std::string PQPSelectExpression::as_cxlumn_name() const {
+std::string PQPSelectExpression::as_column_name() const {
   std::stringstream stream;
   stream << "SUBSELECT (PQP, " << pqp.get() << ")";
   return stream.str();

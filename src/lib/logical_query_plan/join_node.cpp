@@ -12,7 +12,7 @@
 #include "constant_mappings.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
@@ -33,12 +33,12 @@ std::string JoinNode::description() const {
   std::stringstream stream;
   stream << "[Join] Mode: " << join_mode_to_string.at(join_mode);
 
-  if (join_predicate) stream << " " << join_predicate->as_cxlumn_name();
+  if (join_predicate) stream << " " << join_predicate->as_column_name();
 
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::cxlumn_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoiNode's output expressions");
 
   /**
@@ -47,18 +47,18 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::cxlumn_express
    * of feeble code.
    */
 
-  const auto& left_expressions = left_input()->cxlumn_expressions();
-  const auto& right_expressions = right_input()->cxlumn_expressions();
+  const auto& left_expressions = left_input()->column_expressions();
+  const auto& right_expressions = right_input()->column_expressions();
 
   const auto output_both_inputs = join_mode != JoinMode::Semi && join_mode != JoinMode::Anti;
 
-  _cxlumn_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
+  _column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 
-  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _cxlumn_expressions.begin());
+  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _column_expressions.begin());
 
   if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
-  return _cxlumn_expressions;
+  return _column_expressions;
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> JoinNode::node_expressions() const {
@@ -89,7 +89,7 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     if (!operator_join_predicate) return cross_join_statistics;
 
     return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-        *right_input->get_statistics(), join_mode, operator_join_predicate->cxlumn_ids,
+        *right_input->get_statistics(), join_mode, operator_join_predicate->column_ids,
         operator_join_predicate->predicate_condition));
   }
 }

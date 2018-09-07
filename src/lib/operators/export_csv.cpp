@@ -41,14 +41,14 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   CsvMeta meta{};
   meta.chunk_size = table->max_chunk_size();
 
-  // Cxlumn Types
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    CxlumnMeta cxlumn_meta;
-    cxlumn_meta.name = table->cxlumn_name(cxlumn_id);
-    cxlumn_meta.type = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
-    cxlumn_meta.nullable = table->cxlumn_is_nullable(cxlumn_id);
+  // Column Types
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    ColumnMeta column_meta;
+    column_meta.name = table->column_name(column_id);
+    column_meta.type = data_type_to_string.left.at(table->column_data_type(column_id));
+    column_meta.nullable = table->column_is_nullable(column_id);
 
-    meta.cxlumns.push_back(cxlumn_meta);
+    meta.columns.push_back(column_meta);
   }
 
   nlohmann::json meta_json = meta;
@@ -65,7 +65,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
    * as it does not care about representation of values. Also, probably, the main reason for this,
    * it makes is very easy to load this data into a different database.
    * The disadvantage is that it can be quite slow if the data has been compressed before.
-   * Also, it does not involve the cxlumn-oriented style used in OpossumDB.
+   * Also, it does not involve the column-oriented style used in OpossumDB.
    */
 
   // Open file for writing
@@ -76,15 +76,15 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
    * Therefore we first iterate through the chunks, then through the rows
    * in the chunks and afterwards through the segments of the chunks.
    *
-   * This is a lot of iterating, but to convert a cxlumn-based table to
+   * This is a lot of iterating, but to convert a column-based table to
    * a row-based representation takes some effort.
    */
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
-      for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-        const auto segment = chunk->get_segment(cxlumn_id);
+      for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+        const auto segment = chunk->get_segment(column_id);
 
         // The previous implementation did a double dispatch (at least two virtual method calls)
         // So the subscript operator cannot be much slower.

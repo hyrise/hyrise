@@ -25,13 +25,13 @@ namespace {
 using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
 
 Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
-  // initialize matrix with table sizes, including cxlumn names/types
-  Matrix matrix(table->row_count() + 2, std::vector<opossum::AllTypeVariant>(table->cxlumn_count()));
+  // initialize matrix with table sizes, including column names/types
+  Matrix matrix(table->row_count() + 2, std::vector<opossum::AllTypeVariant>(table->column_count()));
 
-  // set cxlumn names/types
-  for (auto cxlumn_id = opossum::CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    matrix[0][cxlumn_id] = table->cxlumn_name(cxlumn_id);
-    matrix[1][cxlumn_id] = opossum::data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
+  // set column names/types
+  for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    matrix[0][column_id] = table->column_name(column_id);
+    matrix[1][column_id] = opossum::data_type_to_string.left.at(table->column_data_type(column_id));
   }
 
   // set values
@@ -42,11 +42,11 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
     // an empty table's chunk might be missing actual segments
     if (chunk->size() == 0) continue;
 
-    for (auto cxlumn_id = opossum::CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-      const auto segment = chunk->get_segment(cxlumn_id);
+    for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      const auto segment = chunk->get_segment(column_id);
 
       for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        matrix[row_offset + chunk_offset + 2][cxlumn_id] = (*segment)[chunk_offset];
+        matrix[row_offset + chunk_offset + 2][column_id] = (*segment)[chunk_offset];
       }
     }
     row_offset += chunk->size();
@@ -86,10 +86,10 @@ std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<
     }
 
     // Highlicht each (applicable) cell with highlight color
-    for (auto cxlumn_id = opossum::CxlumnID{0}; cxlumn_id < matrix[row_id].size(); cxlumn_id++) {
-      auto cell = boost::lexical_cast<std::string>(matrix[row_id][cxlumn_id]);
+    for (auto column_id = opossum::ColumnID{0}; column_id < matrix[row_id].size(); column_id++) {
+      auto cell = boost::lexical_cast<std::string>(matrix[row_id][column_id]);
       coloring = "";
-      if (highlight && it->second == cxlumn_id) {
+      if (highlight && it->second == column_id) {
         coloring = highlight_color;
       }
       stream << coloring << std::setw(8) << cell << ANSI_COLOR_RESET << " ";
@@ -134,52 +134,52 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   };
 
   // compare schema of tables
-  //  - cxlumn count
-  if (opossum_table->cxlumn_count() != expected_table->cxlumn_count()) {
-    const std::string error_type = "Cxlumn count mismatch";
-    const std::string error_msg = "Actual number of cxlumns: " + std::to_string(opossum_table->cxlumn_count()) + "\n" +
-                                  "Expected number of cxlumns: " + std::to_string(expected_table->cxlumn_count());
+  //  - column count
+  if (opossum_table->column_count() != expected_table->column_count()) {
+    const std::string error_type = "Column count mismatch";
+    const std::string error_msg = "Actual number of columns: " + std::to_string(opossum_table->column_count()) + "\n" +
+                                  "Expected number of columns: " + std::to_string(expected_table->column_count());
 
     print_table_comparison(error_type, error_msg);
     return false;
   }
 
-  //  - cxlumn names and types
-  DataType left_cxlumn_type, right_cxlumn_type;
-  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < expected_table->cxlumn_count(); ++cxlumn_id) {
-    left_cxlumn_type = opossum_table->cxlumn_data_type(cxlumn_id);
-    right_cxlumn_type = expected_table->cxlumn_data_type(cxlumn_id);
+  //  - column names and types
+  DataType left_column_type, right_column_type;
+  for (auto column_id = ColumnID{0}; column_id < expected_table->column_count(); ++column_id) {
+    left_column_type = opossum_table->column_data_type(column_id);
+    right_column_type = expected_table->column_data_type(column_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (type_cmp_mode == TypeCmpMode::Lenient) {
-      if (left_cxlumn_type == DataType::Double) {
-        left_cxlumn_type = DataType::Float;
-      } else if (left_cxlumn_type == DataType::Long) {
-        left_cxlumn_type = DataType::Int;
+      if (left_column_type == DataType::Double) {
+        left_column_type = DataType::Float;
+      } else if (left_column_type == DataType::Long) {
+        left_column_type = DataType::Int;
       }
 
-      if (right_cxlumn_type == DataType::Double) {
-        right_cxlumn_type = DataType::Float;
-      } else if (right_cxlumn_type == DataType::Long) {
-        right_cxlumn_type = DataType::Int;
+      if (right_column_type == DataType::Double) {
+        right_column_type = DataType::Float;
+      } else if (right_column_type == DataType::Long) {
+        right_column_type = DataType::Int;
       }
     }
 
-    if (opossum_table->cxlumn_name(cxlumn_id) != expected_table->cxlumn_name(cxlumn_id)) {
-      const std::string error_type = "Cxlumn name mismatch (cxlumn " + std::to_string(cxlumn_id) + ")";
-      const std::string error_msg = "Actual cxlumn name: " + opossum_table->cxlumn_name(cxlumn_id) + "\n" +
-                                    "Expected cxlumn name: " + expected_table->cxlumn_name(cxlumn_id);
+    if (opossum_table->column_name(column_id) != expected_table->column_name(column_id)) {
+      const std::string error_type = "Column name mismatch (column " + std::to_string(column_id) + ")";
+      const std::string error_msg = "Actual column name: " + opossum_table->column_name(column_id) + "\n" +
+                                    "Expected column name: " + expected_table->column_name(column_id);
 
-      print_table_comparison(error_type, error_msg, {{0, cxlumn_id}});
+      print_table_comparison(error_type, error_msg, {{0, column_id}});
       return false;
     }
 
-    if (left_cxlumn_type != right_cxlumn_type) {
-      const std::string error_type = "Cxlumn type mismatch (cxlumn " + std::to_string(cxlumn_id) + ")";
+    if (left_column_type != right_column_type) {
+      const std::string error_type = "Column type mismatch (column " + std::to_string(column_id) + ")";
       const std::string error_msg =
-          "Actual cxlumn type: " + data_type_to_string.left.at(opossum_table->cxlumn_data_type(cxlumn_id)) + "\n" +
-          "Expected cxlumn type: " + data_type_to_string.left.at(expected_table->cxlumn_data_type(cxlumn_id));
+          "Actual column type: " + data_type_to_string.left.at(opossum_table->column_data_type(column_id)) + "\n" +
+          "Expected column type: " + data_type_to_string.left.at(expected_table->column_data_type(column_id));
 
-      print_table_comparison(error_type, error_msg, {{1, cxlumn_id}});
+      print_table_comparison(error_type, error_msg, {{1, column_id}});
       return false;
     }
   }
@@ -205,45 +205,45 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   bool has_error = false;
   std::vector<std::pair<uint64_t, uint16_t>> mismatched_cells{};
 
-  const auto highlight_if = [&has_error, &mismatched_cells](bool statement, uint64_t row_id, uint16_t cxlumn_id) {
+  const auto highlight_if = [&has_error, &mismatched_cells](bool statement, uint64_t row_id, uint16_t column_id) {
     if (statement) {
       has_error = true;
-      mismatched_cells.push_back({row_id, cxlumn_id});
+      mismatched_cells.push_back({row_id, column_id});
     }
   };
 
   // Compare each cell, skipping header
   for (auto row_id = size_t{2}; row_id < opossum_matrix.size(); row_id++)
-    for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < opossum_matrix[row_id].size(); cxlumn_id++) {
-      if (variant_is_null(opossum_matrix[row_id][cxlumn_id]) || variant_is_null(expected_matrix[row_id][cxlumn_id])) {
-        highlight_if(!(variant_is_null(opossum_matrix[row_id][cxlumn_id]) &&
-                       variant_is_null(expected_matrix[row_id][cxlumn_id])),
-                     row_id, cxlumn_id);
-      } else if (opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Float) {
-        auto left_val = type_cast<float>(opossum_matrix[row_id][cxlumn_id]);
-        auto right_val = type_cast<float>(expected_matrix[row_id][cxlumn_id]);
+    for (auto column_id = ColumnID{0}; column_id < opossum_matrix[row_id].size(); column_id++) {
+      if (variant_is_null(opossum_matrix[row_id][column_id]) || variant_is_null(expected_matrix[row_id][column_id])) {
+        highlight_if(!(variant_is_null(opossum_matrix[row_id][column_id]) &&
+                       variant_is_null(expected_matrix[row_id][column_id])),
+                     row_id, column_id);
+      } else if (opossum_table->column_data_type(column_id) == DataType::Float) {
+        auto left_val = type_cast<float>(opossum_matrix[row_id][column_id]);
+        auto right_val = type_cast<float>(expected_matrix[row_id][column_id]);
 
-        highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, cxlumn_id);
-      } else if (opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Double) {
-        auto left_val = type_cast<double>(opossum_matrix[row_id][cxlumn_id]);
-        auto right_val = type_cast<double>(expected_matrix[row_id][cxlumn_id]);
+        highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, column_id);
+      } else if (opossum_table->column_data_type(column_id) == DataType::Double) {
+        auto left_val = type_cast<double>(opossum_matrix[row_id][column_id]);
+        auto right_val = type_cast<double>(expected_matrix[row_id][column_id]);
 
-        highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, cxlumn_id);
+        highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, column_id);
       } else {
-        if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Int ||
-                                                      opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Long)) {
-          auto left_val = type_cast<int64_t>(opossum_matrix[row_id][cxlumn_id]);
-          auto right_val = type_cast<int64_t>(expected_matrix[row_id][cxlumn_id]);
-          highlight_if(left_val != right_val, row_id, cxlumn_id);
+        if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->column_data_type(column_id) == DataType::Int ||
+                                                      opossum_table->column_data_type(column_id) == DataType::Long)) {
+          auto left_val = type_cast<int64_t>(opossum_matrix[row_id][column_id]);
+          auto right_val = type_cast<int64_t>(expected_matrix[row_id][column_id]);
+          highlight_if(left_val != right_val, row_id, column_id);
         } else {
-          highlight_if(opossum_matrix[row_id][cxlumn_id] != expected_matrix[row_id][cxlumn_id], row_id, cxlumn_id);
+          highlight_if(opossum_matrix[row_id][column_id] != expected_matrix[row_id][column_id], row_id, column_id);
         }
       }
     }
 
   if (has_error) {
     const std::string error_type = "Cell data mismatch";
-    std::string error_msg = "Mismatched cells (row,cxlumn): ";
+    std::string error_msg = "Mismatched cells (row,column): ";
     for (auto cell : mismatched_cells) {
       error_msg += "(" + std::to_string(cell.first - 2) + "," + std::to_string(cell.second) + ") ";
     }

@@ -8,21 +8,21 @@ namespace opossum {
 class AbstractOperator;
 
 /**
- * Each ParameterID is assigned a CxlumnID that contains the values for this parameter.
+ * Each ParameterID is assigned a ColumnID that contains the values for this parameter.
  */
 class PQPSelectExpression : public AbstractExpression {
  public:
-  using Parameters = std::vector<std::pair<ParameterID, CxlumnID>>;
+  using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 
-  // Constructor for single-cxlumn PQPSelectExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
+  // Constructor for single-column PQPSelectExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
   PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
                       const Parameters& parameters = {});
 
-  // Constructor for (potentially) multi-cxlumn PQPSelectExpressions as used in `EXISTS(SELECT ...)`
+  // Constructor for (potentially) multi-column PQPSelectExpressions as used in `EXISTS(SELECT ...)`
   explicit PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string as_cxlumn_name() const override;
+  std::string as_column_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
 
@@ -34,7 +34,7 @@ class PQPSelectExpression : public AbstractExpression {
   size_t _on_hash() const override;
 
  private:
-  // If the PQPSelectExpression returns precisely one cxlumn, it "has" this cxlumn's data type and nullability.
+  // If the PQPSelectExpression returns precisely one column, it "has" this column's data type and nullability.
   struct DataTypeInfo {
     DataTypeInfo(const DataType data_type, const bool nullable);
 

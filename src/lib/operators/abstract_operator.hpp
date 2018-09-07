@@ -47,7 +47,7 @@ enum class OperatorType {
   Validate,
   CreateView,
   DropView,
-  ShowCxlumns,
+  ShowColumns,
   ShowTables,
 
   Mock  // for Tests that need to Mock operators

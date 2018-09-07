@@ -1,6 +1,6 @@
 {
     "chunk_size": 20,
-    "cxlumns": [
+    "columns": [
         {
             "name": "b",
             "type": "float"

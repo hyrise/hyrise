@@ -30,10 +30,10 @@ std::shared_ptr<AbstractOperator> Difference::_on_deep_copy(
 void Difference::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Difference::_on_execute() {
-  DebugAssert(input_table_left()->cxlumn_definitions() == input_table_right()->cxlumn_definitions(),
-              "Input tables must have same number of cxlumns");
+  DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
+              "Input tables must have same number of columns");
 
-  auto output = std::make_shared<Table>(input_table_left()->cxlumn_definitions(), TableType::References);
+  auto output = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
 
   // 1. We create a set of all right input rows as concatenated strings.
 
@@ -44,8 +44,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     auto chunk = input_table_right()->get_chunk(chunk_id);
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
-    for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_right()->cxlumn_count(); cxlumn_id++) {
-      const auto base_segment = chunk->get_segment(cxlumn_id);
+    for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); column_id++) {
+      const auto base_segment = chunk->get_segment(column_id);
 
       // filling the row vector with all values from this segment
       auto row_string_buffer = std::stringstream{};
@@ -73,18 +73,18 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
 
-    for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); cxlumn_id++) {
-      const auto base_segment = in_chunk->get_segment(cxlumn_id);
+    for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); column_id++) {
+      const auto base_segment = in_chunk->get_segment(column_id);
       // temporary variables needed to create the reference segment
       const auto referenced_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
-          input_table_left()->get_chunk(chunk_id)->get_segment(cxlumn_id));
-      auto out_cxlumn_id = cxlumn_id;
+          input_table_left()->get_chunk(chunk_id)->get_segment(column_id));
+      auto out_column_id = column_id;
       auto out_referenced_table = input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
 
       if (referenced_segment) {
         // if the input segment was a reference segment then the output segment must reference the same values/objects
-        out_cxlumn_id = referenced_segment->referenced_cxlumn_id();
+        out_column_id = referenced_segment->referenced_column_id();
         out_referenced_table = referenced_segment->referenced_table();
         in_pos_list = referenced_segment->pos_list();
       }
@@ -98,7 +98,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
       // creating a ReferenceSegment for the output
       auto out_reference_segment =
-          std::make_shared<ReferenceSegment>(out_referenced_table, out_cxlumn_id, pos_list_out);
+          std::make_shared<ReferenceSegment>(out_referenced_table, out_column_id, pos_list_out);
       output_segments.push_back(out_reference_segment);
     }
 
@@ -106,8 +106,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk->size(); chunk_offset++) {
       // creating string representation off the row at chunk_offset
       auto row_string_buffer = std::stringstream{};
-      for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); cxlumn_id++) {
-        const auto base_segment = in_chunk->get_segment(cxlumn_id);
+      for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); column_id++) {
+        const auto base_segment = in_chunk->get_segment(column_id);
 
         // Previously a virtual method of the BaseSegment interface was called here.
         // It was replaced with a call to the subscript operator as that is equally slow.

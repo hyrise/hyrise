@@ -20,9 +20,9 @@ class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistic
   const std::vector<std::shared_ptr<SegmentStatistics>>& statistics() const { return _statistics; }
 
   /**
-   * calls can_prune on the SegmentStatistics corresponding to cxlumn_id
+   * calls can_prune on the SegmentStatistics corresponding to column_id
    */
-  bool can_prune(const CxlumnID cxlumn_id, const AllTypeVariant& value,
+  bool can_prune(const ColumnID column_id, const AllTypeVariant& value,
                  const PredicateCondition predicate_condition) const;
 
  protected:

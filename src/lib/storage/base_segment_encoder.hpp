@@ -120,8 +120,8 @@ class SegmentEncoder : public BaseSegmentEncoder {
    * Hint: Use hana::value() if you want to use the result
    *       in a constant expression such as constexpr-if.
    */
-  template <typename CxlumnDataType>
-  auto supports(hana::basic_type<CxlumnDataType> data_type) const {
+  template <typename ColumnDataType>
+  auto supports(hana::basic_type<ColumnDataType> data_type) const {
     return encoding_supports_data_type(Derived::_encoding_type, data_type);
   }
 
@@ -130,12 +130,12 @@ class SegmentEncoder : public BaseSegmentEncoder {
    *
    * Compiles only for supported data types.
    */
-  template <typename CxlumnDataType>
+  template <typename ColumnDataType>
   std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& base_value_segment,
-                                             hana::basic_type<CxlumnDataType> data_type_c) {
+                                             hana::basic_type<ColumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
 
-    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<CxlumnDataType>>(base_value_segment);
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_value_segment);
     Assert(value_segment != nullptr, "Value segment must have passed data type.");
 
     return _self()._on_encode(value_segment);

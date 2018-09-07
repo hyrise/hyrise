@@ -13,7 +13,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_cxlumn_reference.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "resolve_type.hpp"
@@ -24,7 +24,7 @@ std::string ConstantCalculationRule::name() const { return "Constant Calculation
 
 bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
-  // `MIN(2-1)`, since `2-1` is a cxlumn.
+  // `MIN(2-1)`, since `2-1` is a column.
   if (node->type == LQPNodeType::Aggregate) return _apply_to_inputs(node);
 
   for (auto& expression : node->node_expressions()) {

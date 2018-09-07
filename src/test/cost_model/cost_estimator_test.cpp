@@ -15,12 +15,12 @@ namespace opossum {
 class CostEstimatorTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}}, "a");
-    a_a = node_a->get_cxlumn("a");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+    a_a = node_a->get_column("a");
   }
 
   std::shared_ptr<MockNode> node_a;
-  LQPCxlumnReference a_a;
+  LQPColumnReference a_a;
 };
 
 TEST_F(CostEstimatorTest, DiamondShape) {

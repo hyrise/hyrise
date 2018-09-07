@@ -16,9 +16,9 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
   return std::make_shared<InExpression>(value()->deep_copy(), set()->deep_copy());
 }
 
-std::string InExpression::as_cxlumn_name() const {
+std::string InExpression::as_column_name() const {
   std::stringstream stream;
-  stream << _enclose_argument_as_cxlumn_name(*value()) << " IN " << set()->as_cxlumn_name();
+  stream << _enclose_argument_as_column_name(*value()) << " IN " << set()->as_column_name();
   return stream.str();
 }
 

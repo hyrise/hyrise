@@ -15,10 +15,10 @@ UnionNode::UnionNode(const UnionMode union_mode) : AbstractLQPNode(LQPNodeType::
 
 std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(union_mode); }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::cxlumn_expressions() const {
-  Assert(expressions_equal(left_input()->cxlumn_expressions(), right_input()->cxlumn_expressions()),
+const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::column_expressions() const {
+  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
          "Input Expressions must match");
-  return left_input()->cxlumn_expressions();
+  return left_input()->column_expressions();
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(

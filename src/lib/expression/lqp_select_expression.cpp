@@ -32,12 +32,12 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   return std::make_shared<LQPSelectExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
-std::string LQPSelectExpression::as_cxlumn_name() const {
+std::string LQPSelectExpression::as_column_name() const {
   std::stringstream stream;
   stream << "SUBSELECT (LQP, " << lqp.get();
 
   if (!arguments.empty()) {
-    stream << ", Parameters: " << expression_cxlumn_names(arguments);
+    stream << ", Parameters: " << expression_column_names(arguments);
   }
 
   stream << ")";
@@ -46,15 +46,15 @@ std::string LQPSelectExpression::as_cxlumn_name() const {
 }
 
 DataType LQPSelectExpression::data_type() const {
-  Assert(lqp->cxlumn_expressions().size() == 1,
-         "Can only determine the DataType of SelectExpressions that return exactly one cxlumn");
-  return lqp->cxlumn_expressions()[0]->data_type();
+  Assert(lqp->column_expressions().size() == 1,
+         "Can only determine the DataType of SelectExpressions that return exactly one column");
+  return lqp->column_expressions()[0]->data_type();
 }
 
 bool LQPSelectExpression::is_nullable() const {
-  Assert(lqp->cxlumn_expressions().size() == 1,
-         "Can only determine the nullability of SelectExpressions that return exactly one cxlumn");
-  return lqp->cxlumn_expressions()[0]->is_nullable();
+  Assert(lqp->column_expressions().size() == 1,
+         "Can only determine the nullability of SelectExpressions that return exactly one column");
+  return lqp->column_expressions()[0]->is_nullable();
 }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {

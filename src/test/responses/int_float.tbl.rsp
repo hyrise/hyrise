@@ -1,8 +1,8 @@
 response_table {
-  cxlumn_type: "int"
-  cxlumn_type: "float"
-  cxlumn_name: "a"
-  cxlumn_name: "b"
+  column_type: "int"
+  column_type: "float"
+  column_name: "a"
+  column_name: "b"
   row {
     value {
       value_int: 12345

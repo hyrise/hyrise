@@ -4,7 +4,7 @@
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_cxlumn_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
@@ -23,8 +23,8 @@ class PQPSelectExpressionTest : public ::testing::Test {
   void SetUp() {
     table_a = load_table("src/test/tables/int_float.tbl");
     StorageManager::get().add_table("int_float", table_a);
-    a_a = PQPCxlumnExpression::from_table(*table_a, "a");
-    a_b = PQPCxlumnExpression::from_table(*table_a, "b");
+    a_a = PQPColumnExpression::from_table(*table_a, "a");
+    a_b = PQPColumnExpression::from_table(*table_a, "b");
 
     // Build a Select returning a SINGLE NON-NULLABLE VALUE and taking ONE PARAMETER
     const auto parameter_a = parameter_(ParameterID{2});
@@ -32,13 +32,13 @@ class PQPSelectExpressionTest : public ::testing::Test {
     const auto projection_a = std::make_shared<Projection>(get_table_a, expression_vector(add_(a_a, parameter_a)));
     const auto limit_a = std::make_shared<Limit>(projection_a, value_(1));
     pqp_single_value_one_parameter = limit_a;
-    parameters_a = {std::make_pair(ParameterID{2}, CxlumnID{3})};
+    parameters_a = {std::make_pair(ParameterID{2}, ColumnID{3})};
     select_single_value_one_parameter =
         std::make_shared<PQPSelectExpression>(pqp_single_value_one_parameter, DataType::Int, false, parameters_a);
 
     // Build a Select returning a TABLE and taking NO PARAMETERS
     const auto get_table_b = std::make_shared<GetTable>("int_float");
-    const auto table_scan_b = std::make_shared<TableScan>(get_table_b, CxlumnID{0}, PredicateCondition::GreaterThan, 5);
+    const auto table_scan_b = std::make_shared<TableScan>(get_table_b, ColumnID{0}, PredicateCondition::GreaterThan, 5);
     pqp_table = table_scan_b;
     select_table = std::make_shared<PQPSelectExpression>(pqp_table);
   }
@@ -46,7 +46,7 @@ class PQPSelectExpressionTest : public ::testing::Test {
   void TearDown() { StorageManager::reset(); }
 
   std::shared_ptr<Table> table_a;
-  std::shared_ptr<PQPCxlumnExpression> a_a, a_b;
+  std::shared_ptr<PQPColumnExpression> a_a, a_b;
   PQPSelectExpression::Parameters parameters_a;
   std::shared_ptr<PQPSelectExpression> select_single_value_one_parameter;
   std::shared_ptr<PQPSelectExpression> select_table;
@@ -71,7 +71,7 @@ TEST_F(PQPSelectExpressionTest, DeepCopy) {
 
   ASSERT_EQ(select_single_value_one_parameter_copy->parameters.size(), 1u);
   EXPECT_EQ(select_single_value_one_parameter_copy->parameters[0].first, ParameterID{2});
-  EXPECT_EQ(select_single_value_one_parameter_copy->parameters[0].second, CxlumnID{3});
+  EXPECT_EQ(select_single_value_one_parameter_copy->parameters[0].second, ColumnID{3});
   EXPECT_NE(select_single_value_one_parameter_copy->pqp, select_single_value_one_parameter->pqp);
   EXPECT_EQ(select_single_value_one_parameter_copy->pqp->type(), OperatorType::Limit);
 
@@ -107,9 +107,9 @@ TEST_F(PQPSelectExpressionTest, IsNullable) {
   EXPECT_TRUE(select_nullable->is_nullable());
 }
 
-TEST_F(PQPSelectExpressionTest, AsCxlumnName) {
-  EXPECT_TRUE(std::regex_search(select_table->as_cxlumn_name(), std::regex{"SUBSELECT \\(PQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(select_single_value_one_parameter->as_cxlumn_name(),
+TEST_F(PQPSelectExpressionTest, AsColumnName) {
+  EXPECT_TRUE(std::regex_search(select_table->as_column_name(), std::regex{"SUBSELECT \\(PQP, 0x[0-9a-f]+\\)"}));
+  EXPECT_TRUE(std::regex_search(select_single_value_one_parameter->as_column_name(),
                                 std::regex{"SUBSELECT \\(PQP, 0x[0-9a-f]+\\)"}));
 }
 

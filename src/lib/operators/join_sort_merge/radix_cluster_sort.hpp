@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "cxlumn_materializer.hpp"
+#include "column_materializer.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
@@ -48,12 +48,12 @@ template <typename T>
 class RadixClusterSort {
  public:
   RadixClusterSort(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                   const CxlumnIDPair& cxlumn_ids, bool equi_case, const bool materialize_null_left,
+                   const ColumnIDPair& column_ids, bool equi_case, const bool materialize_null_left,
                    const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
-        _left_cxlumn_id{cxlumn_ids.first},
-        _right_cxlumn_id{cxlumn_ids.second},
+        _left_column_id{column_ids.first},
+        _right_column_id{column_ids.second},
         _equi_case{equi_case},
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
@@ -107,8 +107,8 @@ class RadixClusterSort {
   // Input parameters
   std::shared_ptr<const Table> _input_table_left;
   std::shared_ptr<const Table> _input_table_right;
-  const CxlumnID _left_cxlumn_id;
-  const CxlumnID _right_cxlumn_id;
+  const ColumnID _left_column_id;
+  const ColumnID _right_column_id;
   bool _equi_case;
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
@@ -335,10 +335,10 @@ class RadixClusterSort {
     RadixClusterOutput<T> output;
 
     // Sort the chunks of the input tables in the non-equi cases
-    CxlumnMaterializer<T> left_cxlumn_materializer(!_equi_case, _materialize_null_left);
-    CxlumnMaterializer<T> right_cxlumn_materializer(!_equi_case, _materialize_null_right);
-    auto materialization_left = left_cxlumn_materializer.materialize(_input_table_left, _left_cxlumn_id);
-    auto materialization_right = right_cxlumn_materializer.materialize(_input_table_right, _right_cxlumn_id);
+    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
+    auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
     auto materialized_left_segments = std::move(materialization_left.first);
     auto materialized_right_segments = std::move(materialization_right.first);
     output.null_rows_left = std::move(materialization_left.second);

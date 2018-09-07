@@ -40,45 +40,45 @@ class JoinSemiAntiTest : public JoinTest {
 };
 
 TEST_F(JoinSemiAntiTest, SemiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {CxlumnID{0}, CxlumnID{0}}, PredicateCondition::Equals,
+  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
                              JoinMode::Semi, "src/test/tables/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
-  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {CxlumnID{0}, CxlumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
+  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
                              "src/test/tables/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {CxlumnID{0}, CxlumnID{0}},
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
                              PredicateCondition::Equals, JoinMode::Semi,
                              "src/test/tables/joinoperators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
-  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {CxlumnID{0}, CxlumnID{0}}, PredicateCondition::Equals,
+  test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
                              JoinMode::Anti, "src/test/tables/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
-  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
-  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
-  test_join_output<JoinHash>(scan_a, scan_b, {CxlumnID{0}, CxlumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
+  test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
                              "src/test/tables/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
-  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {CxlumnID{0}, CxlumnID{0}},
+  test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
                              PredicateCondition::Equals, JoinMode::Anti,
                              "src/test/tables/joinoperators/anti_result.tbl", 1);
 }

@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -12,34 +12,34 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-MockNode::MockNode(const CxlumnDefinitions& cxlumn_definitions, const std::optional<std::string>& name)
-    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _cxlumn_definitions(cxlumn_definitions) {}
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
+    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _column_definitions(column_definitions) {}
 
-LQPCxlumnReference MockNode::get_cxlumn(const std::string& name) const {
-  const auto& cxlumn_definitions = this->cxlumn_definitions();
+LQPColumnReference MockNode::get_column(const std::string& name) const {
+  const auto& column_definitions = this->column_definitions();
 
-  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_definitions.size(); ++cxlumn_id) {
-    if (cxlumn_definitions[cxlumn_id].second == name) return LQPCxlumnReference{shared_from_this(), cxlumn_id};
+  for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
+    if (column_definitions[column_id].second == name) return LQPColumnReference{shared_from_this(), column_id};
   }
 
-  Fail("Couldn't find cxlumn named '"s + name + "' in MockNode");
+  Fail("Couldn't find column named '"s + name + "' in MockNode");
 }
 
-const MockNode::CxlumnDefinitions& MockNode::cxlumn_definitions() const { return _cxlumn_definitions; }
+const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::cxlumn_expressions() const {
-  if (!_cxlumn_expressions) {
-    _cxlumn_expressions.emplace();
+const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
+  if (!_column_expressions) {
+    _column_expressions.emplace();
 
-    const auto cxlumn_count = _cxlumn_definitions.size();
+    const auto column_count = _column_definitions.size();
 
-    for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
-      const auto cxlumn_reference = LQPCxlumnReference(shared_from_this(), cxlumn_id);
-      _cxlumn_expressions->emplace_back(std::make_shared<LQPCxlumnExpression>(cxlumn_reference));
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      const auto column_reference = LQPColumnReference(shared_from_this(), column_id);
+      _column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(column_reference));
     }
   }
 
-  return *_cxlumn_expressions;
+  return *_column_expressions;
 }
 
 std::string MockNode::description() const { return "[MockNode '"s + _name.value_or("Unnamed") + "']"; }
@@ -53,14 +53,14 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
 void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }
 
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  const auto mock_node = MockNode::make(_cxlumn_definitions);
+  const auto mock_node = MockNode::make(_column_definitions);
   mock_node->set_statistics(_table_statistics);
   return mock_node;
 }
 
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
-  return _cxlumn_definitions == mock_node._cxlumn_definitions && _table_statistics == mock_node._table_statistics;
+  return _column_definitions == mock_node._column_definitions && _table_statistics == mock_node._table_statistics;
 }
 
 }  // namespace opossum

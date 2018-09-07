@@ -55,7 +55,7 @@ float CostModelLogical::_get_expression_cost_multiplier(const std::shared_ptr<Ab
   visit_expression(expression, [&](const auto& sub_expression) {
     multiplier += 1.0f;
 
-    if (sub_expression->type == ExpressionType::LQPCxlumn) {
+    if (sub_expression->type == ExpressionType::LQPColumn) {
       multiplier += 1.0f;
     }
 

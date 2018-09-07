@@ -16,7 +16,7 @@ namespace opossum {
  * ```c++
  *   pmr_vector<std::optional<T>> values_and_nulls;
  *   values_and_nulls.reserve(chunk->size()); // Optional
- *   materialize_values_and_nulls(*chunk->get_segment(expression->cxlumn_id()), values_and_nulls);
+ *   materialize_values_and_nulls(*chunk->get_segment(expression->column_id()), values_and_nulls);
  *   return values_and_nulls;
  * ```
  */

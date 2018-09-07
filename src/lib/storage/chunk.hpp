@@ -18,7 +18,7 @@
 #include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp"
 #include "mvcc_data.hpp"
-#include "table_cxlumn_definition.hpp"
+#include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 #include "utils/scoped_locking_ptr.hpp"
@@ -52,11 +52,11 @@ class Chunk : private Noncopyable {
 
   void mark_immutable();
 
-  // Atomically replaces the current segment at cxlumn_id with the passed segment
-  void replace_segment(size_t cxlumn_id, const std::shared_ptr<BaseSegment>& segment);
+  // Atomically replaces the current segment at column_id with the passed segment
+  void replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment);
 
   // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
-  uint16_t cxlumn_count() const;
+  uint16_t column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;
@@ -75,7 +75,7 @@ class Chunk : private Noncopyable {
    *       However, if you call get_segment again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseSegment> get_segment(CxlumnID cxlumn_id) const;
+  std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
 
   const Segments& segments() const;
 
@@ -99,12 +99,12 @@ class Chunk : private Noncopyable {
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<CxlumnID>& cxlumn_ids) const;
+  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID>& column_ids) const;
 
   std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
                                        const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
   std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
-                                       const std::vector<CxlumnID>& cxlumn_ids) const;
+                                       const std::vector<ColumnID>& column_ids) const;
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index) {
@@ -123,8 +123,8 @@ class Chunk : private Noncopyable {
   }
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<CxlumnID>& cxlumn_ids) {
-    const auto segments = _get_segments_for_ids(cxlumn_ids);
+  std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
+    const auto segments = _get_segments_for_ids(column_ids);
     return create_index<Index>(segments);
   }
 
@@ -148,7 +148,7 @@ class Chunk : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  private:
-  std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<CxlumnID>& cxlumn_ids) const;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;

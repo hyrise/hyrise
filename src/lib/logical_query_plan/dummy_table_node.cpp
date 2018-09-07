@@ -14,8 +14,8 @@ DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}
 
 std::string DummyTableNode::description() const { return "[DummyTable]"; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::cxlumn_expressions() const {
-  return _cxlumn_expressions;
+const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::column_expressions() const {
+  return _column_expressions;
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

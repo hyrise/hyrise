@@ -9,11 +9,11 @@
 namespace opossum {
 
 /**
-   * This operator joins two tables using one cxlumn of each table by performing radix-partition-sort and a merge join.
+   * This operator joins two tables using one column of each table by performing radix-partition-sort and a merge join.
    * This is done in multiple phases to minimize random reads. This makes the Multi Phase Sort Merge (MPSM) Join more
    * efficient on NUMA systems, leading to increased performance compared to other joins, especially the Sort Merge Join.
    *
-   * The output is a new table with referenced cxlumns for all cxlumns of the two inputs and filtered pos_lists.
+   * The output is a new table with referenced columns for all columns of the two inputs and filtered pos_lists.
    *
    * As with most operators, we do not guarantee a stable operation with regards to positions -
    * i.e., your sorting order might be disturbed.
@@ -24,7 +24,7 @@ namespace opossum {
 class JoinMPSM : public AbstractJoinOperator {
  public:
   JoinMPSM(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const std::pair<CxlumnID, CxlumnID>& cxlumn_ids, const PredicateCondition op);
+           const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op);
 
   const std::string name() const override;
 

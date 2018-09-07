@@ -143,21 +143,21 @@ void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
-  export_value(ofstream, static_cast<CxlumnID>(table->cxlumn_count()));
+  export_value(ofstream, static_cast<ColumnID>(table->column_count()));
 
-  std::vector<std::string> cxlumn_types(table->cxlumn_count());
-  std::vector<std::string> cxlumn_names(table->cxlumn_count());
-  std::vector<bool> cxlumns_are_nullable(table->cxlumn_count());
+  std::vector<std::string> column_types(table->column_count());
+  std::vector<std::string> column_names(table->column_count());
+  std::vector<bool> columns_are_nullable(table->column_count());
 
-  // Transform cxlumn types and copy cxlumn names in order to write them to the file.
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    cxlumn_types[cxlumn_id] = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
-    cxlumn_names[cxlumn_id] = table->cxlumn_name(cxlumn_id);
-    cxlumns_are_nullable[cxlumn_id] = table->cxlumn_is_nullable(cxlumn_id);
+  // Transform column types and copy column names in order to write them to the file.
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    column_types[column_id] = data_type_to_string.left.at(table->column_data_type(column_id));
+    column_names[column_id] = table->column_name(column_id);
+    columns_are_nullable[column_id] = table->column_is_nullable(column_id);
   }
-  export_values(ofstream, cxlumn_types);
-  export_values(ofstream, cxlumns_are_nullable);
-  export_string_values(ofstream, cxlumn_names);
+  export_values(ofstream, column_types);
+  export_values(ofstream, columns_are_nullable);
+  export_string_values(ofstream, column_names);
 }
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
@@ -168,10 +168,10 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Iterating over all segments of this chunk and exporting them
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); cxlumn_id++) {
+  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
     auto visitor =
-        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->cxlumn_data_type(cxlumn_id));
-    resolve_data_and_segment_type(*chunk->get_segment(cxlumn_id),
+        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
+    resolve_data_and_segment_type(*chunk->get_segment(column_id),
                                   [&](const auto data_type_t, const auto& resolved_segment) {
                                     visitor->handle_segment(resolved_segment, context);
                                   });

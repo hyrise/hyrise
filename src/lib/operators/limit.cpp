@@ -46,7 +46,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   /**
    * Perform the actual limitting
    */
-  auto output_table = std::make_shared<Table>(input_table->cxlumn_definitions(), TableType::References);
+  auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
   ChunkID chunk_id{0};
   for (size_t i = 0; i < num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
@@ -55,14 +55,14 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
 
-    for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); cxlumn_id++) {
-      const auto input_base_segment = input_chunk->get_segment(cxlumn_id);
+    for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
+      const auto input_base_segment = input_chunk->get_segment(column_id);
       auto output_pos_list = std::make_shared<PosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
-      CxlumnID output_cxlumn_id = cxlumn_id;
+      ColumnID output_column_id = column_id;
 
       if (auto input_ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_base_segment)) {
-        output_cxlumn_id = input_ref_segment->referenced_cxlumn_id();
+        output_column_id = input_ref_segment->referenced_column_id();
         referenced_table = input_ref_segment->referenced_table();
         // TODO(all): optimize using whole chunk whenever possible
         auto begin = input_ref_segment->pos_list()->begin();
@@ -75,7 +75,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
       }
 
       output_segments.push_back(
-          std::make_shared<ReferenceSegment>(referenced_table, output_cxlumn_id, output_pos_list));
+          std::make_shared<ReferenceSegment>(referenced_table, output_column_id, output_pos_list));
     }
 
     i += output_chunk_row_count;

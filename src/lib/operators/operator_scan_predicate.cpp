@@ -18,8 +18,8 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 
   if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression)) {
     value = value_expression->value;
-  } else if (const auto cxlumn_id = node.find_cxlumn_id(expression)) {
-    value = *cxlumn_id;
+  } else if (const auto column_id = node.find_column_id(expression)) {
+    value = *column_id;
   } else if (const auto parameter_expression = dynamic_cast<const ParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
   } else {
@@ -63,9 +63,9 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   if (!argument_a) return std::nullopt;
 
   if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
-    if (is_cxlumn_id(*argument_a)) {
+    if (is_column_id(*argument_a)) {
       return std::vector<OperatorScanPredicate>{
-          OperatorScanPredicate{boost::get<CxlumnID>(*argument_a), predicate_condition}};
+          OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition}};
     } else {
       return std::nullopt;
     }
@@ -76,17 +76,17 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   auto argument_b = resolve_all_parameter_variant(*expression.arguments[1], node);
   if (!argument_b) return std::nullopt;
 
-  if (!is_cxlumn_id(*argument_a) && is_cxlumn_id(*argument_b)) {
+  if (!is_column_id(*argument_a) && is_column_id(*argument_b)) {
     std::swap(argument_a, argument_b);
     predicate_condition = flip_predicate_condition(predicate_condition);
   }
 
   return std::vector<OperatorScanPredicate>{
-      OperatorScanPredicate{boost::get<CxlumnID>(*argument_a), predicate_condition, *argument_b}};
+      OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b}};
 }
 
-OperatorScanPredicate::OperatorScanPredicate(const CxlumnID cxlumn_id, const PredicateCondition predicate_condition,
+OperatorScanPredicate::OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                                              const AllParameterVariant& value)
-    : cxlumn_id(cxlumn_id), predicate_condition(predicate_condition), value(value) {}
+    : column_id(column_id), predicate_condition(predicate_condition), value(value) {}
 
 }  // namespace opossum

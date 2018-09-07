@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-struct CxlumnMeta {
+struct ColumnMeta {
   std::string name;
   std::string type;
 
@@ -22,7 +22,7 @@ struct ParseConfig {
   char escape = '"';
   char delimiter_escape = '\\';
 
-  // If this is set to true, "4.3" will not be accepted as a value for a float cxlumn
+  // If this is set to true, "4.3" will not be accepted as a value for a float column
   bool reject_quoted_nonstrings = true;
 
   // If this is set to true, an unquoted null string causes an exception (only empty field is allowed as null value)
@@ -40,13 +40,13 @@ struct ParseConfig {
  * chunk_size    desired chunk size of the table
  * auto_compress if true, encodes each chunk using dictionary encoding after it is parsed.
  * config        characters and options that specify how the CSV should be parsed (delimiter, separator, etc.)
- * cxlumns       cxlumn meta information (name, type, nullable) for each cxlumn
+ * columns       column meta information (name, type, nullable) for each column
  */
 struct CsvMeta {
   size_t chunk_size = Chunk::MAX_SIZE;
   bool auto_compress = false;
   ParseConfig config;
-  std::vector<CxlumnMeta> cxlumns;
+  std::vector<ColumnMeta> columns;
 
   static constexpr const char* META_FILE_EXTENSION = ".json";
 };

@@ -16,8 +16,8 @@ class BaseJitSegmentReader {
   virtual void read_value(JitRuntimeContext& context) = 0;
 };
 
-struct JitInputCxlumn {
-  CxlumnID cxlumn_id;
+struct JitInputColumn {
+  ColumnID column_id;
   JitTupleValue tuple_value;
 };
 
@@ -89,21 +89,21 @@ class JitReadTuples : public AbstractJittable {
   virtual void before_query(const Table& in_table, JitRuntimeContext& context) const;
   virtual void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
 
-  JitTupleValue add_input_cxlumn(const DataType data_type, const bool is_nullable, const CxlumnID cxlumn_id);
+  JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
   size_t add_temporary_value();
 
-  std::vector<JitInputCxlumn> input_cxlumns() const;
+  std::vector<JitInputColumn> input_columns() const;
   std::vector<JitInputLiteral> input_literals() const;
 
-  std::optional<CxlumnID> find_input_cxlumn(const JitTupleValue& tuple_value) const;
+  std::optional<ColumnID> find_input_column(const JitTupleValue& tuple_value) const;
   std::optional<AllTypeVariant> find_literal_value(const JitTupleValue& tuple_value) const;
 
   void execute(JitRuntimeContext& context) const;
 
  protected:
   uint32_t _num_tuple_values{0};
-  std::vector<JitInputCxlumn> _input_cxlumns;
+  std::vector<JitInputColumn> _input_columns;
   std::vector<JitInputLiteral> _input_literals;
 
  private:

@@ -13,8 +13,8 @@ namespace opossum {
 
 class OperatorsImportBinaryTest : public BaseTest {};
 
-TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatCxlumn) {
-  auto expected_table = std::make_shared<Table>(TableCxlumnDefinitions{{"a", DataType::Float}}, TableType::Data, 5);
+TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
+  auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float}}, TableType::Data, 5);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -25,10 +25,10 @@ TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatCxlumn) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatCxlumn) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Float);
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2);
+TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Float);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -41,9 +41,9 @@ TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatCxlumn) {
 }
 
 TEST_F(OperatorsImportBinaryTest, StringValueSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 5);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -56,9 +56,9 @@ TEST_F(OperatorsImportBinaryTest, StringValueSegment) {
 }
 
 TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10, UseMvcc::Yes);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10, UseMvcc::Yes);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -75,14 +75,14 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
 }
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -95,14 +95,14 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
 }
 
 TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -118,15 +118,15 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportBinaryTest, AllTypesMixCxlumn) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
-  cxlumn_definitions.emplace_back("b", DataType::Int);
-  cxlumn_definitions.emplace_back("c", DataType::Long);
-  cxlumn_definitions.emplace_back("d", DataType::Float);
-  cxlumn_definitions.emplace_back("e", DataType::Double);
+TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -155,12 +155,12 @@ TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
-TEST_F(OperatorsImportBinaryTest, TwoCxlumnsNoValues) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("FirstColumn", DataType::Int);
-  cxlumn_definitions.emplace_back("SecondColumn", DataType::String);
+TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("FirstColumn", DataType::Int);
+  column_definitions.emplace_back("SecondColumn", DataType::String);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 30'000);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30'000);
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/TwoColumnsNoValues.bin");
   importer->execute();
@@ -169,10 +169,10 @@ TEST_F(OperatorsImportBinaryTest, TwoCxlumnsNoValues) {
 }
 
 TEST_F(OperatorsImportBinaryTest, EmptyStringsValueSegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
   expected_table->append({""});
   expected_table->append({""});
@@ -187,10 +187,10 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsValueSegment) {
 }
 
 TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionarySegment) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
   expected_table->append({""});
   expected_table->append({""});
@@ -223,7 +223,7 @@ TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
 }
 
-TEST_F(OperatorsImportBinaryTest, InvalidCxlumnType) {
+TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {
   auto importer =
       std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidColumnType.bin", std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
@@ -236,14 +236,14 @@ TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
 }
 
 TEST_F(OperatorsImportBinaryTest, AllTypesNullValues) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Int, true);
-  cxlumn_definitions.emplace_back("b", DataType::Float, true);
-  cxlumn_definitions.emplace_back("c", DataType::Long, true);
-  cxlumn_definitions.emplace_back("d", DataType::String, true);
-  cxlumn_definitions.emplace_back("e", DataType::Double, true);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   expected_table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   expected_table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -258,14 +258,14 @@ TEST_F(OperatorsImportBinaryTest, AllTypesNullValues) {
 }
 
 TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Int, true);
-  cxlumn_definitions.emplace_back("b", DataType::Float, true);
-  cxlumn_definitions.emplace_back("c", DataType::Long, true);
-  cxlumn_definitions.emplace_back("d", DataType::String, true);
-  cxlumn_definitions.emplace_back("e", DataType::Double, true);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto expected_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   expected_table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   expected_table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

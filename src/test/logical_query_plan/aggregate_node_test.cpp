@@ -19,29 +19,29 @@ class AggregateNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
     _mock_node = MockNode::make(
-        MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-    _a = {_mock_node, CxlumnID{0}};
-    _b = {_mock_node, CxlumnID{1}};
-    _c = {_mock_node, CxlumnID{2}};
+    _a = {_mock_node, ColumnID{0}};
+    _b = {_mock_node, ColumnID{1}};
+    _c = {_mock_node, ColumnID{2}};
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
-    // Cxlumns are ordered as specified in the SELECT list
+    // Columns are ordered as specified in the SELECT list
     _aggregate_node = AggregateNode::make(expression_vector(_a, _c),
                                           expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<AggregateNode> _aggregate_node;
-  LQPCxlumnReference _a, _b, _c;
+  LQPColumnReference _a, _b, _c;
 };
 
-TEST_F(AggregateNodeTest, OutputCxlumnExpressions) {
-  ASSERT_EQ(_aggregate_node->cxlumn_expressions().size(), 4u);
-  EXPECT_EQ(*_aggregate_node->cxlumn_expressions().at(0), *cxlumn_(_a));
-  EXPECT_EQ(*_aggregate_node->cxlumn_expressions().at(1), *cxlumn_(_c));
-  EXPECT_EQ(*_aggregate_node->cxlumn_expressions().at(2), *sum_(add_(_a, _b)));
-  EXPECT_EQ(*_aggregate_node->cxlumn_expressions().at(3), *sum_(add_(_a, _c)));
+TEST_F(AggregateNodeTest, OutputColumnExpressions) {
+  ASSERT_EQ(_aggregate_node->column_expressions().size(), 4u);
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(0), *column_(_a));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(1), *column_(_c));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(2), *sum_(add_(_a, _b)));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum_(add_(_a, _c)));
 }
 
 TEST_F(AggregateNodeTest, Description) {

@@ -36,8 +36,8 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, CxlumnID{0}, PredicateCondition::GreaterThan, 24);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, CxlumnID{0}, PredicateCondition::GreaterThan, 24);
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 24);
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::GreaterThan, 24);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op});
 
@@ -61,8 +61,8 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, CxlumnID{0}, PredicateCondition::LessThan, 10);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, CxlumnID{0}, PredicateCondition::GreaterThan, 200);
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::LessThan, 10);
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::GreaterThan, 200);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -80,8 +80,8 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, CxlumnID{0}, PredicateCondition::GreaterThan, 20);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, CxlumnID{0}, PredicateCondition::LessThan, 100);
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 20);
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::LessThan, 100);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -96,8 +96,8 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, CxlumnID{0}, PredicateCondition::LessThan, 12346);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, CxlumnID{0}, PredicateCondition::LessThan, 0);
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::LessThan, 12346);
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::LessThan, 0);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -114,8 +114,8 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, CxlumnID{0}, PredicateCondition::LessThan, 0);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, CxlumnID{0}, PredicateCondition::LessThan, 12346);
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::LessThan, 0);
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::LessThan, 12346);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -135,8 +135,8 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
   auto table_scan_a_op =
-      std::make_shared<TableScan>(get_table_a_op, CxlumnID{0}, PredicateCondition::GreaterThan, 12345);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, CxlumnID{1}, PredicateCondition::LessThan, 400.0);
+      std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 12345);
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{1}, PredicateCondition::LessThan, 400.0);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -147,9 +147,9 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
 
 TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   /**
-   * Join int_float4 and int_int on their respective "a" cxlumn. Scan the result once for int_int.b >= 2 and for
+   * Join int_float4 and int_int on their respective "a" column. Scan the result once for int_int.b >= 2 and for
    * int_float.a < 457. UnionPositions the results.
-   * The joins will create input tables with multiple referenced tables which tests the cxlumn segmenting aspect of
+   * The joins will create input tables with multiple referenced tables which tests the column segmenting aspect of
    * the UnionPositions algorithm.
    *
    * Result of the JOIN:
@@ -162,14 +162,14 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
    *   |     123|   458.7|     123|       2|
    *
    * Result of the Scan int_int.b >= 2
-   *   === Cxlumns
+   *   === Columns
    *   |       a|       b|       a|       b|
    *   |     int|   float|     int|     int|
    *   === Chunk 0 ===
    *   |     123|   458.7|     123|       2|
    *
    * Result of the Scan int_float.a < 457
-   *   === Cxlumns
+   *   === Columns
    *   |       a|       b|       a|       b|
    *   |     int|   float|     int|     int|
    *   === Chunk 0 ===
@@ -182,12 +182,12 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   auto get_table_c_op = std::make_shared<GetTable>("int_float4");
   auto get_table_d_op = std::make_shared<GetTable>("int_int");
   auto join_a = std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
-                                                 std::make_pair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals);
+                                                 std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   auto join_b = std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
-                                                 std::make_pair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals);
+                                                 std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
-  auto table_scan_a_op = std::make_shared<TableScan>(join_a, CxlumnID{3}, PredicateCondition::GreaterThanEquals, 2);
-  auto table_scan_b_op = std::make_shared<TableScan>(join_b, CxlumnID{1}, PredicateCondition::LessThan, 457.0);
+  auto table_scan_a_op = std::make_shared<TableScan>(join_a, ColumnID{3}, PredicateCondition::GreaterThanEquals, 2);
+  auto table_scan_b_op = std::make_shared<TableScan>(join_b, ColumnID{1}, PredicateCondition::LessThan, 457.0);
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, get_table_c_op, get_table_d_op, join_a, join_b, table_scan_a_op,
@@ -200,16 +200,16 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
    * Additionally check that segment 0 and 1 have the same pos list and that segment 2 and 3 have the same pos list to
    * make sure we're not creating redundant data.
    */
-  const auto get_pos_list = [](const auto& table, CxlumnID cxlumn_id) {
-    const auto segment = table->get_chunk(ChunkID{0})->get_segment(cxlumn_id);
+  const auto get_pos_list = [](const auto& table, ColumnID column_id) {
+    const auto segment = table->get_chunk(ChunkID{0})->get_segment(column_id);
     const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
     return *ref_segment->pos_list();
   };
 
   const auto& output = union_unique_op->get_output();
 
-  EXPECT_EQ(get_pos_list(output, CxlumnID{0}), get_pos_list(output, CxlumnID{1}));
-  EXPECT_EQ(get_pos_list(output, CxlumnID{2}), get_pos_list(output, CxlumnID{3}));
+  EXPECT_EQ(get_pos_list(output, ColumnID{0}), get_pos_list(output, ColumnID{1}));
+  EXPECT_EQ(get_pos_list(output, ColumnID{2}), get_pos_list(output, ColumnID{3}));
 }
 
 TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
@@ -264,30 +264,30 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
 
-  auto segment_left_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{0}, pos_list_left_0_0);
-  auto segment_left_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{0}, pos_list_left_1_0);
-  auto segment_left_0_1 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{1}, pos_list_left_0_0);
-  auto segment_left_1_1 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{1}, pos_list_left_1_0);
-  auto segment_left_0_2 = std::make_shared<ReferenceSegment>(_table_10_ints, CxlumnID{0}, pos_list_left_0_1);
-  auto segment_left_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, CxlumnID{0}, pos_list_left_1_1);
+  auto segment_left_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_left_0_0);
+  auto segment_left_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_left_1_0);
+  auto segment_left_0_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_left_0_0);
+  auto segment_left_1_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_left_1_0);
+  auto segment_left_0_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_left_0_1);
+  auto segment_left_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_left_1_1);
 
-  auto segment_right_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{0}, pos_list_right_0_0);
-  auto segment_right_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{0}, pos_list_right_1_0);
-  auto segment_right_0_1 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{1}, pos_list_right_0_0);
-  auto segment_right_1_1 = std::make_shared<ReferenceSegment>(_table_int_float4, CxlumnID{1}, pos_list_right_1_0);
-  auto segment_right_0_2 = std::make_shared<ReferenceSegment>(_table_10_ints, CxlumnID{0}, pos_list_right_0_1);
-  auto segment_right_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, CxlumnID{0}, pos_list_right_1_1);
+  auto segment_right_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_right_0_0);
+  auto segment_right_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_right_1_0);
+  auto segment_right_0_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_right_0_0);
+  auto segment_right_1_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_right_1_0);
+  auto segment_right_0_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
+  auto segment_right_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
-  TableCxlumnDefinitions cxlumn_definitions;
-  cxlumn_definitions.emplace_back("a", DataType::Int);
-  cxlumn_definitions.emplace_back("b", DataType::Float);
-  cxlumn_definitions.emplace_back("c", DataType::Int);
-  auto table_left = std::make_shared<Table>(cxlumn_definitions, TableType::References, 3);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int);
+  column_definitions.emplace_back("b", DataType::Float);
+  column_definitions.emplace_back("c", DataType::Int);
+  auto table_left = std::make_shared<Table>(column_definitions, TableType::References, 3);
 
   table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));
   table_left->append_chunk(Segments({segment_left_1_0, segment_left_1_1, segment_left_1_2}));
 
-  auto table_right = std::make_shared<Table>(cxlumn_definitions, TableType::References, 4);
+  auto table_right = std::make_shared<Table>(column_definitions, TableType::References, 4);
 
   table_right->append_chunk(Segments({segment_right_0_0, segment_right_0_1, segment_right_0_2}));
   table_right->append_chunk(Segments({segment_right_1_0, segment_right_1_1, segment_right_1_2}));

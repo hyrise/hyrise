@@ -170,7 +170,7 @@ TYPED_TEST(MultiSegmentIndexTest, TooManyReferenceValues) {
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }
 
-TYPED_TEST(MultiSegmentIndexTest, QueryWithFewerValuesThanCxlumns) {
+TYPED_TEST(MultiSegmentIndexTest, QueryWithFewerValuesThanColumns) {
   auto begin = this->index_int_str->lower_bound({4});
   auto end = this->index_int_str->upper_bound({4});
 

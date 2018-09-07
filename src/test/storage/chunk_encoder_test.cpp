@@ -20,26 +20,26 @@ class ChunkEncoderTest : public BaseTest {
   void SetUp() override {
     static const auto max_chunk_size = 5u;
 
-    static const auto cxlumn_count = 3u;
-    TableCxlumnDefinitions cxlumn_definitions;
-    for (auto cxlumn_id = 0u; cxlumn_id < cxlumn_count; ++cxlumn_id) {
-      const auto cxlumn_name = std::to_string(cxlumn_id);
-      cxlumn_definitions.emplace_back(cxlumn_name, DataType::Int);
+    static const auto column_count = 3u;
+    TableColumnDefinitions column_definitions;
+    for (auto column_id = 0u; column_id < column_count; ++column_id) {
+      const auto column_name = std::to_string(column_id);
+      column_definitions.emplace_back(column_name, DataType::Int);
     }
-    _table = std::make_shared<Table>(cxlumn_definitions, TableType::Data, max_chunk_size);
+    _table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
 
     static const auto row_count = max_chunk_size * 3u;
     for (auto row_id = 0u; row_id < row_count; ++row_id) {
-      const auto row = std::vector<AllTypeVariant>(cxlumn_count, AllTypeVariant{static_cast<int32_t>(row_id)});
+      const auto row = std::vector<AllTypeVariant>(column_count, AllTypeVariant{static_cast<int32_t>(row_id)});
       _table->append(row);
     }
   }
 
  protected:
   void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
-    for (auto cxlumn_id = CxlumnID{0u}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-      const auto segment = chunk->get_segment(cxlumn_id);
-      const auto segment_spec = spec.at(cxlumn_id);
+    for (auto column_id = ColumnID{0u}; column_id < chunk->column_count(); ++column_id) {
+      const auto segment = chunk->get_segment(column_id);
+      const auto segment_spec = spec.at(column_id);
 
       if (segment_spec.encoding_type == EncodingType::Unencoded) {
         const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
@@ -60,7 +60,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
-  auto data_types = _table->cxlumn_data_types();
+  auto data_types = _table->column_data_types();
   auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, data_types, chunk_encoding_spec);
@@ -72,7 +72,7 @@ TEST_F(ChunkEncoderTest, LeaveOneSegmentUnencoded) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
-  auto data_types = _table->cxlumn_data_types();
+  auto data_types = _table->column_data_types();
   auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, data_types, chunk_encoding_spec);

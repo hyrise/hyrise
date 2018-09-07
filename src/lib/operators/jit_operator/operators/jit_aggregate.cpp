@@ -10,44 +10,44 @@ namespace opossum {
 std::string JitAggregate::description() const {
   std::stringstream desc;
   desc << "[Aggregate] GroupBy: ";
-  for (const auto& groupby_cxlumn : _groupby_cxlumns) {
-    desc << groupby_cxlumn.cxlumn_name << " = x" << groupby_cxlumn.tuple_value.tuple_index() << ", ";
+  for (const auto& groupby_column : _groupby_columns) {
+    desc << groupby_column.column_name << " = x" << groupby_column.tuple_value.tuple_index() << ", ";
   }
   desc << " Aggregates: ";
-  for (const auto& aggregate_cxlumn : _aggregate_cxlumns) {
-    desc << aggregate_cxlumn.cxlumn_name << " = " << aggregate_function_to_string.left.at(aggregate_cxlumn.function)
-         << "(x" << aggregate_cxlumn.tuple_value.tuple_index() << "), ";
+  for (const auto& aggregate_column : _aggregate_columns) {
+    desc << aggregate_column.column_name << " = " << aggregate_function_to_string.left.at(aggregate_column.function)
+         << "(x" << aggregate_column.tuple_value.tuple_index() << "), ";
   }
   return desc.str();
 }
 
 std::shared_ptr<Table> JitAggregate::create_output_table(const ChunkOffset input_table_chunk_size) const {
-  auto num_cxlumns = _aggregate_cxlumns.size() + _groupby_cxlumns.size();
-  TableCxlumnDefinitions cxlumn_definitions(num_cxlumns);
+  auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
+  TableColumnDefinitions column_definitions(num_columns);
 
-  // Add each groupby cxlumn to the output table
-  for (const auto& cxlumn : _groupby_cxlumns) {
-    const auto data_type = cxlumn.hashmap_value.data_type();
-    const auto is_nullable = cxlumn.hashmap_value.is_nullable();
-    cxlumn_definitions[cxlumn.position_in_table] = {cxlumn.cxlumn_name, data_type, is_nullable};
+  // Add each groupby column to the output table
+  for (const auto& column : _groupby_columns) {
+    const auto data_type = column.hashmap_value.data_type();
+    const auto is_nullable = column.hashmap_value.is_nullable();
+    column_definitions[column.position_in_table] = {column.column_name, data_type, is_nullable};
   }
 
   // Add each aggregate to the output table
-  for (const auto& cxlumn : _aggregate_cxlumns) {
+  for (const auto& column : _aggregate_columns) {
     // Computed averages are always of type double. The hashmap_value, however, is used to compute a SUM aggregate
     // (that is later used to produce averages in a post-processing step) and may thus have a different data type.
     const auto data_type =
-        cxlumn.function == AggregateFunction::Avg ? DataType::Double : cxlumn.hashmap_value.data_type();
-    const auto is_nullable = cxlumn.hashmap_value.is_nullable();
-    cxlumn_definitions[cxlumn.position_in_table] = {cxlumn.cxlumn_name, data_type, is_nullable};
+        column.function == AggregateFunction::Avg ? DataType::Double : column.hashmap_value.data_type();
+    const auto is_nullable = column.hashmap_value.is_nullable();
+    column_definitions[column.position_in_table] = {column.column_name, data_type, is_nullable};
   }
 
-  return std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
 void JitAggregate::before_query(Table& out_table, JitRuntimeContext& context) const {
   // Resize the hashmap data structure.
-  context.hashmap.cxlumns.resize(_num_hashmap_cxlumns);
+  context.hashmap.columns.resize(_num_hashmap_columns);
 }
 
 // Performs the post-processing step for average aggregates.
@@ -55,9 +55,9 @@ void JitAggregate::before_query(Table& out_table, JitRuntimeContext& context) co
 // However, the compiler does not understand that and requires an implementation for all data types.
 // We thus rely on the SFINAE pattern to provide a fallback implementation that throws an exception.
 // This is why this operation must be performed in a separate function.
-template <typename CxlumnDataType>
-typename std::enable_if<std::is_arithmetic<CxlumnDataType>::value, void>::type compute_averages(
-    const std::vector<CxlumnDataType>& sum_values, const std::vector<int64_t>& count_values,
+template <typename ColumnDataType>
+typename std::enable_if<std::is_arithmetic<ColumnDataType>::value, void>::type compute_averages(
+    const std::vector<ColumnDataType>& sum_values, const std::vector<int64_t>& count_values,
     std::vector<double>& avg_values) {
   for (auto i = 0u; i < sum_values.size(); ++i) {
     // Avoid division by 0.
@@ -71,25 +71,25 @@ typename std::enable_if<std::is_arithmetic<CxlumnDataType>::value, void>::type c
 }
 
 // Fallback implementation for non-numeric data types to make the compiler happy (see above).
-template <typename CxlumnDataType>
-typename std::enable_if<!std::is_arithmetic<CxlumnDataType>::value, void>::type compute_averages(
-    const std::vector<CxlumnDataType>& sum_values, const std::vector<int64_t>& count_values,
+template <typename ColumnDataType>
+typename std::enable_if<!std::is_arithmetic<ColumnDataType>::value, void>::type compute_averages(
+    const std::vector<ColumnDataType>& sum_values, const std::vector<int64_t>& count_values,
     std::vector<double>& avg_values) {
   Fail("Invalid aggregate");
 }
 
 void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) const {
-  auto num_cxlumns = _aggregate_cxlumns.size() + _groupby_cxlumns.size();
-  Segments segments(num_cxlumns);
+  auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
+  Segments segments(num_columns);
 
-  // If the operator did not consume a single tuple and there are no groupby cxlumns, we create a single row in the
+  // If the operator did not consume a single tuple and there are no groupby columns, we create a single row in the
   // output with uninitialized aggregate values (0 for count, NULL for sum, max, min, avg).
-  if (context.hashmap.indices.empty() && _groupby_cxlumns.empty()) {
+  if (context.hashmap.indices.empty() && _groupby_columns.empty()) {
     std::vector<AllTypeVariant> values;
-    values.reserve(_aggregate_cxlumns.size());
+    values.reserve(_aggregate_columns.size());
 
-    for (const auto& cxlumn : _aggregate_cxlumns) {
-      if (cxlumn.function == AggregateFunction::Count) {
+    for (const auto& column : _aggregate_columns) {
+      if (column.function == AggregateFunction::Count) {
         values.emplace_back(int64_t{0});
       } else {
         values.emplace_back(NullValue{});
@@ -100,65 +100,65 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
     return;
   }
 
-  // Add each groupby cxlumn to the output table
-  for (const auto& cxlumn : _groupby_cxlumns) {
-    const auto data_type = cxlumn.hashmap_value.data_type();
+  // Add each groupby column to the output table
+  for (const auto& column : _groupby_columns) {
+    const auto data_type = column.hashmap_value.data_type();
 
     resolve_data_type(data_type, [&](auto type) {
-      using CxlumnDataType = typename decltype(type)::type;
+      using ColumnDataType = typename decltype(type)::type;
       // Get the std::vector containing the raw values (and conditionally, also get the is_null values).
       // We then create a ValueSegment of the appropriate data type from these values. Since value segments use a
       // pmr_concurrent_vector internally, this operation copies all values to a new vector of this type.
       // However, using this type of vector within the operator in the first place is also suboptimal, since the
       // pmr_concurrent_vector performs a lot of synchronization. It is thus better to use the faster std::vector and
       // perform a single copy in the end.
-      auto& values = context.hashmap.cxlumns[cxlumn.hashmap_value.cxlumn_index()].template get_vector<CxlumnDataType>();
-      if (cxlumn.hashmap_value.is_nullable()) {
-        auto& null_values = context.hashmap.cxlumns[cxlumn.hashmap_value.cxlumn_index()].get_is_null_vector();
-        segments[cxlumn.position_in_table] = std::make_shared<ValueSegment<CxlumnDataType>>(values, null_values);
+      auto& values = context.hashmap.columns[column.hashmap_value.column_index()].template get_vector<ColumnDataType>();
+      if (column.hashmap_value.is_nullable()) {
+        auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
+        segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
       } else {
-        segments[cxlumn.position_in_table] = std::make_shared<ValueSegment<CxlumnDataType>>(values);
+        segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
       }
     });
   }
 
-  for (const auto& cxlumn : _aggregate_cxlumns) {
-    const auto data_type = cxlumn.hashmap_value.data_type();
+  for (const auto& column : _aggregate_columns) {
+    const auto data_type = column.hashmap_value.data_type();
 
-    if (cxlumn.function == AggregateFunction::Avg) {
+    if (column.function == AggregateFunction::Avg) {
       // Perform the post-processing for average aggregates.
       resolve_data_type(data_type, [&](auto type) {
-        using CxlumnDataType = typename decltype(type)::type;
+        using ColumnDataType = typename decltype(type)::type;
 
         // First get the vectors for both internal aggregates (SUM and COUNT).
-        DebugAssert(cxlumn.hashmap_count_for_avg, "Invalid avg aggregate cxlumn.");
-        auto sum_cxlumn_index = cxlumn.hashmap_value.cxlumn_index();
-        auto& sum_values = context.hashmap.cxlumns[sum_cxlumn_index].template get_vector<CxlumnDataType>();
-        auto count_cxlumn_index = cxlumn.hashmap_count_for_avg.value().cxlumn_index();
-        auto& count_values = context.hashmap.cxlumns[count_cxlumn_index].get_vector<int64_t>();
+        DebugAssert(column.hashmap_count_for_avg, "Invalid avg aggregate column.");
+        auto sum_column_index = column.hashmap_value.column_index();
+        auto& sum_values = context.hashmap.columns[sum_column_index].template get_vector<ColumnDataType>();
+        auto count_column_index = column.hashmap_count_for_avg.value().column_index();
+        auto& count_values = context.hashmap.columns[count_column_index].get_vector<int64_t>();
 
         // Then compute the averages.
         auto avg_values = std::vector<double>(sum_values.size());
         compute_averages(sum_values, count_values, avg_values);
 
-        if (cxlumn.hashmap_value.is_nullable()) {
-          auto& null_values = context.hashmap.cxlumns[cxlumn.hashmap_value.cxlumn_index()].get_is_null_vector();
-          segments[cxlumn.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values, null_values);
+        if (column.hashmap_value.is_nullable()) {
+          auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
+          segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values, null_values);
         } else {
-          segments[cxlumn.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values);
+          segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values);
         }
       });
     } else {
       // All other types of aggregate vectors can be handled just like value segments.
       resolve_data_type(data_type, [&](auto type) {
-        using CxlumnDataType = typename decltype(type)::type;
-        auto cxlumn_index = cxlumn.hashmap_value.cxlumn_index();
-        auto& values = context.hashmap.cxlumns[cxlumn_index].template get_vector<CxlumnDataType>();
-        if (cxlumn.hashmap_value.is_nullable()) {
-          auto& null_values = context.hashmap.cxlumns[cxlumn.hashmap_value.cxlumn_index()].get_is_null_vector();
-          segments[cxlumn.position_in_table] = std::make_shared<ValueSegment<CxlumnDataType>>(values, null_values);
+        using ColumnDataType = typename decltype(type)::type;
+        auto column_index = column.hashmap_value.column_index();
+        auto& values = context.hashmap.columns[column_index].template get_vector<ColumnDataType>();
+        if (column.hashmap_value.is_nullable()) {
+          auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
+          segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
         } else {
-          segments[cxlumn.position_in_table] = std::make_shared<ValueSegment<CxlumnDataType>>(values);
+          segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
         }
       });
     }
@@ -167,16 +167,16 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
   out_table.append_chunk(segments);
 }
 
-void JitAggregate::add_aggregate_cxlumn(const std::string& cxlumn_name, const JitTupleValue& value,
+void JitAggregate::add_aggregate_column(const std::string& column_name, const JitTupleValue& value,
                                         const AggregateFunction function) {
-  auto cxlumn_position = _aggregate_cxlumns.size() + _groupby_cxlumns.size();
+  auto column_position = _aggregate_columns.size() + _groupby_columns.size();
 
   switch (function) {
     case AggregateFunction::Count:
-      // Count aggregates always produce a non-nullable long cxlumn.
-      _aggregate_cxlumns.emplace_back(
-          JitAggregateCxlumn{cxlumn_name, cxlumn_position, function, value,
-                             JitHashmapValue(DataType::Long, false, _num_hashmap_cxlumns++)});
+      // Count aggregates always produce a non-nullable long column.
+      _aggregate_columns.emplace_back(
+          JitAggregateColumn{column_name, column_position, function, value,
+                             JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::Sum:
     case AggregateFunction::Max:
@@ -184,48 +184,48 @@ void JitAggregate::add_aggregate_cxlumn(const std::string& cxlumn_name, const Ji
       Assert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
              "Invalid data type for aggregate function.");
       // The data type depends on the input value.
-      _aggregate_cxlumns.emplace_back(
-          JitAggregateCxlumn{cxlumn_name, cxlumn_position, function, value,
-                             JitHashmapValue(value.data_type(), true, _num_hashmap_cxlumns++)});
+      _aggregate_columns.emplace_back(
+          JitAggregateColumn{column_name, column_position, function, value,
+                             JitHashmapValue(value.data_type(), true, _num_hashmap_columns++)});
       break;
     case AggregateFunction::Avg:
       Assert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
              "Invalid data type for aggregate function.");
       // Average aggregates are computed by first computing two aggregates: a SUM and a COUNT
-      _aggregate_cxlumns.emplace_back(
-          JitAggregateCxlumn{cxlumn_name, cxlumn_position, function, value,
-                             JitHashmapValue(value.data_type(), true, _num_hashmap_cxlumns++),
-                             JitHashmapValue(DataType::Long, false, _num_hashmap_cxlumns++)});
+      _aggregate_columns.emplace_back(
+          JitAggregateColumn{column_name, column_position, function, value,
+                             JitHashmapValue(value.data_type(), true, _num_hashmap_columns++),
+                             JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::CountDistinct:
       Fail("Not supported");
   }
 }
 
-void JitAggregate::add_groupby_cxlumn(const std::string& cxlumn_name, const JitTupleValue& value) {
-  auto cxlumn_position = _aggregate_cxlumns.size() + _groupby_cxlumns.size();
-  _groupby_cxlumns.emplace_back(
-      JitGroupByCxlumn{cxlumn_name, cxlumn_position, value,
-                       JitHashmapValue(value.data_type(), value.is_nullable(), _num_hashmap_cxlumns++)});
+void JitAggregate::add_groupby_column(const std::string& column_name, const JitTupleValue& value) {
+  auto column_position = _aggregate_columns.size() + _groupby_columns.size();
+  _groupby_columns.emplace_back(
+      JitGroupByColumn{column_name, column_position, value,
+                       JitHashmapValue(value.data_type(), value.is_nullable(), _num_hashmap_columns++)});
 }
 
-const std::vector<JitAggregateCxlumn> JitAggregate::aggregate_cxlumns() const { return _aggregate_cxlumns; }
+const std::vector<JitAggregateColumn> JitAggregate::aggregate_columns() const { return _aggregate_columns; }
 
-const std::vector<JitGroupByCxlumn> JitAggregate::groupby_cxlumns() const { return _groupby_cxlumns; }
+const std::vector<JitGroupByColumn> JitAggregate::groupby_columns() const { return _groupby_columns; }
 
 void JitAggregate::_consume(JitRuntimeContext& context) const {
   // We use index-based for loops in this function, since the LLVM optimizer is not able to properly unroll range-based
   // loops, and we need the unrolling for proper specialization.
 
-  const auto num_groupby_cxlumns = _groupby_cxlumns.size();
-  const auto num_aggregate_cxlumns = _aggregate_cxlumns.size();
+  const auto num_groupby_columns = _groupby_columns.size();
+  const auto num_aggregate_columns = _aggregate_columns.size();
 
   // Step 1: Compute hash value of the input tuple
   uint64_t hash_value = 0;
 
-  // Compute a hash for each groupby cxlumn and combine the resulting hashes.
-  for (uint32_t i = 0; i < num_groupby_cxlumns; ++i) {
-    hash_value = (hash_value << 5u) ^ jit_hash(_groupby_cxlumns[i].tuple_value, context);
+  // Compute a hash for each groupby column and combine the resulting hashes.
+  for (uint32_t i = 0; i < num_groupby_columns; ++i) {
+    hash_value = (hash_value << 5u) ^ jit_hash(_groupby_columns[i].tuple_value, context);
   }
 
   // Step 2: Look up the rows with this hash in the hashmap.
@@ -239,8 +239,8 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
   for (const auto& index : hash_bucket) {
     // Compare all values of the row to the currently consumed tuple.
     bool all_values_equal = true;
-    for (uint32_t i = 0; i < num_groupby_cxlumns; ++i) {
-      if (!jit_aggregate_equals(_groupby_cxlumns[i].tuple_value, _groupby_cxlumns[i].hashmap_value, index, context)) {
+    for (uint32_t i = 0; i < num_groupby_columns; ++i) {
+      if (!jit_aggregate_equals(_groupby_columns[i].tuple_value, _groupby_columns[i].hashmap_value, index, context)) {
         all_values_equal = false;
         break;
       }
@@ -255,37 +255,37 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
 
   // If no row matches, a new tuple group must be created.
   // This requires adding a row to each output vector.
-  // For groupby cxlumns, this new row contains the value from the current tuple.
+  // For groupby columns, this new row contains the value from the current tuple.
   // Aggregates are initialized with a value that is specific to their aggregate function.
   // The it_grow_by_one function appends an element to the end of an output vector and returns the index of that newly
   // added value in the vector.
   if (!found_match) {
-    for (uint32_t i = 0; i < num_groupby_cxlumns; ++i) {
-      // Grow each groupby cxlumn vector and copy the value from the current tuple.
-      row_index = jit_grow_by_one(_groupby_cxlumns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
-      jit_assign(_groupby_cxlumns[i].tuple_value, _groupby_cxlumns[i].hashmap_value, row_index, context);
+    for (uint32_t i = 0; i < num_groupby_columns; ++i) {
+      // Grow each groupby column vector and copy the value from the current tuple.
+      row_index = jit_grow_by_one(_groupby_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
+      jit_assign(_groupby_columns[i].tuple_value, _groupby_columns[i].hashmap_value, row_index, context);
     }
-    for (uint32_t i = 0; i < num_aggregate_cxlumns; ++i) {
-      // Grow each aggregate cxlumn vector and initialize the aggregate with a proper initial value.
-      switch (_aggregate_cxlumns[i].function) {
+    for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
+      // Grow each aggregate column vector and initialize the aggregate with a proper initial value.
+      switch (_aggregate_columns[i].function) {
         case AggregateFunction::Count:
         case AggregateFunction::Sum:
           row_index =
-              jit_grow_by_one(_aggregate_cxlumns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
           break;
         case AggregateFunction::Max:
           row_index =
-              jit_grow_by_one(_aggregate_cxlumns[i].hashmap_value, JitVariantVector::InitialValue::MinValue, context);
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::MinValue, context);
           break;
         case AggregateFunction::Min:
           row_index =
-              jit_grow_by_one(_aggregate_cxlumns[i].hashmap_value, JitVariantVector::InitialValue::MaxValue, context);
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::MaxValue, context);
           break;
         case AggregateFunction::Avg:
           row_index =
-              jit_grow_by_one(_aggregate_cxlumns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
-          DebugAssert(_aggregate_cxlumns[i].hashmap_count_for_avg, "Invalid avg aggregate cxlumn.");
-          jit_grow_by_one(_aggregate_cxlumns[i].hashmap_count_for_avg.value(), JitVariantVector::InitialValue::Zero,
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
+          DebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
+          jit_grow_by_one(_aggregate_columns[i].hashmap_count_for_avg.value(), JitVariantVector::InitialValue::Zero,
                           context);
           break;
         case AggregateFunction::CountDistinct:
@@ -298,31 +298,31 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
   }
 
   // Step 3: Update the aggregate values by calling jit_aggregate_compute with appropriate operation lambdas.
-  for (uint32_t i = 0; i < num_aggregate_cxlumns; ++i) {
-    switch (_aggregate_cxlumns[i].function) {
+  for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
+    switch (_aggregate_columns[i].function) {
       case AggregateFunction::Count:
-        jit_aggregate_compute(jit_increment, _aggregate_cxlumns[i].tuple_value, _aggregate_cxlumns[i].hashmap_value,
+        jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
         break;
       case AggregateFunction::Sum:
-        jit_aggregate_compute(jit_addition, _aggregate_cxlumns[i].tuple_value, _aggregate_cxlumns[i].hashmap_value,
+        jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
         break;
       case AggregateFunction::Max:
-        jit_aggregate_compute(jit_maximum, _aggregate_cxlumns[i].tuple_value, _aggregate_cxlumns[i].hashmap_value,
+        jit_aggregate_compute(jit_maximum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
         break;
       case AggregateFunction::Min:
-        jit_aggregate_compute(jit_minimum, _aggregate_cxlumns[i].tuple_value, _aggregate_cxlumns[i].hashmap_value,
+        jit_aggregate_compute(jit_minimum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
         break;
       case AggregateFunction::Avg:
         // In case of an average aggregate, the two auxiliary aggregates need to be updated.
-        jit_aggregate_compute(jit_addition, _aggregate_cxlumns[i].tuple_value, _aggregate_cxlumns[i].hashmap_value,
+        jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
-        DebugAssert(_aggregate_cxlumns[i].hashmap_count_for_avg, "Invalid avg aggregate cxlumn.");
-        jit_aggregate_compute(jit_increment, _aggregate_cxlumns[i].tuple_value,
-                              _aggregate_cxlumns[i].hashmap_count_for_avg.value(), row_index, context);
+        DebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
+        jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value,
+                              _aggregate_columns[i].hashmap_count_for_avg.value(), row_index, context);
         break;
       case AggregateFunction::CountDistinct:
         Fail("Not supported");

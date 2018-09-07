@@ -84,21 +84,21 @@ bool JitTupleValue::operator==(const JitTupleValue& other) const {
          tuple_index() == other.tuple_index();
 }
 
-JitHashmapValue::JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t cxlumn_index)
-    : _data_type{data_type}, _is_nullable{is_nullable}, _cxlumn_index{cxlumn_index} {}
+JitHashmapValue::JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
+    : _data_type{data_type}, _is_nullable{is_nullable}, _column_index{column_index} {}
 
 DataType JitHashmapValue::data_type() const { return _data_type; }
 
 bool JitHashmapValue::is_nullable() const { return _is_nullable; }
 
-size_t JitHashmapValue::cxlumn_index() const { return _cxlumn_index; }
+size_t JitHashmapValue::column_index() const { return _column_index; }
 
 bool JitHashmapValue::is_null(const size_t index, JitRuntimeContext& context) const {
-  return _is_nullable && context.hashmap.cxlumns[_cxlumn_index].is_null(index);
+  return _is_nullable && context.hashmap.columns[_column_index].is_null(index);
 }
 
 void JitHashmapValue::set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
-  context.hashmap.cxlumns[_cxlumn_index].set_is_null(index, is_null);
+  context.hashmap.columns[_column_index].set_is_null(index, is_null);
 }
 
 bool jit_expression_is_binary(const JitExpressionType expression_type) {
@@ -121,7 +121,7 @@ bool jit_expression_is_binary(const JitExpressionType expression_type) {
     case JitExpressionType::Or:
       return true;
 
-    case JitExpressionType::Cxlumn:
+    case JitExpressionType::Column:
     case JitExpressionType::Between:
     case JitExpressionType::Not:
     case JitExpressionType::IsNull:

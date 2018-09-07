@@ -41,7 +41,7 @@ constexpr auto encoded_segment_for_type = hana::make_map(
  *
  * @see resolve_segment_type in resolve_type.hpp for info on usage
  */
-template <typename CxlumnDataType, typename Functor>
+template <typename ColumnDataType, typename Functor>
 void resolve_encoded_segment_type(const BaseEncodedSegment& segment, const Functor& functor) {
   // Iterate over all pairs in the map
   hana::fold(encoded_segment_for_type, false, [&](auto match_found, auto encoded_segment_pair) {
@@ -52,15 +52,15 @@ void resolve_encoded_segment_type(const BaseEncodedSegment& segment, const Funct
 
     // If the segment's encoding type matches that of the pair, we have found the segment's type
     if (!match_found && (encoding_type == segment.encoding_type())) {
-      // Check if CxlumnDataType is supported by encoding
-      const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<CxlumnDataType>);
+      // Check if ColumnDataType is supported by encoding
+      const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
 
       // clang-format off
 
-      // Compile only if CxlumnDataType is supported
+      // Compile only if ColumnDataType is supported
       if constexpr(hana::value(data_type_supported)) {
         using SegmentTemplateType = typename decltype(segment_template_c)::type;
-        using SegmentType = typename SegmentTemplateType::template _template<CxlumnDataType>;
+        using SegmentType = typename SegmentTemplateType::template _template<ColumnDataType>;
         functor(static_cast<const SegmentType&>(segment));
       }
 

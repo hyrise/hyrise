@@ -21,7 +21,7 @@ ParameterExpression::ParameterExpression(const ParameterID parameter_id,
       parameter_id(parameter_id),
       parameter_expression_type(ParameterExpressionType::External),
       _referenced_expression_info(std::in_place, referenced_expression.data_type(), referenced_expression.is_nullable(),
-                                  referenced_expression.as_cxlumn_name()) {}
+                                  referenced_expression.as_column_name()) {}
 
 ParameterExpression::ParameterExpression(const ParameterID parameter_id,
                                          const ReferencedExpressionInfo& referenced_expression_info)
@@ -40,11 +40,11 @@ std::shared_ptr<AbstractExpression> ParameterExpression::deep_copy() const {
   }
 }
 
-std::string ParameterExpression::as_cxlumn_name() const {
+std::string ParameterExpression::as_column_name() const {
   std::stringstream stream;
   stream << "Parameter[";
   if (parameter_expression_type == ParameterExpressionType::External) {
-    stream << "name=" << _referenced_expression_info->cxlumn_name << ";";
+    stream << "name=" << _referenced_expression_info->column_name << ";";
   }
   stream << "id=" << std::to_string(parameter_id);
 
@@ -112,18 +112,18 @@ size_t ParameterExpression::_on_hash() const {
   if (_referenced_expression_info) {
     boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info->data_type));
     boost::hash_combine(hash, _referenced_expression_info->nullable);
-    boost::hash_combine(hash, _referenced_expression_info->cxlumn_name);
+    boost::hash_combine(hash, _referenced_expression_info->column_name);
   }
 
   return hash;
 }
 
 ParameterExpression::ReferencedExpressionInfo::ReferencedExpressionInfo(const DataType data_type, const bool nullable,
-                                                                        const std::string& cxlumn_name)
-    : data_type(data_type), nullable(nullable), cxlumn_name(cxlumn_name) {}
+                                                                        const std::string& column_name)
+    : data_type(data_type), nullable(nullable), column_name(column_name) {}
 
 bool ParameterExpression::ReferencedExpressionInfo::operator==(const ReferencedExpressionInfo& rhs) const {
-  return data_type == rhs.data_type && nullable == rhs.nullable && cxlumn_name == rhs.cxlumn_name;
+  return data_type == rhs.data_type && nullable == rhs.nullable && column_name == rhs.column_name;
 }
 
 }  // namespace opossum

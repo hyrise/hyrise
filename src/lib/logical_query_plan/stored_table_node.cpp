@@ -1,6 +1,6 @@
 #include "stored_table_node.hpp"
 
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -9,10 +9,10 @@ namespace opossum {
 StoredTableNode::StoredTableNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
 
-LQPCxlumnReference StoredTableNode::get_cxlumn(const std::string& name) const {
+LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   const auto table = StorageManager::get().get_table(table_name);
-  const auto cxlumn_id = table->cxlumn_id_by_name(name);
-  return {shared_from_this(), cxlumn_id};
+  const auto column_id = table->column_id_by_name(name);
+  return {shared_from_this(), column_id};
 }
 
 void StoredTableNode::set_excluded_chunk_ids(const std::vector<ChunkID>& chunks) { _excluded_chunk_ids = chunks; }
@@ -21,16 +21,16 @@ const std::vector<ChunkID>& StoredTableNode::excluded_chunk_ids() const { return
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + table_name + "'"; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::cxlumn_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
   if (!_expressions) {
     const auto table = StorageManager::get().get_table(table_name);
 
-    _expressions.emplace(table->cxlumn_count());
-    for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-      (*_expressions)[cxlumn_id] =
-          std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{shared_from_this(), cxlumn_id});
+    _expressions.emplace(table->column_count());
+    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      (*_expressions)[column_id] =
+          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), column_id});
     }
   }
 

@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_single_cxlumn_table_scan_impl.hpp"
+#include "base_single_column_table_scan_impl.hpp"
 #include "boost/variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 
@@ -18,7 +18,7 @@ namespace opossum {
 class Table;
 
 /**
- * @brief Implements a cxlumn scan using the LIKE operator
+ * @brief Implements a column scan using the LIKE operator
  *
  * - The only supported type is std::string.
  * - Value segments are scanned sequentially
@@ -29,9 +29,9 @@ class Table;
  * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
  *                    e.g., StartsWithPattern. 
  */
-class LikeTableScanImpl : public BaseSingleCxlumnTableScanImpl {
+class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
+  LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                     const PredicateCondition predicate_condition, const std::string& pattern);
 
   void handle_segment(const BaseValueSegment& base_segment,
@@ -43,7 +43,7 @@ class LikeTableScanImpl : public BaseSingleCxlumnTableScanImpl {
   void handle_segment(const BaseEncodedSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleCxlumnTableScanImpl::handle_segment;
+  using BaseSingleColumnTableScanImpl::handle_segment;
 
  private:
   /**

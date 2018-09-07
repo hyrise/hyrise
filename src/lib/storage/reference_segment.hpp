@@ -19,8 +19,8 @@ namespace opossum {
 class ReferenceSegment : public BaseSegment {
  public:
   // creates a reference segment
-  // the parameters specify the positions and the referenced cxlumn
-  ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const CxlumnID referenced_cxlumn_id,
+  // the parameters specify the positions and the referenced column
+  ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
                    const std::shared_ptr<const PosList>& pos);
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
@@ -32,7 +32,7 @@ class ReferenceSegment : public BaseSegment {
   const std::shared_ptr<const PosList> pos_list() const;
   const std::shared_ptr<const Table> referenced_table() const;
 
-  CxlumnID referenced_cxlumn_id() const;
+  ColumnID referenced_column_id() const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
@@ -43,7 +43,7 @@ class ReferenceSegment : public BaseSegment {
   // their own shared_ptrs
   const std::shared_ptr<const Table> _referenced_table;
 
-  const CxlumnID _referenced_cxlumn_id;
+  const ColumnID _referenced_column_id;
 
   // The position list can be shared amongst multiple segments
   const std::shared_ptr<const PosList> _pos_list;

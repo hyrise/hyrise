@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "resolve_type.hpp"
-#include "statistics/cxlumn_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -29,16 +29,16 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
   }
 #endif
 
-  _cxlumn_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
-  _cxlumn_expressions.insert(_cxlumn_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
-  _cxlumn_expressions.insert(_cxlumn_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
+  _column_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
+  _column_expressions.insert(_column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
+  _column_expressions.insert(_column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
 }
 
 std::string AggregateNode::description() const {
   std::stringstream stream;
 
-  stream << "[Aggregate] GroupBy: [" << expression_cxlumn_names(group_by_expressions);
-  stream << "] Aggregates: [" << expression_cxlumn_names(aggregate_expressions) << "]";
+  stream << "[Aggregate] GroupBy: [" << expression_column_names(group_by_expressions);
+  stream << "] Aggregates: [" << expression_column_names(aggregate_expressions) << "]";
 
   return stream.str();
 }
@@ -50,31 +50,31 @@ std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
   const auto input_statistics = left_input->get_statistics();
   const auto row_count = input_statistics->row_count();
 
-  std::vector<std::shared_ptr<const BaseCxlumnStatistics>> cxlumn_statistics;
-  cxlumn_statistics.reserve(_cxlumn_expressions.size());
+  std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
+  column_statistics.reserve(_column_expressions.size());
 
-  for (const auto& expression : _cxlumn_expressions) {
-    const auto cxlumn_id = left_input->find_cxlumn_id(*expression);
-    if (cxlumn_id) {
-      cxlumn_statistics.emplace_back(input_statistics->cxlumn_statistics()[*cxlumn_id]);
+  for (const auto& expression : _column_expressions) {
+    const auto column_id = left_input->find_column_id(*expression);
+    if (column_id) {
+      column_statistics.emplace_back(input_statistics->column_statistics()[*column_id]);
     } else {
       // TODO(anybody) Statistics for expressions not yet supported
       resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
         using ExpressionDataType = typename decltype(data_type_t)::type;
-        cxlumn_statistics.emplace_back(
-            std::make_shared<CxlumnStatistics<ExpressionDataType>>(CxlumnStatistics<ExpressionDataType>::dummy()));
+        column_statistics.emplace_back(
+            std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
       });
     }
   }
 
-  return std::make_shared<TableStatistics>(TableType::Data, row_count, cxlumn_statistics);
+  return std::make_shared<TableStatistics>(TableType::Data, row_count, column_statistics);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::cxlumn_expressions() const {
-  return _cxlumn_expressions;
+const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
+  return _column_expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::node_expressions() const { return _cxlumn_expressions; }
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::node_expressions() const { return _column_expressions; }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<AggregateNode>(

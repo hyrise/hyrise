@@ -11,11 +11,11 @@ namespace opossum {
 std::string to_string(const AllParameterVariant& x) {
   if (is_parameter_id(x)) {
     return std::string("Placeholder #") + std::to_string(boost::get<ParameterID>(x));
-  } else if (is_cxlumn_id(x)) {
-    return std::string("Cxlumn #") + std::to_string(boost::get<CxlumnID>(x));
-  } else if (is_lqp_cxlumn_reference(x)) {
+  } else if (is_column_id(x)) {
+    return std::string("Column #") + std::to_string(boost::get<ColumnID>(x));
+  } else if (is_lqp_column_reference(x)) {
     std::stringstream stream;
-    stream << boost::get<LQPCxlumnReference>(x);
+    stream << boost::get<LQPColumnReference>(x);
     return stream.str();
   } else {
     return boost::lexical_cast<std::string>(x);

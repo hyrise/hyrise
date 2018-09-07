@@ -48,27 +48,27 @@ std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk
 namespace opossum {
 
 std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_table, size_t num_rows,
-                                              size_t num_cxlumns) {
+                                              size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
-  TableCxlumnDefinitions cxlumn_definitions;
-  for (size_t cxlumn_idx = 0; cxlumn_idx < num_cxlumns; ++cxlumn_idx) {
-    cxlumn_definitions.emplace_back("c" + std::to_string(cxlumn_idx), DataType::Int);
+  TableColumnDefinitions column_definitions;
+  for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
+    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
   }
-  auto table = std::make_shared<Table>(cxlumn_definitions, TableType::References);
+  auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
   for (size_t row_idx = 0; row_idx < num_rows;) {
     const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
     Segments segments;
-    for (auto cxlumn_idx = CxlumnID{0}; cxlumn_idx < num_cxlumns; ++cxlumn_idx) {
+    for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
       /**
        * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table
        * of (num_rows * 0.2f) * REFERENCED_TABLE_CHUNK_COUNT rows - i.e. twice as many rows as the referencing table
        * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
        */
       auto pos_list = generate_pos_list(num_rows * 0.2f, num_rows_per_chunk);
-      segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, cxlumn_idx, pos_list));
+      segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, column_idx, pos_list));
     }
     table->append_chunk(segments);
 
@@ -80,27 +80,27 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
 
 void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   const auto num_rows = 500000;
-  const auto num_cxlumns = 5;
+  const auto num_columns = 5;
 
   /**
    * Create the referenced table, that doesn't actually contain any data - but UnionPositions won't care, it just
    * operates on RowIDs
    */
-  TableCxlumnDefinitions cxlumn_definitions;
+  TableColumnDefinitions column_definitions;
 
-  for (auto cxlumn_idx = 0; cxlumn_idx < num_cxlumns; ++cxlumn_idx) {
-    cxlumn_definitions.emplace_back("c" + std::to_string(cxlumn_idx), DataType::Int);
+  for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
+    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
   }
-  auto referenced_table = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   /**
    * Create the referencing tables, the ones we're actually going to perform the benchmark on
    */
   auto table_wrapper_left =
-      std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_cxlumns));
+      std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
   table_wrapper_left->execute();
   auto table_wrapper_right =
-      std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_cxlumns));
+      std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
   table_wrapper_right->execute();
 
   while (state.KeepRunning()) {

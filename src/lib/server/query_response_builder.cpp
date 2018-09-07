@@ -11,17 +11,17 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-std::vector<CxlumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table>& table) {
-  std::vector<CxlumnDescription> result;
+std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table>& table) {
+  std::vector<ColumnDescription> result;
 
-  const auto& cxlumn_names = table->cxlumn_names();
-  const auto& cxlumn_types = table->cxlumn_data_types();
+  const auto& column_names = table->column_names();
+  const auto& column_types = table->column_data_types();
 
-  for (auto cxlumn_id = 0u; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
+  for (auto column_id = 0u; column_id < table->column_count(); ++column_id) {
     uint32_t object_id;
     int32_t type_id;
 
-    switch (cxlumn_types[cxlumn_id]) {
+    switch (column_types[column_id]) {
       case DataType::Int:
         object_id = 23;
         type_id = 4;
@@ -46,7 +46,7 @@ std::vector<CxlumnDescription> QueryResponseBuilder::build_row_description(const
         Fail("Bad DataType");
     }
 
-    result.emplace_back(CxlumnDescription{cxlumn_names[cxlumn_id], object_id, type_id});
+    result.emplace_back(ColumnDescription{column_names[column_id], object_id, type_id});
   }
 
   return result;
@@ -105,11 +105,11 @@ boost::future<void> QueryResponseBuilder::_send_query_response_rows(const send_r
                                                                     ChunkOffset current_chunk_offset) {
   if (current_chunk_offset == chunk.size()) return boost::make_ready_future();
 
-  std::vector<std::string> row_strings(chunk.cxlumn_count());
+  std::vector<std::string> row_strings(chunk.column_count());
 
-  for (CxlumnID cxlumn_id{0}; cxlumn_id < CxlumnID{chunk.cxlumn_count()}; ++cxlumn_id) {
-    const auto& segment = chunk.get_segment(cxlumn_id);
-    row_strings[cxlumn_id] = type_cast<std::string>((*segment)[current_chunk_offset]);
+  for (ColumnID column_id{0}; column_id < ColumnID{chunk.column_count()}; ++column_id) {
+    const auto& segment = chunk.get_segment(column_id);
+    row_strings[column_id] = type_cast<std::string>((*segment)[current_chunk_offset]);
   }
 
   return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::_send_query_response_rows, send_row,

@@ -27,7 +27,7 @@ using NamedQueries = std::vector<NamedQuery>;
 
 using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec>;
 
-// Map<TABLE_NAME, Map<cxlumn_name, SegmentEncoding>>
+// Map<TABLE_NAME, Map<column_name, SegmentEncoding>>
 using TableSegmentEncodingMapping =
     std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
 

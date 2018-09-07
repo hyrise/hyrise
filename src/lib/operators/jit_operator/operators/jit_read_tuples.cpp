@@ -9,8 +9,8 @@ namespace opossum {
 std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
-  for (const auto& input_cxlumn : _input_cxlumns) {
-    desc << "x" << input_cxlumn.tuple_value.tuple_index() << " = Cxlumn#" << input_cxlumn.cxlumn_id << ", ";
+  for (const auto& input_column : _input_columns) {
+    desc << "x" << input_column.tuple_value.tuple_index() << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
     desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value << ", ";
@@ -38,20 +38,20 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   context.chunk_size = in_chunk.size();
 
   // Create the segment iterator for each input segment and store them to the runtime context
-  for (const auto& input_cxlumn : _input_cxlumns) {
-    const auto cxlumn_id = input_cxlumn.cxlumn_id;
-    const auto segment = in_chunk.get_segment(cxlumn_id);
-    const auto is_nullable = in_table.cxlumn_is_nullable(cxlumn_id);
+  for (const auto& input_column : _input_columns) {
+    const auto column_id = input_column.column_id;
+    const auto segment = in_chunk.get_segment(column_id);
+    const auto is_nullable = in_table.column_is_nullable(column_id);
     resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
-      using CxlumnDataType = typename decltype(type)::type;
-      create_iterable_from_segment<CxlumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
+      using ColumnDataType = typename decltype(type)::type;
+      create_iterable_from_segment<ColumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
         if (is_nullable) {
           context.inputs.push_back(
-              std::make_shared<JitSegmentReader<IteratorType, CxlumnDataType, true>>(it, input_cxlumn.tuple_value));
+              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value));
         } else {
           context.inputs.push_back(
-              std::make_shared<JitSegmentReader<IteratorType, CxlumnDataType, false>>(it, input_cxlumn.tuple_value));
+              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value));
         }
       });
     });
@@ -68,18 +68,18 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
   }
 }
 
-JitTupleValue JitReadTuples::add_input_cxlumn(const DataType data_type, const bool is_nullable,
-                                              const CxlumnID cxlumn_id) {
-  // There is no need to add the same input cxlumn twice.
-  // If the same cxlumn is requested for the second time, we return the JitTupleValue created previously.
-  const auto it = std::find_if(_input_cxlumns.begin(), _input_cxlumns.end(),
-                               [&cxlumn_id](const auto& input_cxlumn) { return input_cxlumn.cxlumn_id == cxlumn_id; });
-  if (it != _input_cxlumns.end()) {
+JitTupleValue JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
+                                              const ColumnID column_id) {
+  // There is no need to add the same input column twice.
+  // If the same column is requested for the second time, we return the JitTupleValue created previously.
+  const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
+                               [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
+  if (it != _input_columns.end()) {
     return it->tuple_value;
   }
 
   const auto tuple_value = JitTupleValue(data_type, is_nullable, _num_tuple_values++);
-  _input_cxlumns.push_back({cxlumn_id, tuple_value});
+  _input_columns.push_back({column_id, tuple_value});
   return tuple_value;
 }
 
@@ -98,17 +98,17 @@ size_t JitReadTuples::add_temporary_value() {
   return _num_tuple_values++;
 }
 
-std::vector<JitInputCxlumn> JitReadTuples::input_cxlumns() const { return _input_cxlumns; }
+std::vector<JitInputColumn> JitReadTuples::input_columns() const { return _input_columns; }
 
 std::vector<JitInputLiteral> JitReadTuples::input_literals() const { return _input_literals; }
 
-std::optional<CxlumnID> JitReadTuples::find_input_cxlumn(const JitTupleValue& tuple_value) const {
-  const auto it = std::find_if(_input_cxlumns.begin(), _input_cxlumns.end(), [&tuple_value](const auto& input_cxlumn) {
-    return input_cxlumn.tuple_value == tuple_value;
+std::optional<ColumnID> JitReadTuples::find_input_column(const JitTupleValue& tuple_value) const {
+  const auto it = std::find_if(_input_columns.begin(), _input_columns.end(), [&tuple_value](const auto& input_column) {
+    return input_column.tuple_value == tuple_value;
   });
 
-  if (it != _input_cxlumns.end()) {
-    return it->cxlumn_id;
+  if (it != _input_columns.end()) {
+    return it->column_id;
   } else {
     return {};
   }

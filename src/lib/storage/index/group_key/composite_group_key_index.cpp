@@ -121,10 +121,10 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   auto result = VariableLengthKey(_keys.key_size());
 
   // retrieve the partial keys for every value except for the last one and append them into one partial-key
-  for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < values.size() - 1; ++cxlumn_id) {
-    auto partial_key = _indexed_segments[cxlumn_id]->lower_bound(values[cxlumn_id]);
+  for (auto column_id = ColumnID{0}; column_id < values.size() - 1; ++column_id) {
+    auto partial_key = _indexed_segments[column_id]->lower_bound(values[column_id]);
     auto bits_of_partial_key =
-        byte_width_for_fixed_size_byte_aligned_type(_indexed_segments[cxlumn_id]->compressed_vector_type()) * CHAR_BIT;
+        byte_width_for_fixed_size_byte_aligned_type(_indexed_segments[column_id]->compressed_vector_type()) * CHAR_BIT;
     result.shift_and_set(partial_key, bits_of_partial_key);
   }
 

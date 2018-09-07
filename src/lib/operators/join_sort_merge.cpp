@@ -24,7 +24,7 @@ namespace opossum {
 **/
 
 /**
-* The sort merge join performs a join on two input tables on specific join cxlumns. For usage notes, see the
+* The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
 * -> The input tables are materialized and clustered to a specified amount of clusters.
 *    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
@@ -34,8 +34,8 @@ namespace opossum {
 **/
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                              const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                             const CxlumnIDPair& cxlumn_ids, const PredicateCondition op)
-    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, cxlumn_ids, op) {
+                             const ColumnIDPair& column_ids, const PredicateCondition op)
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
@@ -51,21 +51,21 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _cxlumn_ids,
+  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _column_ids,
                                          _predicate_condition);
 }
 
 void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
-  // Check cxlumn types
-  const auto& left_cxlumn_type = input_table_left()->cxlumn_data_type(_cxlumn_ids.first);
-  DebugAssert(left_cxlumn_type == input_table_right()->cxlumn_data_type(_cxlumn_ids.second),
-              "Left and right cxlumn types do not match. The sort merge join requires matching cxlumn types");
+  // Check column types
+  const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
+              "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_cxlumn_type, *this, _cxlumn_ids.first, _cxlumn_ids.second, _predicate_condition, _mode);
+      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -80,11 +80,11 @@ const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, CxlumnID left_cxlumn_id, CxlumnID right_cxlumn_id,
+  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                        const PredicateCondition op, JoinMode mode)
       : _sort_merge_join{sort_merge_join},
-        _left_cxlumn_id{left_cxlumn_id},
-        _right_cxlumn_id{right_cxlumn_id},
+        _left_column_id{left_column_id},
+        _right_column_id{right_column_id},
         _op{op},
         _mode{mode} {
     _cluster_count = _determine_number_of_clusters();
@@ -99,12 +99,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_left_table;
   std::unique_ptr<MaterializedSegmentList<T>> _sorted_right_table;
 
-  // Contains the null value row ids if a join cxlumn is an outer join cxlumn
+  // Contains the null value row ids if a join column is an outer join column
   std::unique_ptr<PosList> _null_rows_left;
   std::unique_ptr<PosList> _null_rows_right;
 
-  const CxlumnID _left_cxlumn_id;
-  const CxlumnID _right_cxlumn_id;
+  const ColumnID _left_column_id;
+  const ColumnID _right_column_id;
 
   const PredicateCondition _op;
   const JoinMode _mode;
@@ -583,30 +583,30 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   void _add_output_segments(Segments& output_segments, std::shared_ptr<const Table> input_table,
                             std::shared_ptr<const PosList> pos_list) {
-    auto cxlumn_count = input_table->cxlumn_count();
-    for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
+    auto column_count = input_table->column_count();
+    for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the segment data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
         // Create a pos_list referencing the original segment instead of the reference segment
-        auto new_pos_list = _dereference_pos_list(input_table, cxlumn_id, pos_list);
+        auto new_pos_list = _dereference_pos_list(input_table, column_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
-          const auto base_segment = input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id);
+          const auto base_segment = input_table->get_chunk(ChunkID{0})->get_segment(column_id);
           const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
 
           auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
-                                                                    ref_segment->referenced_cxlumn_id(), new_pos_list);
+                                                                    ref_segment->referenced_column_id(), new_pos_list);
           output_segments.push_back(new_ref_segment);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
           // it.
-          const auto dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
-          output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
+          const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
+          output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
         }
       } else {
-        auto new_ref_segment = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
+        auto new_ref_segment = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
         output_segments.push_back(new_ref_segment);
       }
     }
@@ -616,12 +616,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference segment entries into a pos list pointing to the original table.
   * This is done because there should not be any reference segments referencing reference segments.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, CxlumnID cxlumn_id,
+  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
                                                  const std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto base_segment = input_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
+      auto base_segment = input_table->get_chunk(chunk_id)->get_segment(column_id);
       auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
       input_pos_lists.push_back(reference_segment->pos_list());
     }
@@ -647,7 +647,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSort<T>(
-        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(), _sort_merge_join._cxlumn_ids,
+        _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(), _sort_merge_join._column_ids,
         _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
@@ -664,7 +664,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto output_left = _concatenate_pos_lists(_output_pos_lists_left);
     auto output_right = _concatenate_pos_lists(_output_pos_lists_right);
 
-    // Add the outer join rows which had a null value in their join cxlumn
+    // Add the outer join rows which had a null value in their join column
     if (include_null_left) {
       for (auto row_id_left : *_null_rows_left) {
         output_left->push_back(row_id_left);
@@ -684,9 +684,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _add_output_segments(output_segments, _sort_merge_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_cxlumn_definitions = concatenated(_sort_merge_join.input_table_left()->cxlumn_definitions(),
-                                                  _sort_merge_join.input_table_right()->cxlumn_definitions());
-    auto output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
+    auto output_column_definitions = concatenated(_sort_merge_join.input_table_left()->column_definitions(),
+                                                  _sort_merge_join.input_table_right()->column_definitions());
+    auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 
     output_table->append_chunk(output_segments);
 

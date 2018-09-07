@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-/* Base class for all cxlumn writers.
+/* Base class for all column writers.
  * We need this class, so we can store a number of JitSegmentWriters with different template
  * specializations in a common data structure.
  */
@@ -14,14 +14,14 @@ class BaseJitSegmentWriter {
   virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
-struct JitOutputCxlumn {
-  std::string cxlumn_name;
+struct JitOutputColumn {
+  std::string column_name;
   JitTupleValue tuple_value;
 };
 
 /* JitWriteTuples must be the last operator in any chain of jit operators.
  * It is responsible for
- * 1) adding cxlumn definitions to the output table
+ * 1) adding column definitions to the output table
  * 2) appending the current tuple to the current output chunk
  * 3) creating a new output chunks and adding output chunks to the output table
  */
@@ -32,7 +32,7 @@ class JitWriteTuples : public AbstractJittableSink {
    * to all output segments in vector in the runtime context.
    * We then use JitSegmentWriter instances to access these segments. JitSegmentWriters are templated with the
    * type of ValueSegment they are accessing. They are initialized with an output_index and a tuple value.
-   * When requested to store a value, they will access the cxlumn from the runtime context corresponding to their
+   * When requested to store a value, they will access the column from the runtime context corresponding to their
    * output_index and copy the value from their JitTupleValue.
    *
    * All segment writers have a common template-free base class. That allows us to store the segment writers in a
@@ -66,16 +66,16 @@ class JitWriteTuples : public AbstractJittableSink {
   void before_query(Table& out_table, JitRuntimeContext& context) const override;
   void after_chunk(Table& out_table, JitRuntimeContext& context) const override;
 
-  void add_output_cxlumn(const std::string& cxlumn_name, const JitTupleValue& value);
+  void add_output_column(const std::string& column_name, const JitTupleValue& value);
 
-  std::vector<JitOutputCxlumn> output_cxlumns() const;
+  std::vector<JitOutputColumn> output_columns() const;
 
  private:
   void _consume(JitRuntimeContext& context) const final;
 
   void _create_output_chunk(JitRuntimeContext& context) const;
 
-  std::vector<JitOutputCxlumn> _output_cxlumns;
+  std::vector<JitOutputColumn> _output_columns;
 };
 
 }  // namespace opossum

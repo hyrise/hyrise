@@ -15,17 +15,17 @@ class StorageManagerTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& sm = StorageManager::get();
-    auto t1 = std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data);
-    auto t2 = std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data, 4);
+    auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
+    auto t2 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 4);
 
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
 
     const auto v1_lqp = StoredTableNode::make("first_table");
-    const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<CxlumnID, std::string>{});
+    const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
 
     const auto v2_lqp = StoredTableNode::make("second_table");
-    const auto v2 = std::make_shared<LQPView>(v2_lqp, std::unordered_map<CxlumnID, std::string>{});
+    const auto v2 = std::make_shared<LQPView>(v2_lqp, std::unordered_map<ColumnID, std::string>{});
 
     sm.add_lqp_view("first_view", std::move(v1));
     sm.add_lqp_view("second_view", std::move(v2));
@@ -34,9 +34,9 @@ class StorageManagerTest : public BaseTest {
 
 TEST_F(StorageManagerTest, AddTableTwice) {
   auto& sm = StorageManager::get();
-  EXPECT_THROW(sm.add_table("first_table", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data)),
+  EXPECT_THROW(sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
                std::exception);
-  EXPECT_THROW(sm.add_table("first_view", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data)),
+  EXPECT_THROW(sm.add_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
                std::exception);
 }
 
@@ -68,7 +68,7 @@ TEST_F(StorageManagerTest, HasTable) {
 
 TEST_F(StorageManagerTest, AddViewTwice) {
   const auto v1_lqp = StoredTableNode::make("first_table");
-  const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<CxlumnID, std::string>{});
+  const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
 
   auto& sm = StorageManager::get();
   EXPECT_THROW(sm.add_lqp_view("first_table", v1), std::exception);

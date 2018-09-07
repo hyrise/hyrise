@@ -12,7 +12,7 @@ class AbstractExpression;
 class AbstractLPQNode;
 
 // Predicate in a representation so that scan operators (TableScan, IndexScan) can use is. That is, it only
-// consists of cxlumns, values, a predicate condition and no nesting.
+// consists of columns, values, a predicate condition and no nesting.
 struct OperatorScanPredicate {
   /**
    * Try to build a conjunction of OperatorScanPredicates from an @param expression executed on @param node.
@@ -24,10 +24,10 @@ struct OperatorScanPredicate {
                                                                            const AbstractLQPNode& node);
 
   OperatorScanPredicate() = default;
-  OperatorScanPredicate(const CxlumnID cxlumn_id, const PredicateCondition predicate_condition,
+  OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                         const AllParameterVariant& value = NullValue{});
 
-  CxlumnID cxlumn_id{INVALID_cxlumn_id};
+  ColumnID column_id{INVALID_column_id};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
 };

@@ -10,7 +10,7 @@ namespace opossum {
 class AbstractExpression;
 class AbstractLQPNode;
 
-// Predicate representation for Join operators consists of one cxlumn of each input side and a join predicate.
+// Predicate representation for Join operators consists of one column of each input side and a join predicate.
 struct OperatorJoinPredicate {
   /**
    * Try to build an OperatorJoinPredicate from an @param expression executed on @param left_input and
@@ -21,10 +21,10 @@ struct OperatorJoinPredicate {
                                                               const AbstractLQPNode& left_input,
                                                               const AbstractLQPNode& right_input);
 
-  OperatorJoinPredicate(const CxlumnIDPair& cxlumn_ids, const PredicateCondition predicate_condition);
+  OperatorJoinPredicate(const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
-  // `.first` is the Cxlumn in the left input, `.second` is the cxlumn in the right input
-  CxlumnIDPair cxlumn_ids;
+  // `.first` is the Column in the left input, `.second` is the column in the right input
+  ColumnIDPair column_ids;
   PredicateCondition predicate_condition;
 };
 

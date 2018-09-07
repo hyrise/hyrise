@@ -5,23 +5,23 @@
 
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "lqp_cxlumn_reference.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
-class LQPCxlumnExpression;
+class LQPColumnExpression;
 
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
   explicit StoredTableNode(const std::string& table_name);
 
-  LQPCxlumnReference get_cxlumn(const std::string& name) const;
+  LQPColumnReference get_column(const std::string& name) const;
 
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunks);
   const std::vector<ChunkID>& excluded_chunk_ids() const;
 
   std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& cxlumn_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input) const override;

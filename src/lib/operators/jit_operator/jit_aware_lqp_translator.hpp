@@ -22,14 +22,14 @@ namespace opossum {
  *    node to the chain of jit operators.
  * 2) Once we know which nodes we want to jit, we can start building out JitOperatorWrapper:
  *    We start by adding a JitReadTuples node. This node is passed to all translation functions during the construction
- *    of further operators. If any jit operator depends on a cxlumn or literal value, this value is registered with the
+ *    of further operators. If any jit operator depends on a column or literal value, this value is registered with the
  *    JitReadTuples operator. The operator returns a JitTupleValue that serves as a placeholder in the requesting
  *    operator. The JitReadTuples operator will make sure that the actual value is then accessible through the
  *    JitTupleValue at runtime.
- *    The output cxlumns are determined by the top-most ProjectionNode. If there is no ProjectionNode, all cxlumns from
+ *    The output columns are determined by the top-most ProjectionNode. If there is no ProjectionNode, all columns from
  *    the input node are considered as outputs.
  *    In case we find any PredicateNode or UnionNode during our traversal, we need to create a JitFilter operator.
- *    Whenever a non-primitive value (such as a predicate conditions, LQPExpression of LQPCxlumnReferences - which
+ *    Whenever a non-primitive value (such as a predicate conditions, LQPExpression of LQPColumnReferences - which
  *    can in turn reference a LQPExpression in a ProjectionNode) is encountered, it is converted to an JitExpression
  *    by a helper method first. We then add a JitCompute operator to our chain and use its result value instead of the
  *    original non-primitive value.

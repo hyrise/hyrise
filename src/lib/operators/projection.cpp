@@ -10,7 +10,7 @@
 
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/pqp_cxlumn_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "utils/assert.hpp"
 
@@ -38,26 +38,26 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   /**
-   * Determine the TableCxlumnDefinitions
+   * Determine the TableColumnDefinitions
    */
-  TableCxlumnDefinitions cxlumn_definitions;
+  TableColumnDefinitions column_definitions;
   for (const auto& expression : expressions) {
-    cxlumn_definitions.emplace_back(expression->as_cxlumn_name(), expression->data_type(), expression->is_nullable());
+    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
   }
 
   /**
-   * If an expression is a PQPCxlumnExpression then it might be possible to forward the input cxlumn, if the
-   * input TableType (References or Data) matches the output cxlumn type.
+   * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
+   * input TableType (References or Data) matches the output column type.
    */
-  const auto only_projects_cxlumns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
-    return expression->type == ExpressionType::PQPCxlumn;
+  const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
+    return expression->type == ExpressionType::PQPColumn;
   });
 
-  const auto output_table_type = only_projects_cxlumns ? input_table_left()->type() : TableType::Data;
-  const auto forward_cxlumns = input_table_left()->type() == output_table_type;
+  const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
+  const auto forward_columns = input_table_left()->type() == output_table_type;
 
   const auto output_table =
-      std::make_shared<Table>(cxlumn_definitions, output_table_type, input_table_left()->max_chunk_size());
+      std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection
@@ -70,10 +70,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     ExpressionEvaluator evaluator(input_table_left(), chunk_id);
     for (const auto& expression : expressions) {
-      // Forward input cxlumn if possible
-      if (expression->type == ExpressionType::PQPCxlumn && forward_cxlumns) {
-        const auto pqp_cxlumn_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(expression);
-        output_segments.emplace_back(input_chunk->get_segment(pqp_cxlumn_expression->cxlumn_id));
+      // Forward input column if possible
+      if (expression->type == ExpressionType::PQPColumn && forward_columns) {
+        const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
+        output_segments.emplace_back(input_chunk->get_segment(pqp_column_expression->column_id));
       } else {
         output_segments.emplace_back(evaluator.evaluate_expression_to_segment(*expression));
       }

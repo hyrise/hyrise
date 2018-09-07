@@ -1,4 +1,4 @@
-cxlumn_name|cxlumn_type|is_nullable
+column_name|column_type|is_nullable
 string|string|int
 i|int|0
 f|float|0

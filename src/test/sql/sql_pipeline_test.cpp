@@ -49,11 +49,11 @@ class SQLPipelineTest : public BaseTest {
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
-    TableCxlumnDefinitions cxlumn_definitions;
-    cxlumn_definitions.emplace_back("a", DataType::Int);
-    cxlumn_definitions.emplace_back("b", DataType::Float);
-    cxlumn_definitions.emplace_back("bb", DataType::Float);
-    _join_result = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("b", DataType::Float);
+    column_definitions.emplace_back("bb", DataType::Float);
+    _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
@@ -412,7 +412,7 @@ TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
-  auto sql = "SELECT a + not_a_cxlumn FROM table_a";
+  auto sql = "SELECT a + not_a_column FROM table_a";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);

@@ -17,11 +17,11 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::then() const { return
 
 const std::shared_ptr<AbstractExpression>& CaseExpression::otherwise() const { return arguments[2]; }
 
-std::string CaseExpression::as_cxlumn_name() const {
+std::string CaseExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << "CASE WHEN " << when()->as_cxlumn_name() << " THEN " << then()->as_cxlumn_name() << " ELSE "
-         << otherwise()->as_cxlumn_name() << " END";
+  stream << "CASE WHEN " << when()->as_column_name() << " THEN " << then()->as_column_name() << " ELSE "
+         << otherwise()->as_column_name() << " END";
 
   return stream.str();
 }

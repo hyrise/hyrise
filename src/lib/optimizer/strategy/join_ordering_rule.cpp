@@ -15,19 +15,19 @@ std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
 bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   /**
-   * Dispatch _perform_join_ordering_recursively() and fix the cxlumn order afterwards, since changing join order might
+   * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it
    */
 
   Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
 
-  const auto expected_cxlumn_order = root->cxlumn_expressions();
+  const auto expected_column_order = root->column_expressions();
 
   auto result_lqp = _perform_join_ordering_recursively(root->left_input());
 
-  // Join ordering might change the output cxlumn order, let's fix that
-  if (!expressions_equal(expected_cxlumn_order, result_lqp->cxlumn_expressions())) {
-    result_lqp = ProjectionNode::make(expected_cxlumn_order, result_lqp);
+  // Join ordering might change the output column order, let's fix that
+  if (!expressions_equal(expected_column_order, result_lqp->column_expressions())) {
+    result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
 
   root->set_left_input(result_lqp);

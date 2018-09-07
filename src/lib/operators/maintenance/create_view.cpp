@@ -26,7 +26,7 @@ void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
 std::shared_ptr<const Table> CreateView::_on_execute() {
   StorageManager::get().add_lqp_view(_view_name, _view);
 
-  return std::make_shared<Table>(TableCxlumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
 }
 
 }  // namespace opossum

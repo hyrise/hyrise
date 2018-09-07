@@ -76,7 +76,7 @@ class IterablesTest : public BaseTest {
 TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto iterable = ValueSegmentIterable<int>{*int_segment};
@@ -90,7 +90,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
 TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -106,7 +106,7 @@ TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
 TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
   auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto iterable = ValueSegmentIterable<int>{*int_segment};
@@ -120,7 +120,7 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
 TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
   auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -138,7 +138,7 @@ TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
 
   auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
@@ -154,7 +154,7 @@ TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -172,7 +172,7 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
 
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
 
   auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
@@ -188,7 +188,7 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
 
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
@@ -206,7 +206,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
       PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
 
   auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, CxlumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
   auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
 
@@ -219,7 +219,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto iterable = ValueSegmentIterable<int>{*int_segment};
@@ -233,7 +233,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
 TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto segment = chunk->get_segment(CxlumnID{0u});
+  auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto iterable = ValueSegmentIterable<int>{*int_segment};

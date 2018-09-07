@@ -13,7 +13,7 @@
 namespace opossum {
 
 class AbstractLQPNode;
-class LQPCxlumnExpression;
+class LQPColumnExpression;
 class TransactionContext;
 
 /**
@@ -43,32 +43,32 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
 /**
- * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting cxlumn references in
- * LQPCxlumnExpressions according to the node_mapping
+ * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in
+ * LQPColumnExpressions according to the node_mapping
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping);
 
 /**
- * Utility to AbstractExpression::deep_copy() a single expression while adjusting cxlumn references in
- * LQPCxlumnExpressions according to the node_mapping
+ * Utility to AbstractExpression::deep_copy() a single expression while adjusting column references in
+ * LQPColumnExpressions according to the node_mapping
  */
 std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(const AbstractExpression& expression,
                                                                                const LQPNodeMapping& node_mapping);
 
 /**
- * Makes all cxlumn references points to their equivalent in a copied LQP
+ * Makes all column references points to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);
 
-std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_cxlumn_expression,
+std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping);
 
 /**
- * Create a comma separated string with the AbstractExpression::as_cxlumn_name() of each expression
+ * Create a comma separated string with the AbstractExpression::as_column_name() of each expression
  */
-std::string expression_cxlumn_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
 enum class ExpressionVisitation { VisitArguments, DoNotVisitArguments };
 
@@ -107,7 +107,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
 
 /**
  * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
- *         all required LQPCxlumnExpressions are available from this LQP).
+ *         all required LQPColumnExpressions are available from this LQP).
  *         To check if an expression is available in a form ready to be used by a scan/join,
  *         use `Operator*Predicate::from_expression(...) != nullptr`.
  */

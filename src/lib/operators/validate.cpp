@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
 
   const auto in_table = input_table_left();
-  auto output = std::make_shared<Table>(in_table->cxlumn_definitions(), TableType::References);
+  auto output = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
 
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
@@ -62,7 +62,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     Segments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
-    const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(CxlumnID{0}));
+    const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
 
     // If the segments in this chunk reference a segment, build a poslist for a reference segment.
     if (ref_segment_in) {
@@ -84,11 +84,11 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
-      for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
+      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
         const auto reference_segment =
-            std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
-        const auto referenced_cxlumn_id = reference_segment->referenced_cxlumn_id();
-        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_cxlumn_id, pos_list_out);
+            std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id));
+        const auto referenced_column_id = reference_segment->referenced_column_id();
+        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, pos_list_out);
         output_segments.push_back(ref_segment_out);
       }
 
@@ -107,8 +107,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       }
 
       // Create actual ReferenceSegment objects.
-      for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
-        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, cxlumn_id, pos_list_out);
+      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+        auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list_out);
         output_segments.push_back(ref_segment_out);
       }
     }

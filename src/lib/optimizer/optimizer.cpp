@@ -10,7 +10,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
-#include "strategy/cxlumn_pruning_rule.hpp"
+#include "strategy/column_pruning_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
@@ -25,7 +25,7 @@
  * ProjectionNode computing a subselect and a subsequent PredicateNode filtering based on it.
  * We do not WANT to optimize the LQP twice (optimization takes time after all) and we CANNOT optimize it twice, since,
  * e.g., a non-deterministic rule, could produce two different LQPs while optimizing and then the select-expression
- * in the PredicateNode couldn't be resolved to a cxlumn anymore. There are more subtle ways LQPs might break in this
+ * in the PredicateNode couldn't be resolved to a column anymore. There are more subtle ways LQPs might break in this
  * scenario, and frankly, this is one of the weak links in the expression system...
  *
  * ...long story short:
@@ -85,7 +85,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
   RuleBatch pruning_batch(RuleBatchExecutionPolicy::Once);
-  pruning_batch.add_rule(std::make_shared<CxlumnPruningRule>());
+  pruning_batch.add_rule(std::make_shared<ColumnPruningRule>());
   optimizer->add_rule_batch(pruning_batch);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);

@@ -36,7 +36,7 @@
  */
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
-STRONG_TYPEDEF(uint16_t, CxlumnID);
+STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
@@ -136,13 +136,13 @@ using TransactionID = uint32_t;
 using AttributeVectorWidth = uint8_t;
 
 using PosList = pmr_vector<RowID>;
-using CxlumnIDPair = std::pair<CxlumnID, CxlumnID>;
+using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
-constexpr CxlumnID INVALID_cxlumn_id{std::numeric_limits<CxlumnID::base_type>::max()};
+constexpr ColumnID INVALID_column_id{std::numeric_limits<ColumnID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 

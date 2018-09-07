@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_cxlumn_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
@@ -34,12 +34,12 @@ class OperatorsProjectionTest : public BaseTest {
     table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     table_wrapper_b->execute();
 
-    a_a = PQPCxlumnExpression::from_table(*table_wrapper_a->get_output(), "a");
-    a_b = PQPCxlumnExpression::from_table(*table_wrapper_a->get_output(), "b");
+    a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
+    a_b = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "b");
   }
 
   std::shared_ptr<TableWrapper> table_wrapper_a, table_wrapper_b;
-  std::shared_ptr<PQPCxlumnExpression> a_a, a_b, b_a, b_b;
+  std::shared_ptr<PQPColumnExpression> a_a, a_b, b_a, b_b;
 };
 
 TEST_F(OperatorsProjectionTest, OperatorName) {
@@ -63,8 +63,8 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_segment(CxlumnID{1}), output_chunk->get_segment(CxlumnID{0}));
-  EXPECT_EQ(input_chunk->get_segment(CxlumnID{0}), output_chunk->get_segment(CxlumnID{1}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
@@ -75,13 +75,13 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_segment(CxlumnID{1}), output_chunk->get_segment(CxlumnID{0}));
-  EXPECT_EQ(input_chunk->get_segment(CxlumnID{0}), output_chunk->get_segment(CxlumnID{1}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
   const auto table_scan =
-      std::make_shared<TableScan>(table_wrapper_a, CxlumnID{0}, PredicateCondition::LessThan, 100'000);
+      std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
@@ -90,28 +90,28 @@ TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_NE(input_chunk->get_segment(CxlumnID{1}), output_chunk->get_segment(CxlumnID{0}));
-  EXPECT_NE(input_chunk->get_segment(CxlumnID{0}), output_chunk->get_segment(CxlumnID{1}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
   // See ForwardsIfPossibleDataTable
 
   const auto table_scan =
-      std::make_shared<TableScan>(table_wrapper_a, CxlumnID{0}, PredicateCondition::LessThan, 100'000);
+      std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();
 
-  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(CxlumnID{1}),
-            projection->get_output()->get_chunk(ChunkID{0})->get_segment(CxlumnID{0}));
-  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(CxlumnID{0}),
-            projection->get_output()->get_chunk(ChunkID{0})->get_segment(CxlumnID{1}));
+  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto table_scan_a =
-      std::make_shared<TableScan>(table_wrapper_b, CxlumnID{1}, PredicateCondition::GreaterThan, ParameterID{5});
+      std::make_shared<TableScan>(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, ParameterID{5});
   const auto projection_a = std::make_shared<Projection>(table_scan_a, expression_vector(b_a));
   const auto select_expression =
       std::make_shared<PQPSelectExpression>(table_scan_a, DataType::Int, false, PQPSelectExpression::Parameters{});

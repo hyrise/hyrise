@@ -18,9 +18,9 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID left_cxlumn_id,
+LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                                      const PredicateCondition predicate_condition, const std::string& pattern)
-    : BaseSingleCxlumnTableScanImpl{in_table, left_cxlumn_id, predicate_condition},
+    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 

@@ -9,7 +9,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -24,7 +24,7 @@ PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicat
 
 std::string PredicateNode::description() const {
   std::stringstream stream;
-  stream << "[Predicate] " << predicate->as_cxlumn_name();
+  stream << "[Predicate] " << predicate->as_column_name();
   return stream.str();
 }
 
@@ -35,7 +35,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
 
   /**
-   * If the predicate is a not simple `<cxlumn> <predicate_condition> <value>` predicate, then we have to
+   * If the predicate is a not simple `<column> <predicate_condition> <value>` predicate, then we have to
    * fall back to a selectivity of 1 atm, because computing statistics for complex predicates is
    * not implemented
    */
@@ -47,7 +47,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
 
   for (const auto& operator_predicate : *operator_predicates) {
     output_statistics = std::make_shared<TableStatistics>(output_statistics->estimate_predicate(
-        operator_predicate.cxlumn_id, operator_predicate.predicate_condition, operator_predicate.value));
+        operator_predicate.column_id, operator_predicate.predicate_condition, operator_predicate.value));
   }
 
   return output_statistics;

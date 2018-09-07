@@ -51,11 +51,11 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Chunk size            | ChunkOffset                           |   4
    * Chunk count           | ChunkID                               |   4
-   * Cxlumn count          | CxlumnID                              |   2
-   * Cxlumn types          | TypeID array                          |   Cxlumn Count * 1
-   * Cxlumn nullable       | bool (stored as BoolAsByteType)       |   Cxlumn Count * 1
-   * Cxlumn name lengths   | size_t array                          |   Cxlumn Count * 1
-   * Cxlumn names          | std::string array                     |   Sum of lengths of all names
+   * Column count          | ColumnID                              |   2
+   * Column types          | TypeID array                          |   Column Count * 1
+   * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
+   * Column name lengths   | size_t array                          |   Column Count * 1
+   * Column names          | std::string array                     |   Sum of lengths of all names
    *
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
@@ -96,18 +96,18 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Cxlumn Type           | CxlumnType                            |   1
+   * Column Type           | ColumnType                            |   1
    * Null Values'          | vector<bool> (BoolAsByteType)         |   rows * 1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
    *
    * Please note that the number of rows are written in the header of the chunk.
-   * The type of the cxlumn can be found in the global header of the file.
+   * The type of the column can be found in the global header of the file.
    *
-   * ': These fields are only written if the cxlumn is nullable.
-   * ^: These fields are only written if the type of the cxlumn IS a string.
-   * °: This field is writen if the type of the cxlumn is NOT a string
+   * ': These fields are only written if the column is nullable.
+   * ^: These fields are only written if the type of the column IS a string.
+   * °: This field is writen if the type of the column is NOT a string
    *
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
@@ -120,16 +120,16 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Cxlumn Type           | CxlumnType                            |   1
+   * Column Type           | ColumnType                            |   1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
    * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
    *
    * Please note that the number of rows are written in the header of the chunk.
-   * The type of the cxlumn can be found in the global header of the file.
+   * The type of the column can be found in the global header of the file.
    *
-   * ^: These fields are only written if the type of the cxlumn IS a string.
-   * °: This field is writen if the type of the cxlumn is NOT a string
+   * ^: These fields are only written if the type of the column IS a string.
+   * °: This field is writen if the type of the column is NOT a string
    *
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
@@ -142,7 +142,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Cxlumn Type           | CxlumnType                            |   1
+   * Column Type           | ColumnType                            |   1
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
@@ -151,10 +151,10 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * Attribute v. values   | uintX                                 |   rows * width of attribute v.
    *
    * Please note that the number of rows are written in the header of the chunk.
-   * The type of the cxlumn can be found in the global header of the file.
+   * The type of the column can be found in the global header of the file.
    *
-   * ^: These fields are only written if the type of the cxlumn IS a string.
-   * °: This field is written if the type of the cxlumn is NOT a string
+   * ^: These fields are only written if the type of the column IS a string.
+   * °: This field is written if the type of the column is NOT a string
    *
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.

@@ -64,7 +64,7 @@ TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
 
   // build and execute join
   auto join = std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals);
+                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   EXPECT_NE(join, nullptr) << "Could not build Join";
   join->execute();
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
@@ -135,7 +135,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 1);
 
   // build and execute sort
-  auto sort = std::make_shared<Sort>(_table_wrapper_a, CxlumnID{0}, OrderByMode::Ascending, 2u);
+  auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
   EXPECT_TABLE_EQ_UNORDERED(sort->get_output(), expected_result);
 
@@ -154,7 +154,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
 
   // build and execute table scan
   auto scan =
-      std::make_shared<TableScan>(this->_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+      std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 
@@ -169,9 +169,9 @@ TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
 }
 
 TEST_F(OperatorDeepCopyTest, DiamondShape) {
-  auto scan_a = std::make_shared<TableScan>(_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-  auto scan_b = std::make_shared<TableScan>(scan_a, CxlumnID{1}, PredicateCondition::LessThan, 1000);
-  auto scan_c = std::make_shared<TableScan>(scan_a, CxlumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
   auto copied_pqp = union_positions->deep_copy();
@@ -186,13 +186,13 @@ TEST_F(OperatorDeepCopyTest, Subselect) {
   StorageManager::get().add_table("table_3int", table);
 
   const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
-  const TableCxlumnDefinitions cxlumn_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+  const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
 
   auto sql_pipeline = SQLPipelineBuilder{subselect_query}.disable_mvcc().create_pipeline_statement();
   const auto first_result = sql_pipeline.get_result_table();
 
   // Quick sanity check to see that the original query is correct
-  auto expected_first = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto expected_first = std::make_shared<Table>(column_definitions, TableType::Data);
   expected_first->append({10, 10, 10});
   EXPECT_TABLE_EQ_UNORDERED(first_result, expected_first);
 
@@ -204,7 +204,7 @@ TEST_F(OperatorDeepCopyTest, Subselect) {
 
   const auto copied_result = tasks.back()->get_operator()->get_output();
 
-  auto expected_copied = std::make_shared<Table>(cxlumn_definitions, TableType::Data);
+  auto expected_copied = std::make_shared<Table>(column_definitions, TableType::Data);
   expected_copied->append({11, 10, 11});
   expected_copied->append({11, 11, 11});
 

@@ -16,46 +16,46 @@ class AllParameterVariantTest : public BaseTest {};
 
 TEST_F(AllParameterVariantTest, GetCurrentType) {
   {
-    AllParameterVariant parameter(CxlumnID{0});
-    EXPECT_EQ(parameter.type(), typeid(CxlumnID));
+    AllParameterVariant parameter(ColumnID{0});
+    EXPECT_EQ(parameter.type(), typeid(ColumnID));
     EXPECT_NE(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter("string");
-    EXPECT_NE(parameter.type(), typeid(CxlumnID));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(true);
-    EXPECT_NE(parameter.type(), typeid(CxlumnID));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(static_cast<int32_t>(123));
-    EXPECT_NE(parameter.type(), typeid(CxlumnID));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(static_cast<int64_t>(123456789l));
-    EXPECT_NE(parameter.type(), typeid(CxlumnID));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(123.4f);
-    EXPECT_NE(parameter.type(), typeid(CxlumnID));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
   {
     AllParameterVariant parameter(123.4);
-    EXPECT_NE(parameter.type(), typeid(CxlumnID));
+    EXPECT_NE(parameter.type(), typeid(ColumnID));
     EXPECT_EQ(parameter.type(), typeid(AllTypeVariant));
   }
 }
 
 TEST_F(AllParameterVariantTest, GetCurrentValue) {
   {
-    AllParameterVariant parameter(CxlumnID{0});
-    EXPECT_EQ(static_cast<std::uint16_t>(boost::get<CxlumnID>(parameter)), static_cast<std::uint16_t>(0u));
+    AllParameterVariant parameter(ColumnID{0});
+    EXPECT_EQ(static_cast<std::uint16_t>(boost::get<ColumnID>(parameter)), static_cast<std::uint16_t>(0u));
   }
   {
     AllParameterVariant parameter("string");
@@ -90,20 +90,20 @@ TEST_F(AllParameterVariantTest, ToString) {
     EXPECT_EQ(to_string(parameter), "Placeholder #17");
   }
   {
-    const AllParameterVariant parameter(CxlumnID{17});
-    EXPECT_EQ(to_string(parameter), "Cxlumn #17");
+    const AllParameterVariant parameter(ColumnID{17});
+    EXPECT_EQ(to_string(parameter), "Column #17");
   }
   {
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
     const std::shared_ptr<StoredTableNode> int_float = StoredTableNode::make("int_float");
-    const LQPCxlumnReference cxlumn_a = {int_float, CxlumnID{0}};
-    const LQPCxlumnReference cxlumn_b = {int_float, CxlumnID{1}};
+    const LQPColumnReference column_a = {int_float, ColumnID{0}};
+    const LQPColumnReference column_b = {int_float, ColumnID{1}};
 
-    const AllParameterVariant parameter_cxlumn_a(cxlumn_a);
-    EXPECT_EQ(to_string(parameter_cxlumn_a), "a");
+    const AllParameterVariant parameter_column_a(column_a);
+    EXPECT_EQ(to_string(parameter_column_a), "a");
 
-    const AllParameterVariant parameter_cxlumn_b(cxlumn_b);
-    EXPECT_EQ(to_string(parameter_cxlumn_b), "b");
+    const AllParameterVariant parameter_column_b(column_b);
+    EXPECT_EQ(to_string(parameter_column_b), "b");
   }
   {
     const AllParameterVariant parameter("string");

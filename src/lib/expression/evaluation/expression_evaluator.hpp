@@ -27,18 +27,18 @@ class FunctionExpression;
 class UnaryMinusExpression;
 class InExpression;
 class IsNullExpression;
-class PQPCxlumnExpression;
+class PQPColumnExpression;
 class PQPSelectExpression;
 
 /**
- * Computes a result (i.e., a Cxlumn or an ExpressionResult<Result>) from an Expression.
+ * Computes a result (i.e., a Column or an ExpressionResult<Result>) from an Expression.
  * Operates either
  *      - ...on a Chunk, thus returning a value for each row in it
- *      - ...without a Chunk, thus returning a single value (and failing if Cxlumns are encountered in the Expression)
+ *      - ...without a Chunk, thus returning a single value (and failing if Columns are encountered in the Expression)
  */
 class ExpressionEvaluator final {
  public:
-  // Hyrise doesn't have a bool cxlumn type, so we use int32_t. If at any point we get bool cxlumn types, just replace
+  // Hyrise doesn't have a bool column type, so we use int32_t. If at any point we get bool column types, just replace
   // all the occurences of Bool and DataTypeBool.
   using Bool = int32_t;
   static constexpr auto DataTypeBool = DataType::Int;
@@ -88,7 +88,7 @@ class ExpressionEvaluator final {
                                                                    const ChunkOffset chunk_offset);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_cxlumn_expression(const PQPCxlumnExpression& cxlumn_expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_column_expression(const PQPColumnExpression& column_expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_case_expression(const CaseExpression& case_expression);
@@ -155,7 +155,7 @@ class ExpressionEvaluator final {
    */
   std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
 
-  void _materialize_segment_if_not_yet_materialized(const CxlumnID cxlumn_id);
+  void _materialize_segment_if_not_yet_materialized(const ColumnID column_id);
 
   std::shared_ptr<ExpressionResult<std::string>> _evaluate_substring(
       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);

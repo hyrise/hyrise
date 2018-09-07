@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "expression/lqp_cxlumn_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -15,10 +15,10 @@ namespace opossum {
 class AliasNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
-    const auto mock_node = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+    const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
 
-    const auto a_expression = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{mock_node, CxlumnID{0}});
-    const auto b_expression = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{mock_node, CxlumnID{1}});
+    const auto a_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{0}});
+    const auto b_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{1}});
     const auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{{b_expression, a_expression}};
 
     const auto aliases = std::vector<std::string>{"x", "y"};

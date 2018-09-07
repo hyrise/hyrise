@@ -12,14 +12,14 @@ class OperatorScanPredicateTest : public ::testing::Test {
  public:
   void SetUp() override {
     node = MockNode::make(
-        MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::String, "c"}});
-    a = node->get_cxlumn("a");
-    b = node->get_cxlumn("b");
-    c = node->get_cxlumn("c");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::String, "c"}});
+    a = node->get_column("a");
+    b = node->get_column("b");
+    c = node->get_column("c");
   }
 
   std::shared_ptr<MockNode> node;
-  LQPCxlumnReference a, b, c;
+  LQPColumnReference a, b, c;
 };
 
 TEST_F(OperatorScanPredicateTest, FromExpression) {
@@ -27,7 +27,7 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
   ASSERT_TRUE(operator_predicates_a);
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
-  EXPECT_EQ(operator_predicate_a.cxlumn_id, CxlumnID{0});
+  EXPECT_EQ(operator_predicate_a.column_id, ColumnID{0});
   EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::GreaterThan);
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 
@@ -35,18 +35,18 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
   ASSERT_TRUE(operator_predicates_b);
   ASSERT_EQ(operator_predicates_b->size(), 1u);
   const auto& operator_predicate_b = operator_predicates_b->at(0);
-  EXPECT_EQ(operator_predicate_b.cxlumn_id, CxlumnID{0});
+  EXPECT_EQ(operator_predicate_b.column_id, ColumnID{0});
   EXPECT_EQ(operator_predicate_b.predicate_condition, PredicateCondition::GreaterThan);
-  EXPECT_EQ(operator_predicate_b.value, AllParameterVariant{CxlumnID{1}});
+  EXPECT_EQ(operator_predicate_b.value, AllParameterVariant{ColumnID{1}});
 }
 
-TEST_F(OperatorScanPredicateTest, FromExpressionCxlumnRight) {
+TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   // `5 > a` becomes `a < 5`
   const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than_(5, a), *node);
   ASSERT_TRUE(operator_predicates_a);
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
-  EXPECT_EQ(operator_predicate_a.cxlumn_id, CxlumnID{0});
+  EXPECT_EQ(operator_predicate_a.column_id, ColumnID{0});
   EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::LessThan);
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 
@@ -56,12 +56,12 @@ TEST_F(OperatorScanPredicateTest, FromExpressionCxlumnRight) {
   ASSERT_EQ(operator_predicates_b->size(), 2u);
 
   const auto& operator_predicate_b_a = operator_predicates_b->at(0);
-  EXPECT_EQ(operator_predicate_b_a.cxlumn_id, CxlumnID{0});
+  EXPECT_EQ(operator_predicate_b_a.column_id, ColumnID{0});
   EXPECT_EQ(operator_predicate_b_a.predicate_condition, PredicateCondition::LessThanEquals);
   EXPECT_EQ(operator_predicate_b_a.value, AllParameterVariant{5});
 
   const auto& operator_predicate_b_b = operator_predicates_b->at(1);
-  EXPECT_EQ(operator_predicate_b_b.cxlumn_id, CxlumnID{1});
+  EXPECT_EQ(operator_predicate_b_b.column_id, ColumnID{1});
   EXPECT_EQ(operator_predicate_b_b.predicate_condition, PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(operator_predicate_b_b.value, AllParameterVariant{5});
 }

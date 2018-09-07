@@ -14,7 +14,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/cxlumn_statistics.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -38,23 +38,23 @@ class IndexScanRuleTest : public StrategyBaseTest {
     rule = std::make_shared<IndexScanRule>();
 
     stored_table_node = StoredTableNode::make("a");
-    a = stored_table_node->get_cxlumn("a");
-    b = stored_table_node->get_cxlumn("b");
-    c = stored_table_node->get_cxlumn("c");
+    a = stored_table_node->get_column("a");
+    b = stored_table_node->get_column("b");
+    c = stored_table_node->get_column("c");
   }
 
   std::shared_ptr<TableStatistics> generate_mock_statistics(float row_count = 0.0f) {
-    std::vector<std::shared_ptr<const BaseCxlumnStatistics>> cxlumn_statistics;
-    cxlumn_statistics.emplace_back(std::make_shared<CxlumnStatistics<int32_t>>(0.0f, 10, 0, 20));
-    cxlumn_statistics.emplace_back(std::make_shared<CxlumnStatistics<int32_t>>(0.0f, 10, 0, 20));
-    cxlumn_statistics.emplace_back(std::make_shared<CxlumnStatistics<int32_t>>(0.0f, 10, 0, 20'000));
-    return std::make_shared<TableStatistics>(TableStatistics{TableType::Data, row_count, cxlumn_statistics});
+    std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
+    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
+    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
+    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20'000));
+    return std::make_shared<TableStatistics>(TableStatistics{TableType::Data, row_count, column_statistics});
   }
 
   std::shared_ptr<IndexScanRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
   std::shared_ptr<Table> table;
-  LQPCxlumnReference a, b, c;
+  LQPColumnReference a, b, c;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
@@ -69,8 +69,8 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherCxlumn) {
-  table->create_index<GroupKeyIndex>({CxlumnID{2}});
+TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
 
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
@@ -84,7 +84,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherCxlumn) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
-  table->create_index<CompositeGroupKeyIndex>({CxlumnID{2}, CxlumnID{1}});
+  table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
 
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
@@ -97,7 +97,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithTwoCxlumnPredicate) {
+TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
 
@@ -110,7 +110,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoCxlumnPredicate) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
-  table->create_index<GroupKeyIndex>({CxlumnID{2}});
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
 
   auto statistics_mock = generate_mock_statistics(80'000);
   table->set_table_statistics(statistics_mock);
@@ -124,7 +124,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
-  table->create_index<AdaptiveRadixTreeIndex>({CxlumnID{2}});
+  table->create_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
 
   auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
@@ -138,7 +138,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
-  table->create_index<GroupKeyIndex>({CxlumnID{2}});
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
 
   auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
@@ -152,7 +152,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
-  table->create_index<GroupKeyIndex>({CxlumnID{2}});
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
 
   auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
