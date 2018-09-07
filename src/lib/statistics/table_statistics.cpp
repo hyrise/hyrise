@@ -238,7 +238,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   switch (mode) {
-    case JoinMode::Anti:  // TODO                                                              --                               prbly wrong, but we want it to work now
+    case JoinMode::Semi:  // TODO
+    case JoinMode::Anti:  // TODO
     case JoinMode::Inner: {
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
       join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;

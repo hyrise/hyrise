@@ -9,7 +9,11 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-// TODO Comment                                                                                                                !
+// Checks for constructs like `SELECT * FROM t1 WHERE EXISTS (SELECT a FROM t2 WHERE t1.a = t2.a)
+// Does not cover - cases where the subselect is not correlated (because we cannot use a semi join without a predicate)
+//                - cases where the predicate is not `=` (because only the hash join can do semi/anti)
+//                - cases where multiple predicates exists (because our joins can only handle single predicates)
+//                - complex subselects (because we have not thought about all eventualities yet)
 
 class ExistsToSemijoinRule : public AbstractRule {
  public:
