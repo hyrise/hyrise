@@ -11,6 +11,7 @@
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
+#include "strategy/exists_to_semijoin_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
