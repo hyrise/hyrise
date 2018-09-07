@@ -5,7 +5,7 @@
 #include <string>
 
 /**
- * Performance Warnings can be used in places where slow workarounds are used. This includes BaseColumn[] or the
+ * Performance Warnings can be used in places where slow workarounds are used. This includes BaseSegment[] or the
  * use of a cross join followed by a projection instead of an equijoin.
  *
  * The warnings are printed only once per program execution. This is achieved by using static variables.
@@ -14,7 +14,7 @@
  *
  * {
  *   PerformanceWarningDisabler pwd;
- *   std::cout << base_column[5] << std::endl; // this does not cause a warning
+ *   std::cout << base_segment[5] << std::endl; // this does not cause a warning
  * }
  * // warnings are enabled again
  *

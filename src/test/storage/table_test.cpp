@@ -4,19 +4,19 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/resolve_type.hpp"
-#include "../lib/storage/table.hpp"
+#include "resolve_type.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    column_definitions.emplace_back("col_1", DataType::Int);
-    column_definitions.emplace_back("col_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int);
+    column_definitions.emplace_back("column_2", DataType::String);
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
@@ -41,7 +41,7 @@ TEST_F(StorageTableTest, GetChunk) {
   EXPECT_NE(t->get_chunk(ChunkID{1}), nullptr);
 }
 
-TEST_F(StorageTableTest, ColCount) { EXPECT_EQ(t->column_count(), 2u); }
+TEST_F(StorageTableTest, ColumnCount) { EXPECT_EQ(t->column_count(), 2u); }
 
 TEST_F(StorageTableTest, RowCount) {
   EXPECT_EQ(t->row_count(), 0u);
@@ -52,8 +52,8 @@ TEST_F(StorageTableTest, RowCount) {
 }
 
 TEST_F(StorageTableTest, GetColumnName) {
-  EXPECT_EQ(t->column_name(ColumnID{0}), "col_1");
-  EXPECT_EQ(t->column_name(ColumnID{1}), "col_2");
+  EXPECT_EQ(t->column_name(ColumnID{0}), "column_1");
+  EXPECT_EQ(t->column_name(ColumnID{1}), "column_2");
   // TODO(anyone): Do we want checks here?
   // EXPECT_THROW(t->column_name(ColumnID{2}), std::exception);
 }
@@ -65,8 +65,8 @@ TEST_F(StorageTableTest, GetColumnType) {
   // EXPECT_THROW(t->column_data_type(ColumnID{2}), std::exception);
 }
 
-TEST_F(StorageTableTest, GetColumnIdByName) {
-  EXPECT_EQ(t->column_id_by_name("col_2"), 1u);
+TEST_F(StorageTableTest, GetColumnIDByName) {
+  EXPECT_EQ(t->column_id_by_name("column_2"), 1u);
   EXPECT_THROW(t->column_id_by_name("no_column_name"), std::exception);
 }
 
@@ -83,7 +83,7 @@ TEST_F(StorageTableTest, GetValue) {
   EXPECT_THROW(t->get_value<int>(ColumnID{3}, 0u), std::exception);
 }
 
-TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
+TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
   t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
   t->append({4, "Hello,"});
@@ -94,40 +94,40 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   const auto values = std::vector<CommitID>{1u, 2u};
 
   {
-    // acquiring mvcc_columns locks them
-    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+    // acquiring mvcc_data locks them
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-    mvcc_columns->tids[0u] = values[0u];
-    mvcc_columns->tids[1u] = values[1u];
-    mvcc_columns->begin_cids[0u] = values[0u];
-    mvcc_columns->begin_cids[1u] = values[1u];
-    mvcc_columns->end_cids[0u] = values[0u];
-    mvcc_columns->end_cids[1u] = values[1u];
+    mvcc_data->tids[0u] = values[0u];
+    mvcc_data->tids[1u] = values[1u];
+    mvcc_data->begin_cids[0u] = values[0u];
+    mvcc_data->begin_cids[1u] = values[1u];
+    mvcc_data->end_cids[0u] = values[0u];
+    mvcc_data->end_cids[1u] = values[1u];
   }
 
   const auto previous_size = chunk->size();
 
-  chunk->get_scoped_mvcc_columns_lock()->shrink();
+  chunk->get_scoped_mvcc_data_lock()->shrink();
 
   ASSERT_EQ(previous_size, chunk->size());
-  ASSERT_TRUE(chunk->has_mvcc_columns());
+  ASSERT_TRUE(chunk->has_mvcc_data());
 
-  auto new_mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+  auto new_mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   for (auto i = 0u; i < chunk->size(); ++i) {
-    EXPECT_EQ(new_mvcc_columns->tids[i], values[i]);
-    EXPECT_EQ(new_mvcc_columns->begin_cids[i], values[i]);
-    EXPECT_EQ(new_mvcc_columns->end_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_data->tids[i], values[i]);
+    EXPECT_EQ(new_mvcc_data->begin_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_data->end_cids[i], values[i]);
   }
 }
 
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  std::shared_ptr<BaseSegment> vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vs_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
 
-  t->append_chunk({vc_int, vc_str});
+  t->append_chunk({vs_int, vs_str});
   EXPECT_EQ(t->chunk_count(), 1u);
 }
 
@@ -136,9 +136,9 @@ TEST_F(StorageTableTest, EmplaceChunkAndAppend) {
 
   t->append({4, "Hello,"});
   EXPECT_EQ(t->chunk_count(), 1u);
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->append_chunk(ChunkColumns{{vc_int, vc_str}});
+  std::shared_ptr<BaseSegment> vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vs_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
+  t->append_chunk(Segments{{vs_int, vs_str}});
   EXPECT_EQ(t->chunk_count(), 2u);
 }
 
@@ -146,14 +146,14 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
   t->append({4, "Hello,"});
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->append_chunk({vc_int, vc_str});
+  std::shared_ptr<BaseSegment> vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vs_str = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
+  t->append_chunk({vs_int, vs_str});
   EXPECT_EQ(t->chunk_count(), 2u);
 
-  std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
-  t->append_chunk({vc_int, vc_str});
+  std::shared_ptr<BaseSegment> vs_int2 = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  std::shared_ptr<BaseSegment> vs_str2 = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::String);
+  t->append_chunk({vs_int, vs_str});
   EXPECT_EQ(t->chunk_count(), 3u);
 }
 

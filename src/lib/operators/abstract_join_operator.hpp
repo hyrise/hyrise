@@ -11,7 +11,7 @@
 namespace opossum {
 
 // operator to join two tables using one column of each table
-// output is a table with reference columns
+// output is a table with ReferenceSegments
 // to filter by multiple criteria, you can chain the operator
 
 // As with most operators, we do not guarantee a stable operation with regards
@@ -20,7 +20,7 @@ namespace opossum {
 // find more information about joins in our Wiki:
 // https://github.com/hyrise/hyrise/wiki/Operator-Join
 
-// We have decided against forwarding MVCC columns in https://github.com/hyrise/hyrise/issues/409
+// We have decided against forwarding MVCC data in https://github.com/hyrise/hyrise/issues/409
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:

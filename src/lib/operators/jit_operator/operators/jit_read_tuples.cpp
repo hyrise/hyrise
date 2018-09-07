@@ -2,7 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 
 namespace opossum {
 
@@ -10,7 +10,7 @@ std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.tuple_value.tuple_index() << " = Col#" << input_column.column_id << ", ";
+    desc << "x" << input_column.tuple_value.tuple_index() << " = Column#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
     desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value << ", ";
@@ -37,21 +37,21 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   context.chunk_offset = 0;
   context.chunk_size = in_chunk.size();
 
-  // Create the column iterator for each input column and store them to the runtime context
+  // Create the segment iterator for each input segment and store them to the runtime context
   for (const auto& input_column : _input_columns) {
     const auto column_id = input_column.column_id;
-    const auto column = in_chunk.get_column(column_id);
+    const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullable = in_table.column_is_nullable(column_id);
-    resolve_data_and_column_type(*column, [&](auto type, auto& typed_column) {
+    resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
       using ColumnDataType = typename decltype(type)::type;
-      create_iterable_from_column<ColumnDataType>(typed_column).with_iterators([&](auto it, auto end) {
+      create_iterable_from_segment<ColumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
         if (is_nullable) {
           context.inputs.push_back(
-              std::make_shared<JitColumnReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value));
+              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value));
         } else {
           context.inputs.push_back(
-              std::make_shared<JitColumnReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value));
+              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value));
         }
       });
     });
@@ -60,7 +60,7 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
 
 void JitReadTuples::execute(JitRuntimeContext& context) const {
   for (; context.chunk_offset < context.chunk_size; ++context.chunk_offset) {
-    // We read from and advance all column iterators, before passing the tuple on to the next operator.
+    // We read from and advance all segment iterators, before passing the tuple on to the next operator.
     for (const auto& input : context.inputs) {
       input->read_value(context);
     }

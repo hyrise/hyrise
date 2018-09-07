@@ -10,13 +10,13 @@
 
 namespace opossum {
 
-class BaseColumn;
+class BaseSegment;
 class ARTNode;
-class BaseDictionaryColumn;
+class BaseDictionarySegment;
 
 /**
- * The AdaptiveRadixTreeIndex (ART) currently works on single DictionaryColumns. Conceptually it also works on
- * ValueColumns.
+ * The AdaptiveRadixTreeIndex (ART) currently works on single DictionarySegments. Conceptually it also works on
+ * ValueSegments.
  * The ART does not compare full keys, but only partial keys in each node: On level n, the n-th byte of the full key
  * is compared.
  * In order to store the partial keys, it uses 4 different node-types, which can hold up to 4, 16, 48 and 256 partial
@@ -37,7 +37,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest_BinaryComparableFromChunkOffset_Test;
 
  public:
-  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
+  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
 
@@ -79,9 +79,9 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,
                                         size_t depth, Iterator& it);
 
-  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
 
-  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<ARTNode> _root;
 };

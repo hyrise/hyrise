@@ -10,7 +10,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -51,7 +51,7 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
+  void add_column(std::vector<opossum::Segments>& segments_by_chunk,
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
@@ -67,8 +67,8 @@ class AbstractBenchmarkTableGenerator {
     auto loop_count =
         std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
-    tbb::concurrent_vector<T> column;
-    column.reserve(_chunk_size);
+    tbb::concurrent_vector<T> data;
+    data.reserve(_chunk_size);
 
     /**
      * The loop over all records that the final column of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
@@ -100,27 +100,27 @@ class AbstractBenchmarkTableGenerator {
        * Pass in the previously generated indices to use them in 'generator_function',
        * e.g. when generating IDs.
        * We generate a vector of values with variable length
-       * and iterate it to add to the output column.
+       * and iterate it to add to the output segment.
        */
       auto values = generator_function(indices);
       for (T& value : values) {
-        column.push_back(value);
+        data.push_back(value);
 
-        // write output chunks if column size has reached chunk_size
+        // write output chunks if segment size has reached chunk_size
         if (row_index % _chunk_size == _chunk_size - 1) {
-          auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
+          auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(data));
 
           if (is_first_column) {
-            columns_by_chunk.emplace_back();
-            columns_by_chunk.back().push_back(value_column);
+            segments_by_chunk.emplace_back();
+            segments_by_chunk.back().push_back(value_segment);
           } else {
             opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-            columns_by_chunk[chunk_id].push_back(value_column);
+            segments_by_chunk[chunk_id].push_back(value_segment);
           }
 
-          // reset column
-          column.clear();
-          column.reserve(_chunk_size);
+          // reset data
+          data.clear();
+          data.reserve(_chunk_size);
         }
         row_index++;
       }
@@ -128,21 +128,21 @@ class AbstractBenchmarkTableGenerator {
 
     // write partially filled last chunk
     if (row_index % _chunk_size != 0) {
-      auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
+      auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(data));
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
-        columns_by_chunk.emplace_back();
-        columns_by_chunk.back().push_back(value_column);
+        segments_by_chunk.emplace_back();
+        segments_by_chunk.back().push_back(value_segment);
       } else {
         opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-        columns_by_chunk[chunk_id].push_back(value_column);
+        segments_by_chunk[chunk_id].push_back(value_segment);
       }
     }
   }
 
   /**
-   * This method simplifies the interface for columns,
+   * This method simplifies the interface for columns
    * where only a single element is added in the inner loop.
    *
    * @tparam T                  the type of the column
@@ -153,13 +153,13 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
+  void add_column(std::vector<opossum::Segments>& segments_by_chunk,
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
-    add_column(columns_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
+    add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
 }  // namespace opossum

@@ -81,7 +81,7 @@ TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
       PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals};
 
   // 3 dimensional table of cached row count results
-  // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * col1_index + col2_index ]
+  // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * column1_index + column2_index ]
   const std::vector<std::vector<std::vector<uint32_t>>> row_counts{{
       {5400, 5400, 5400, 5400, 5400, 10800, 10800, 4320, 5400, 10800, 16200, 6480, 5400, 4320, 6480, 6480},
       {27000, 27000, 27000, 27000, 27000, 21600, 21600, 28080, 27000, 21600, 16200, 25920, 27000, 28080, 25920, 25920},
@@ -139,7 +139,7 @@ TEST_F(TableStatisticsJoinTest, OuterJoinsTest) {
       PredicateCondition::GreaterThanEquals};  // PredicateCondition::LessThan, PredicateCondition::GreaterThan,
 
   // 3 dimensional table of cached row count results
-  // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * col1_index + col2_index ]
+  // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * column1_index + column2_index ]
   const std::vector<std::vector<std::vector<uint32_t>>> row_counts{
       {
           {5400, 5400, 5400, 5400, 5490, 10800, 10800, 4428, 5520, 10860, 16200, 6588, 5430, 4380, 6480, 6480},

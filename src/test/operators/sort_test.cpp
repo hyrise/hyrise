@@ -2,7 +2,7 @@
 #include <memory>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
@@ -178,7 +178,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
+TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegmentWithNull) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
@@ -187,7 +187,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
+TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegmentWithNull) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Descending, 2u);
@@ -196,7 +196,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumn) {
+TEST_P(OperatorsSortTest, AscendingSortOfOneDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
@@ -205,7 +205,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumn) {
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
 }
 
-TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumn) {
+TEST_P(OperatorsSortTest, DescendingSortOfOneDictSegment) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Descending, 2u);

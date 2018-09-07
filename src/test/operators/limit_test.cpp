@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
@@ -66,12 +66,12 @@ class OperatorsLimitTest : public BaseTest {
   std::shared_ptr<AbstractOperator> _input_operator;
 };
 
-TEST_F(OperatorsLimitTest, Limit1ValueColumn) {
+TEST_F(OperatorsLimitTest, Limit1ValueSegment) {
   _input_operator = _table_wrapper;
   test_limit_1();
 }
 
-TEST_F(OperatorsLimitTest, Limit1ReferenceColumn) {
+TEST_F(OperatorsLimitTest, Limit1ReferenceSegment) {
   // Filter accepts all rows in table.
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
@@ -79,12 +79,12 @@ TEST_F(OperatorsLimitTest, Limit1ReferenceColumn) {
   test_limit_1();
 }
 
-TEST_F(OperatorsLimitTest, Limit2ValueColumn) {
+TEST_F(OperatorsLimitTest, Limit2ValueSegment) {
   _input_operator = _table_wrapper;
   test_limit_2();
 }
 
-TEST_F(OperatorsLimitTest, Limit2ReferenceColumn) {
+TEST_F(OperatorsLimitTest, Limit2ReferenceSegment) {
   // Filter accepts all rows in table.
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
@@ -92,12 +92,12 @@ TEST_F(OperatorsLimitTest, Limit2ReferenceColumn) {
   test_limit_2();
 }
 
-TEST_F(OperatorsLimitTest, Limit4ValueColumn) {
+TEST_F(OperatorsLimitTest, Limit4ValueSegment) {
   _input_operator = _table_wrapper;
   test_limit_4();
 }
 
-TEST_F(OperatorsLimitTest, Limit4ReferenceColumn) {
+TEST_F(OperatorsLimitTest, Limit4ReferenceSegment) {
   // Filter accepts all rows in table.
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
@@ -105,12 +105,12 @@ TEST_F(OperatorsLimitTest, Limit4ReferenceColumn) {
   test_limit_4();
 }
 
-TEST_F(OperatorsLimitTest, Limit10ValueColumn) {
+TEST_F(OperatorsLimitTest, Limit10ValueSegment) {
   _input_operator = _table_wrapper;
   test_limit_10();
 }
 
-TEST_F(OperatorsLimitTest, Limit10ReferenceColumn) {
+TEST_F(OperatorsLimitTest, Limit10ReferenceSegment) {
   // Filter accepts all rows in table.
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();

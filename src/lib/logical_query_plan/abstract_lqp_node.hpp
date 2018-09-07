@@ -116,7 +116,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const;
 
   /**
-   * @return The Expressions defining each Column that this node outputs
+   * @return The Expressions defining each column that this node outputs
    */
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 

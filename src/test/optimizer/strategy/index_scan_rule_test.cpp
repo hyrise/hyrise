@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "expression/abstract_expression.hpp"
@@ -17,7 +17,7 @@
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -83,7 +83,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
+TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
   table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
 
   auto statistics_mock = generate_mock_statistics();

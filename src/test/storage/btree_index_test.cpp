@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/base_column.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/index/b_tree/b_tree_index.hpp"
-#include "../lib/types.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -19,9 +19,9 @@ class BTreeIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
-    column = std::make_shared<ValueColumn<std::string>>(values);
+    segment = std::make_shared<ValueSegment<std::string>>(values);
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
-    index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+    index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
@@ -29,7 +29,7 @@ class BTreeIndexTest : public BaseTest {
   std::vector<std::string> values;
   std::vector<std::string> sorted;
   std::shared_ptr<BTreeIndex> index = nullptr;
-  std::shared_ptr<ValueColumn<std::string>> column = nullptr;
+  std::shared_ptr<ValueSegment<std::string>> segment = nullptr;
 
   /**
    * Use pointers to inner data structures of BTreeIndex in order to bypass the

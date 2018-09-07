@@ -4,16 +4,16 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "column_index_type.hpp"
+#include "segment_index_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-class BaseColumn;
+class BaseSegment;
 
 /**
- * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex , CompositeGroupKeyIndex,
+ * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indices.
  * I.e. the index is sorted based on the column order. To check whether a key is less than another
@@ -39,20 +39,20 @@ class BaseIndex : private Noncopyable {
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   /**
-   * Creates an index on all given columns. Since all indices are composite indices the order of
-   * the provided columns matters. Creating two indices with the same columns, but in different orders
+   * Creates an index on all given segments. Since all indices are composite indices the order of
+   * the provided segments matters. Creating two indices with the same segments, but in different orders
    * leads to very different indices.
    */
 
   BaseIndex() = delete;
-  explicit BaseIndex(const ColumnIndexType type);
+  explicit BaseIndex(const SegmentIndexType type);
   BaseIndex(BaseIndex&&) = default;
   BaseIndex& operator=(BaseIndex&&) = default;
   virtual ~BaseIndex() = default;
 
   /**
-   * Checks whether the given columns are covered by the index. This is the case when the order of the given columns
-   * and the columns of the index match, and the given columns are either exactly or a subset of the index columns.
+   * Checks whether the given segments are covered by the index. This is the case when the order of the given columns
+   * and the columns of the index match, and the given segments are either exactly or a subset of the indexed segments.
    *
    * For example:
    * We have an index on columns DAB.
@@ -60,13 +60,13 @@ class BaseIndex : private Noncopyable {
    * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
+  bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
-   * The number of given values has to be less or equal to number of indexed columns. Additionally
-   * the order of values and columns has to match. If less values are provided the search is performed
-   * as if all entries of the table are truncated to the columns, that got reference values.
+   * The number of given values has to be less or equal to number of indexed segments. Additionally
+   * the order of values and segments has to match. If less values are provided the search is performed
+   * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _lower_bound() of the most derived class.
    * See also upper_bound()
@@ -77,9 +77,9 @@ class BaseIndex : private Noncopyable {
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
-   * The number of given values has to be less or equal to number of indexed columns. Additionally
-   * the order of values and columns has to match. If less values are provided the search is performed
-   * as if all entries of the table are truncated to the columns, that got reference values.
+   * The number of given values has to be less or equal to number of indexed segments. Additionally
+   * the order of values and segments has to match. If less values are provided the search is performed
+   * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _upper_bound() of the most derived class.
    * See also lower_bound()
@@ -106,7 +106,7 @@ class BaseIndex : private Noncopyable {
    */
   Iterator cend() const;
 
-  ColumnIndexType type() const;
+  SegmentIndexType type() const;
 
  protected:
   /**
@@ -117,9 +117,9 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
+  virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
 
  private:
-  const ColumnIndexType _type;
+  const SegmentIndexType _type;
 };
 }  // namespace opossum
