@@ -53,15 +53,15 @@ std::shared_ptr<PosList> CxlumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
       constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
       constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
 
-      constexpr auto LEFT_IS_STRING_SEGMENT = (std::is_same<LeftType, std::string>{});
-      constexpr auto RIGHT_IS_STRING_SEGMENT = (std::is_same<RightType, std::string>{});
+      constexpr auto LEFT_IS_STRING_CXLUMN = (std::is_same<LeftType, std::string>{});
+      constexpr auto RIGHT_IS_STRING_CXLUMN = (std::is_same<RightType, std::string>{});
 
-      constexpr auto NEITHER_IS_STRING_SEGMENT = !LEFT_IS_STRING_SEGMENT && !RIGHT_IS_STRING_SEGMENT;
-      constexpr auto BOTH_ARE_STRING_SEGMENTS = LEFT_IS_STRING_SEGMENT && RIGHT_IS_STRING_SEGMENT;
+      constexpr auto NEITHER_IS_STRING_CXLUMN = !LEFT_IS_STRING_CXLUMN && !RIGHT_IS_STRING_CXLUMN;
+      constexpr auto BOTH_ARE_STRING_CXLUMNS = LEFT_IS_STRING_CXLUMN && RIGHT_IS_STRING_CXLUMN;
 
       // clang-format off
       if constexpr((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
-                   (NEITHER_IS_STRING_SEGMENT || BOTH_ARE_STRING_SEGMENTS)) {
+                   (NEITHER_IS_STRING_CXLUMN || BOTH_ARE_STRING_CXLUMNS)) {
         auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
 

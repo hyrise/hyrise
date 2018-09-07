@@ -15,7 +15,7 @@
 namespace opossum {
 
 template <typename DerivedIndex>
-class MultiCxlumnIndexTest : public BaseTest {
+class MultiSegmentIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
@@ -50,9 +50,9 @@ class MultiCxlumnIndexTest : public BaseTest {
 
 // List of indices to test
 typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndices;
-TYPED_TEST_CASE(MultiCxlumnIndexTest, DerivedIndices);
+TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndices);
 
-TYPED_TEST(MultiCxlumnIndexTest, FullRange) {
+TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
   auto end_int_str = this->index_int_str->cend();
   auto result_values_int_str =
@@ -72,7 +72,7 @@ TYPED_TEST(MultiCxlumnIndexTest, FullRange) {
   EXPECT_EQ(expected_values_str_int, result_values_str_int);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithSingleReturnValue) {
+TYPED_TEST(MultiSegmentIndexTest, PointQueryWithSingleReturnValue) {
   auto begin = this->index_int_str->lower_bound({3, "foo"});
   auto end = this->index_int_str->upper_bound({3, "foo"});
 
@@ -82,7 +82,7 @@ TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithSingleReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithNoReturnValue) {
+TYPED_TEST(MultiSegmentIndexTest, PointQueryWithNoReturnValue) {
   auto begin = this->index_int_str->lower_bound({3, "hello"});
   auto end = this->index_int_str->upper_bound({3, "hello"});
 
@@ -91,7 +91,7 @@ TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithNoReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithMultipleReturnValues) {
+TYPED_TEST(MultiSegmentIndexTest, PointQueryWithMultipleReturnValues) {
   auto begin = this->index_int_str->lower_bound({4, "bar"});
   auto end = this->index_int_str->upper_bound({4, "bar"});
 
@@ -100,7 +100,7 @@ TYPED_TEST(MultiCxlumnIndexTest, PointQueryWithMultipleReturnValues) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQuery) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQuery) {
   auto begin = this->index_int_str->lower_bound({1, "baz"});
   auto end = this->index_int_str->upper_bound({3, "bar"});
 
@@ -110,7 +110,7 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQuery) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQueryBelow) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQueryBelow) {
   auto begin = this->index_int_str->lower_bound({-3, "arrr!"});
   auto end = this->index_int_str->upper_bound({0, "bar"});
 
@@ -119,7 +119,7 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQueryBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQueryPartiallyBelow) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQueryPartiallyBelow) {
   auto begin = this->index_int_str->lower_bound({-3, "arrr!"});
   auto end = this->index_int_str->upper_bound({1, "baz"});
 
@@ -128,7 +128,7 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQueryPartiallyBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQueryAbove) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQueryAbove) {
   auto begin = this->index_int_str->lower_bound({10, "srsly?"});
   auto end = this->index_int_str->upper_bound({13, "srsly?"});
 
@@ -137,7 +137,7 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQueryAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQueryPartiallyAbove) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQueryPartiallyAbove) {
   auto begin = this->index_int_str->lower_bound({8, "bar"});
   auto end = this->index_int_str->upper_bound({13, "srsly?"});
 
@@ -146,7 +146,7 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQueryPartiallyAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQueryOpenEnd) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQueryOpenEnd) {
   auto begin = this->index_int_str->lower_bound({8, "bar"});
   auto end = this->index_int_str->cend();
 
@@ -155,7 +155,7 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQueryOpenEnd) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, RangeQueryOpenBegin) {
+TYPED_TEST(MultiSegmentIndexTest, RangeQueryOpenBegin) {
   auto begin = this->index_int_str->cbegin();
   auto end = this->index_int_str->upper_bound({1, "baz"});
 
@@ -164,13 +164,13 @@ TYPED_TEST(MultiCxlumnIndexTest, RangeQueryOpenBegin) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, TooManyReferenceValues) {
+TYPED_TEST(MultiSegmentIndexTest, TooManyReferenceValues) {
   if (!IS_DEBUG) return;
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, QueryWithFewerValuesThanCxlumns) {
+TYPED_TEST(MultiSegmentIndexTest, QueryWithFewerValuesThanCxlumns) {
   auto begin = this->index_int_str->lower_bound({4});
   auto end = this->index_int_str->upper_bound({4});
 
@@ -180,7 +180,7 @@ TYPED_TEST(MultiCxlumnIndexTest, QueryWithFewerValuesThanCxlumns) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, IsIndexForTest) {
+TYPED_TEST(MultiSegmentIndexTest, IsIndexForTest) {
   EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int}));
   EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int, this->dict_segment_str}));
   EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_segment_str}));
@@ -192,7 +192,7 @@ TYPED_TEST(MultiCxlumnIndexTest, IsIndexForTest) {
   EXPECT_FALSE(this->index_str_int->is_index_for({}));
 }
 
-TYPED_TEST(MultiCxlumnIndexTest, CreateAndRetrieveUsingChunk) {
+TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   auto chunk = std::make_shared<Chunk>(Segments({this->dict_segment_int, this->dict_segment_str}));
 
   chunk->create_index<TypeParam>({this->dict_segment_int});

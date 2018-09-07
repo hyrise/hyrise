@@ -83,7 +83,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherCxlumn) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
 }
 
-TEST_F(IndexScanRuleTest, NoIndexScanWithMultiCxlumnIndex) {
+TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
   table->create_index<CompositeGroupKeyIndex>({CxlumnID{2}, CxlumnID{1}});
 
   auto statistics_mock = generate_mock_statistics();

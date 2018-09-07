@@ -86,12 +86,12 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/enumerate_ccp_test.cpp
-    optimizer/lqp_translator_test.cpp
-    optimizer/join_graph_test.cpp
-    optimizer/join_graph_builder_test.cpp
-    optimizer/optimizer_test.cpp
     optimizer/dp_ccp_test.cpp
+    optimizer/enumerate_ccp_test.cpp
+    optimizer/join_graph_builder_test.cpp
+    optimizer/join_graph_test.cpp
+    optimizer/lqp_translator_test.cpp
+    optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/cxlumn_pruning_rule_test.cpp
@@ -139,7 +139,7 @@ set(
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
     storage/materialize_test.cpp
-    storage/multi_cxlumn_index_test.cpp
+    storage/multi_segment_index_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp

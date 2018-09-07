@@ -285,7 +285,7 @@ void Aggregate::_aggregate() {
   PARTITIONING PHASE
   First we partition the input chunks by the given group key(s).
   This is done by creating a vector that contains the AggregateKey for each row.
-  It is gradually built by visitors, one for each group cxlumn.
+  It is gradually built by visitors, one for each group segment.
   */
 
   KeysPerChunk<AggregateKey> keys_per_chunk;

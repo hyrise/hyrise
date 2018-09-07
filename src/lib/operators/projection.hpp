@@ -31,8 +31,8 @@ class Projection : public AbstractReadOnlyOperator {
    * Because each INSERT uses a projection as input, the above case needs to project the three
    * literals (1, 2, 3) without any specific input table. Therefore, this dummy table is used instead.
    *
-   * The dummy table contains one (value) cxlumn with one row. This way, the above projection
-   * contains exactly one row with the given literals.
+   * The dummy table contains one column, and a chunk with one (value) segment with one row. This way,
+   * the above projection contains exactly one row with the given literals.
    */
   class DummyTable : public Table {
    public:
