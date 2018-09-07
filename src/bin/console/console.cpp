@@ -502,7 +502,7 @@ int Console::_visualize(const std::string& input) {
   const bool no_execute = (first_word == NOEXEC || second_word == NOEXEC);
 
   // Determine the plan type to visualize
-  enum class PlanType { LQP, LQPOpt, PQP};
+  enum class PlanType { LQP, LQPOpt, PQP };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
   if (first_word == LQP || second_word == LQP) {
@@ -549,7 +549,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_unoptimized_logical_plans()
-                                              : _sql_pipeline->get_optimized_logical_plans();
+                                                      : _sql_pipeline->get_optimized_logical_plans();
       for (const auto& lqp : lqps) {
         lqp_roots.push_back(lqp);
       }
