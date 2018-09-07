@@ -138,6 +138,13 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     result.iteration_durations = state.iteration_durations;
 
     _query_results_by_query_name.emplace(name, result);
+
+    const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count();
+    const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
+    const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
+
+    _config.out << "  -> Executed " << result.num_iterations << " times in " << duration_seconds << " seconds ("
+                << items_per_second << " iter/s)" << std::endl;
   }
 }
 
