@@ -1,8 +1,8 @@
 #include <memory>
 #include <string_view>
 
-#include "base_test.hpp"
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "null_value.hpp"
 

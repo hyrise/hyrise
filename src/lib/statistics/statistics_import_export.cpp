@@ -2,8 +2,8 @@
 
 #include <fstream>
 
-#include "constant_mappings.hpp"
 #include "column_statistics.hpp"
+#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 

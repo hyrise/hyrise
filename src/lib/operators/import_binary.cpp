@@ -129,12 +129,12 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   Segments output_segments;
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     output_segments.push_back(
-            _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
+        _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
   table->append_chunk(output_segments);
 }
 
-std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, ChunkOffset row_count,
+std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            DataType data_type, bool is_nullable) {
   std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
@@ -146,7 +146,7 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, 
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream &file, ChunkOffset row_count,
+std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
                                                            bool is_nullable) {
   const auto column_type = _read_value<BinarySegmentType>(file);
 

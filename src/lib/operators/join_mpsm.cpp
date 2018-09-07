@@ -424,7 +424,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the segments from an input table to the output table
   **/
-  void _add_output_segments(Segments &output_segments, std::shared_ptr<const Table> input_table,
+  void _add_output_segments(Segments& output_segments, std::shared_ptr<const Table> input_table,
                             std::shared_ptr<const PosList> pos_list) {
     auto column_count = input_table->column_count();
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
