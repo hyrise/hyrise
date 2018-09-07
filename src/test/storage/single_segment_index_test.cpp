@@ -19,7 +19,7 @@
 namespace opossum {
 
 template <typename DerivedIndex>
-class SingleColumnIndexTest : public BaseTest {
+class SingleSegmentIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
@@ -49,9 +49,9 @@ class SingleColumnIndexTest : public BaseTest {
 // List of indices to test
 typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
     DerivedIndices;
-TYPED_TEST_CASE(SingleColumnIndexTest, DerivedIndices);
+TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices);
 
-TYPED_TEST(SingleColumnIndexTest, FullRange) {
+TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
   auto end_int = this->index_int->cend();
   auto result_values_int = this->result_as_vector(this->dict_segment_int, begin_int, end_int);
@@ -65,7 +65,7 @@ TYPED_TEST(SingleColumnIndexTest, FullRange) {
   EXPECT_EQ(expected_values_str, result_values_str);
 }
 
-TYPED_TEST(SingleColumnIndexTest, PointQueryWithSingleReturnValue) {
+TYPED_TEST(SingleSegmentIndexTest, PointQueryWithSingleReturnValue) {
   auto begin = this->index_int->lower_bound({3});
   auto end = this->index_int->upper_bound({3});
 
@@ -75,7 +75,7 @@ TYPED_TEST(SingleColumnIndexTest, PointQueryWithSingleReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, PointQueryWithNoReturnValue) {
+TYPED_TEST(SingleSegmentIndexTest, PointQueryWithNoReturnValue) {
   auto begin = this->index_int->lower_bound({5});
   auto end = this->index_int->upper_bound({5});
 
@@ -84,7 +84,7 @@ TYPED_TEST(SingleColumnIndexTest, PointQueryWithNoReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, PointQueryWithMultipleReturnValues) {
+TYPED_TEST(SingleSegmentIndexTest, PointQueryWithMultipleReturnValues) {
   auto begin = this->index_int->lower_bound({4});
   auto end = this->index_int->upper_bound({4});
 
@@ -93,7 +93,7 @@ TYPED_TEST(SingleColumnIndexTest, PointQueryWithMultipleReturnValues) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQuery) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQuery) {
   auto begin = this->index_int->lower_bound({1});
   auto end = this->index_int->upper_bound({3});
 
@@ -107,7 +107,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQuery) {
   EXPECT_EQ(expected_values, result_values);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryBelow) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryBelow) {
   auto begin = this->index_int->lower_bound({-3});
   auto end = this->index_int->upper_bound({-1});
 
@@ -116,7 +116,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyBelow) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyBelow) {
   auto begin = this->index_int->lower_bound({-3});
   auto end = this->index_int->upper_bound({1});
 
@@ -125,7 +125,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryAbove) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryAbove) {
   auto begin = this->index_int->lower_bound({10});
   auto end = this->index_int->upper_bound({13});
 
@@ -134,7 +134,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyAbove) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyAbove) {
   auto begin = this->index_int->lower_bound({8});
   auto end = this->index_int->upper_bound({13});
 
@@ -143,7 +143,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenEnd) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenEnd) {
   auto begin = this->index_int->lower_bound({8});
   auto end = this->index_int->cend();
 
@@ -152,7 +152,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenEnd) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenBegin) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
   auto begin = this->index_int->cbegin();
   auto end = this->index_int->upper_bound({1});
 
@@ -161,7 +161,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenBegin) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
+TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
   EXPECT_TRUE(this->index_int->is_index_for({this->dict_segment_int}));
   EXPECT_TRUE(this->index_str->is_index_for({this->dict_segment_str}));
 
@@ -171,7 +171,7 @@ TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
   EXPECT_FALSE(this->index_str->is_index_for({}));
 }
 
-TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
+TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
   if (!IS_DEBUG) return;
   auto vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
   vs_int->append(4);
