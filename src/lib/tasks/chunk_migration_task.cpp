@@ -44,11 +44,11 @@ void ChunkMigrationTask::_on_execute() {
 bool ChunkMigrationTask::chunk_is_completed(const std::shared_ptr<const Chunk>& chunk, const uint32_t max_chunk_size) {
   if (chunk->size() != max_chunk_size) return false;
 
-  if (chunk->has_mvcc_columns()) {
-    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+  if (chunk->has_mvcc_data()) {
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-    for (const auto begin_cid : mvcc_columns->begin_cids) {
-      if (begin_cid == MvccColumns::MAX_COMMIT_ID) return false;
+    for (const auto begin_cid : mvcc_data->begin_cids) {
+      if (begin_cid == MvccData::MAX_COMMIT_ID) return false;
     }
   }
 

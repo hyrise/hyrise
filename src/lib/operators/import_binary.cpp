@@ -126,36 +126,37 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
 void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
-  ChunkColumns output_columns;
+  Segments output_segments;
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    output_columns.push_back(
-        _import_column(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
+    output_segments.push_back(
+        _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
-  table->append_chunk(output_columns);
+  table->append_chunk(output_segments);
 }
 
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
-                                                         bool is_nullable) {
-  std::shared_ptr<BaseColumn> result;
+std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
+                                                           DataType data_type, bool is_nullable) {
+  std::shared_ptr<BaseSegment> result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    result = _import_column<ColumnDataType>(file, row_count, is_nullable);
+    result = _import_segment<ColumnDataType>(file, row_count, is_nullable);
   });
 
   return result;
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
-  const auto column_type = _read_value<BinaryColumnType>(file);
+std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,
+                                                           bool is_nullable) {
+  const auto column_type = _read_value<BinarySegmentType>(file);
 
   switch (column_type) {
-    case BinaryColumnType::value_column:
-      return _import_value_column<ColumnDataType>(file, row_count, is_nullable);
-    case BinaryColumnType::dictionary_column:
-      return _import_dictionary_column<ColumnDataType>(file, row_count);
+    case BinarySegmentType::value_segment:
+      return _import_value_segment<ColumnDataType>(file, row_count, is_nullable);
+    case BinarySegmentType::dictionary_segment:
+      return _import_dictionary_segment<ColumnDataType>(file, row_count);
     default:
-      // This case happens if the read column type is not a valid BinaryColumnType.
+      // This case happens if the read column type is not a valid BinarySegmentType.
       Fail("Cannot import column: invalid column type");
   }
 }
@@ -175,24 +176,24 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 }
 
 template <typename T>
-std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count,
-                                                                   bool is_nullable) {
+std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
+                                                                     bool is_nullable) {
   // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
   // needed
   if (is_nullable) {
     const auto nullables = _read_values<bool>(file, row_count);
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
-                                            tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
+    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
+                                             tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
   } else {
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueColumn<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
   }
 }
 
 template <typename T>
-std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
-                                                                             ChunkOffset row_count) {
+std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(std::ifstream& file,
+                                                                               ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
   const auto null_value_id = dictionary_size;
@@ -200,7 +201,7 @@ std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std
 
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
-  return std::make_shared<DictionaryColumn<T>>(dictionary, attribute_vector, null_value_id);
+  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
 }
 
 }  // namespace opossum

@@ -2,7 +2,7 @@
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
 
-#include "../../../base_test.hpp"
+#include "base_test.hpp"
 #include "operators/jit_operator/specialization/jit_code_specializer.hpp"
 #include "operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp"
 

@@ -9,9 +9,9 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
-#include "storage/base_column.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -74,7 +74,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * ----------------
    * |  Row count   |
    * |--------------|
-   * |   Columns¹   |
+   * |  Segments¹   |
    * ----------------
    *
    * ¹Number of columns is provided in the binary header
@@ -82,15 +82,15 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
-                                                    bool is_nullable);
+  static std::shared_ptr<BaseSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+                                                      bool is_nullable);
 
-  // Reads the column type from the given file and chooses a column import function from it.
   template <typename ColumnDataType>
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  // Reads the column type from the given file and chooses a segment import function from it.
+  static std::shared_ptr<BaseSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
   /*
-   * Imports a serialized ValueColumn from the given file.
+   * Imports a serialized ValueSegment from the given file.
    * In case T is std::string the file contains:
    *
    * Description           | Type                                  | Size in byte
@@ -115,11 +115,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    */
   template <typename T>
-  static std::shared_ptr<ValueColumn<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count,
-                                                              bool is_nullable);
+  static std::shared_ptr<ValueSegment<T>> _import_value_segment(std::ifstream& file, ChunkOffset row_count,
+                                                                bool is_nullable);
 
   /*
-   * Imports a serialized DictionaryColumn from the given file.
+   * Imports a serialized DictionarySegment from the given file.
    * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes
@@ -135,7 +135,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,

@@ -21,10 +21,10 @@ class Table;
  * @brief Implements a column scan using the LIKE operator
  *
  * - The only supported type is std::string.
- * - Value columns are scanned sequentially
- * - For dictionary columns, we check the values in the dictionary and store the results in a vector
+ * - Value segments are scanned sequentially
+ * - For dictionary segments, we check the values in the dictionary and store the results in a vector
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
- *   enables us to detect if all or none of the values in the column satisfy the expression.
+ *   enables us to detect if all or none of the values in the segment satisfy the expression.
  *
  * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
  *                    e.g., StartsWithPattern. 
@@ -34,14 +34,16 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                     const PredicateCondition predicate_condition, const std::string& pattern);
 
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseValueSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseDictionarySegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleColumnTableScanImpl::handle_column;
+  using BaseSingleColumnTableScanImpl::handle_segment;
 
  private:
   /**
@@ -53,7 +55,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
                       const ChunkOffsetsList* const mapped_chunk_offsets);
 
   /**
-   * Used for dictionary columns
+   * Used for dictionary segments
    * @returns number of matches and the result of each dictionary entry
    */
   std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);

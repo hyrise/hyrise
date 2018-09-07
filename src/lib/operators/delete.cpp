@@ -6,7 +6,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
@@ -33,9 +33,9 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto chunk = values_to_delete->get_chunk(chunk_id);
 
-    // we have already verified that all columns reference the same table
-    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk->get_column(ColumnID{0}));
-    const auto pos_list = first_column->pos_list();
+    // we have already verified that all segments reference the same table
+    const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
+    const auto pos_list = first_segment->pos_list();
 
     _pos_lists.emplace_back(pos_list);
 
@@ -45,7 +45,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       auto expected = 0u;
       // Actual row lock for delete happens here
       const auto success =
-          referenced_chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(
+          referenced_chunk->get_scoped_mvcc_data_lock()->tids[row_id.chunk_offset].compare_exchange_strong(
               expected, _transaction_id);
 
       if (success) continue;
@@ -53,7 +53,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       // If the row has a set TID, it might be a row that our TX inserted
       // No need to compare-and-swap here, because we can only run into conflicts when two transactions try to
       // change this row from the initial tid
-      if (auto mvcc_data = referenced_chunk->get_scoped_mvcc_columns_lock();
+      if (auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
           mvcc_data->tids[row_id.chunk_offset] == _transaction_id) {
         // Make sure that even we don't see it anymore
         mvcc_data->tids[row_id.chunk_offset] = TransactionManager::INVALID_TRANSACTION_ID;
@@ -76,7 +76,7 @@ void Delete::_on_commit_records(const CommitID cid) {
     for (const auto& row_id : *pos_list) {
       auto chunk = _table->get_chunk(row_id.chunk_id);
 
-      chunk->get_scoped_mvcc_columns_lock()->end_cids[row_id.chunk_offset] = cid;
+      chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = cid;
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
@@ -98,7 +98,7 @@ void Delete::_on_rollback_records() {
 
       // unlock all rows locked in _on_execute
       const auto result =
-          chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
+          chunk->get_scoped_mvcc_data_lock()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop
@@ -109,7 +109,7 @@ void Delete::_on_rollback_records() {
 }
 
 /**
- * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
+ * values_to_delete must be a table with at least one chunk, containing at least one ReferenceSegment
  * that all reference the table specified by table_name.
  */
 bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
@@ -130,9 +130,9 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk->references_exactly_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk->get_column(ColumnID{0}));
+    const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
 
-    if (table != first_column->referenced_table()) return false;
+    if (table != first_segment->referenced_table()) return false;
   }
 
   return true;

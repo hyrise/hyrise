@@ -218,9 +218,9 @@ TEST_F(TableStatisticsTest, DirectlyAccessColumnStatistics) {
      */
   auto column_statistics = _table_a_with_statistics.statistics->column_statistics();
   EXPECT_EQ(column_statistics.size(), 4u);
-  for (auto col = ColumnID{0}; col < column_statistics.size(); ++col) {
-    EXPECT_TRUE(column_statistics.at(col));
-    EXPECT_FLOAT_EQ(column_statistics.at(col)->distinct_count(), 6.f);
+  for (auto column_id = ColumnID{0}; column_id < column_statistics.size(); ++column_id) {
+    EXPECT_TRUE(column_statistics.at(column_id));
+    EXPECT_FLOAT_EQ(column_statistics.at(column_id)->distinct_count(), 6.f);
   }
 }
 

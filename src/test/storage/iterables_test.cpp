@@ -9,13 +9,13 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/dictionary_column/dictionary_column_iterable.hpp"
-#include "storage/fixed_string_dictionary_column.hpp"
-#include "storage/reference_column/reference_column_iterable.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -73,13 +73,13 @@ class IterablesTest : public BaseTest {
   std::shared_ptr<Table> table_strings;
 };
 
-TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
+TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
-  auto iterable = ValueColumnIterable<int>{*int_column};
+  auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIterator{sum});
@@ -87,15 +87,15 @@ TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = ValueColumnIterable<int>{*int_column};
+  auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
@@ -103,13 +103,13 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
   EXPECT_EQ(sum, 12'480u);
 }
 
-TEST_F(IterablesTest, ValueColumnNullableIteratorWithIterators) {
+TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
   auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
-  auto iterable = ValueColumnIterable<int>{*int_column};
+  auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIterator{sum});
@@ -117,15 +117,15 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorWithIterators) {
   EXPECT_EQ(sum, 13'702u);
 }
 
-TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
   auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = ValueColumnIterable<int>{*int_column};
+  auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
@@ -133,15 +133,15 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
   EXPECT_EQ(sum, 13'579u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
+TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
 
-  auto iterable = DictionaryColumnIterable<int, pmr_vector<int>>{*dict_column};
+  auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIterator{sum});
@@ -149,17 +149,17 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<int, pmr_vector<int>>{*dict_column};
+  auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
@@ -167,15 +167,15 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
   EXPECT_EQ(sum, 12'480u);
 }
 
-TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
+TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const FixedStringDictionaryColumn<std::string>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
 
-  auto iterable = DictionaryColumnIterable<std::string, FixedStringVector>{*dict_column};
+  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
 
   auto concatenate = std::string();
   iterable.with_iterators(AppendWithIterator{concatenate});
@@ -183,17 +183,17 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
   EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
 }
 
-TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const FixedStringDictionaryColumn<std::string>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<std::string, FixedStringVector>{*dict_column};
+  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
 
   auto concatenate = std::string();
   iterable.with_iterators(&chunk_offsets, AppendWithIterator{concatenate});
@@ -201,14 +201,14 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators
   EXPECT_EQ(concatenate, "xxxyyyuuu");
 }
 
-TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
+TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto pos_list =
       PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
 
-  auto reference_column =
-      std::make_unique<ReferenceColumn>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+  auto reference_segment =
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto iterable = ReferenceColumnIterable<int>{*reference_column};
+  auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIterator{sum});
@@ -216,13 +216,13 @@ TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, ValueColumnIteratorForEach) {
+TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   auto chunk = table->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
-  auto iterable = ValueColumnIterable<int>{*int_column};
+  auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
   iterable.for_each(SumUp{sum});
@@ -230,13 +230,13 @@ TEST_F(IterablesTest, ValueColumnIteratorForEach) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, ValueColumnNullableIteratorForEach) {
+TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
-  auto column = chunk->get_column(ColumnID{0u});
-  auto int_column = std::dynamic_pointer_cast<const ValueColumn<int>>(column);
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
 
-  auto iterable = ValueColumnIterable<int>{*int_column};
+  auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
   iterable.for_each(SumUp{sum});

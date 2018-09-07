@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "storage/chunk.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -32,9 +32,9 @@
  * Each of the C column can represent 1..S columns in the input table and is called a ColumnSegmnent, see below.
  *
  *
- * ### About ColumnSegments
+ * ### About ColumnSegments                                                                                                     // Moritz: please do renaming here, because segment is ambiguous
  * For each ColumnID in which one (or both) of the InputTables has a different PosList than in the Column left of it,
- * a entry into _column_segment_offsets is made.
+ * an entry into _column_segment_offsets is made.
  *
  * The ReferenceMatrix of a StoredTable will only contain one column, the ReferenceMatrix of the result of a 3 way Join
  * will contain 3 columns.
@@ -125,7 +125,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   // Turn 'pos_lists' into a new chunk and append it to the table
   const auto emit_chunk = [&]() {
-    ChunkColumns output_columns;
+    Segments output_segments;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_column_id_begin = _column_segment_offsets[pos_lists_idx];
@@ -133,13 +133,13 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
                                              ? input_table_left()->column_count()
                                              : _column_segment_offsets[pos_lists_idx + 1];
       for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
-        auto ref_column = std::make_shared<ReferenceColumn>(
+        auto ref_segment = std::make_shared<ReferenceSegment>(
             _referenced_tables[pos_lists_idx], _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
-        output_columns.push_back(ref_column);
+        output_segments.push_back(ref_segment);
       }
     }
 
-    out_table->append_chunk(output_columns);
+    out_table->append_chunk(output_segments);
   };
 
   /**
@@ -212,7 +212,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   }
 
   /**
-   * Both tables must contain only ReferenceColumns
+   * Both tables must contain only ReferenceSegments
    */
   Assert(input_table_left()->type() == TableType::References && input_table_right()->type() == TableType::References,
          "UnionPositions doesn't support non-reference tables yet");
@@ -221,13 +221,13 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the column segments (verification that this is the same for all chunks happens in the #if IS_DEBUG block
    * below)
    */
-  const auto add_column_segments = [&](const auto& table) {
+  const auto add = [&](const auto& table) {
     auto current_pos_list = std::shared_ptr<const PosList>();
     const auto first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      const auto column = first_chunk->get_column(column_id);
-      const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
-      auto pos_list = ref_column->pos_list();
+      const auto segment = first_chunk->get_segment(column_id);
+      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
+      auto pos_list = ref_segment->pos_list();
 
       if (current_pos_list != pos_list) {
         current_pos_list = pos_list;
@@ -235,8 +235,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       }
     }
   };
-  add_column_segments(input_table_left());
-  add_column_segments(input_table_right());
+  add(input_table_left());
+  add(input_table_right());
 
   std::sort(_column_segment_offsets.begin(), _column_segment_offsets.end());
   const auto unique_end_iter = std::unique(_column_segment_offsets.begin(), _column_segment_offsets.end());
@@ -248,9 +248,9 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
   for (const auto& segment_begin : _column_segment_offsets) {
-    const auto column = first_chunk_left->get_column(segment_begin);
-    const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
-    _referenced_tables.emplace_back(ref_column->referenced_table());
+    const auto segment = first_chunk_left->get_segment(segment_begin);
+    const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
+    _referenced_tables.emplace_back(ref_segment->referenced_table());
   }
 
   /**
@@ -258,9 +258,9 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * in the #if IS_DEBUG block below)
    */
   for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto column = first_chunk_left->get_column(column_id);
-    const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
-    _referenced_column_ids.emplace_back(ref_column->referenced_column_id());
+    const auto segment = first_chunk_left->get_segment(column_id);
+    const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
+    _referenced_column_ids.emplace_back(ref_segment->referenced_column_id());
   }
 
 #if IS_DEBUG
@@ -279,23 +279,23 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
           current_pos_list = nullptr;
         }
 
-        const auto column = chunk->get_column(column_id);
-        const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
-        auto pos_list = ref_column->pos_list();
+        const auto segment = chunk->get_segment(column_id);
+        const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
+        auto pos_list = ref_segment->pos_list();
 
         if (current_pos_list == nullptr) {
           current_pos_list = pos_list;
         }
 
-        Assert(ref_column->referenced_table() == _referenced_tables[next_segment_id - 1],
-               "ReferenceColumn (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
+        Assert(ref_segment->referenced_table() == _referenced_tables[next_segment_id - 1],
+               "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
                    ") "
-                   "doesn't reference the same table as the column at the same index in the first chunk "
+                   "doesn't reference the same table as the segment at the same index in the first chunk "
                    "of the left input table does");
-        Assert(ref_column->referenced_column_id() == _referenced_column_ids[column_id],
-               "ReferenceColumn (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
+        Assert(ref_segment->referenced_column_id() == _referenced_column_ids[column_id],
+               "ReferenceSegment (Chunk: " + std::to_string(chunk_id) + ", Column: " + std::to_string(column_id) +
                    ")"
-                   " doesn't reference the same table as the column at the same index in the first chunk "
+                   " doesn't reference the same column as the segment at the same index in the first chunk "
                    "of the left input table does");
         Assert(current_pos_list == pos_list, "Different PosLists in column segment");
       }
@@ -321,11 +321,11 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 
     for (size_t segment_id = 0; segment_id < _column_segment_offsets.size(); ++segment_id) {
       const auto column_id = _column_segment_offsets[segment_id];
-      const auto column = chunk->get_column(column_id);
-      const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
+      const auto segment = chunk->get_segment(column_id);
+      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
 
       auto& out_pos_list = reference_matrix[segment_id];
-      auto in_pos_list = ref_column->pos_list();
+      auto in_pos_list = ref_segment->pos_list();
       std::copy(in_pos_list->begin(), in_pos_list->end(), std::back_inserter(out_pos_list));
     }
   }

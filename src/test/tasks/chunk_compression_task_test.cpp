@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
@@ -42,10 +42,10 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
     auto chunk = table_dict->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      auto column = chunk->get_column(column_id);
+      auto segment = chunk->get_segment(column_id);
 
-      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
-      ASSERT_NE(dict_column, nullptr);
+      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
+      ASSERT_NE(dict_segment, nullptr);
     }
   }
 }
@@ -66,12 +66,12 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = table_dict->get_chunk(chunk_id);
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      auto column = chunk->get_column(column_id);
+      auto segment = chunk->get_segment(column_id);
 
-      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
-      ASSERT_NE(dict_column, nullptr);
+      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
+      ASSERT_NE(dict_segment, nullptr);
 
-      EXPECT_EQ(dict_column->unique_values_count(), dictionary_sizes[chunk_id][column_id]);
+      EXPECT_EQ(dict_segment->unique_values_count(), dictionary_sizes[chunk_id][column_id]);
     }
   }
 }
@@ -96,9 +96,9 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   compression->execute();
 
   for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
-    auto dict_column =
-        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i)->get_column(ColumnID{0}));
-    ASSERT_NE(dict_column, nullptr);
+    auto dict_segment =
+        std::dynamic_pointer_cast<const BaseDictionarySegment>(table->get_chunk(i)->get_segment(ColumnID{0}));
+    ASSERT_NE(dict_segment, nullptr);
   }
 
   auto gt2 = std::make_shared<GetTable>("table_insert");

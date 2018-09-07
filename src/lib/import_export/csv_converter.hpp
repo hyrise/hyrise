@@ -10,17 +10,17 @@
 #include <utility>
 
 #include "csv_meta.hpp"
-#include "storage/base_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/base_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 /*
- * CsvConverter is a helper class that creates a ValueColumn by converting the given null terminated strings and placing
+ * CsvConverter is a helper class that creates a ValueSegment by converting the given null terminated strings and placing
  * them at the given position.
- * The base class BaseCsvConverter allows us to handle different types of ColumnCreators uniformly.
+ * The base class BaseCsvConverter allows us to handle different types of columns uniformly.
  */
 
 class BaseCsvConverter {
@@ -30,9 +30,9 @@ class BaseCsvConverter {
   // Converts value to the underlying data type and saves it at the given position.
   virtual void insert(std::string& value, ChunkOffset position) = 0;
 
-  // Returns the Column which contains the previously converted values.
+  // Returns the segment that contains the previously converted values.
   // After the call of finish, no other operation should be called.
-  virtual std::unique_ptr<BaseColumn> finish() = 0;
+  virtual std::unique_ptr<BaseSegment> finish() = 0;
 
   /*
    * This is a helper function that removes surrounding quotes of the given csv field and all escape characters.
@@ -81,18 +81,18 @@ class CsvConverter : public BaseCsvConverter {
     _parsed_values[position] = _get_conversion_function()(value);
   }
 
-  std::unique_ptr<BaseColumn> finish() override {
+  std::unique_ptr<BaseSegment> finish() override {
     if (_is_nullable) {
-      return std::make_unique<ValueColumn<T>>(std::move(_parsed_values), std::move(_null_values));
+      return std::make_unique<ValueSegment<T>>(std::move(_parsed_values), std::move(_null_values));
     } else {
-      return std::make_unique<ValueColumn<T>>(std::move(_parsed_values));
+      return std::make_unique<ValueSegment<T>>(std::move(_parsed_values));
     }
   }
 
  private:
   /*
    * Returns a conversion function that converts from a string to type T.
-   * This function is defined for each type that can be stored in a ValueColumn.
+   * This function is defined for each type that can be stored in a ValueSegment.
    * The assumption is that only csv fields of type string must be unescaped because other types cannot contain special
    * csv characters.
    */

@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
@@ -15,7 +15,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -69,12 +69,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     pos_list->emplace_back(RowID{ChunkID{0}, 0});
     pos_list->emplace_back(RowID{ChunkID{0}, 4});
 
-    auto col_a = std::make_shared<ReferenceColumn>(test_table_part_compressed, ColumnID{0}, pos_list);
-    auto col_b = std::make_shared<ReferenceColumn>(test_table_part_compressed, ColumnID{1}, pos_list);
+    auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{0}, pos_list);
+    auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{1}, pos_list);
 
-    ChunkColumns columns({col_a, col_b});
+    Segments segments({segment_a, segment_b});
 
-    table->append_chunk(columns);
+    table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     return table_wrapper;
@@ -110,46 +110,46 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
-    ChunkColumns columns;
+    Segments segments;
     TableColumnDefinitions column_definitions;
 
     for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
       column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id));
 
-      auto column_out = std::make_shared<ReferenceColumn>(table, column_id, pos_list);
-      columns.push_back(column_out);
+      auto segment_out = std::make_shared<ReferenceSegment>(table, column_id, pos_list);
+      segments.push_back(segment_out);
     }
 
     auto table_out = std::make_shared<Table>(column_definitions, TableType::References);
 
-    table_out->append_chunk(columns);
+    table_out->append_chunk(segments);
 
     return table_out;
   }
 
-  std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_column) {
+  std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_segment) {
     const auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
-    if (references_dict_column) {
+    if (references_dict_segment) {
       ChunkEncoder::encode_all_chunks(table, _encoding_type);
     }
 
     auto pos_list_a = std::make_shared<PosList>(
         PosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
-    auto ref_column_a = std::make_shared<ReferenceColumn>(table, ColumnID{0u}, pos_list_a);
+    auto ref_segment_a = std::make_shared<ReferenceSegment>(table, ColumnID{0u}, pos_list_a);
 
     auto pos_list_b = std::make_shared<PosList>(
         PosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
-    auto ref_column_b = std::make_shared<ReferenceColumn>(table, ColumnID{1u}, pos_list_b);
+    auto ref_segment_b = std::make_shared<ReferenceSegment>(table, ColumnID{1u}, pos_list_b);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, true);
     column_definitions.emplace_back("b", DataType::Int, true);
     auto ref_table = std::make_shared<Table>(column_definitions, TableType::References);
 
-    ChunkColumns columns({ref_column_a, ref_column_b});
+    Segments segments({ref_segment_a, ref_segment_b});
 
-    ref_table->append_chunk(columns);
+    ref_table->append_chunk(segments);
 
     return ref_table;
   }
@@ -174,9 +174,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
-        const auto& column = *chunk->get_column(column_id);
+        const auto& segment = *chunk->get_segment(column_id);
 
-        const auto found_value = column[chunk_offset];
+        const auto found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
           // returns equivalency, not equality to simulate std::multiset.
           // multiset cannot be used because it triggers a compiler / lib bug when built in CI
@@ -237,7 +237,7 @@ TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -270,7 +270,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumn) {
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -330,7 +330,7 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictionaryValue) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueGreaterThanMaxDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -355,7 +355,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictiona
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryValue) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -380,7 +380,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryV
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -394,7 +394,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -408,7 +408,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -423,7 +423,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullV
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -438,7 +438,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColum
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnAroundBounds) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
   // scanning for a value that is around the dictionary's bounds
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -476,7 +476,7 @@ TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnWideDictionarySegment) {
   // 2**8 + 1 values require a data type of 16bit.
   const auto table_wrapper_dict_16 = get_table_op_with_n_dict_entries((1 << 8) + 1);
   auto scan_1 =
@@ -501,7 +501,7 @@ TEST_P(OperatorsTableScanTest, OperatorName) {
   EXPECT_EQ(scan_1->name(), "TableScan");
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4));
   table_wrapper->execute();
 
@@ -512,7 +512,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -526,7 +526,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
   auto table = load_table("src/test/tables/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -538,7 +538,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumnWithoutNulls) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNulls) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutNulls) {
   auto table = load_table("src/test/tables/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -550,7 +550,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNu
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -563,7 +563,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedSegments) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -577,7 +577,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueSegment) {
   auto table = create_referencing_table_w_null_row_id(false);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -589,7 +589,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompressedSegments) {
   auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);

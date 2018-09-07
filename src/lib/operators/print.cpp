@@ -9,7 +9,7 @@
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -45,16 +45,16 @@ std::shared_ptr<const Table> Print::_on_execute() {
 
   // print column headers
   _out << "=== Columns" << std::endl;
-  for (ColumnID col{0}; col < input_table_left()->column_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << input_table_left()->column_name(col) << std::setw(0);
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_name(column_id) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (ColumnID col{0}; col < input_table_left()->column_count(); ++col) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(col));
-    _out << "|" << std::setw(widths[col]) << data_type << std::setw(0);
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(column_id));
+    _out << "|" << std::setw(widths[column_id]) << data_type << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -78,23 +78,23 @@ std::shared_ptr<const Table> Print::_on_execute() {
     // print the rows in the chunk
     for (size_t row = 0; row < chunk->size(); ++row) {
       _out << "|";
-      for (ColumnID col{0}; col < chunk->column_count(); ++col) {
-        // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+        // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
-        auto col_width = widths[col];
-        auto cell = _truncate_cell((*chunk->get_column(col))[row], col_width);
-        _out << std::setw(col_width) << cell << "|" << std::setw(0);
+        auto column_width = widths[column_id];
+        auto cell = _truncate_cell((*chunk->get_segment(column_id))[row], column_width);
+        _out << std::setw(column_width) << cell << "|" << std::setw(0);
       }
 
-      if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
-        auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+      if (_flags & PrintMvcc && chunk->has_mvcc_data()) {
+        auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-        auto begin = mvcc_columns->begin_cids[row];
-        auto end = mvcc_columns->end_cids[row];
-        auto tid = mvcc_columns->tids[row];
+        auto begin = mvcc_data->begin_cids[row];
+        auto end = mvcc_data->end_cids[row];
+        auto tid = mvcc_data->tids[row];
 
-        auto begin_string = begin == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_string = end == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(end);
+        auto begin_string = begin == MvccData::MAX_COMMIT_ID ? "" : std::to_string(begin);
+        auto end_string = end == MvccData::MAX_COMMIT_ID ? "" : std::to_string(end);
         auto tid_string = tid == 0 ? "" : std::to_string(tid);
 
         _out << "|" << std::setw(6) << begin_string << std::setw(0);
@@ -116,18 +116,18 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
                                                    const std::shared_ptr<const Table>& table) const {
   std::vector<uint16_t> widths(table->column_count());
   // calculate the length of the column name
-  for (ColumnID col{0}; col < table->column_count(); ++col) {
-    widths[col] = std::max(min, static_cast<uint16_t>(table->column_name(col).size()));
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    widths[column_id] = std::max(min, static_cast<uint16_t>(table->column_name(column_id).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
 
-    for (ColumnID col{0}; col < chunk->column_count(); ++col) {
+    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (size_t row = 0; row < chunk->size(); ++row) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_column(col))[row]).size());
-        widths[col] = std::max({min, widths[col], std::min(max, cell_length)});
+        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[row]).size());
+        widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }
   }
