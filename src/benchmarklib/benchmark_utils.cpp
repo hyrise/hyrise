@@ -129,7 +129,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
-    Assert(enable_scheduler, "Can't specify '--cores' or '--clients' without '--scheduler'");
+    if (!enable_scheduler) {
+      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false")
+    }
   }
 
   // Determine benchmark and display it
