@@ -9,14 +9,12 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-
 // TODO Comment                                                                                                                !
 
 class ExistsToSemijoinRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 };
 
 }  // namespace opossum
