@@ -12,8 +12,18 @@ import json
 from datetime import datetime
 
 
-MAX_CORE_COUNT = multiprocessing.cpu_count()
+# This script executes the Hyrise TPCH benchmarks multiple times over a specified range of cores,
+# and produces a plot of the results. You'll have to provide the path to the hyriseBenchmarkTPCH executable
+# as argument, as well as all parameters you want to be passed to the executable, like --scale, --chunk_size, etc.
+# You'll also have to specify the number of query runs as either a fixed number for all cores (--fixed-runs),
+# or a number of runs per core (--runs-per-core).
+# You can also specify the cores to be benchmarked, otherwise a default range will be used.
 
+# Example usage:
+# python3 scripts/benchmark_multithreaded.py --cores 20 15 10 5 --fixed-runs 1000 --queries 1 3 5 ./build-release/hyriseBenchmarkTPCH --clients 10
+
+
+MAX_CORE_COUNT = multiprocessing.cpu_count()
 DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
 
 def parse_arguments():
