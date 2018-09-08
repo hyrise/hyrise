@@ -20,7 +20,7 @@ from datetime import datetime
 # You can also specify the cores to be benchmarked, otherwise a default range will be used.
 
 # Example usage:
-# python3 scripts/benchmark_multithreaded.py --cores 20 15 10 5 --fixed-runs 1000 --queries 1 3 5 ./build-release/hyriseBenchmarkTPCH --clients 10
+# python3 scripts/benchmark_multithreaded.py --cores 20 15 10 5 --queries 1 3 5 ./build-release/hyriseBenchmarkTPCH --runs 1000 --clients 10
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
@@ -39,8 +39,8 @@ def parse_arguments():
     core_group.add_argument('--max-cores', action='store', type=int, metavar='C', help='Number of cores this machine has available')
 
     run_group = parser.add_mutually_exclusive_group(required=True)
-    run_group.add_argument('--fixed-runs', action='store', type=int, metavar='N', help='Fixed number of runs each query is executed')
-    run_group.add_argument('--runs-per-core', action='store', type=int, metavar='N', help='Number of runs per core each query is executed')
+    run_group.add_argument('-r', '--runs', action='store', type=int, metavar='N', help='Fixed number of (max) runs each query is executed')
+    run_group.add_argument('--runs-per-core', action='store', type=int, metavar='N', help='Number of (max) runs per core each query is executed')
     
     return parser.parse_known_args()
 
@@ -86,10 +86,10 @@ def run_benchmarks(args, hyrise_args, core_counts, result_dir):
 
         if core_count == 0:
             use_scheduler = 'false'
-            number_of_runs = args.runs_per_core if args.runs_per_core else args.fixed_runs
+            number_of_runs = args.runs_per_core if args.runs_per_core else args.runs
         else:
             use_scheduler = 'true'
-            number_of_runs = args.runs_per_core * core_count if args.runs_per_core else args.fixed_runs
+            number_of_runs = args.runs_per_core * core_count if args.runs_per_core else args.runs
 
         file_name = str(core_count) + '-cores.json'
         result_file = os.path.join(result_dir, file_name)
