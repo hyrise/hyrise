@@ -12,20 +12,17 @@ import json
 from datetime import datetime
 
 
-
-BENCHMARK_EXECUTABLE = 'hyriseBenchmarkTPCH'
-DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
 MAX_CORE_COUNT = multiprocessing.cpu_count()
+
+DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--scale', action='store', type=float, metavar='S', default=0.1, help='TPC-H scale factor (default: 0.1)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
     parser.add_argument('-q', '--queries', action='store', type=int, metavar='Q', nargs='+', help='Specify the TPC-H queries that will be benchmarked')
-    parser.add_argument('--chunk-size', action='store', type=int, metavar='S', help='Specify maximum chunk size (default: Maximum available)')
     parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the result folder will be stored (default: \'results/\')')
     parser.add_argument('--result-name', action='store', type=str, metavar='NAME', help='Directory where the actual results will be stored (default: current datetime)')
-    parser.add_argument('--build-dir', action='store', type=str, metavar='DIR', required=True, help='Directory that contains the hyriseBenchmarkTPCH executable')
+    parser.add_argument('executable', action='store', type=str, metavar='EXECUTABLE', help='hyriseBenchmarkTPCH executable')
 
     core_group = parser.add_mutually_exclusive_group()
     core_group.add_argument('-c', '--cores', action='store', type=int, metavar='C', nargs='+', help='List of cores to be used for the benchmarks')
@@ -35,7 +32,7 @@ def parse_arguments():
     run_group.add_argument('--fixed-runs', action='store', type=int, metavar='N', help='Fixed number of runs each query is executed')
     run_group.add_argument('--runs-per-core', action='store', type=int, metavar='N', help='Number of runs per core each query is executed')
     
-    return parser.parse_args()
+    return parser.parse_known_args()
 
 def verbose_print(verbose, message):
     if verbose: print('python> ' + message)
@@ -71,7 +68,7 @@ def get_subplot_row_and_column_count(num_plots):
         num_plots += 1
     return num_plots ** 0.5
 
-def run_benchmarks(args, core_counts, executable, result_dir):
+def run_benchmarks(args, hyrise_args, core_counts, result_dir):
     benchmark_run = 0
     for core_count in core_counts:
         benchmark_run += 1
@@ -87,24 +84,21 @@ def run_benchmarks(args, core_counts, executable, result_dir):
         file_name = str(core_count) + '-cores.json'
         result_file = os.path.join(result_dir, file_name)
         execution_command = [
-            executable,
-            '--parallel',
+            args.executable,
             '--output', result_file,
-            '--scale', str(args.scale),
             '--runs', str(number_of_runs),
             '--scheduler', use_scheduler,
             '--cores', str(core_count),
         ]
-        if args.chunk_size:
-            execution_command += ['--chunk_size', str(args.chunk_size)]
         if args.verbose:
             execution_command.append('--verbose')
+        if hyrise_args:
+            execution_command += hyrise_args
         execution_command += get_formatted_queries(args)
         verbose_print(args.verbose, 'Executing command: ' + subprocess.list2cmdline(execution_command) + '\n')
         subprocess.run(execution_command)
 
-def benchmark(args):
-    executable = os.path.join(args.build_dir, BENCHMARK_EXECUTABLE)
+def benchmark(args, hyrise_args):
     result_name = args.result_name if args.result_name else datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     result_dir = os.path.join(args.result_dir, result_name)
         
@@ -116,9 +110,9 @@ def benchmark(args):
 
     # Make sure our machine has the number of cores we are trying to benchmark with
     for core_count in core_counts:
-        assert core_count <= MAX_CORE_COUNT
+        assert core_count <= MAX_CORE_COUNT, 'Can\'t use more cores than we have available'
 
-    run_benchmarks(args, core_counts, executable, result_dir)
+    run_benchmarks(args, hyrise_args, core_counts, result_dir)
 
     verbose_print(args.verbose, 'Benchmarks complete!')
     verbose_print(args.verbose, 'Saved JSON results to: ' + result_dir)
@@ -184,7 +178,7 @@ def plot(args, result_dir):
         verbose_print(args.verbose, 'Plot saved as: ' + result_plot_file)
 
 if __name__ == "__main__":
-    args = parse_arguments()
+    args, hyrise_args = parse_arguments()
 
-    result_dir = benchmark(args)
+    result_dir = benchmark(args, hyrise_args)
     plot(args, result_dir)
