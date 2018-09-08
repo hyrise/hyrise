@@ -18,9 +18,12 @@ from datetime import datetime
 # You'll also have to specify the number of query runs as either a fixed number for all cores (--fixed-runs),
 # or a number of runs per core (--runs-per-core).
 # You can also specify the cores to be benchmarked, otherwise a default range will be used.
-
-# Example usage:
-# python3 scripts/benchmark_multithreaded.py --cores 20 15 10 5 --queries 1 3 5 ./build-release/hyriseBenchmarkTPCH --runs 1000 --clients 10
+#
+# Example usage 1:
+# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v
+#
+# Example usage 2:
+# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1 3 6 12
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
