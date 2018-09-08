@@ -175,7 +175,8 @@ def plot(args, result_dir):
     for extension in ['png', 'pdf']:
         result_plot_file = os.path.join(result_dir, 'result_plots.' + extension)
         plt.savefig(result_plot_file, bbox_inches='tight')
-        verbose_print(args.verbose, 'Plot saved as: ' + result_plot_file)
+        # Always print out where the plot was saved, independent of verbosity
+        verbose_print(True, 'Plot saved as: ' + result_plot_file)
 
 if __name__ == "__main__":
     args, hyrise_args = parse_arguments()
