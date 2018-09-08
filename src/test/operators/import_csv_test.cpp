@@ -1,7 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/import_csv.hpp"
@@ -304,14 +304,14 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   // Check if table content is preserved
   EXPECT_TABLE_EQ_ORDERED(result_table, expected_table);
 
-  // Check if columns are compressed into DictionaryColumns
+  // Check if segments are compressed into DictionarySegments
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
     auto chunk = result_table->get_chunk(chunk_id);
     for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
-      auto base_column = chunk->get_column(column_id);
-      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(base_column);
+      auto base_segment = chunk->get_segment(column_id);
+      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(base_segment);
 
-      EXPECT_TRUE(dict_column != nullptr);
+      EXPECT_TRUE(dict_segment != nullptr);
     }
   }
 }

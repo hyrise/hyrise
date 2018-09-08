@@ -56,18 +56,18 @@ class CsvParser {
    * @param      csv_chunk  String_view on one chunk of the CSV.
    * @param      field_ends Positions of the field ends of the given \p csv_chunk.
    * @param      table      Empty table created by _process_meta_file.
-   * @param[out] columns    The columns of the chunk, to be populated with data
+   * @param[out] segments   The segments of the chunk, to be populated with data
    * @returns               The number of rows in the chunk
    */
   size_t _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                           ChunkColumns& columns);
+                           Segments& segments);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.
    */
   void _sanitize_field(std::string& field);
 
-  // CSV meta information like chunk_size, column information, delimitor/seperator charactere, etc.
+  // CSV meta information like chunk_size, column information, delimitor/seperator characters, etc.
   CsvMeta _meta;
 };
 }  // namespace opossum

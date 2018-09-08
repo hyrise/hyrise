@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "expression/abstract_expression.hpp"
@@ -16,6 +16,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/column_statistics.hpp"
@@ -43,6 +44,8 @@ class PredicateReorderingTest : public StrategyBaseTest {
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 2, 110, 1100)});
 
     auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 100, column_statistics);
+    // Assumes 50% deleted rows
+    table_statistics->increase_invalid_row_count(50);
 
     node = StoredTableNode::make("a");
     table->set_table_statistics(table_statistics);
@@ -176,8 +179,10 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   auto table_statistics = std::make_shared<TableStatistics>(
       TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
-  auto table_0 = MockNode::make(table_statistics);
-  auto table_1 = MockNode::make(table_statistics);
+  auto table_0 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  table_0->set_statistics(table_statistics);
+  auto table_1 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  table_1->set_statistics(table_statistics);
   auto cross_node = JoinNode::make(JoinMode::Cross);
   auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
   auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
@@ -227,7 +232,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   auto table_statistics = std::make_shared<TableStatistics>(
       TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
-  auto table_node = MockNode::make(table_statistics);
+  auto table_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+  table_node->set_statistics(table_statistics);
   auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
@@ -244,6 +250,37 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   EXPECT_EQ(reordered->right_input(), predicate_b_node);
   EXPECT_EQ(predicate_a_node->left_input(), predicate_b_node);
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
+}
+
+TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
+  // clang-format off
+  const auto input_lqp =
+    PredicateNode::make(greater_than_(a, 60),
+      ValidateNode::make(node));
+
+  const auto expected_lqp =
+    ValidateNode::make(
+      PredicateNode::make(greater_than_(a, 60),
+        node));
+  // clang-format on
+
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
+}
+
+TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
+  // clang-format off
+  const auto input_lqp =
+    PredicateNode::make(greater_than_(a, 30),
+      ValidateNode::make(node));
+
+  const auto expected_lqp =
+    PredicateNode::make(greater_than_(a, 30),
+      ValidateNode::make(node));
+  // clang-format on
+
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
 }
 
 }  // namespace opossum

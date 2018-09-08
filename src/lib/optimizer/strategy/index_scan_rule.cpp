@@ -53,9 +53,9 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_is_single_column_index(index_info)) return false;
+  if (!_is_single_segment_index(index_info)) return false;
 
-  if (index_info.type != ColumnIndexType::GroupKey) return false;
+  if (index_info.type != SegmentIndexType::GroupKey) return false;
 
   const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
   if (!operator_predicates) return false;
@@ -78,7 +78,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
-inline bool IndexScanRule::_is_single_column_index(const IndexInfo& index_info) const {
+inline bool IndexScanRule::_is_single_segment_index(const IndexInfo& index_info) const {
   return index_info.column_ids.size() == 1;
 }
 

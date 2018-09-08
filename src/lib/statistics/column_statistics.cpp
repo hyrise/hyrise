@@ -61,7 +61,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
         return estimate_range(_min, value - 1);
       }
       // intentionally no break
-      // if ColumnType is a floating point number, OpLessThanEquals behaviour is expected instead of OpLessThan
+      // if ColumnDataType is a floating point number, OpLessThanEquals behaviour is expected instead of OpLessThan
       [[fallthrough]];
     }
     case PredicateCondition::LessThanEquals:
@@ -75,7 +75,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
         return estimate_range(value + 1, _max);
       }
       // intentionally no break
-      // if ColumnType is a floating point number,
+      // if ColumnDataType is a floating point number,
       // OpGreaterThanEquals behaviour is expected instead of OpGreaterThan
       [[fallthrough]];
     }
@@ -167,26 +167,26 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
     const PredicateCondition predicate_condition, const BaseColumnStatistics& base_right_column_statistics) const {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
-   * range of both columns. 
-   * 
-   * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping 
+   * range of both columns.
+   *
+   * For the different predicate conditions the appropriate ratios of values below, within and above the overlapping
    * range from both columns are taken to compute the selectivity.
    *
    * Example estimation:
    *
-   * |  Column name     |  col_left  |  col_right  |
-   * |  Min value       |  1         |  11         |
-   * |  Max value       |  20        |  40         |
-   * |  Distinct count  |  20        |  15         |
+   * |  Column name     |  column_left  |  column_right  |
+   * |  Min value       |  1            |  11            |
+   * |  Max value       |  20           |  40            |
+   * |  Distinct count  |  20           |  15            |
    *
    * Overlapping value range: 11 to 20  -->  overlapping_range_min = 11,  overlapping_range_max = 20
    * left_overlapping_ratio = (20 - 11 + 1) / (20 - 1 + 1) = 1 / 2
    * right_overlapping_ratio = (20 - 11 + 1) / (40 - 11 + 1) = 1 / 3
    *
    * left_below_overlapping_ratio = (10 - 1 + 1) / (20 - 1 + 1) = 1 / 2
-   * left_above_overlapping_ratio = 0 as col_left max value within overlapping range
+   * left_above_overlapping_ratio = 0 as column_left max value within overlapping range
    * right_below_overlapping_ratio = (40 - 21 + 1) / (40 - 11 + 1) = 2 / 3
-   * right_above_overlapping_ratio = 0 as col_right min value within overlapping range
+   * right_above_overlapping_ratio = 0 as column_right min value within overlapping range
    *
    * left_overlapping_distinct_count = (1 / 2) * 20 = 10
    * right_overlapping_distinct_count = (1 / 3) * 15 = 5
@@ -194,7 +194,7 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
    * For predicate condition equals only the ratios of values in the overlapping range is considered as values. If values could
    * match outside the overlapping range, the range would be false as it would be too small. In order to calculate the
    * equal value ratio, the column with fewer distinct values within the overlapping range is determined. In this case
-   * this is col_right. Statistics component assumes that for two value sets for the same range the smaller set is
+   * this is column_right. Statistics component assumes that for two value sets for the same range the smaller set is
    * part of the bigger set. Therefore, it assumes that the 5 distinct values within the overlapping range of the right
    * column also exist in the left column. The equal value ratio is then calculated by multiplying
    * right_overlapping_ratio (= 1 / 2) with the probability to hit any distinct value of the left column (= 1 / 20):
@@ -202,9 +202,9 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
    * This is also the selectivity for the predicate condition equals: (1 / 40) = 2.5 %
    *
    * For predicate condition less the ratios left_below_overlapping_ratio and right_above_overlapping_ratio are also considered as
-   * table entries where the col_left value is below the common range or the col_right value is above it will always be
-   * in the result. The probability that both values are within the overlapping range and that col_left < col_right is
-   * (probability of col_left != col_right where left and right values are in overlapping range) / 2
+   * table entries where the column_left value is below the common range or the column_right value is above it will always be
+   * in the result. The probability that both values are within the overlapping range and that column_left < column_right is
+   * (probability of column_left != column_right where left and right values are in overlapping range) / 2
    *
    * The selectivity for predicate condition less is the sum of different probabilities: // NOLINT
    *    prob. that left value is below overlapping range (= 1 / 2) // NOLINT
@@ -380,11 +380,11 @@ FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predica
 template <typename ColumnDataType>
 std::string ColumnStatistics<ColumnDataType>::description() const {
   std::stringstream stream;
-  stream << "Col Stats: " << std::endl;
-  stream << "  dist.    " << _distinct_count << std::endl;
-  stream << "  min      " << _min << std::endl;
-  stream << "  max      " << _max << std::endl;
-  stream << "  non-null " << non_null_value_ratio() << std::endl;
+  stream << "Column Stats: " << std::endl;
+  stream << "     dist.    " << _distinct_count << std::endl;
+  stream << "     min      " << _min << std::endl;
+  stream << "     max      " << _max << std::endl;
+  stream << "     non-null " << non_null_value_ratio() << std::endl;
   return stream.str();
 }
 

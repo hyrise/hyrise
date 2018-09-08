@@ -71,12 +71,12 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     empty_table_columns.emplace_back("s", DataType::String, false);
     table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
 
-    ChunkColumns columns;
-    columns.emplace_back(std::make_shared<ValueColumn<int32_t>>(pmr_concurrent_vector<int32_t>{}));
-    columns.emplace_back(
-        std::make_shared<ValueColumn<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
-    columns.emplace_back(std::make_shared<ValueColumn<std::string>>(pmr_concurrent_vector<std::string>{}));
-    table_empty->append_chunk(columns);
+    Segments segments;
+    segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{}));
+    segments.emplace_back(
+        std::make_shared<ValueSegment<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<std::string>>(pmr_concurrent_vector<std::string>{}));
+    table_empty->append_chunk(segments);
 
     empty_a = PQPColumnExpression::from_table(*table_empty, "a");
     empty_b = PQPColumnExpression::from_table(*table_empty, "b");
@@ -451,6 +451,13 @@ TEST_F(ExpressionEvaluatorTest, InListSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, list_(null_(), 1.0, 3.0)), {1, std::nullopt, 1, std::nullopt}));
   EXPECT_TRUE(
       test_expression<int32_t>(table_a, *in_(sub_(mul_(a, 2), 2), list_(b, 6, null_(), 0)), {1, std::nullopt, 1, 1}));
+}
+
+TEST_F(ExpressionEvaluatorTest, InArbitraryExpression) {
+  // We support `<expression_a> IN <expression_b>`, even though it looks weird, because <expression_b> might be a column
+  // storing the pre-computed result a subselect
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, div_(b, 2.0f)), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, sub_(c, 31)), {0, std::nullopt, 1, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {

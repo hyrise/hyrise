@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
@@ -54,8 +54,8 @@ TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
-  // The Projection will forward columns from its input if all expressions are column references. Why would you enforce
-  // something like this? E.g., Update relies on it.
+  // The Projection will forward segments from its input if all expressions are segment references.
+  // Why would you enforce something like this? E.g., Update relies on it.
 
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a));
   projection->execute();
@@ -63,8 +63,8 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_column(ColumnID{1}), output_chunk->get_column(ColumnID{0}));
-  EXPECT_EQ(input_chunk->get_column(ColumnID{0}), output_chunk->get_column(ColumnID{1}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
@@ -75,8 +75,8 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_EQ(input_chunk->get_column(ColumnID{1}), output_chunk->get_column(ColumnID{0}));
-  EXPECT_EQ(input_chunk->get_column(ColumnID{0}), output_chunk->get_column(ColumnID{1}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
@@ -90,8 +90,8 @@ TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
   const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
 
-  EXPECT_NE(input_chunk->get_column(ColumnID{1}), output_chunk->get_column(ColumnID{0}));
-  EXPECT_NE(input_chunk->get_column(ColumnID{0}), output_chunk->get_column(ColumnID{1}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
+  EXPECT_NE(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
@@ -103,10 +103,10 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();
 
-  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}),
-            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
-  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}),
-            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
+  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
