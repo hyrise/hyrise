@@ -5,6 +5,7 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
 #include "expression/parameter_expression.hpp"
@@ -55,6 +56,41 @@ bool ExistsToSemijoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   Assert(predicate_node->left_input()->type == LQPNodeType::Projection, "ProjectionNode not found");
   const auto projection_node = std::static_pointer_cast<ProjectionNode>(predicate_node->left_input());
 
+  // First, make sure that there is only one external parameter used in the subselect's LQP
+  bool found_external_parameter = false;
+  for (const auto& argument : subselect->arguments) {
+    if (argument->type == ExpressionType::LQPColumn) {
+      if (found_external_parameter) {
+        // The subselect has multiple external parameters, nothing we can do here.
+        return _apply_to_inputs(node);
+      }
+      found_external_parameter = true;
+    }
+  }
+
+  // Now make sure that the one parameter is only used once
+  int uses_of_external_parameter = 0;
+  visit_lqp(subselect->lqp, [&uses_of_external_parameter](const auto& deeper_node) {
+    for (const auto& expression : deeper_node->node_expressions()) {
+      visit_expression(expression, [&uses_of_external_parameter](const auto& subexpression) {
+        if (subexpression->type == ExpressionType::Parameter) {
+          auto parameter_type = std::static_pointer_cast<ParameterExpression>(subexpression)->parameter_expression_type;
+          if (parameter_type == ParameterExpressionType::External) {
+            ++uses_of_external_parameter;
+          }
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+      if (uses_of_external_parameter > 1) {
+        return LQPVisitation::DoNotVisitInputs;
+      }
+    }
+    return LQPVisitation::VisitInputs;
+  });
+  if (uses_of_external_parameter > 1) {
+    return _apply_to_inputs(node);
+  }
+
   // Now go into the subselect and extract the join predicate
   auto join_predicate = std::shared_ptr<AbstractExpression>();
   auto subselect_predicate_node = std::shared_ptr<PredicateNode>();
@@ -102,26 +138,23 @@ bool ExistsToSemijoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
       return LQPVisitation::VisitInputs;
     }
 
-    // We found a condition. Check if we already found one before:
-    if (join_predicate) {
-      // We also found a different condition before. Because our semi/anti joins cannot handle multiple conditions
-      // yet, we cannot convert the subselect into a join. :/
-      join_predicate = nullptr;
-      return LQPVisitation::DoNotVisitInputs;
+    if (parameter_expression->parameter_expression_type != ParameterExpressionType::External) {
+      // Close, but not close enough. This is a parameter of the prepared statement type
+      return LQPVisitation::VisitInputs;
     }
 
     // Transform the parameter back into a column expression on the outside
-    DebugAssert(subselect->arguments[parameter_expression->parameter_id]->type == ExpressionType::LQPColumn,
-                "Expected LQP Column");
-    const auto outer_column_expression =
-        std::static_pointer_cast<LQPColumnExpression>(subselect->arguments[parameter_expression->parameter_id]);
+    auto parameter_id_iter = std::find(subselect->parameter_ids.cbegin(), subselect->parameter_ids.cend(),
+                                       parameter_expression->parameter_id);
+    auto outer_column_expression =
+        subselect->arguments[std::distance(subselect->parameter_ids.cbegin(), parameter_id_iter)];
 
     // Build the join predicate
     join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, outer_column_expression,
                                                                  inner_column_expression);
 
     // We still need to visit the inputs to make sure that there is not more than one predicate
-    return LQPVisitation::VisitInputs;
+    return LQPVisitation::DoNotVisitInputs;
   });
 
   if (!join_predicate) {
