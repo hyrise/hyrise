@@ -30,8 +30,7 @@ std::ostream& get_out_stream(const bool verbose) {
   return null_stream;
 }
 
-BenchmarkState::BenchmarkState(const opossum::Duration max_duration)
-    : max_duration(max_duration) {}
+BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
 
 bool BenchmarkState::keep_running() {
   switch (state) {
