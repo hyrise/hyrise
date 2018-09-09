@@ -362,7 +362,8 @@ int Console::_help(const std::string&) {
   out("                                       Options\n");
   out("                                         - {exec, noexec} Execute the query before visualization.\n");
   out("                                                          Default: noexec\n");
-  out("                                         - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives the\n");
+  out("                                         - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives "
+      "the\n");
   out("                                                                unoptimized lqp. Default: pqp\n");
   out("                                       SQL\n");
   out("                                         - Optional, a query to visualize. If not specified, the last\n");
