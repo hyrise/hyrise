@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "lqp_view.hpp"
+#include "lqp_prepared_statement.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -20,35 +21,35 @@ class StorageManager : private Noncopyable {
  public:
   static StorageManager& get();
 
-  // adds a table to the storage manager
+  /**
+   * @defgroup Manage Tables
+   * @{
+   */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
-
-  // removes the table from the storage manger
   void drop_table(const std::string& name);
-
-  // returns the table instance with the given name
   std::shared_ptr<Table> get_table(const std::string& name) const;
-
-  // returns whether the storage manager holds a table with the given name
   bool has_table(const std::string& name) const;
-
-  // returns a list of all table names
   std::vector<std::string> table_names() const;
+  /** @} */
 
-  // adds a view to the storage manager
-  void add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view);
-
-  // removes the view from the storage manger
-  void drop_lqp_view(const std::string& name);
-
-  // returns the view instance with the given name
+  /**
+   * @defgroup Manage SQL VIEWs
+   * @{
+   */
+  void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
+  void drop_view(const std::string& name);
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
-
-  // returns whether the storage manager holds a table with the given name
   bool has_view(const std::string& name) const;
-
-  // returns a list of all view names
   std::vector<std::string> view_names() const;
+  /** @} */
+
+  /**
+   * @defgroup Manage SQL PREPAREd statements
+   * @{
+   */
+  void add_prepared_statement(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& view);
+  std::shared_ptr<LQPPreparedStatement> get_prepared_statement(const std::string& name) const;
+  /** @} */
 
   // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
   void print(std::ostream& out = std::cout) const;
@@ -70,5 +71,6 @@ class StorageManager : private Noncopyable {
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
   std::map<std::string, std::shared_ptr<LQPView>> _views;
+  std::map<std::string, std::shared_ptr<LQPPreparedStatement>> _prepared_statements;
 };
 }  // namespace opossum

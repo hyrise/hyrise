@@ -24,7 +24,7 @@ class DropViewTest : public BaseTest {
     const auto view_lqp = StoredTableNode::make("first_table");
     const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-    sm.add_lqp_view("view_name", view);
+    sm.add_view("view_name", view);
   }
 };
 

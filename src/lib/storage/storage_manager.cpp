@@ -58,7 +58,7 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
+void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
@@ -66,7 +66,7 @@ void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr
   _views.emplace(name, view);
 }
 
-void StorageManager::drop_lqp_view(const std::string& name) {
+void StorageManager::drop_view(const std::string& name) {
   const auto num_deleted = _views.erase(name);
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
@@ -89,6 +89,20 @@ std::vector<std::string> StorageManager::view_names() const {
   }
 
   return view_names;
+}
+
+void StorageManager::add_prepared_statement(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& view) {
+  Assert(_prepared_statements.find(name) == _prepared_statements.end(),
+         "Cannot add prepared statement " + name + " - a prepared statement with the same name already exists");
+
+  _prepared_statements.emplace(name, view);
+}
+
+std::shared_ptr<LQPPreparedStatement> StorageManager::get_prepared_statement(const std::string& name) const {
+  const auto iter = _prepared_statements.find(name);
+  Assert(iter != _prepared_statements.end(), "No such prepared statement named '" + name + "'");
+
+  return iter->second->deep_copy();
 }
 
 void StorageManager::print(std::ostream& out) const {
