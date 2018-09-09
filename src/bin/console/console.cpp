@@ -362,8 +362,8 @@ int Console::_help(const std::string&) {
   out("                                       Options\n");
   out("                                         - {exec, noexec} Execute the query before visualization.\n");
   out("                                                          Default: noexec\n");
-  out("                                         - {lqp, lqpopt, pqp} Type of plan to visualize. lqpopt gives the\n");
-  out("                                                              optimized query lqp. Default: pqp\n");
+  out("                                         - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives the\n");
+  out("                                                                unoptimized lqp. Default: pqp\n");
   out("                                       SQL\n");
   out("                                         - Optional, a query to visualize. If not specified, the last\n");
   out("                                           previously executed query is visualized.\n");
@@ -488,7 +488,7 @@ int Console::_visualize(const std::string& input) {
   /**
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
-   *    - "lqp", "lqpopt"; or implicit "pqp"
+   *    - "lqp", "unoptlqp"; or implicit "pqp"
    *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
    */
 
@@ -499,7 +499,7 @@ int Console::_visualize(const std::string& input) {
   const std::string NOEXEC = "noexec";
   const std::string PQP = "pqp";
   const std::string LQP = "lqp";
-  const std::string LQPOPT = "lqpopt";
+  const std::string UNOPTLQP = "unoptlqp";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default
@@ -509,14 +509,14 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize
-  enum class PlanType { LQP, LQPOpt, PQP };
+  enum class PlanType { LQP, UnoptLQP, PQP };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
-  if (input_words.front() == LQP || input_words.front() == LQPOPT || input_words.front() == PQP) {
+  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP) {
     if (input_words.front() == LQP)
       plan_type = PlanType::LQP;
-    else if (input_words.front() == LQPOPT)
-      plan_type = PlanType::LQPOpt;
+    else if (input_words.front() == UNOPTLQP)
+      plan_type = PlanType::UnoptLQP;
 
     plan_type_str = input_words.front();
     input_words.erase(input_words.begin());
@@ -546,7 +546,7 @@ int Console::_visualize(const std::string& input) {
   const auto img_filename = plan_type_str + ".png";
 
   // Visualize the Logical Query Plan
-  if (plan_type == PlanType::LQP || plan_type == PlanType::LQPOpt) {
+  if (plan_type == PlanType::LQP || plan_type == PlanType::UnoptLQP) {
     std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
     try {
@@ -555,8 +555,8 @@ int Console::_visualize(const std::string& input) {
         _sql_pipeline->get_result_table();
       }
 
-      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_unoptimized_logical_plans()
-                                                      : _sql_pipeline->get_optimized_logical_plans();
+      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                      : _sql_pipeline->get_unoptimized_logical_plans();
       for (const auto& lqp : lqps) {
         lqp_roots.push_back(lqp);
       }
