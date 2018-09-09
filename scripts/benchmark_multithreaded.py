@@ -29,7 +29,7 @@ from datetime import datetime
 MAX_CORE_COUNT = multiprocessing.cpu_count()
 DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
 
-def parse_arguments():
+def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
     parser.add_argument('-q', '--queries', action='store', type=int, metavar='Q', nargs='+', help='Specify the TPC-H queries that will be benchmarked')
@@ -39,13 +39,13 @@ def parse_arguments():
 
     core_group = parser.add_mutually_exclusive_group()
     core_group.add_argument('-c', '--cores', action='store', type=int, metavar='C', nargs='+', help='List of cores to be used for the benchmarks')
-    core_group.add_argument('--max-cores', action='store', type=int, metavar='C', help='Number of cores this machine has available')
+    core_group.add_argument('--max-cores', action='store', type=int, metavar='C', help='Number of cores up to which the benchmarks will be executed')
 
     run_group = parser.add_mutually_exclusive_group(required=True)
     run_group.add_argument('-r', '--runs', action='store', type=int, metavar='N', help='Fixed number of (max) runs each query is executed')
     run_group.add_argument('--runs-per-core', action='store', type=int, metavar='N', help='Number of (max) runs per core each query is executed')
     
-    return parser.parse_known_args()
+    return parser
 
 def verbose_print(verbose, message):
     if verbose: print('python> ' + message)
@@ -192,7 +192,14 @@ def plot(args, result_dir):
         verbose_print(True, 'Plot saved as: ' + result_plot_file)
 
 if __name__ == "__main__":
-    args, hyrise_args = parse_arguments()
+    parser = get_parser()
+    args, hyrise_args = parser.parse_known_args()
+
+    for arg in hyrise_args:
+        if arg.startswith('--scheduler'):
+            parser.print_help()
+            print('\nerror: The \'--scheduler\' argument will be set by this script and not by the user')
+            exit(1)
 
     result_dir = benchmark(args, hyrise_args)
     plot(args, result_dir)
