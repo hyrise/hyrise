@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utils/filesystem.hpp>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -113,6 +114,37 @@ TEST_F(StorageManagerTest, ListViewNames) {
 
   EXPECT_EQ(view_names[0], "first_view");
   EXPECT_EQ(view_names[1], "second_view");
+}
+
+TEST_F(StorageManagerTest, Print) {
+  std::ostringstream output;
+  auto& sm = StorageManager::get();
+  sm.print(output);
+
+  auto output_string = output.str();
+
+  EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> first_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> second_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+
+  EXPECT_TRUE(output_string.find("===== Views ======") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== view >> first_view <<") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== view >> second_view <<") != std::string::npos);
+}
+
+TEST_F(StorageManagerTest, ExportTables) {
+  std::ostringstream output;
+  auto& sm = StorageManager::get();
+  sm.drop_table("first_table");
+  sm.drop_table("second_table");
+
+  sm.add_table("third_table", load_table("src/test/tables/int_float.tbl"));
+
+  sm.export_all_tables_as_csv(opossum::test_data_path);
+
+  const std::string filename = opossum::test_data_path + "/third_table.csv";
+  EXPECT_TRUE(filesystem::exists(filename));
+  std::remove(filename.c_str());
 }
 
 }  // namespace opossum
