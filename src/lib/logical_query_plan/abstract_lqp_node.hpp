@@ -43,7 +43,7 @@ struct LQPOutputRelation {
   LQPInputSide input_side{LQPInputSide::Left};
 };
 
-class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
  public:
   explicit AbstractLQPNode(const LQPNodeType node_type);
   virtual ~AbstractLQPNode();
