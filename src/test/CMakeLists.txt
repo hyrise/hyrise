@@ -90,11 +90,6 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    statistics/chunk_statistics/pruning_filters_test.cpp
-    statistics/chunk_statistics/min_max_filter_test.cpp
-    statistics/column_statistics_test.cpp
-    statistics/table_statistics_join_test.cpp
-    statistics/table_statistics_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
@@ -122,7 +117,7 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
-    statistics/column_statistics_test.cpp
+    statistics/chunk_statistics/min_max_filter_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
