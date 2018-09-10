@@ -61,7 +61,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   /**
    * Performance hack:
-   *  Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk).
+   *  Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk), 
+   *  cache their result tables and use them in the per-chunk loop below.
    */
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
   {
