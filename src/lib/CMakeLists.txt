@@ -104,6 +104,8 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
+    logical_query_plan/execute_statement_node.cpp
+    logical_query_plan/execute_statement_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -122,6 +124,8 @@ set(
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
+    logical_query_plan/prepare_statement_node.cpp
+    logical_query_plan/prepare_statement_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
     logical_query_plan/show_columns_node.cpp
@@ -191,6 +195,10 @@ set(
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
+    operators/maintenance/execute_statement.cpp
+    operators/maintenance/execute_statement.hpp
+    operators/maintenance/prepare_statement.cpp
+    operators/maintenance/prepare_statement.hpp
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
