@@ -30,7 +30,7 @@ class MinMaxFilterTest : public ::testing::Test {
 };
 
 template <>
-class MinMaxFilterTest <std::string> : public ::testing::Test {
+class MinMaxFilterTest<std::string> : public ::testing::Test {
  protected:
   void SetUp() override {
     _values = pmr_vector<std::string>{"aa", "bb", "b", "bbbbba", "bbbbbb", "bbbbbc", "c"};

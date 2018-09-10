@@ -1,7 +1,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <utils/filesystem.hpp>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -9,6 +8,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "utils/filesystem.hpp"
 
 namespace opossum {
 

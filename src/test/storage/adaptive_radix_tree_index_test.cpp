@@ -1,8 +1,8 @@
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <random>
 #include <set>
-#include <limits>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -59,7 +59,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
 
     // create search values from given values + randomly chosen ones
     std::set<int> search_values = distinct_values;
-    while (search_values.size() < distinct_values.size()*2) {
+    while (search_values.size() < distinct_values.size() * 2) {
       search_values.insert(uni_integer(_rng));
     }
 
@@ -75,10 +75,9 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
       int min = *distinct_values.begin();
       int max = *distinct_values.rbegin();
 
-      EXPECT_EQ(index->upper_bound({min-1}), index->cbegin());
-      EXPECT_EQ(index->upper_bound({max+1}), index->cend());
+      EXPECT_EQ(index->upper_bound({min - 1}), index->cbegin());
+      EXPECT_EQ(index->upper_bound({max + 1}), index->cend());
     }
-
   }
 
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
@@ -220,7 +219,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
   std::uniform_int_distribution<int> uni(1, std::numeric_limits<int>::max() - 1);
 
   std::vector<int> values(test_size);
-  std::generate(values.begin(), values.end(), [this, &uni] () { return uni(_rng); });
+  std::generate(values.begin(), values.end(), [this, &uni]() { return uni(_rng); });
 
   _search_elements(values);
 }
@@ -231,7 +230,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfRandomInts) {
   std::exponential_distribution<double> exp(1.0);
 
   std::vector<int> values(test_size);
-  std::generate(values.begin(), values.end(), [this, &exp] () { return static_cast<int>(exp(_rng)); });
+  std::generate(values.begin(), values.end(), [this, &exp]() { return static_cast<int>(exp(_rng)); });
 
   _search_elements(values);
 }

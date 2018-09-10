@@ -26,7 +26,7 @@ class RangeFilterTest : public ::testing::Test {
   }
 
   void test_varying_range_filter_size(int gap_count) {
-    // RangeFilter constructor takes range count, not gap count 
+    // RangeFilter constructor takes range count, not gap count
     auto filter = RangeFilter<T>::build_filter(_values, gap_count + 1);
 
     for (const auto& value : _values) {
@@ -40,18 +40,17 @@ class RangeFilterTest : public ::testing::Test {
     for (auto it = value_set.begin(); it != std::prev(value_set.end()); ++it) {
       auto begin = *it;
       auto end = *(std::next(it));
-      begin_length_pairs.push_back(std::make_pair(begin, end-begin));
+      begin_length_pairs.push_back(std::make_pair(begin, end - begin));
     }
 
-    std::sort(begin_length_pairs.begin(), begin_length_pairs.end(), [](auto &left, auto &right) {
-      return left.second > right.second;
-    });
+    std::sort(begin_length_pairs.begin(), begin_length_pairs.end(),
+              [](auto& left, auto& right) { return left.second > right.second; });
 
     for (int i = 0; i < gap_count && i < static_cast<int>(begin_length_pairs.size()); ++i) {
       auto gap = begin_length_pairs[i];
       auto begin = gap.first;
       auto length = gap.second;
-      auto end = begin + length; 
+      auto end = begin + length;
       EXPECT_FALSE(filter->can_prune({begin}, PredicateCondition::Equals));
       EXPECT_FALSE(filter->can_prune({end}, PredicateCondition::Equals));
       if (std::numeric_limits<T>::is_iec559) {
@@ -88,7 +87,7 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
 }
 
 TYPED_TEST(RangeFilterTest, MultipleRanges) {
-  for (unsigned long i = 0; i < this->_values.size() * 2; ++i) {
+  for (size_t i = 0; i < this->_values.size() * 2; ++i) {
     this->test_varying_range_filter_size(static_cast<int>(i));
   }
 }
