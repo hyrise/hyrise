@@ -716,7 +716,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
 
 std::shared_ptr<const Table> ExpressionEvaluator::evaluate_uncorrelated_select_expression(
     const PQPSelectExpression& expression) {
-  DebugAssert(expression.parameters.empty(), "called with correlated select expression");
+  DebugAssert(!expression.is_correlated(), "called with correlated select expression");
   return _evaluate_select_expression_for_row(expression, ChunkOffset{0});
 }
 

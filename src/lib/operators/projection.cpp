@@ -69,7 +69,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     for (const auto& expression : expressions) {
       visit_expression(expression, [&](const auto& sub_expression) {
         const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-        if (pqp_select_expression && pqp_select_expression->parameters.empty()) {
+        if (pqp_select_expression && !pqp_select_expression->is_correlated()) {
           auto result = evaluator.evaluate_uncorrelated_select_expression(*pqp_select_expression);
           uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
           return ExpressionVisitation::DoNotVisitArguments;

@@ -464,7 +464,7 @@ TEST_F(ExpressionEvaluatorTest, InArbitraryExpression) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, sub_(c, 31)), {0, std::nullopt, 1, std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
+TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithoutPrecalculated) {
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
@@ -487,6 +487,20 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, select_b), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", select_b), {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, select_b), {1, std::nullopt, 1, std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithPrecalculated) {
+  // PQP that returns the column "a"
+  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+  const auto pqp_a =
+      std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
+  const auto select_a = select_(pqp_a, DataType::Int, false);
+
+  // PQP that returns the column "c"
+  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
+  const auto pqp_b =
+      std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
+  const auto select_b = select_(pqp_b, DataType::Int, true);
 
   // Test it with pre-calculated uncorrelated_select_results
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
@@ -496,10 +510,6 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   pqp_b->execute();
   uncorrelated_select_results->emplace(pqp_a, pqp_a->get_output());
   uncorrelated_select_results->emplace(pqp_b, pqp_b->get_output());
-
-  // Destroy the pqp's so that if the expression evaluator tries to access them, it crashes
-  pqp_a->input_left() = nullptr;
-  pqp_b->input_left() = nullptr;
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}, uncorrelated_select_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, select_a), {1, 1, 1, 1}, uncorrelated_select_results));
@@ -511,8 +521,30 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", select_b), {0}, uncorrelated_select_results));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, select_b), {1, std::nullopt, 1, std::nullopt},
                                        uncorrelated_select_results));
+}
 
+TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithBrokenPrecalculated) {
   // Make sure the expression evaluator complains if it has been given a list of preevaluated selects but one is missing
+
+  // PQP that returns the column "a"
+  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+  const auto pqp_a =
+      std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
+  const auto select_a = select_(pqp_a, DataType::Int, false);
+
+  // PQP that returns the column "c"
+  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
+  const auto pqp_b =
+      std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
+  const auto select_b = select_(pqp_b, DataType::Int, true);
+
+  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  table_wrapper_a->execute();
+  pqp_a->execute();
+  table_wrapper_b->execute();
+  pqp_b->execute();
+  uncorrelated_select_results->emplace(pqp_a, pqp_a->get_output());
+  uncorrelated_select_results->emplace(pqp_b, pqp_b->get_output());
 
   const auto table_wrapper_c = std::make_shared<TableWrapper>(table_a);
   table_wrapper_c->execute();

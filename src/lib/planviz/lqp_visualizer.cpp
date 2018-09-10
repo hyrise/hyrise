@@ -65,7 +65,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
         _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
 
         auto edge_info = _default_edge;
-        auto correlated_str = std::string(lqp_select_expression->parameter_ids.empty() ? "uncorrelated" : "correlated");
+        auto correlated_str = std::string(lqp_select_expression->is_correlated() ? "correlated" : "uncorrelated");
         edge_info.label = correlated_str + " subquery";
         edge_info.style = "dashed";
         _add_edge(lqp_select_expression->lqp, node, edge_info);
