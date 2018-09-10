@@ -59,13 +59,7 @@ bool LQPSelectExpression::is_nullable() const {
 }
 
 bool LQPSelectExpression::is_correlated() const {
-  for (const auto& argument : arguments) {
-    DebugAssert(argument->type == ExpressionType::Parameter,
-                "Expected argument of LQPSelectExpression to be ParameterExpression");
-    const auto& parameter_expression = static_cast<const ParameterExpression&>(*argument);
-    if (parameter_expression.parameter_expression_type == ParameterExpressionType::External) return true;
-  }
-  return false;
+  return !arguments.empty();
 }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {
