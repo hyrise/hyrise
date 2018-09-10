@@ -52,11 +52,12 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   void _search_elements(std::vector<int>& values) {
     std::uniform_int_distribution<int> uni_integer(0, std::numeric_limits<int>::max());
 
-    auto column = create_dict_column_by_type<int>(DataType::Int, values);
-    auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+    auto segment = create_dict_segment_by_type<int>(DataType::Int, values);
+    auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     std::set<int> distinct_values(values.begin(), values.end());
 
+    // create search values from given values + randomly chosen ones
     std::set<int> search_values = distinct_values;
     while (search_values.size() < distinct_values.size()*2) {
       search_values.insert(uni_integer(_rng));
@@ -193,8 +194,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
   std::vector<int> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int>::max()};
 
-  auto column = create_dict_column_by_type<int>(DataType::Int, values);
-  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+  auto segment = create_dict_segment_by_type<int>(DataType::Int, values);
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
   EXPECT_EQ(*index->cbegin(), 0);
   EXPECT_EQ(*index->lower_bound({0}), 0);
@@ -207,8 +208,15 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
   EXPECT_EQ(index->upper_bound({std::numeric_limits<int>::max()}), index->cend());
 }
 
+/**
+* The following two tests try to test two rather extreme tests that both test the node overflow
+* handling of the ART implementation:
+*   - sparse vector: wide range of values (between 1 and MAX_INT) with large gaps
+*   - dense vector: expenential distribution, rounded to integer values
+**/
 TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
-  size_t test_size = 10'000;
+  // Increase temporaliy when working on the ART
+  size_t test_size = 1'000;
   std::uniform_int_distribution<int> uni(1, std::numeric_limits<int>::max() - 1);
 
   std::vector<int> values(test_size);
@@ -218,7 +226,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfRandomInts) {
-  size_t test_size = 10'000;
+  // Increase temporaliy when working on the ART
+  size_t test_size = 5'000;
   std::exponential_distribution<double> exp(1.0);
 
   std::vector<int> values(test_size);
