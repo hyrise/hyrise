@@ -4,6 +4,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -26,6 +27,10 @@ struct OperatorScanPredicate {
   OperatorScanPredicate() = default;
   OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                         const AllParameterVariant& value = NullValue{});
+
+  // Returns a string representation of the predicate, using an optionally given table that is used to resolve column
+  // ids.
+  std::string to_string(const std::shared_ptr<const Table>& table = nullptr) const;
 
   ColumnID column_id{INVALID_column_id};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
