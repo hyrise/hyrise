@@ -36,7 +36,7 @@ class MinMaxFilterTest <std::string> : public ::testing::Test {
     _values = pmr_vector<std::string>{"aa", "bb", "b", "bbbbba", "bbbbbb", "bbbbbc", "c"};
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
-    _in_between = "b";
+    _in_between = "ba";
     _before_range = "a";
     _after_range = "cc";
   }
