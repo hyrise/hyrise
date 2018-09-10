@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"

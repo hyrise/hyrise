@@ -3,7 +3,7 @@
 #include "constant_mappings.hpp"
 #include "operators/jit_operator/jit_operations.hpp"
 #include "resolve_type.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -80,7 +80,7 @@ typename std::enable_if<!std::is_arithmetic<ColumnDataType>::value, void>::type 
 
 void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) const {
   auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
-  ChunkColumns chunk_columns(num_columns);
+  Segments segments(num_columns);
 
   // If the operator did not consume a single tuple and there are no groupby columns, we create a single row in the
   // output with uninitialized aggregate values (0 for count, NULL for sum, max, min, avg).
@@ -107,7 +107,7 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       // Get the std::vector containing the raw values (and conditionally, also get the is_null values).
-      // We then create a ValueColumn of the appropriate data type from these values. Since value columns use a
+      // We then create a ValueSegment of the appropriate data type from these values. Since value segments use a
       // pmr_concurrent_vector internally, this operation copies all values to a new vector of this type.
       // However, using this type of vector within the operator in the first place is also suboptimal, since the
       // pmr_concurrent_vector performs a lot of synchronization. It is thus better to use the faster std::vector and
@@ -115,9 +115,9 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
       auto& values = context.hashmap.columns[column.hashmap_value.column_index()].template get_vector<ColumnDataType>();
       if (column.hashmap_value.is_nullable()) {
         auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
-        chunk_columns[column.position_in_table] = std::make_shared<ValueColumn<ColumnDataType>>(values, null_values);
+        segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
       } else {
-        chunk_columns[column.position_in_table] = std::make_shared<ValueColumn<ColumnDataType>>(values);
+        segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
       }
     });
   }
@@ -143,28 +143,28 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
 
         if (column.hashmap_value.is_nullable()) {
           auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
-          chunk_columns[column.position_in_table] = std::make_shared<ValueColumn<double>>(avg_values, null_values);
+          segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values, null_values);
         } else {
-          chunk_columns[column.position_in_table] = std::make_shared<ValueColumn<double>>(avg_values);
+          segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values);
         }
       });
     } else {
-      // All other types of aggregate vectors can be handled just like value columns.
+      // All other types of aggregate vectors can be handled just like value segments.
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
         auto column_index = column.hashmap_value.column_index();
         auto& values = context.hashmap.columns[column_index].template get_vector<ColumnDataType>();
         if (column.hashmap_value.is_nullable()) {
           auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
-          chunk_columns[column.position_in_table] = std::make_shared<ValueColumn<ColumnDataType>>(values, null_values);
+          segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
         } else {
-          chunk_columns[column.position_in_table] = std::make_shared<ValueColumn<ColumnDataType>>(values);
+          segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
         }
       });
     }
   }
 
-  out_table.append_chunk(chunk_columns);
+  out_table.append_chunk(segments);
 }
 
 namespace {

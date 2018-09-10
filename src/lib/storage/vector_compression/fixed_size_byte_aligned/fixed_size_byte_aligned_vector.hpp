@@ -3,15 +3,10 @@
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
-
-#include <boost/iterator/transform_iterator.hpp>
-
 #include <memory>
 
-#include "storage/vector_compression/base_compressed_vector.hpp"
-
 #include "fixed_size_byte_aligned_decompressor.hpp"
-
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -42,17 +37,14 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
 
   auto on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
 
-  auto on_begin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
+  auto on_begin() const { return _data.cbegin(); }
 
-  auto on_end() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
+  auto on_end() const { return _data.cend(); }
 
   std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::make_unique<FixedSizeByteAlignedVector<UnsignedIntType>>(std::move(data_copy));
   }
-
- private:
-  static uint32_t cast_to_uint32(UnsignedIntType value) { return static_cast<uint32_t>(value); }
 
  private:
   const pmr_vector<UnsignedIntType> _data;

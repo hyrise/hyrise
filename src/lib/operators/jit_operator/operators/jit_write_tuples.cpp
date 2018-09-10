@@ -3,8 +3,8 @@
 #include "../jit_types.hpp"
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_value_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -56,39 +56,39 @@ void JitWriteTuples::_create_output_chunk(JitRuntimeContext& context) const {
   context.out_chunk.clear();
   context.outputs.clear();
 
-  // Create new value columns and add them to the runtime context to make them accessible by the column writers
+  // Create new value segments and add them to the runtime context to make them accessible by the segment writers
   for (const auto& output_column : _output_columns) {
     const auto data_type = output_column.tuple_value.data_type();
     const auto is_nullable = output_column.tuple_value.is_nullable();
 
-    // Create the appropriate column writer for the output column
+    // Create the appropriate segment writer for the output segment
     if (data_type == DataType::Bool) {
       // Data type bool is a special jit data type and not an opossum data type
       // Therefore, bools needs to be handled separately as they are transformed to opossum int types
-      auto column = std::make_shared<ValueColumn<Bool>>(output_column.tuple_value.is_nullable());
-      context.out_chunk.push_back(column);
+      auto segment = std::make_shared<ValueSegment<Bool>>(output_column.tuple_value.is_nullable());
+      context.out_chunk.push_back(segment);
       if (is_nullable) {
         context.outputs.push_back(
-            std::make_shared<JitColumnWriter<ValueColumn<Bool>, bool, true>>(column, output_column.tuple_value));
+            std::make_shared<JitSegmentWriter<ValueSegment<Bool>, bool, true>>(segment, output_column.tuple_value));
       } else {
         context.outputs.push_back(
-            std::make_shared<JitColumnWriter<ValueColumn<Bool>, bool, false>>(column, output_column.tuple_value));
+            std::make_shared<JitSegmentWriter<ValueSegment<Bool>, bool, false>>(segment, output_column.tuple_value));
       }
     } else {
       // Opossum data types
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
-        auto column = std::make_shared<ValueColumn<ColumnDataType>>(output_column.tuple_value.is_nullable());
-        context.out_chunk.push_back(column);
+        auto segment = std::make_shared<ValueSegment<ColumnDataType>>(output_column.tuple_value.is_nullable());
+        context.out_chunk.push_back(segment);
 
         if (is_nullable) {
           context.outputs.push_back(
-              std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
-                  column, output_column.tuple_value));
+              std::make_shared<JitSegmentWriter<ValueSegment<ColumnDataType>, ColumnDataType, true>>(
+                  segment, output_column.tuple_value));
         } else {
           context.outputs.push_back(
-              std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
-                  column, output_column.tuple_value));
+              std::make_shared<JitSegmentWriter<ValueSegment<ColumnDataType>, ColumnDataType, false>>(
+                  segment, output_column.tuple_value));
         }
       });
     }

@@ -16,7 +16,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/column_encoding_utils.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -45,13 +45,13 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<ChunkColumns> columns_by_chunks;
+  std::list<Segments> segments_by_chunks;
   std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
     // create empty chunk
-    columns_by_chunks.emplace_back();
-    auto& columns = columns_by_chunks.back();
+    segments_by_chunks.emplace_back();
+    auto& segments = segments_by_chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
     std::string_view relevant_content = content_view.substr(0, field_ends.back());
@@ -60,8 +60,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &columns]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, columns);
+    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &segments]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, segments);
     }));
     tasks.back()->schedule();
   }
@@ -70,8 +70,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     task->join();
   }
 
-  for (auto& chunk_columns : columns_by_chunks) {
-    table->append_chunk(chunk_columns);
+  for (auto& segments : segments_by_chunks) {
+    table->append_chunk(segments);
   }
 
   if (_meta.auto_compress) ChunkEncoder::encode_all_chunks(table);
@@ -80,7 +80,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
-  TableColumnDefinitions colum_definitions;
+  TableColumnDefinitions column_definitions;
   for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;
     BaseCsvConverter::unescape(column_name);
@@ -90,10 +90,10 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
 
     const auto data_type = data_type_to_string.right.at(column_type);
 
-    colum_definitions.emplace_back(column_name, data_type, column_meta.nullable);
+    column_definitions.emplace_back(column_name, data_type, column_meta.nullable);
   }
 
-  return std::make_shared<Table>(colum_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
+  return std::make_shared<Table>(column_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
 }
 
 bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,
@@ -148,8 +148,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 }
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
-                                    const Table& table, ChunkColumns& columns) {
-  // For each csv column create a CsvConverter which builds up a ValueColumn
+                                    const Table& table, Segments& segments) {
+  // For each csv column, create a CsvConverter which builds up a ValueSegment
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
   std::vector<std::unique_ptr<BaseCsvConverter>> converters;
@@ -183,9 +183,9 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
     }
   }
 
-  // Transform the field_offsets to columns and add columns to chunk.
+  // Transform the field_offsets to segments and add segments to chunk.
   for (auto& converter : converters) {
-    columns.push_back(converter->finish());
+    segments.push_back(converter->finish());
   }
 
   return row_count;

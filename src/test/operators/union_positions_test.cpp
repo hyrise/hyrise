@@ -9,7 +9,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -125,7 +125,7 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
 }
 
-TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleColumns) {
+TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
   /**
    * Scan '10_ints' once for values smaller than 100 and then for those greater than 20. Union the results.
    * Result should be all values in the original table, *without introducing duplicates of rows existing in both tables*
@@ -197,13 +197,13 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                             load_table("src/test/tables/int_float4_int_int_union_positions.tbl", Chunk::MAX_SIZE));
 
   /**
-   * Additionally check that Column 0 and 1 have the same pos list and that Column 2 and 3 have the same pos list to
+   * Additionally check that segment 0 and 1 have the same pos list and that segment 2 and 3 have the same pos list to
    * make sure we're not creating redundant data.
    */
   const auto get_pos_list = [](const auto& table, ColumnID column_id) {
-    const auto column = table->get_chunk(ChunkID{0})->get_column(column_id);
-    const auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column);
-    return *ref_column->pos_list();
+    const auto segment = table->get_chunk(ChunkID{0})->get_segment(column_id);
+    const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment);
+    return *ref_segment->pos_list();
   };
 
   const auto& output = union_unique_op->get_output();
@@ -214,7 +214,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
 
 TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   /**
-   * Test UnionPositions on Tables with multiple shuffled poslists and columns sharing poslists
+   * Test UnionPositions on Tables with multiple shuffled poslists and segments sharing poslists
    *
    * TODO(anybody) this test is an atrocity, look how complicated it is to build Reference Tables!
    */
@@ -264,19 +264,19 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
   pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
 
-  auto column_left_0_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_left_0_0);
-  auto column_left_1_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_left_1_0);
-  auto column_left_0_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_left_0_0);
-  auto column_left_1_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_left_1_0);
-  auto column_left_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_left_0_1);
-  auto column_left_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_left_1_1);
+  auto segment_left_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_left_0_0);
+  auto segment_left_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_left_1_0);
+  auto segment_left_0_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_left_0_0);
+  auto segment_left_1_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_left_1_0);
+  auto segment_left_0_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_left_0_1);
+  auto segment_left_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_left_1_1);
 
-  auto column_right_0_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_right_0_0);
-  auto column_right_1_0 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{0}, pos_list_right_1_0);
-  auto column_right_0_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_right_0_0);
-  auto column_right_1_1 = std::make_shared<ReferenceColumn>(_table_int_float4, ColumnID{1}, pos_list_right_1_0);
-  auto column_right_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
-  auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
+  auto segment_right_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_right_0_0);
+  auto segment_right_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_right_1_0);
+  auto segment_right_0_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_right_0_0);
+  auto segment_right_1_1 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{1}, pos_list_right_1_0);
+  auto segment_right_0_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
+  auto segment_right_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int);
@@ -284,13 +284,13 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   column_definitions.emplace_back("c", DataType::Int);
   auto table_left = std::make_shared<Table>(column_definitions, TableType::References, 3);
 
-  table_left->append_chunk(ChunkColumns({column_left_0_0, column_left_0_1, column_left_0_2}));
-  table_left->append_chunk(ChunkColumns({column_left_1_0, column_left_1_1, column_left_1_2}));
+  table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));
+  table_left->append_chunk(Segments({segment_left_1_0, segment_left_1_1, segment_left_1_2}));
 
   auto table_right = std::make_shared<Table>(column_definitions, TableType::References, 4);
 
-  table_right->append_chunk(ChunkColumns({column_right_0_0, column_right_0_1, column_right_0_2}));
-  table_right->append_chunk(ChunkColumns({column_right_1_0, column_right_1_1, column_right_1_2}));
+  table_right->append_chunk(Segments({segment_right_0_0, segment_right_0_1, segment_right_0_2}));
+  table_right->append_chunk(Segments({segment_right_1_0, segment_right_1_1, segment_right_1_2}));
 
   auto table_wrapper_left_op = std::make_shared<TableWrapper>(table_left);
   auto table_wrapper_right_op = std::make_shared<TableWrapper>(table_right);

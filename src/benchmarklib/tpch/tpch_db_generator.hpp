@@ -12,7 +12,7 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {

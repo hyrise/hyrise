@@ -11,7 +11,7 @@
 namespace opossum {
 
 // operator to join two tables using one column of each table
-// output is a table with reference columns
+// output is a table with ReferenceSegments
 // to filter by multiple criteria, you can chain the operator
 
 // As with most operators, we do not guarantee a stable operation with regards
@@ -20,13 +20,15 @@ namespace opossum {
 // find more information about joins in our Wiki:
 // https://github.com/hyrise/hyrise/wiki/Operator-Join
 
-// We have decided against forwarding MVCC columns in https://github.com/hyrise/hyrise/issues/409
+// We have decided against forwarding MVCC data in https://github.com/hyrise/hyrise/issues/409
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
-                       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                       const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+  AbstractJoinOperator(
+      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode, const ColumnIDPair& column_ids,
+      const PredicateCondition predicate_condition,
+      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;
   const ColumnIDPair& column_ids() const;

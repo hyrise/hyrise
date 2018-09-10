@@ -16,19 +16,20 @@
 #include "abstract_read_only_operator.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/abstract_column_visitor.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/abstract_segment_visitor.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
+template <typename AggregateKey>
 struct GroupByContext;
 
 /**
- * Aggregates are defined by the Column (ColumnID for Operators, ColumnReference in LQP) they operate on and the aggregate
- * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
+ * Aggregates are defined by the column (ColumnID for Operators, LQPColumnReference in LQP) they operate on and the aggregate
+ * function they use. COUNT() is the exception that doesn't use a column, which is why column is optional
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateColumnDefinition final {
@@ -41,7 +42,7 @@ struct AggregateColumnDefinition final {
 
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
- with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
+ with reference segments. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
 
 For implementation details, please check the wiki: https://github.com/hyrise/hyrise/wiki/Aggregate-Operator
@@ -63,18 +64,12 @@ struct AggregateResult {
 The key type that is used for the aggregation map.
 */
 using AggregateKeyEntry = uint64_t;
-using AggregateKey = pmr_vector<AggregateKeyEntry>;
-using AggregateKeys = pmr_vector<AggregateKey>;
-using KeysPerChunk = pmr_vector<AggregateKeys>;
 
-// We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
-// save time when allocating and we can throw away everything in this temporary structure at once (once the resource
-// gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
-// This is suitable here because the amount of memory needed is known from the start. In other places with frequent
-// reallocations, this might make less sense.
-// We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
-// https://libcxx.llvm.org/ts1z_status.html
-using AggregateKeysAllocator = boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys>>;
+template <typename AggregateKey>
+using AggregateKeys = pmr_vector<AggregateKey>;
+
+template <typename AggregateKey>
+using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -99,11 +94,14 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   // write the aggregated output for a given aggregate column
-  template <typename ColumnType, AggregateFunction function>
+  template <typename ColumnType, AggregateFunction function, typename AggregateKey>
   void write_aggregate_output(ColumnID column_index);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  template <typename AggregateKey>
+  void _aggregate();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -113,48 +111,48 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   void _on_cleanup() override;
 
-  template <typename ColumnType>
-  static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitorContext>& aggregate_context,
-                                        AggregateFunction function);
-
-  template <typename ColumnType>
-  static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<AbstractColumnVisitor>& builder,
-                                        std::shared_ptr<ColumnVisitorContext> context,
-                                        std::shared_ptr<GroupByContext> groupby_context, AggregateFunction function);
-
-  template <typename ColumnType>
+  template <typename AggregateKey, typename ColumnType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
                                AggregateFunction function);
 
   void _write_groupby_output(PosList& pos_list);
 
-  template <typename ColumnDataType, AggregateFunction function>
-  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
-                         const KeysPerChunk& keys_per_chunk);
+  template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+  void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const BaseSegment& base_segment,
+                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
-  std::shared_ptr<ColumnVisitorContext> _create_aggregate_context(const DataType data_type,
-                                                                  const AggregateFunction function) const;
+  template <typename AggregateKey>
+  std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
+                                                                   const AggregateFunction function) const;
 
-  template <typename ColumnDataType, AggregateFunction aggregate_function>
-  std::shared_ptr<ColumnVisitorContext> _create_aggregate_context_impl() const;
+  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
+  std::shared_ptr<SegmentVisitorContext> _create_aggregate_context_impl() const;
 
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   TableColumnDefinitions _output_column_definitions;
-  ChunkColumns _output_columns;
+  Segments _output_segments;
 
-  ChunkColumns _groupby_columns;
-  std::vector<std::shared_ptr<ColumnVisitorContext>> _contexts_per_column;
+  Segments _groupby_segments;
+  std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
 };
 
 }  // namespace opossum
 
 namespace std {
 template <>
-struct hash<opossum::AggregateKey> {
-  size_t operator()(const opossum::AggregateKey& key) const { return boost::hash_range(key.begin(), key.end()); }
+struct hash<opossum::pmr_vector<opossum::AggregateKeyEntry>> {
+  size_t operator()(const opossum::pmr_vector<opossum::AggregateKeyEntry>& key) const {
+    return boost::hash_range(key.begin(), key.end());
+  }
+};
+
+template <>
+struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
+  // gcc7 doesn't support templating by `int N` here.
+  size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
+    return boost::hash_range(key.begin(), key.end());
+  }
 };
 }  // namespace std

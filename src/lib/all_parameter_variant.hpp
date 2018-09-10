@@ -40,7 +40,7 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 // Function to check if AllParameterVariant is a column id
 inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
 
-// Function to check if AllParameterVariant is a column origin
+// Function to check if AllParameterVariant is an LQP column reference
 inline bool is_lqp_column_reference(const AllParameterVariant& variant) {
   return (variant.type() == typeid(LQPColumnReference));
 }
@@ -49,12 +49,5 @@ inline bool is_lqp_column_reference(const AllParameterVariant& variant) {
 inline bool is_parameter_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
 
 std::string to_string(const AllParameterVariant& x);
-
-/**
- * Checks whether two variants are equal, except when they contain float/double. In this case check whether they are
- * near, e.g. withing a certain absolute difference from each other.
- */
-bool all_parameter_variant_near(const AllParameterVariant& lhs, const AllParameterVariant& rhs,
-                                double max_abs_error = 0.001);
 
 }  // namespace opossum

@@ -27,6 +27,13 @@ class JoinIndex : public AbstractJoinOperator {
 
   const std::string name() const override;
 
+  struct PerformanceData : public OperatorPerformanceData {
+    size_t chunks_scanned_with_index{0};
+    size_t chunks_scanned_without_index{0};
+
+    std::string to_string(DescriptionMode description_mode = DescriptionMode::SingleLine) const override;
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -38,21 +45,21 @@ class JoinIndex : public AbstractJoinOperator {
   void _perform_join();
 
   template <typename LeftIterator>
-  void _join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
-                                     const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index);
+  void _join_two_segments_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
+                                      const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _join_two_columns_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                     RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                     const ChunkID chunk_id_right);
+  void _join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                                      RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                                      const ChunkID chunk_id_right);
 
   void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                        const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left, const ChunkID chunk_id_right);
 
   void _create_table_structure();
 
-  void _write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
-                             std::shared_ptr<PosList> pos_list);
+  void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
+                              std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;
 

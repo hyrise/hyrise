@@ -15,6 +15,7 @@ SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
 SELECT * FROM mixed WHERE b BETWEEN 20 AND 45;
+SELECT * FROM mixed WHERE b = 10 OR b BETWEEN 45 AND 20; -- valid SQL with expected empty result
 SELECT * FROM mixed WHERE b BETWEEN c AND 45;
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
@@ -189,6 +190,9 @@ SELECT * FROM id_int_int_int_100 WHERE a * 10 IN (SELECT b FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
 
 -- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;

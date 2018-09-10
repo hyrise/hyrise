@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "join_test.hpp"
 
@@ -254,13 +254,13 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionaryColumns) {
+TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionarySegments) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
                                              JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceColumns) {
+TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceSegments) {
   // scan that returns all rows
   auto scan_a =
       std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -373,7 +373,7 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
                                              "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
+TYPED_TEST(JoinEquiTest, RightJoinRefSegment) {
   // scan that returns all rows
   auto scan_a =
       std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -384,7 +384,7 @@ TYPED_TEST(JoinEquiTest, RightJoinRefColumn) {
                                              "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
+TYPED_TEST(JoinEquiTest, LeftJoinRefSegment) {
   // scan that returns all rows
   auto scan_b =
       std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -395,7 +395,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinRefColumn) {
                                              "src/test/tables/joinoperators/int_left_join.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
+TYPED_TEST(JoinEquiTest, RightJoinEmptyRefSegment) {
   // scan that returns no rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -405,7 +405,7 @@ TYPED_TEST(JoinEquiTest, RightJoinEmptyRefColumn) {
                                              "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
+TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefSegment) {
   // scan that returns no rows
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
@@ -417,7 +417,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefColumn) {
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
 TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
-  //  Filtering to generate RefColumns
+  //  Filtering to generate RefSegments
   auto filtered_left =
       std::make_shared<opossum::TableScan>(this->_table_wrapper_e, ColumnID{0}, PredicateCondition::LessThanEquals, 10);
   filtered_left->execute();

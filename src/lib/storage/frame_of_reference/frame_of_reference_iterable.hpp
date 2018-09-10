@@ -2,25 +2,25 @@
 
 #include <type_traits>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 
-#include "storage/frame_of_reference_column.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
 template <typename T>
-class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfReferenceIterable<T>> {
+class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfReferenceIterable<T>> {
  public:
-  explicit FrameOfReferenceIterable(const FrameOfReferenceColumn<T>& column) : _column{column} {}
+  explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_compressed_vector_type(_column.offset_values(), [&](const auto& offset_values) {
+    resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
-      auto begin = Iterator<OffsetValueIteratorT>{_column.block_minima().cbegin(), offset_values.cbegin(),
-                                                  _column.null_values().cbegin()};
+      auto begin = Iterator<OffsetValueIteratorT>{_segment.block_minima().cbegin(), offset_values.cbegin(),
+                                                  _segment.null_values().cbegin()};
 
       auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
 
@@ -30,11 +30,11 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    resolve_compressed_vector_type(_column.offset_values(), [&](const auto& vector) {
+    resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_column.block_minima(), &_column.null_values(),
+      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
                                                                  decoder.get(), mapped_chunk_offsets.cbegin()};
 
       auto end = PointAccessIterator<OffsetValueDecompressorT>{mapped_chunk_offsets.cend()};
@@ -43,12 +43,14 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
     });
   }
 
+  size_t _on_size() const { return _segment.size(); }
+
  private:
-  const FrameOfReferenceColumn<T>& _column;
+  const FrameOfReferenceSegment<T>& _segment;
 
  private:
   template <typename OffsetValueIteratorT>
-  class Iterator : public BaseColumnIterator<Iterator<OffsetValueIteratorT>, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentIteratorValue<T>> {
    public:
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
@@ -75,7 +77,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       ++_index_within_frame;
       ++_chunk_offset;
 
-      if (_index_within_frame >= FrameOfReferenceColumn<T>::block_size) {
+      if (_index_within_frame >= FrameOfReferenceSegment<T>::block_size) {
         _index_within_frame = 0u;
         ++_block_minimum_it;
       }
@@ -83,9 +85,9 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
     bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
 
-    ColumnIteratorValue<T> dereference() const {
+    SegmentIteratorValue<T> dereference() const {
       const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
-      return ColumnIteratorValue<T>{value, *_null_value_it, _chunk_offset};
+      return SegmentIteratorValue<T>{value, *_null_value_it, _chunk_offset};
     }
 
    private:
@@ -98,13 +100,13 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
   template <typename OffsetValueDecompressorT>
   class PointAccessIterator
-      : public BasePointAccessColumnIterator<PointAccessIterator<OffsetValueDecompressorT>, ColumnIteratorValue<T>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentIteratorValue<T>> {
    public:
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         OffsetValueDecompressorT* attribute_decoder, ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator<OffsetValueDecompressorT>,
-                                        ColumnIteratorValue<T>>{chunk_offsets_it},
+        : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
+                                         SegmentIteratorValue<T>>{chunk_offsets_it},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decoder{attribute_decoder} {}
@@ -116,17 +118,17 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    ColumnIteratorValue<T> dereference() const {
+    SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;
+      static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
       const auto is_null = (*_null_values)[chunk_offsets.into_referenced];
       const auto block_minimum = (*_block_minima)[chunk_offsets.into_referenced / block_size];
       const auto offset_value = _offset_value_decoder->get(chunk_offsets.into_referenced);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
-      return ColumnIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
+      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
     }
 
    private:

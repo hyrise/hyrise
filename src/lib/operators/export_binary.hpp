@@ -6,9 +6,9 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
-#include "storage/abstract_column_visitor.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/abstract_segment_visitor.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -70,8 +70,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * -----------------------------------------------------------------------------------------
    * Row count             | ChunkOffset                           |  4
    *
-   * Next, it dumps the contents of the columns in the respective format (depending on the type
-   * of the column, such as ReferenceColumn, DictionaryColumn, ValueColumn).
+   * Next, it dumps the contents of the segments in the respective format (depending on the type
+   * of the segment, such as ReferenceSegment, DictionarySegment, ValueSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -83,16 +83,16 @@ class ExportBinary : public AbstractReadOnlyOperator {
   template <typename T>
   class ExportBinaryVisitor;
 
-  struct ExportContext : ColumnVisitorContext {
+  struct ExportContext : SegmentVisitorContext {
     explicit ExportContext(std::ofstream& ofstream) : ofstream(ofstream) {}
     std::ofstream& ofstream;
   };
 };
 
 template <typename T>
-class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
+class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   /**
-   * Value Columns are dumped with the following layout:
+   * Value Segments are dumped with the following layout:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
@@ -109,14 +109,14 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
-   * @param base_column The Column to export
+   * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) final;
+  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) final;
 
   /**
-   * Reference Columns are dumped with the following layout, which is similar to value columns:
+   * Reference Segments are dumped with the following layout, which is similar to value segments:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
@@ -131,13 +131,14 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
-   * @param base_column The Column to export
+   * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const ReferenceSegment& ref_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
   /**
-   * Dictionary Columns are dumped with the following layout:
+   * Dictionary Segments are dumped with the following layout:
    *
    * Description           | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
@@ -155,13 +156,14 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is written if the type of the column is NOT a string
    *
-   * @param base_column The Column to export
+   * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseDictionarySegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
 
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.

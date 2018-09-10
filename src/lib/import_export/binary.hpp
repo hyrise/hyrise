@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-enum class BinaryColumnType : uint8_t { value_column = 0, dictionary_column = 1 };
+enum class BinarySegmentType : uint8_t { value_segment = 0, dictionary_segment = 1 };
 
 using BoolAsByteType = uint8_t;
 

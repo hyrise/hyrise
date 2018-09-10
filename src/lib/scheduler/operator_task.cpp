@@ -12,6 +12,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/processing_unit.hpp"
 #include "scheduler/worker.hpp"
+#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,
@@ -82,6 +83,7 @@ void OperatorTask::_on_execute() {
     }
   }
 
+  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
   _op->execute();
 
   /**
@@ -109,7 +111,7 @@ void OperatorTask::_on_execute() {
           previous_operator_still_needed = true;
         }
       }
-      // If someone else still holds a shared_ptr to the table (e.g., a ReferenceColumn pointing to a materialized
+      // If someone else still holds a shared_ptr to the table (e.g., a ReferenceSegment pointing to a materialized
       // temporary table), it will not yet get deleted
       if (!previous_operator_still_needed) predecessor->get_operator()->clear_output();
     }
