@@ -27,7 +27,7 @@ struct OperatorScanPredicate {
   OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                         const AllParameterVariant& value = NullValue{});
 
-  ColumnID column_id{INVALID_column_id};
+  ColumnID column_id{INVALID_COLUMN_ID};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
 };
