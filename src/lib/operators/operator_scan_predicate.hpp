@@ -29,7 +29,7 @@ struct OperatorScanPredicate {
                         const AllParameterVariant& value = NullValue{});
 
   // Returns a string representation of the predicate, using an optionally given table that is used to resolve column
-  // ids.
+  // ids to names.
   std::string to_string(const std::shared_ptr<const Table>& table = nullptr) const;
 
   ColumnID column_id{INVALID_column_id};
