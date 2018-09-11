@@ -525,6 +525,7 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithPrecalculated) {
 
 TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithBrokenPrecalculated) {
   // Make sure the expression evaluator complains if it has been given a list of preevaluated selects but one is missing
+  if (!IS_DEBUG) continue;
 
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
