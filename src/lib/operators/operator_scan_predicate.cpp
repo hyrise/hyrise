@@ -45,7 +45,9 @@ std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>&
     right = table->column_name(boost::get<ColumnID>(value));
   }
 
-  return column_name_left + " " + predicate_condition_to_string.left.at(predicate_condition) + " " + right;
+  std::stringstream stream;
+  stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
+  return stream.str();
 }
 
 std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_expression(
