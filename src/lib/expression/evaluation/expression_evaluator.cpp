@@ -38,8 +38,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id)
-    : _table(table), _chunk(_table->get_chunk(chunk_id)) {
+ExpressionEvaluator::ExpressionEvaluator(
+    const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+    const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
+    : _table(table), _chunk(_table->get_chunk(chunk_id)), _uncorrelated_select_results(uncorrelated_select_results) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
 }
@@ -337,9 +339,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
   } else {
     /**
-     * `<expression> IN <anything>` is not legal SQL, but on expression level we have to support it, since `<anything>`
-     * might be a column holding the result of a subselect.
-     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything>)`
+     * `<expression> IN <anything_but_list_or_select>` is not legal SQL, but on expression level we have to support
+     * it, since `<anything_but_list_or_select>` might be a column holding the result of a subselect.
+     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
      */
 
     return _evaluate_in_expression<ExpressionEvaluator::Bool>(*in_(in_expression.value(), list_(in_expression.set())));
@@ -687,7 +689,15 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
     const PQPSelectExpression& expression) {
   // If the SelectExpression is uncorrelated, evaluating it once is sufficient
   if (expression.parameters.empty()) {
-    return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
+    if (_uncorrelated_select_results) {
+      // This was already evaluated before
+      const auto table_iter = _uncorrelated_select_results->find(expression.pqp);
+      DebugAssert(table_iter != _uncorrelated_select_results->cend(),
+                  "All uncorrelated PQPSelectExpression should be cached, if cache is present");
+      return {table_iter->second};
+    } else {
+      return {evaluate_uncorrelated_select_expression(expression)};
+    }
   }
 
   // Make sure all columns (i.e. segments) that are parameters are materialized
@@ -702,6 +712,12 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   }
 
   return results;
+}
+
+std::shared_ptr<const Table> ExpressionEvaluator::evaluate_uncorrelated_select_expression(
+    const PQPSelectExpression& expression) {
+  DebugAssert(!expression.is_correlated(), "called with correlated select expression");
+  return _evaluate_select_expression_for_row(expression, ChunkOffset{0});
 }
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_for_row(
