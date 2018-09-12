@@ -133,7 +133,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
     }
 
     return {min, max, counts, distinct_counts, num_bins_with_larger_range};
-  };
+  }
 
   /**
    * Creates bins and their statistics for string histograms.
