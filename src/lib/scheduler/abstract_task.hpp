@@ -132,7 +132,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Called by a dependency when it finished execution
    */
   void _on_predecessor_done();
-  
+
   std::atomic<TaskID> _id{INVALID_TASK_ID};
   std::atomic<NodeID> _node_id = INVALID_NODE_ID;
   std::atomic<SchedulePriority> _priority;
