@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "boost/algorithm/string/replace.hpp"
-
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
