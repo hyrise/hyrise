@@ -30,7 +30,7 @@ cxxopts::Options CLIOptions::get_basic_cli_options(const std::string& program_na
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("logger", "Set logging implementation. Options: " + logging_options, cxxopts::value<std::string>()->default_value(logger_to_string.left.at(Logger::Implementation::No))) // NOLINT
-    ("log_format", "Set logging format. Options: " + log_format_options, cxxopts::value<std::string>()->default_value(log_format_to_string.left.at(Logger::Format::No))) // NOLINT
+    ("log_format", "Set logging format. Options: " + log_format_options, cxxopts::value<std::string>()->default_value(log_format_to_string.left.at(Logger::Format::Binary))) // NOLINT
     ("data_path", "Set folder for data like logfiles", cxxopts::value<std::string>()->default_value("./data/")); // NOLINT
   // clang-format on
 

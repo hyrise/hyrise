@@ -33,6 +33,12 @@ AbstractLogger& Logger::get() { return *_logger_instance; }
 
 void Logger::setup(std::string folder, const Implementation implementation, const Format format) {
   DebugAssert(_implementation == Implementation::No, "Logger: Trying to setup logging that has already been setup");
+
+  // If there is no logging, nothing has to be set up
+  if (implementation == Implementation::No) {
+    return;
+  }
+
   DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
 
   Assert((implementation == Implementation::No) == (format == Format::No),
@@ -51,9 +57,6 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
 
   std::unique_ptr<AbstractFormatter> formatter;
   switch (format) {
-    case Format::No: {
-      break;
-    }
     case Format::Text: {
       formatter = std::unique_ptr<TextFormatter>(new TextFormatter());
       break;
@@ -66,10 +69,6 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
   }
 
   switch (_implementation) {
-    case Implementation::No: {
-      // _logger_instance is initiated with NoLogger
-      break;
-    }
     case Implementation::Simple: {
       _logger_instance = std::unique_ptr<SimpleLogger>(new SimpleLogger(std::move(formatter)));
       break;
