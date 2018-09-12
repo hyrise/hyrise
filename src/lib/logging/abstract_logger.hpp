@@ -3,7 +3,7 @@
 #include <fstream>
 #include <mutex>
 
-#include "abstract_formatter.hpp"
+#include "abstract_log_formatter.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
@@ -44,12 +44,12 @@ class AbstractLogger {
 
  protected:
   friend class Logger;
-  explicit AbstractLogger(std::unique_ptr<AbstractFormatter> formatter);
+  explicit AbstractLogger(std::unique_ptr<AbstractLogFormatter> formatter);
 
  protected:
   void _open_logfile();
 
-  std::unique_ptr<AbstractFormatter> _formatter;
+  std::unique_ptr<AbstractLogFormatter> _formatter;
   std::mutex _file_mutex;
   std::fstream _log_file;
 };

@@ -5,10 +5,10 @@
 
 namespace opossum {
 
-// AbstractFormatter is the abstract class for all log format implementations.
+// AbstractLogFormatter is the abstract class for all log format implementations.
 // It serves the interface to create log entries for all db transactions and recover from logfiles on startup.
 
-class AbstractFormatter {
+class AbstractLogFormatter {
  public:
   // Creates a commit entry
   virtual std::vector<char> commit_entry(const TransactionID transaction_id) = 0;
@@ -27,8 +27,8 @@ class AbstractFormatter {
   // Calls the corresponding recoverer
   virtual uint32_t recover() = 0;
 
-  AbstractFormatter() = default;
-  virtual ~AbstractFormatter() = default;
+  AbstractLogFormatter() = default;
+  virtual ~AbstractLogFormatter() = default;
 };
 
 }  // namespace opossum

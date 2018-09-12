@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-#include "binary_formatter.hpp"
+#include "binary_log_formatter.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "logger.hpp"
 #include "operators/insert.hpp"
@@ -87,7 +87,7 @@ uint32_t BinaryRecoverer::recover() {
           auto row_id = _read<RowID>(log_file);
 
           auto data_types = StorageManager::get().get_table(table_name)->column_data_types();
-          auto null_bitmap_number_of_bytes = BinaryFormatter::null_bitmap_size(data_types.size());
+          auto null_bitmap_number_of_bytes = BinaryLogFormatter::null_bitmap_size(data_types.size());
           std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
           log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
 

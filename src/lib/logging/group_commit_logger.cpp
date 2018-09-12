@@ -105,7 +105,7 @@ void GroupCommitLogger::log_flush() {
   }
 }
 
-GroupCommitLogger::GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter)
+GroupCommitLogger::GroupCommitLogger(std::unique_ptr<AbstractLogFormatter> formatter)
     : AbstractLogger(std::move(formatter)),
       _buffer_capacity(LOG_BUFFER_CAPACITY),
       _buffer_position(0),

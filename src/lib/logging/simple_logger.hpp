@@ -3,7 +3,7 @@
 #include <fstream>
 #include <mutex>
 
-#include "abstract_formatter.hpp"
+#include "abstract_log_formatter.hpp"
 #include "abstract_logger.hpp"
 #include "types.hpp"
 
@@ -33,7 +33,7 @@ class SimpleLogger final : public AbstractLogger {
 
  private:
   friend class Logger;
-  explicit SimpleLogger(std::unique_ptr<AbstractFormatter> formatter);
+  explicit SimpleLogger(std::unique_ptr<AbstractLogFormatter> formatter);
 };
 
 }  // namespace opossum

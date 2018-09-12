@@ -10,11 +10,11 @@
 #include <sstream>
 
 #include "abstract_logger.hpp"
-#include "binary_formatter.hpp"
+#include "binary_log_formatter.hpp"
 #include "group_commit_logger.hpp"
 #include "no_logger.hpp"
 #include "simple_logger.hpp"
-#include "text_formatter.hpp"
+#include "text_log_formatter.hpp"
 #include "utils/filesystem.hpp"
 
 namespace opossum {
@@ -55,14 +55,14 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
 
   _implementation = implementation;
 
-  std::unique_ptr<AbstractFormatter> formatter;
+  std::unique_ptr<AbstractLogFormatter> formatter;
   switch (format) {
     case Format::Text: {
-      formatter = std::unique_ptr<TextFormatter>(new TextFormatter());
+      formatter = std::unique_ptr<TextLogFormatter>(new TextLogFormatter());
       break;
     }
     case Format::Binary: {
-      formatter = std::unique_ptr<BinaryFormatter>(new BinaryFormatter());
+      formatter = std::unique_ptr<BinaryLogFormatter>(new BinaryLogFormatter());
       break;
     }
     default: { throw std::runtime_error("Logger: format unkown."); }

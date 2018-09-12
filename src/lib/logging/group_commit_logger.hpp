@@ -3,7 +3,7 @@
 #include <fstream>
 #include <mutex>
 
-#include "abstract_formatter.hpp"
+#include "abstract_log_formatter.hpp"
 #include "abstract_logger.hpp"
 #include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
@@ -47,7 +47,7 @@ class GroupCommitLogger final : public AbstractLogger {
 
  private:
   friend class Logger;
-  explicit GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
+  explicit GroupCommitLogger(std::unique_ptr<AbstractLogFormatter> formatter);
 };
 
 }  // namespace opossum

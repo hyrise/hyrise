@@ -16,7 +16,7 @@
  *      (l,<path.size()>,<path>,<table_name.size()>,<table_name>)\n
  */
 
-#include "text_formatter.hpp"
+#include "text_log_formatter.hpp"
 
 #include <sys/types.h>
 #include <sstream>
@@ -26,19 +26,19 @@
 
 namespace opossum {
 
-std::vector<char> TextFormatter::_char_vector_of(std::stringstream& ss) {
+std::vector<char> TextLogFormatter::_char_vector_of(std::stringstream& ss) {
   auto data_string = ss.str();
   return std::vector<char>(data_string.begin(), data_string.end());
 }
 
-std::vector<char> TextFormatter::commit_entry(const TransactionID transaction_id) {
+std::vector<char> TextLogFormatter::commit_entry(const TransactionID transaction_id) {
   std::stringstream ss;
   ss << "(c," << transaction_id << ")\n";
 
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> TextLogFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
                                              const RowID row_id, const std::vector<AllTypeVariant>& values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
@@ -57,7 +57,7 @@ std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id,
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> TextLogFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
                                                   const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
@@ -65,13 +65,13 @@ std::vector<char> TextFormatter::invalidate_entry(const TransactionID transactio
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
+std::vector<char> TextLogFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
   std::stringstream ss;
   ss << "(l," << file_path.size() << "," << file_path << "," << table_name.size() << "," << table_name << ")\n";
 
   return _char_vector_of(ss);
 }
 
-uint32_t TextFormatter::recover() { return TextRecoverer::getInstance().recover(); }
+uint32_t TextLogFormatter::recover() { return TextRecoverer::getInstance().recover(); }
 
 }  // namespace opossum

@@ -38,7 +38,7 @@
  *        Then the vector needs to be resized just once.
  */
 
-#include "binary_formatter.hpp"
+#include "binary_log_formatter.hpp"
 
 #include "all_type_variant.hpp"
 #include "binary_recoverer.hpp"
@@ -118,7 +118,7 @@ class EntryWriter : public boost::static_visitor<void> {
   LogEntry& entry() { return _entry; }
 
   void create_null_bitmap(size_t number_of_values) {
-    auto number_of_bitmap_bytes = BinaryFormatter::null_bitmap_size(number_of_values);
+    auto number_of_bitmap_bytes = BinaryLogFormatter::null_bitmap_size(number_of_values);
     _entry.data.resize(_entry.data.size() + number_of_bitmap_bytes);
     _null_bitmap_pos = _entry.cursor;
     _bit_pos = 0;
@@ -162,9 +162,9 @@ void EntryWriter::operator()(NullValue v) {
 }
 
 // uint32_t resolves to ~ 4 Billion values
-uint32_t BinaryFormatter::null_bitmap_size(uint32_t number_of_values) { return ceil(number_of_values / 8.0); }
+uint32_t BinaryLogFormatter::null_bitmap_size(uint32_t number_of_values) { return ceil(number_of_values / 8.0); }
 
-std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_id) {
+std::vector<char> BinaryLogFormatter::commit_entry(const TransactionID transaction_id) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   EntryWriter writer(entry_length);
 
@@ -173,7 +173,7 @@ std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_
   return writer.release_data();
 }
 
-std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> BinaryLogFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
                                                const RowID row_id, const std::vector<AllTypeVariant>& values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
@@ -193,7 +193,7 @@ std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_i
   return writer.release_data();
 }
 
-std::vector<char> BinaryFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> BinaryLogFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
                                                     const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
@@ -204,7 +204,7 @@ std::vector<char> BinaryFormatter::invalidate_entry(const TransactionID transact
   return writer.release_data();
 }
 
-std::vector<char> BinaryFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
+std::vector<char> BinaryLogFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
   const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
   EntryWriter writer(entry_length);
 
@@ -213,6 +213,6 @@ std::vector<char> BinaryFormatter::load_table_entry(const std::string& file_path
   return writer.release_data();
 }
 
-uint32_t BinaryFormatter::recover() { return BinaryRecoverer::getInstance().recover(); }
+uint32_t BinaryLogFormatter::recover() { return BinaryRecoverer::getInstance().recover(); }
 
 }  // namespace opossum

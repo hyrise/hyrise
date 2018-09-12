@@ -56,7 +56,7 @@ void SimpleLogger::_write_to_logfile(const std::vector<char> data) {
   }
 }
 
-SimpleLogger::SimpleLogger(std::unique_ptr<AbstractFormatter> formatter) : AbstractLogger(std::move(formatter)) {
+SimpleLogger::SimpleLogger(std::unique_ptr<AbstractLogFormatter> formatter) : AbstractLogger(std::move(formatter)) {
   _open_logfile();
 }
 

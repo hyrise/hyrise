@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_formatter.hpp"
+#include "abstract_log_formatter.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -8,10 +8,10 @@
 namespace opossum {
 
 /*
- *  Log formatter that writes log entries as text.
+ *  Log formatter that writes log entries as binary.
  */
 
-class TextFormatter final : public AbstractFormatter {
+class BinaryLogFormatter final : public AbstractLogFormatter {
  public:
   std::vector<char> commit_entry(const TransactionID transaction_id) final;
 
@@ -25,12 +25,12 @@ class TextFormatter final : public AbstractFormatter {
 
   uint32_t recover() final;
 
- protected:
-  std::vector<char> _char_vector_of(std::stringstream& ss);
+  // returns the number of bytes needed for the null bitmap
+  static uint32_t null_bitmap_size(uint32_t number_of_values);
 
  private:
   friend class Logger;
-  TextFormatter() = default;
+  BinaryLogFormatter() = default;
 };
 
 }  // namespace opossum

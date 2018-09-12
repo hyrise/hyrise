@@ -95,7 +95,7 @@ set(
     cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
-    logging/abstract_formatter.hpp
+    logging/abstract_log_formatter.hpp
     logging/abstract_logger.hpp
     logging/abstract_logger.cpp
     logging/abstract_recoverer.hpp
@@ -109,10 +109,10 @@ set(
     logging/no_logger.hpp
     logging/simple_logger.cpp
     logging/simple_logger.hpp
-    logging/binary_formatter.hpp
-    logging/binary_formatter.cpp
-    logging/text_formatter.hpp
-    logging/text_formatter.cpp
+    logging/binary_log_formatter.hpp
+    logging/binary_log_formatter.cpp
+    logging/text_log_formatter.hpp
+    logging/text_log_formatter.cpp
     logging/text_recoverer.hpp
     logging/text_recoverer.cpp
     logical_query_plan/abstract_lqp_node.cpp
