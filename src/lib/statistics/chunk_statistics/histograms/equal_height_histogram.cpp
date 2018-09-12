@@ -2,6 +2,9 @@
 
 #include <memory>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "histogram_utils.hpp"
 
@@ -100,7 +103,7 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
   const auto bin_stats = EqualHeightHistogram<T>::_get_bin_stats(value_counts, max_num_bins);
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto [characters, prefix_length] =
+    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_prefix_settings(supported_characters, string_prefix_length);
     return std::make_shared<EqualHeightHistogram<T>>(bin_stats.maxs, bin_stats.distinct_counts, bin_stats.min,
                                                      bin_stats.total_count, characters, prefix_length);

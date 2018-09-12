@@ -1,7 +1,11 @@
 #include "equal_width_histogram.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "histogram_utils.hpp"
 
@@ -179,7 +183,7 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
   }
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto [characters, prefix_length] =
+    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_prefix_settings(supported_characters, string_prefix_length);
     const auto bin_stats =
         EqualWidthHistogram<T>::_get_bin_stats(value_counts, max_num_bins, characters, prefix_length);

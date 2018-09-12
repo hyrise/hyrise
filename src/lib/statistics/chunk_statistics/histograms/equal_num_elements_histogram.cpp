@@ -2,6 +2,9 @@
 
 #include <memory>
 #include <numeric>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "histogram_utils.hpp"
 
@@ -114,7 +117,7 @@ std::shared_ptr<EqualNumElementsHistogram<T>> EqualNumElementsHistogram<T>::from
   const auto bin_stats = EqualNumElementsHistogram<T>::_get_bin_stats(value_counts, max_num_bins);
 
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto [characters, prefix_length] =
+    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_prefix_settings(supported_characters, string_prefix_length);
     return std::make_shared<EqualNumElementsHistogram<T>>(
         bin_stats.mins, bin_stats.maxs, bin_stats.counts, bin_stats.distinct_count_per_bin,

@@ -2,6 +2,11 @@
 
 #include <cmath>
 
+#include <algorithm>
+#include <limits>
+#include <string>
+#include <utility>
+
 #include "utils/assert.hpp"
 
 namespace opossum {

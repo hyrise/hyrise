@@ -2,7 +2,9 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "statistics/chunk_statistics/abstract_filter.hpp"
