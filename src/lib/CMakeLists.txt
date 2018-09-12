@@ -337,6 +337,16 @@ set(
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/histograms/abstract_histogram.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_num_elements_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_num_elements_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.hpp
+    statistics/chunk_statistics/histograms/histogram_utils.cpp
+    statistics/chunk_statistics/histograms/histogram_utils.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp

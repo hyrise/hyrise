@@ -116,6 +116,11 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_num_elements_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
+    statistics/chunk_statistics/histograms/histogram_utils_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
     statistics/column_statistics_test.cpp
     statistics/column_statistics_test.cpp

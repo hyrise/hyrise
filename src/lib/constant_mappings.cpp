@@ -116,4 +116,10 @@ const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string
                                                 {JitExpressionType::IsNull, "IS NULL"},
                                                 {JitExpressionType::IsNotNull, "IS NOT NULL"}});
 
+const std::unordered_map<HistogramType, std::string> histogram_type_to_string = {
+    {HistogramType::EqualHeight, "EqualHeightHistogram"},
+    {HistogramType::EqualNumElements, "EqualNumElementsHistogram"},
+    {HistogramType::EqualWidth, "EqualWidthHistogram"},
+};
+
 }  // namespace opossum
