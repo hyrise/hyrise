@@ -172,14 +172,6 @@ template <typename T>
 std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const size_t max_num_bins,
     const std::optional<std::string>& supported_characters, const std::optional<uint64_t>& string_prefix_length) {
-  std::string characters;
-  uint64_t prefix_length;
-  if constexpr (std::is_same_v<T, std::string>) {
-    const auto pair = get_default_or_check_prefix_settings(supported_characters, string_prefix_length);
-    characters = pair.first;
-    prefix_length = pair.second;
-  }
-
   const auto value_counts = AbstractHistogram<T>::_calculate_value_counts(segment);
 
   if (value_counts.empty()) {
@@ -187,12 +179,16 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
   }
 
   if constexpr (std::is_same_v<T, std::string>) {
+    const auto [characters, prefix_length] =
+        get_default_or_check_prefix_settings(supported_characters, string_prefix_length);
     const auto bin_stats =
         EqualWidthHistogram<T>::_get_bin_stats(value_counts, max_num_bins, characters, prefix_length);
     return std::make_shared<EqualWidthHistogram<T>>(bin_stats.min, bin_stats.max, bin_stats.counts,
                                                     bin_stats.distinct_counts, bin_stats.num_bins_with_larger_range,
                                                     characters, prefix_length);
   } else {
+    DebugAssert(!static_cast<bool>(supported_characters) && !static_cast<bool>(string_prefix_length),
+                "Do not provide string prefix prefix arguments for non-string histograms.");
     const auto bin_stats = EqualWidthHistogram<T>::_get_bin_stats(value_counts, max_num_bins);
     return std::make_shared<EqualWidthHistogram<T>>(bin_stats.min, bin_stats.max, bin_stats.counts,
                                                     bin_stats.distinct_counts, bin_stats.num_bins_with_larger_range);
