@@ -41,7 +41,12 @@ void SimpleLogger::log_load_table(const std::string& file_path, const std::strin
   log_flush();
 }
 
-void SimpleLogger::log_flush() { _log_file.sync(); }
+void SimpleLogger::log_flush() {
+  {
+    std::scoped_lock file_lock(_file_mutex);
+    _log_file.sync();
+  }
+}
 
 void SimpleLogger::_write_to_logfile(const std::vector<char> data) {
   {
