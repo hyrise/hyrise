@@ -44,6 +44,8 @@ class AbstractHistogram : public AbstractFilter {
   AbstractHistogram(const std::string& supported_characters, const uint64_t string_prefix_length);
   virtual ~AbstractHistogram() = default;
 
+  using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
+
   virtual HistogramType histogram_type() const = 0;
 
   /**
@@ -154,14 +156,9 @@ class AbstractHistogram : public AbstractFilter {
 
   /**
    * Returns the width of a bin.
-   * This method does not work for strings. Use _string_bin_width instead.
+   * This method is specialized for strings to return a numerical width.
    */
-  virtual T _bin_width(const BinID index) const;
-
-  /**
-   * Returns the width of a bin in a string histogram.
-   */
-  uint64_t _string_bin_width(const BinID index) const;
+  virtual HistogramWidthType _bin_width(const BinID index) const;
 
   /**
    * Returns the id of the bin that holds the given `value`.

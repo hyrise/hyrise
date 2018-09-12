@@ -102,18 +102,13 @@ std::string AbstractHistogram<std::string>::_convert_number_representation_to_st
 }
 
 template <typename T>
-T AbstractHistogram<T>::_bin_width(const BinID index) const {
+typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::_bin_width(const BinID index) const {
   DebugAssert(index < num_bins(), "Index is not a valid bin.");
   return get_next_value(_bin_max(index) - _bin_min(index));
 }
 
 template <>
-std::string AbstractHistogram<std::string>::_bin_width(const BinID /*index*/) const {
-  Fail("Not supported for string histograms. Use _string_bin_width instead.");
-}
-
-template <>
-uint64_t AbstractHistogram<std::string>::_string_bin_width(const BinID index) const {
+AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
   DebugAssert(index < num_bins(), "Index is not a valid bin.");
 
   const auto num_min = this->_convert_string_to_number_representation(_bin_min(index));
