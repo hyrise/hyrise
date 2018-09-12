@@ -287,7 +287,7 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
   const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
     /**
      * HACK! We're checking for other.expired() here as well when looking for `output`
-     * If nothing else breaks the only way we might get `other.expired()` to be true is if `other` is the expired
+     * If nothing else breaks, the only way we might get `other.expired()`   to be true is if `other` is the expired
      * weak_ptr<> to output - and thus the element we're looking for - in the following scenario:
      *
      * auto node_a = Node::make()
