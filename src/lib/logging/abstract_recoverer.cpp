@@ -35,7 +35,7 @@ void AbstractRecoverer::_redo_transaction(std::map<TransactionID, std::vector<Lo
         break;
       }
       default:
-        throw("Recovery: Log item type not implemented.");
+        Fail("Recovery: Log item type not implemented.");
     }
   }
 
