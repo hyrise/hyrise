@@ -836,6 +836,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
         }
 
         case PredicateCondition::In:
+
+
         case PredicateCondition::Like:
         case PredicateCondition::NotLike:
         case PredicateCondition::IsNull:
@@ -849,20 +851,25 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
     case ExpressionType::Logical: {
       const auto& logical_expression = static_cast<const LogicalExpression&>(expression);
 
+      const auto left_pos_list = evaluate_expression_to_pos_list(*logical_expression.arguments[0]);
+      const auto right_pos_list = evaluate_expression_to_pos_list(*logical_expression.arguments[1]);
+
       switch(logical_expression.logical_operator) {
         case LogicalOperator::And:
+          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(), std::back_inserter(result_pos_list));
+          break;
 
         case LogicalOperator::Or:
-          
+          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(), std::back_inserter(result_pos_list));
+          break;
       }
+
+      return result_pos_list;
     }
-
-
 
     default:
       Fail("Expression type cannot be evaluated to PosList");
   }
-
 }
 
 template <>
