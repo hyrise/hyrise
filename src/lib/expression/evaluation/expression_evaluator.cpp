@@ -791,6 +791,18 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
   return segment;
 }
 
+PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
+  switch (expression.type) {
+    case ExpressionType::Predicate:
+
+    case ExpressionType::Logical:
+
+    default:
+      Fail("Expression type cannot be evaluated to PosList");
+  }
+
+}
+
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(const LogicalExpression& expression) {
