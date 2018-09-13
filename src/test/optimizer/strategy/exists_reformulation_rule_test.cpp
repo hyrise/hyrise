@@ -50,45 +50,38 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
 };
 
 bool lqp_contains_exists(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
-  std::shared_ptr<AbstractLQPNode> current_node = lqp;
-  while (current_node) {
-    if (current_node->type != LQPNodeType::Predicate) {
-      current_node = current_node->left_input();
-      continue;
-    }
-
-    const auto predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
-    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate);
-    if (predicate_expression->arguments[0]->type == ExpressionType::Exists) {
-      if ((predicate_expression->predicate_condition != PredicateCondition::Equals && !is_non_exists) ||
-        (predicate_expression->predicate_condition == PredicateCondition::Equals && is_non_exists)) {
-        // If the predicate checks for == 0 (boolean false), we have an NOT EXISTS, otherwise an EXISTS
-        return true;
+  bool found_exists = false;
+  visit_lqp(lqp, [&](const auto& deeper_node) {
+    if (deeper_node->type == LQPNodeType::Predicate) {
+      const auto predicate_node = std::static_pointer_cast<PredicateNode>(deeper_node);
+      const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate);
+      if (predicate_expression->arguments[0]->type == ExpressionType::Exists) {
+        if ((predicate_expression->predicate_condition != PredicateCondition::Equals && !is_non_exists) ||
+          (predicate_expression->predicate_condition == PredicateCondition::Equals && is_non_exists)) {
+          // If the predicate checks for == 0 (boolean false), we have an NOT EXISTS, otherwise an EXISTS
+          found_exists = true;
+          return LQPVisitation::DoNotVisitInputs;
+        }
       }
     }
-
-    current_node = current_node->left_input();
-  }
-
-  return false;
+    return LQPVisitation::VisitInputs;
+  });
+  return found_exists;
 }
 
 bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, const JoinMode join_mode) {
-  std::shared_ptr<AbstractLQPNode> current_node = lqp;
-  while (current_node) {
-    if (current_node->type != LQPNodeType::Join) {
-      current_node = current_node->left_input();
-      continue;
+  bool found_join = false;
+  visit_lqp(lqp, [&](const auto& deeper_node) {
+    if (deeper_node->type == LQPNodeType::Join) {
+      const auto join_node = std::static_pointer_cast<JoinNode>(deeper_node);
+      if (join_node->join_mode == join_mode) {
+        found_join = true;
+        return LQPVisitation::DoNotVisitInputs;
+      }
     }
-
-    const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
-    if (join_node->join_mode == join_mode) {
-      return true;
-    }
-
-    current_node = current_node->left_input();
-  }  
-  return false;
+    return LQPVisitation::VisitInputs;
+  });
+  return found_join;
 }
 
 
@@ -172,12 +165,6 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
   std::cout << "$$$$$$$$$$$$$$$" << std::endl;
 
   EXPECT_LQP_EQ(opt_lqp, manual_lqp);
-
- //  [0] [Projection] a, b
- // \_[1] [Join] Mode: Semi a = a
- //    \_[2] [Projection] a, b
- //    |  \_[3] [StoredTable] Name: 'table_a'
- //    \_[4] [StoredTable] Name: 'table_b'
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
@@ -206,12 +193,6 @@ TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
   std::cout << "$$$$$$$$$$$$$$$" << std::endl;
 
   EXPECT_LQP_EQ(opt_lqp, manual_lqp);
-
- //  [0] [Projection] a, b
- // \_[1] [Join] Mode: Semi a = a
- //    \_[2] [Projection] a, b
- //    |  \_[3] [StoredTable] Name: 'table_a'
- //    \_[4] [StoredTable] Name: 'table_b'
 }
 
 }  // namespace opossum
