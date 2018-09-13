@@ -2,8 +2,8 @@
 
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "optimizer/dp_ccp.hpp"
-#include "optimizer/join_graph.hpp"
+#include "optimizer/join_ordering/dp_ccp.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

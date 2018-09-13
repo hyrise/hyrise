@@ -60,6 +60,28 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
+   * Performance hack:
+   *  Identify PQPSelectExpressions that are not correlated and execute them once (instead of once per chunk), 
+   *  cache their result tables and use them in the per-chunk loop below.
+   */
+  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  {
+    auto evaluator = ExpressionEvaluator{};
+    for (const auto& expression : expressions) {
+      visit_expression(expression, [&](const auto& sub_expression) {
+        const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+        if (pqp_select_expression && !pqp_select_expression->is_correlated()) {
+          auto result = evaluator.evaluate_uncorrelated_select_expression(*pqp_select_expression);
+          uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
+
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+  }
+
+  /**
    * Perform the projection
    */
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
@@ -68,7 +90,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id);
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_select_results);
     for (const auto& expression : expressions) {
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {

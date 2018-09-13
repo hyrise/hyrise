@@ -40,6 +40,8 @@ bool PQPSelectExpression::is_nullable() const {
   return _data_type_info->nullable;
 }
 
+bool PQPSelectExpression::is_correlated() const { return !parameters.empty(); }
+
 std::string PQPSelectExpression::as_column_name() const {
   std::stringstream stream;
   stream << "SUBSELECT (PQP, " << pqp.get() << ")";
