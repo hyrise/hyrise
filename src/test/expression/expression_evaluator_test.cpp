@@ -549,7 +549,8 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithBrokenPrecalculated) {
 
   const auto table_wrapper_c = std::make_shared<TableWrapper>(table_a);
   table_wrapper_c->execute();
-  const auto table_scan_c = std::make_shared<TableScan>(table_wrapper_c, ColumnID{0}, PredicateCondition::Equals, 3);
+  const auto table_scan_c =
+      std::make_shared<TableScan>(table_wrapper_c, OperatorScanPredicate(ColumnID{0}, PredicateCondition::Equals, 3));
   table_scan_c->execute();
   const auto projection_c =
       std::make_shared<Projection>(table_scan_c, expression_vector(PQPColumnExpression::from_table(*table_a, "b")));
