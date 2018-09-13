@@ -1,7 +1,7 @@
 #include "join_hash.hpp"
 
+#include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/variant.hpp>
 
 #include <cmath>
 #include <memory>
@@ -106,8 +106,13 @@ struct PartitionedElement {
 template <typename T>
 using Partition = std::vector<PartitionedElement<T>>;
 
+// The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
+// as n because in many cases, we join on primary key attributes where by definition we have only one match on the
+// smaller side.
+using SmallPosList = boost::container::small_vector<RowID, 1>;
+
 template <typename T>
-using HashTable = std::unordered_map<T, boost::variant<RowID, PosList>>;
+using HashTable = std::unordered_map<T, SmallPosList>;
 
 /*
 This struct contains radix-partitioned data in a contiguous buffer,
@@ -154,21 +159,13 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
       auto hashtable = HashTable<HashedType>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
-        const auto& element = partition_left[partition_offset];
+        auto& element = partition_left[partition_offset];
 
-        const auto hash_key = type_cast<HashedType>(element.value);
-        const auto it = hashtable.find(hash_key);
-        if (it == hashtable.end()) {
-          // key is not present: add value and row ID
-          hashtable[hash_key] = element.row_id;
-        } else {
-          auto& map_entry = it->second;
-          if (map_entry.type() == typeid(RowID)) {
-            // Previously, there was only one row id stored for this value. Convert the entry to a multi-row-id one.
-            hashtable[hash_key] = PosList{boost::get<RowID>(map_entry), element.row_id};
-          } else {
-            boost::get<PosList>(map_entry).push_back(element.row_id);
-          }
+        auto [it, inserted] =
+            hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
+        if (!inserted) {
+          // We already have the value in the map
+          it->second.emplace_back(element.row_id);
         }
       }
 
@@ -408,18 +405,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           if (rows_iter != hashtable.end()) {
             // Key exists, thus we have at least one hit
-            const auto& matching_rows_variant = rows_iter->second;
-            if (matching_rows_variant.type() == typeid(PosList)) {
-              // Multiple matches, stored in one PosList
-              for (const auto row_id : boost::get<PosList>(matching_rows_variant)) {
-                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                  pos_list_left_local.emplace_back(row_id);
-                  pos_list_right_local.emplace_back(row.row_id);
-                }
-              }
-            } else {
-              // A single RowID
-              const auto row_id = boost::get<RowID>(matching_rows_variant);
+            const auto& matching_rows = rows_iter->second;
+            for (const auto& row_id : matching_rows) {
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
@@ -651,7 +638,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // We assume an std::unordered_map with a linked list within the buckets.
     // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-    // that each value maps to two RowIDs (thus, no single value optimizatio via boost::variant).
+    // that each value maps to two RowIDs.
     const auto complete_hash_map_size =
         // hash map
         build_relation_size * (sizeof(LeftType) + sizeof(void*)) +
