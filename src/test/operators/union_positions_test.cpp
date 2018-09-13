@@ -36,8 +36,10 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 24);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::GreaterThan, 24);
+  auto table_scan_a_op = std::make_shared<TableScan>(
+      get_table_a_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 24});
+  auto table_scan_b_op = std::make_shared<TableScan>(
+      get_table_b_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 24});
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op});
 
@@ -61,8 +63,10 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::LessThan, 10);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::GreaterThan, 200);
+  auto table_scan_a_op =
+      std::make_shared<TableScan>(get_table_a_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 10});
+  auto table_scan_b_op = std::make_shared<TableScan>(
+      get_table_b_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 200});
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -80,8 +84,10 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 20);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::LessThan, 100);
+  auto table_scan_a_op = std::make_shared<TableScan>(
+      get_table_a_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 20});
+  auto table_scan_b_op = std::make_shared<TableScan>(
+      get_table_b_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 100});
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -96,8 +102,10 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::LessThan, 12346);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::LessThan, 0);
+  auto table_scan_a_op = std::make_shared<TableScan>(
+      get_table_a_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 12346});
+  auto table_scan_b_op =
+      std::make_shared<TableScan>(get_table_b_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 0});
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -114,8 +122,10 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::LessThan, 0);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{0}, PredicateCondition::LessThan, 12346);
+  auto table_scan_a_op =
+      std::make_shared<TableScan>(get_table_a_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 0});
+  auto table_scan_b_op = std::make_shared<TableScan>(
+      get_table_b_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 12346});
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -134,9 +144,10 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op =
-      std::make_shared<TableScan>(get_table_a_op, ColumnID{0}, PredicateCondition::GreaterThan, 12345);
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, ColumnID{1}, PredicateCondition::LessThan, 400.0);
+  auto table_scan_a_op = std::make_shared<TableScan>(
+      get_table_a_op, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 12345});
+  auto table_scan_b_op = std::make_shared<TableScan>(
+      get_table_b_op, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 400.0});
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
@@ -186,8 +197,10 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   auto join_b = std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
                                                  std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
-  auto table_scan_a_op = std::make_shared<TableScan>(join_a, ColumnID{3}, PredicateCondition::GreaterThanEquals, 2);
-  auto table_scan_b_op = std::make_shared<TableScan>(join_b, ColumnID{1}, PredicateCondition::LessThan, 457.0);
+  auto table_scan_a_op =
+      std::make_shared<TableScan>(join_a, OperatorScanPredicate{ColumnID{3}, PredicateCondition::GreaterThanEquals, 2});
+  auto table_scan_b_op =
+      std::make_shared<TableScan>(join_b, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 457.0});
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
   _execute_all({get_table_a_op, get_table_b_op, get_table_c_op, get_table_d_op, join_a, join_b, table_scan_a_op,

@@ -42,7 +42,8 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto t_context = TransactionManager::get().new_transaction_context();
 
   // Make input left actually referenced. Projection does NOT generate ReferenceSegments.
-  auto ref_table = std::make_shared<TableScan>(table_to_update, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+  auto ref_table = std::make_shared<TableScan>(table_to_update,
+                                               OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
   ref_table->set_transaction_context(t_context);
   ref_table->execute();
 
@@ -156,7 +157,8 @@ TEST_F(OperatorsUpdateTest, MissingChunks) {
   gt->execute();
 
   // table scan will leave out first two chunks
-  auto table_scan1 = std::make_shared<TableScan>(gt, ColumnID{0}, PredicateCondition::Equals, "12345");
+  auto table_scan1 =
+      std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, "12345"});
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 

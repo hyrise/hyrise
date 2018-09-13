@@ -69,7 +69,8 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_scanned.tbl", 2u);
 
-  auto table_scan = std::make_shared<TableScan>(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 2);
+  auto table_scan = std::make_shared<TableScan>(
+      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 2});
   table_scan->set_transaction_context(context);
   table_scan->execute();
 
