@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-TextRecoverer& TextRecoverer::getInstance() {
+TextRecoverer& TextRecoverer::get() {
   static TextRecoverer instance;
   return instance;
 }

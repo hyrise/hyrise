@@ -6,6 +6,7 @@
 #pragma once
 
 #include "abstract_logger.hpp"
+#include "no_recoverer.hpp"
 
 #include "types.hpp"
 
@@ -29,7 +30,7 @@ class NoLogger : public AbstractLogger {
 
   void log_flush() override{};
 
-  uint32_t recover() override { return 0u; };
+  AbstractRecoverer& get_recoverer() override { return NoRecoverer::get(); };
 
  private:
   friend class Logger;

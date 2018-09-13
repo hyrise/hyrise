@@ -213,6 +213,6 @@ std::vector<char> BinaryLogFormatter::load_table_entry(const std::string& file_p
   return writer.release_data();
 }
 
-uint32_t BinaryLogFormatter::recover() { return BinaryRecoverer::getInstance().recover(); }
+AbstractRecoverer& BinaryLogFormatter::get_recoverer() { return BinaryRecoverer::get(); }
 
 }  // namespace opossum

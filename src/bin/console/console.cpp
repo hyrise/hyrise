@@ -867,7 +867,7 @@ int main(int argc, char** argv) {
     }
   } else {
     console.out("Running recovery.\n");
-    auto number_of_loaded_tables = opossum::Logger::get().recover();
+    auto number_of_loaded_tables = opossum::Logger::recover();
     console.out("Recovery done. Loaded " + std::to_string(number_of_loaded_tables) + " tables.\n\n");
   }
 

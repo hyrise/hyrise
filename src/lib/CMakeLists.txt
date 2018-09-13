@@ -107,6 +107,7 @@ set(
     logging/logger.cpp
     logging/logger.hpp
     logging/no_logger.hpp
+    logging/no_recoverer.hpp
     logging/simple_logger.cpp
     logging/simple_logger.hpp
     logging/binary_log_formatter.hpp

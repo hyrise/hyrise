@@ -11,7 +11,7 @@ class BinaryRecoverer : public AbstractRecoverer {
   BinaryRecoverer(const BinaryRecoverer&) = delete;
   BinaryRecoverer& operator=(const BinaryRecoverer&) = delete;
 
-  static BinaryRecoverer& getInstance();
+  static BinaryRecoverer& get();
 
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;

@@ -10,7 +10,7 @@ class TextRecoverer : public AbstractRecoverer {
   TextRecoverer(const TextRecoverer&) = delete;
   TextRecoverer& operator=(const TextRecoverer&) = delete;
 
-  static TextRecoverer& getInstance();
+  static TextRecoverer& get();
 
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;

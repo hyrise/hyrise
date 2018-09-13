@@ -23,7 +23,7 @@ class BinaryLogFormatter final : public AbstractLogFormatter {
 
   std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name) final;
 
-  uint32_t recover() final;
+  AbstractRecoverer& get_recoverer() final;
 
   // returns the number of bytes needed for the null bitmap
   static uint32_t null_bitmap_size(uint32_t number_of_values);

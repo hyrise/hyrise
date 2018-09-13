@@ -24,6 +24,7 @@
 #pragma once
 
 #include "abstract_logger.hpp"
+#include "abstract_recoverer.hpp"
 
 #include "types.hpp"
 
@@ -38,6 +39,9 @@ class Logger {
   Logger& operator=(const Logger&) = delete;
 
   static AbstractLogger& get();
+  
+  // Recovers from log files and returns the number of loaded tables
+  static uint32_t recover();
 
   // Called by logging implementations to get their new filename
   static std::string get_new_log_path();

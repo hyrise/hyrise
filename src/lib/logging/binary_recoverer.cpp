@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-BinaryRecoverer& BinaryRecoverer::getInstance() {
+BinaryRecoverer& BinaryRecoverer::get() {
   static BinaryRecoverer instance;
   return instance;
 }

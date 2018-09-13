@@ -1,5 +1,6 @@
 #pragma once
 
+#include "abstract_recoverer.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
@@ -24,8 +25,8 @@ class AbstractLogFormatter {
   // Creates a load table entry
   virtual std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name) = 0;
 
-  // Calls the corresponding recoverer
-  virtual uint32_t recover() = 0;
+  // Returns the corresponding recoverer
+  virtual AbstractRecoverer& get_recoverer() = 0;
 
   AbstractLogFormatter() = default;
   virtual ~AbstractLogFormatter() = default;

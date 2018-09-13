@@ -72,6 +72,6 @@ std::vector<char> TextLogFormatter::load_table_entry(const std::string& file_pat
   return _char_vector_of(ss);
 }
 
-uint32_t TextLogFormatter::recover() { return TextRecoverer::getInstance().recover(); }
+AbstractRecoverer& TextLogFormatter::get_recoverer() { return TextRecoverer::get(); }
 
 }  // namespace opossum

@@ -31,6 +31,8 @@ std::unique_ptr<AbstractLogger> Logger::_logger_instance = std::unique_ptr<NoLog
 
 AbstractLogger& Logger::get() { return *_logger_instance; }
 
+uint32_t Logger::recover() { return get().get_recoverer().recover(); }
+
 void Logger::setup(std::string folder, const Implementation implementation, const Format format) {
   DebugAssert(_implementation == Implementation::No, "Logger: Trying to setup logging that has already been setup");
 
