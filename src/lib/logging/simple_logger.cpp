@@ -31,7 +31,7 @@ void SimpleLogger::log_value(const TransactionID transaction_id, const std::stri
 
 void SimpleLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
                                   const RowID row_id) {
-  const auto& data = _formatter->invalidate_entry(transaction_id, table_name, row_id);
+  const auto& data = _formatter->create_invalidation_entry(transaction_id, table_name, row_id);
   _write_to_logfile(data);
 }
 

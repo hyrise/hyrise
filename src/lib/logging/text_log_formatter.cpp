@@ -57,7 +57,7 @@ std::vector<char> TextLogFormatter::value_entry(const TransactionID transaction_
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextLogFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> TextLogFormatter::create_invalidation_entry(const TransactionID transaction_id, const std::string& table_name,
                                                   const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";

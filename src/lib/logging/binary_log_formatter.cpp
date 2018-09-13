@@ -193,7 +193,7 @@ std::vector<char> BinaryLogFormatter::value_entry(const TransactionID transactio
   return writer.release_data();
 }
 
-std::vector<char> BinaryLogFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> BinaryLogFormatter::create_invalidation_entry(const TransactionID transaction_id, const std::string& table_name,
                                                     const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);

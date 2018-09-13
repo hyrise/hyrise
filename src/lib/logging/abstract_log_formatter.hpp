@@ -18,7 +18,7 @@ class AbstractLogFormatter {
                                         const RowID row_id, const std::vector<AllTypeVariant>& values) = 0;
 
   // Creates a invalidation entry
-  virtual std::vector<char> invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
+  virtual std::vector<char> create_invalidation_entry(const TransactionID transaction_id, const std::string& table_name,
                                              const RowID row_id) = 0;
 
   // Creates a load table entry
