@@ -35,16 +35,18 @@ const T& get(const AllTypeVariant& value) {
 
 // cast methods - from one type to another
 
-// For convenience, allow `type_cast<T>(T bla);`, but it shouldn't do anything
-template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<T, U>>>
+// For convenience, allow `type_cast<T>(T bla);`, but it shouldn't do anything.
+// Conversions that don't require lexical_cast handling (e.g., float->double or float->int) are handled here as well.
+template <typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<std::decay<U>, std::decay<T>>>>
 inline __attribute__((always_inline)) auto&& type_cast(U&& value) {
-  return std::forward<U>(value);
+  return std::forward<T>(value);
 }
 
+// If trivial conversion failed, continues here:
 // Template specialization for everything but integral types
 template <typename T, typename U>
 std::enable_if_t<!std::is_integral<T>::value, T> type_cast(const U& value) {
-  // For AllTypeVariants, check if it contains the type that we want. In that case, we don't need to convert anything
+  // For AllTypeVariants, check if it contains the type that we want. In that case, we don't need to convert anything.
   if constexpr (std::is_same_v<U, AllTypeVariant>) {
     if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
   }
