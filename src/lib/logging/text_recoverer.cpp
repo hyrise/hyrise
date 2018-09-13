@@ -92,7 +92,7 @@ uint32_t TextRecoverer::recover() {
         DebugAssert(line[next_token_begin - 1] == ')',
                     "Recoverer: load table entry expected ')', but got " + line[next_token_begin - 1] + " instead.");
 
-        _recover_table(path, table_name);
+        _redo_load_table(path, table_name);
         continue;
       }
 

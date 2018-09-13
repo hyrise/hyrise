@@ -59,7 +59,7 @@ uint32_t BinaryRecoverer::recover() {
         case 'l': {
           auto table_path = _read<std::string>(log_file);
           auto table_name = _read<std::string>(log_file);
-          _recover_table(table_path, table_name);
+          _redo_load_table(table_path, table_name);
           break;
         }
 

@@ -42,7 +42,7 @@ void AbstractRecoverer::_redo_transaction(std::map<TransactionID, std::vector<Lo
   transactions.erase(transaction);
 }
 
-void AbstractRecoverer::_recover_table(const std::string& path, const std::string& table_name) {
+void AbstractRecoverer::_redo_load_table(const std::string& path, const std::string& table_name) {
   auto table = load_table(path, Chunk::MAX_SIZE);
   StorageManager::get().add_table(table_name, table);
   ++_number_of_loaded_tables;
