@@ -41,7 +41,7 @@ namespace opossum {
 ExpressionEvaluator::ExpressionEvaluator(
     const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
     const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
-    : _table(table), _chunk(_table->get_chunk(chunk_id)), _uncorrelated_select_results(uncorrelated_select_results) {
+    : _table(table), _chunk(_table->get_chunk(chunk_id)), _chunk_id(chunk_id), _uncorrelated_select_results(uncorrelated_select_results) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
 }
@@ -362,7 +362,7 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     const AbstractPredicateExpression& predicate_expression) {
   /**
-   * NOTE: This is evaluates predicates, but typical predicates in the WHERE clause of an SQL query will not take this
+   * NOTE: This evaluates predicates, but typical predicates in the WHERE clause of an SQL query will not take this
    * path and go through a dedicates scan operator (e.g. TableScan)
    */
 
@@ -792,10 +792,72 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
 }
 
 PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
-  switch (expression.type) {
-    case ExpressionType::Predicate:
+  auto result_pos_list = PosList{};
 
-    case ExpressionType::Logical:
+  switch (expression.type) {
+    case ExpressionType::Predicate: {
+      const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
+
+      switch (predicate_expression.predicate_condition) {
+        case PredicateCondition::Equals:
+        case PredicateCondition::LessThanEquals:
+        case PredicateCondition::GreaterThanEquals:
+        case PredicateCondition::GreaterThan:
+        case PredicateCondition::NotEquals:
+        case PredicateCondition::LessThan: {
+          const auto left_result = evaluate_expression_to_result(*predicate_expression.arguments[0]);
+          const auto right_result = evaluate_expression_to_result(*predicate_expression.arguments[1]);
+
+          _resolve_to_functor(predicate_expression.predicate_condition, [&](const auto functor) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+              if (left_result->is_null(chunk_offset) || right_result->is_null(chunk_offset)) continue;
+
+              auto value = Bool{0};
+              functor(value, left_result->value(chunk_offset), right_result->value(chunk_offset));
+              if (value != 0) {
+                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            }
+          });
+        }
+
+        case PredicateCondition::Between: {
+          // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
+          // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
+          // combinations and thus lengthen compile time and increase binary size notably.
+
+          const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
+          const auto gte_expression = greater_than_equals_(between_expression.value(), between_expression.lower_bound());
+          const auto lte_expression = less_than_equals_(between_expression.value(), between_expression.upper_bound());
+
+          const auto gte_lte_expression = and_(gte_expression, lte_expression);
+
+          return evaluate_expression_to_pos_list(*gte_lte_expression);
+        }
+
+        case PredicateCondition::In:
+        case PredicateCondition::Like:
+        case PredicateCondition::NotLike:
+        case PredicateCondition::IsNull:
+        case PredicateCondition::IsNotNull:
+          Fail("Not implemented");
+      }
+      Fail("GCC thinks this is reachable");
+    }
+
+
+    case ExpressionType::Logical: {
+      const auto& logical_expression = static_cast<const LogicalExpression&>(expression);
+
+      switch(logical_expression.logical_operator) {
+        case LogicalOperator::And:
+
+        case LogicalOperator::Or:
+          
+      }
+    }
+
+
 
     default:
       Fail("Expression type cannot be evaluated to PosList");

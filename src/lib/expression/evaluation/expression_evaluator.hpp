@@ -182,6 +182,7 @@ class ExpressionEvaluator final {
 
   std::shared_ptr<const Table> _table;
   std::shared_ptr<const Chunk> _chunk;
+  const ChunkID _chunk_id;
   size_t _output_row_count{1};
 
   // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized
