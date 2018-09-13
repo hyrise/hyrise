@@ -286,17 +286,20 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
   const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
     /**
-     * HACK! We're checking for other.expired() here as well when looking for `output`
-     * If nothing else breaks the only way we might get `other.expired()` to be true is if `other` is the expired
-     * weak_ptr<> to output - and thus the element we're looking for - in the following scenario:
+     * HACK!
+     *  Normally we'd just check `&output == other.lock().get()` here.
+     *  BUT (this is the hacky part), we're checking for `!locked_other` here as well and accept a nullptr element as
+     *  a match. If nothing else breaks the only way we might get `other == nullptr` to be true is if `other` is the
+     *  expired weak_ptr<> to `output` - and thus the element we're looking for - in the following scenario:
      *
      * auto node_a = Node::make()
      * auto node_b = Node::make(..., node_a)
      *
-     * node_b.reset(); // ~AbstractLQPNode() will call `node_a_remove_output_pointer(node_b)`
+     * node_b.reset(); // ~AbstractLQPNode() will call `node_a.remove_output_pointer(node_b)`
      *                 // But we can't lock node_b anymore, since its ref count is already 0
      */
-    return &output == other.lock().get() || other.expired();
+    const auto locked_other = other.lock();
+    return &output == other.lock().get() || !locked_other;
   });
   DebugAssert(iter != _outputs.end(), "Specified output node is not actually a output node of this node.");
 
