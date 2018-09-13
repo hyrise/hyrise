@@ -163,10 +163,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_ta
     const std::shared_ptr<AbstractOperator>& input_operator) const {
   Assert(operator_scan_predicate.predicate_condition != PredicateCondition::In, "TableScan doesn't support IN yet");
 
-  const auto column_id = operator_scan_predicate.column_id;
-  const auto predicate_condition = operator_scan_predicate.predicate_condition;
-
-  return std::make_shared<TableScan>(input_operator, column_id, predicate_condition, operator_scan_predicate.value);
+  return std::make_shared<TableScan>(input_operator, operator_scan_predicate);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
@@ -228,14 +225,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::shared_ptr<TableScan> table_scan;
   if (predicate->predicate_condition == PredicateCondition::Between) {
     Assert(value2_variant, "Need value2 for Between");
-    auto table_scan_gt =
-        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value_variant);
+    auto table_scan_gt = std::make_shared<TableScan>(
+        input_operator, OperatorScanPredicate{column_id, PredicateCondition::GreaterThanEquals, value_variant});
     table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
 
-    table_scan =
-        std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals, *value2_variant);
+    table_scan = std::make_shared<TableScan>(
+        table_scan_gt, OperatorScanPredicate{column_id, PredicateCondition::LessThanEquals, *value2_variant});
   } else {
-    table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate->predicate_condition, value_variant);
+    table_scan = std::make_shared<TableScan>(
+        input_operator, OperatorScanPredicate{column_id, predicate->predicate_condition, value_variant});
   }
 
   index_scan->set_included_chunk_ids(indexed_chunks);

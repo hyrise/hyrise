@@ -57,8 +57,8 @@ class ColumnStatisticsTest : public BaseTest {
       for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
         auto result_container = column_statistics[column_1]->estimate_predicate_with_column(
             predicate_condition, *column_statistics[column_2]);
-        auto table_scan =
-            std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, predicate_condition, ColumnID{column_2});
+        auto table_scan = std::make_shared<TableScan>(
+            table_wrapper, OperatorScanPredicate{ColumnID{column_1}, predicate_condition, ColumnID{column_2}});
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,
