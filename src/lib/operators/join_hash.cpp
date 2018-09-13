@@ -196,7 +196,7 @@ constexpr Radix hash_value(const OriginalType& value, const unsigned int seed) {
 
 template <typename T, typename HashedType>
 std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                                std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                                std::vector<std::vector<size_t>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
                                                 bool keep_nulls = false) {
   // list of all elements that will be partitioned
@@ -222,7 +222,6 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   }
 
   // create histograms per chunk
-  histograms = std::vector<std::shared_ptr<std::vector<size_t>>>();
   histograms.resize(chunk_offsets.size());
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -236,8 +235,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
       // prepare histogram
-      histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
-      auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
+      auto histogram = std::vector<size_t>(num_partitions);
 
       resolve_segment_type<T>(*segment, [&, chunk_id, keep_nulls](auto& typed_segment) {
         auto reference_chunk_offset = ChunkOffset{0};
@@ -269,6 +267,8 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
           }
         });
       });
+
+      histograms[chunk_id] = std::move(histogram);
     }));
     jobs.back()->schedule();
   }
@@ -281,7 +281,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 template <typename T>
 RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
-                                           std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                           std::vector<std::vector<size_t>>& histograms,
                                            const size_t radix_bits, bool keep_nulls = false) {
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
@@ -303,7 +303,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
     radix_output.partition_offsets[partition_id] = offset;
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       output_offsets_by_chunk[chunk_id][partition_id] = offset;
-      offset += (*histograms[chunk_id])[partition_id];
+      offset += histograms[chunk_id][partition_id];
     }
   }
   radix_output.partition_offsets[num_partitions] = offset;
@@ -718,8 +718,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     Timer performance_timer;
 
     // Materialization phase
-    std::vector<std::shared_ptr<std::vector<size_t>>> histograms_left;
-    std::vector<std::shared_ptr<std::vector<size_t>>> histograms_right;
+    std::vector<std::vector<size_t>> histograms_left;
+    std::vector<std::vector<size_t>> histograms_right;
     /*
     NUMA notes:
     The materialized vectors don't have any strong NUMA preference because they haven't been partitioned yet.
