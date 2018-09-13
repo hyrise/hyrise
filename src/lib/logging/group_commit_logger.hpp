@@ -38,10 +38,10 @@ class GroupCommitLogger final : public AbstractLogger {
   const uint32_t _buffer_capacity;  // uint32_t: Max buffer capacity ~ 4GB
   uint32_t _buffer_position;
   bool _has_unflushed_buffer;
-  std::mutex _buffer_mutex;
+  std::recursive_mutex _buffer_mutex;
 
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
-  std::mutex _commit_callback_mutex;
+  std::recursive_mutex _commit_callback_mutex;
 
   std::unique_ptr<PausableLoopThread> _flush_thread;
 
