@@ -22,7 +22,7 @@ class SimpleLogger final : public AbstractLogger {
   void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                  const std::vector<AllTypeVariant>& values) final;
 
-  void log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) final;
+  void log_invalidation(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) final;
 
   void log_load_table(const std::string& file_path, const std::string& table_name) final;
 

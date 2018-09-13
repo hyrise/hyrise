@@ -61,7 +61,7 @@ void GroupCommitLogger::log_load_table(const std::string& file_path, const std::
   }
 }
 
-void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
+void GroupCommitLogger::log_invalidation(const TransactionID transaction_id, const std::string& table_name,
                                        const RowID row_id) {
   const auto& data = _formatter->create_invalidation_entry(transaction_id, table_name, row_id);
   _write_to_buffer(data);
