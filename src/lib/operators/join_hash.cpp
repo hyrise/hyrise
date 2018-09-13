@@ -24,16 +24,13 @@
 #include "utils/assert.hpp"
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
-#include "utils/uninitialized_vector.hpp"
 
 namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-                   const size_t radix_bits)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
-      _radix_bits(radix_bits) {
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
@@ -83,14 +80,13 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }
 
 void JoinHash::_on_cleanup() { _impl.reset(); }
 
-// currently using 32bit Murmur
-using Hash = uint32_t;
+using Radix = uint16_t;
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -99,17 +95,16 @@ The original value is used to detect hash collisions.
 template <typename T>
 struct PartitionedElement {
   PartitionedElement() {}
-  PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
+  PartitionedElement(RowID row, Radix radix, T val) : row_id(row), radix(radix), value(val) {}
 
   RowID row_id;
-  Hash partition_hash{0};
+  Radix radix;
   T value;
 };
 
-// The unitialized_vector does not zero-initialize the values when we call resize. There is no need for that because
-// we make sure that we fill the entire partition.
 template <typename T>
-using Partition = uninitialized_vector<PartitionedElement<T>>;
+// TODO test unitialized_vector
+using Partition = std::vector<PartitionedElement<T>>;
 
 // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
 // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -192,20 +187,13 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
-  // clang-format off
-  // doesn't deal with constexpr nicely
-  if constexpr(!std::is_same_v<OriginalType, HashedType>) {
-    return murmur2<HashedType>(type_cast<HashedType>(value), seed);
-  } else {
-    return murmur2<HashedType>(value, seed);
-  }
-  // clang-format on
+constexpr Radix hash_value(const OriginalType& value, const unsigned int seed) {
+  return murmur2<HashedType>(type_cast<HashedType>(value), seed);
 }
 
 template <typename T, typename HashedType>
 std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                                std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                                std::vector<std::vector<size_t>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
                                                 bool keep_nulls = false) {
   // list of all elements that will be partitioned
@@ -231,7 +219,6 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   }
 
   // create histograms per chunk
-  histograms = std::vector<std::shared_ptr<std::vector<size_t>>>();
   histograms.resize(chunk_offsets.size());
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -245,8 +232,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
       // prepare histogram
-      histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
-      auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
+      auto histogram = std::vector<size_t>(num_partitions);
 
       resolve_segment_type<T>(*segment, [&, chunk_id, keep_nulls](auto& typed_segment) {
         auto reference_chunk_offset = ChunkOffset{0};
@@ -254,7 +240,8 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Radix hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Radix radix = hashed_value & mask;
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -263,13 +250,12 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             */
             if constexpr (std::is_same<std::decay<decltype(typed_segment)>, ReferenceSegment>::value) {
               *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, hashed_value, value.value()};
+                  PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, radix, value.value()};
             } else {
               *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
+                  PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, radix, value.value()};
             }
 
-            const Hash radix = hashed_value & mask;
             histogram[radix]++;
           }
           // reference_chunk_offset is only used for ReferenceSegments
@@ -278,6 +264,8 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
           }
         });
       });
+
+      histograms[chunk_id] = std::move(histogram);
     }));
     jobs.back()->schedule();
   }
@@ -290,14 +278,10 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 template <typename T>
 RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
-                                           std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                           std::vector<std::vector<size_t>>& histograms,
                                            const size_t radix_bits, bool keep_nulls = false) {
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
-
-  // currently, we just do one pass
-  size_t pass = 0;
-  size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
   auto output = std::make_shared<Partition<T>>();
@@ -316,7 +300,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
     radix_output.partition_offsets[partition_id] = offset;
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       output_offsets_by_chunk[chunk_id][partition_id] = offset;
-      offset += (*histograms[chunk_id])[partition_id];
+      offset += histograms[chunk_id][partition_id];
     }
   }
   radix_output.partition_offsets[num_partitions] = offset;
@@ -344,7 +328,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
           continue;
         }
 
-        const size_t radix = element.partition_hash & mask;
+        const auto radix = element.radix;
 
         out[output_offsets[radix]++] = element;
       }
@@ -609,8 +593,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
-               const size_t radix_bits)
+               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
@@ -657,7 +640,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    _radix_bits = std::ceil(std::log2(cluster_count));
+    _radix_bits = std::min(sizeof(Radix) * 8, static_cast<size_t>(std::ceil(std::log2(cluster_count))));
   }
 
  protected:
@@ -732,8 +715,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     Timer performance_timer;
 
     // Materialization phase
-    std::vector<std::shared_ptr<std::vector<size_t>>> histograms_left;
-    std::vector<std::shared_ptr<std::vector<size_t>>> histograms_right;
+    std::vector<std::vector<size_t>> histograms_left;
+    std::vector<std::vector<size_t>> histograms_right;
     /*
     NUMA notes:
     The materialized vectors don't have any strong NUMA preference because they haven't been partitioned yet.
