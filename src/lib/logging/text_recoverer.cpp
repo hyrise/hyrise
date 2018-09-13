@@ -60,7 +60,7 @@ uint32_t TextRecoverer::recover() {
     std::ifstream log_file(path);
     DebugAssert(log_file.is_open(), "Recoverer: could not open logfile " + path);
 
-    std::map<TransactionID, std::vector<LoggedItem>> transactions;
+    std::map<TransactionID, std::vector<std::unique_ptr<LoggedItem>>> transactions;
 
     std::string line;
     while (std::getline(log_file, line)) {
@@ -112,7 +112,7 @@ uint32_t TextRecoverer::recover() {
       // if invalidation
       if (log_type == 'i') {
         transactions[transaction_id].emplace_back(
-            LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+          std::make_unique<LoggedInvalidation>(LoggedInvalidation(transaction_id, table_name, row_id)));
         continue;
       }
 
@@ -135,7 +135,8 @@ uint32_t TextRecoverer::recover() {
         DebugAssert(line.length() >= next_token_begin, "Recoverer: line ended before ')'");
       }
 
-      transactions[transaction_id].emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+      transactions[transaction_id].emplace_back(
+        std::make_unique<LoggedValue>(LoggedValue(transaction_id, table_name, row_id, values)));
     }
   }
 

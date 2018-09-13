@@ -104,6 +104,8 @@ set(
     logging/binary_recoverer.cpp
     logging/group_commit_logger.cpp
     logging/group_commit_logger.hpp
+    logging/logged_item.cpp
+    logging/logged_item.hpp
     logging/logger.cpp
     logging/logger.hpp
     logging/no_logger.hpp
