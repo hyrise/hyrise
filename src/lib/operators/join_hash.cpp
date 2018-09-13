@@ -24,6 +24,7 @@
 #include "utils/assert.hpp"
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
+#include "utils/uninitialized_vector.hpp"
 
 namespace opossum {
 
@@ -94,7 +95,7 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  PartitionedElement() {}
+  PartitionedElement() : row_id(NULL_ROW_ID), radix(0), value(T()) {}
   PartitionedElement(RowID row, Radix radix, T val) : row_id(row), radix(radix), value(val) {}
 
   RowID row_id;
@@ -102,8 +103,11 @@ struct PartitionedElement {
   T value;
 };
 
+// Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
+// The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
 template <typename T>
-using Partition = std::vector<PartitionedElement<T>>;
+using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
+                                     std::vector<PartitionedElement<T>>>;
 
 // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
 // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -196,12 +200,12 @@ constexpr Radix hash_value(const OriginalType& value, const unsigned int seed) {
 
 template <typename T, typename HashedType>
 std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                                std::vector<std::vector<size_t>>& histograms,
-                                                const size_t radix_bits, const unsigned int partitioning_seed,
-                                                bool keep_nulls = false) {
+                                                std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                                const unsigned int partitioning_seed, bool keep_nulls = false) {
   // list of all elements that will be partitioned
-  auto elements = std::make_shared<Partition<T>>();
-  elements->resize(in_table->row_count());
+  auto elements = std::make_shared<Partition<T>>(in_table->row_count());
+
+  for (auto& x : *elements) x = PartitionedElement<T>();
 
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
@@ -255,8 +259,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
               *(output_iterator++) =
                   PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, radix, value.value()};
             } else {
-              *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, radix, value.value()};
+              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, radix, value.value()};
             }
 
             histogram[radix]++;
@@ -267,6 +270,14 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
           }
         });
       });
+
+      if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {
+        // Because the vector is uninitialized, we need to manually fill up all slots that we did not use
+        auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
+        while (output_iterator != elements->begin() + output_offset_end) {
+          *(output_iterator++) = PartitionedElement<T>{};
+        }
+      }
 
       histograms[chunk_id] = std::move(histogram);
     }));
@@ -281,8 +292,8 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 template <typename T>
 RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
-                                           std::vector<std::vector<size_t>>& histograms,
-                                           const size_t radix_bits, bool keep_nulls = false) {
+                                           std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                           bool keep_nulls = false) {
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
 
