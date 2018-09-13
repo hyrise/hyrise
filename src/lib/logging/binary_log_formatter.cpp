@@ -16,7 +16,7 @@
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
  *       - NULL bitmap          : ceil(values.size() / 8.0)               : Bitmap indicating NullValues with 1
  *       - value                : length(value)
- *       - any optional values
+ *       - value ...
  * 
  *     Invalidation Entries:
  *       - log entry type ('i') : sizeof(char)
