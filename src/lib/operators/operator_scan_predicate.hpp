@@ -32,7 +32,7 @@ struct OperatorScanPredicate {
   // ids to names.
   std::string to_string(const std::shared_ptr<const Table>& table = nullptr) const;
 
-  ColumnID column_id{INVALID_column_id};
+  ColumnID column_id{INVALID_COLUMN_ID};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
 };
