@@ -103,7 +103,6 @@ struct PartitionedElement {
 };
 
 template <typename T>
-// TODO test unitialized_vector
 using Partition = std::vector<PartitionedElement<T>>;
 
 // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
