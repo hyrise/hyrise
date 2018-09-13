@@ -103,8 +103,6 @@ TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
   const auto& opt_lqp = sql_pipeline.get_optimized_logical_plan();
   EXPECT_TRUE(lqp_contains_join_with_mode(opt_lqp, JoinMode::Semi));
   EXPECT_FALSE(lqp_contains_exists(opt_lqp, false));
-
-  opt_lqp->print();
 }
 
 TEST_F(ExistsReformulationRuleTest, QueryWithNotExists) {
@@ -118,31 +116,6 @@ TEST_F(ExistsReformulationRuleTest, QueryWithNotExists) {
   const auto& opt_lqp = sql_pipeline.get_optimized_logical_plan();
   EXPECT_TRUE(lqp_contains_join_with_mode(opt_lqp, JoinMode::Anti));
   EXPECT_FALSE(lqp_contains_exists(opt_lqp, true));
-}
-
-TEST_F(ExistsReformulationRuleTest, UncorrelatedNotRewritten) {
-  auto query = "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_b.a < table_b.b)";
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-
-  auto input_lqp = sql_pipeline.get_unoptimized_logical_plan();
-
-  auto lqp_copy = input_lqp->deep_copy();
-  apply_rule(_rule, lqp_copy);
-
-  EXPECT_LQP_EQ(input_lqp, lqp_copy);
-}
-
-TEST_F(ExistsReformulationRuleTest, InequalityPredicateNotRewritten) {
-  // As of now, we reformulate to hash joins. Hash joins only support equality join predicates.
-  auto query = "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a < table_b.a)";
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-
-  auto input_lqp = sql_pipeline.get_unoptimized_logical_plan();
-
-  auto lqp_copy = input_lqp->deep_copy();
-  apply_rule(_rule, lqp_copy);
-
-  EXPECT_LQP_EQ(input_lqp, lqp_copy);
 }
 
 TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
@@ -178,36 +151,67 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
   }
 }
 
-TEST_F(ExistsReformulationRuleTest, ManualLQPComparison) {
+TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
   if (!IS_DEBUG) return;
 
-  const auto subselect_lqp =
-  PredicateNode::make(less_than_(node_table_a_col_a, node_table_a_col_b), node_table_a);
-  const auto subselect = select_(subselect_lqp);
+  auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a)";
+  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
+  const auto& opt_lqp = sql_pipeline.get_optimized_logical_plan();
 
-  const auto non_zero_value_comparison_lqp =
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+  opt_lqp->print();
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+
+  const auto manual_lqp =
   ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-    PredicateNode::make(equals_(exists_(subselect), 0),
-      ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b))), node_table_a
+    JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_a_col_b), node_table_a, node_table_b)
   );
 
-  // non_zero_value_comparison_lqp->print();
-    // JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
-    //   node_a,
-    //   JoinNode::make(JoinMode::Left, equals_(b_a, d_a),
-    //     node_b,
-    //     JoinNode::make(JoinMode::Inner, equals_(d_a, c_a),
-    //       node_d,
-    //       node_c))));
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+  manual_lqp->print();
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
 
-// [0] [Projection] a, b
-//  \_[1] [Predicate] EXISTS(SUBSELECT (LQP, 0x7fd1394ccb18)) = 0
-//     \_[2] [Projection] EXISTS(SUBSELECT (LQP, 0x7fd1394ccb18)), a, b
-//        \_[3] [StoredTable] Name: 'a'
-// -------- Subselects ---------
-// 0x7fd1394ccb18:
-// [0] [Predicate] a < b
-//  \_[1] [StoredTable] Name: 'b'
+  EXPECT_LQP_EQ(opt_lqp, manual_lqp);
+
+ //  [0] [Projection] a, b
+ // \_[1] [Join] Mode: Semi a = a
+ //    \_[2] [Projection] a, b
+ //    |  \_[3] [StoredTable] Name: 'table_a'
+ //    \_[4] [StoredTable] Name: 'table_b'
+}
+
+TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
+  if (!IS_DEBUG) return;
+
+  auto query = "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a)";
+  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
+  const auto& opt_lqp = sql_pipeline.get_optimized_logical_plan();
+
+
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+  sql_pipeline.get_unoptimized_logical_plan()->print();
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+  opt_lqp->print();
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+
+  const auto manual_lqp =
+  ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+    JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_a_col_b), node_table_a, node_table_b)
+  );
+
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+  manual_lqp->print();
+  std::cout << "$$$$$$$$$$$$$$$" << std::endl;
+
+  EXPECT_LQP_EQ(opt_lqp, manual_lqp);
+
+ //  [0] [Projection] a, b
+ // \_[1] [Join] Mode: Semi a = a
+ //    \_[2] [Projection] a, b
+ //    |  \_[3] [StoredTable] Name: 'table_a'
+ //    \_[4] [StoredTable] Name: 'table_b'
 }
 
 }  // namespace opossum
