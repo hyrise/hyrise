@@ -189,15 +189,8 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
-  // clang-format off
-  // doesn't deal with constexpr nicely
-  if constexpr(!std::is_same_v<OriginalType, HashedType>) {
-    return murmur2<HashedType>(type_cast<HashedType>(value), seed);
-  } else {
-    return murmur2<HashedType>(value, seed);
-  }
-  // clang-format on
+constexpr Radix hash_value(const OriginalType& value, const unsigned int seed) {
+  return murmur2<HashedType>(type_cast<HashedType>(value), seed);
 }
 
 template <typename T, typename HashedType>
