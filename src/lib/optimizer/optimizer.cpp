@@ -140,11 +140,6 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   const auto optimized_node = root_node->left_input();
   optimized_node->clear_outputs();
 
-  visit_lqp(optimized_node, [](const auto& node) {
-    Assert(node->outputs().size() >= 0, "??");
-    return LQPVisitation::VisitInputs;
-  });
-
   return optimized_node;
 }
 
