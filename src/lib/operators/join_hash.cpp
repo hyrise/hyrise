@@ -29,10 +29,8 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-                   const size_t radix_bits)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
-      _radix_bits(radix_bits) {
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
@@ -82,7 +80,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   return _impl->_on_execute();
 }
 
@@ -616,8 +614,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
-               const size_t radix_bits)
+               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped)
       : _left(left),
         _right(right),
         _mode(mode),
