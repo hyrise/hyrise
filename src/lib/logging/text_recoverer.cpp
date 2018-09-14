@@ -67,12 +67,13 @@ uint32_t TextRecoverer::recover() {
       // (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)
       // (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))
 
-      // next_token_begin is set to the pos of the next token after each read
-      size_t next_token_begin = 3;
-
       char log_type = line[1];
       DebugAssert(log_type == 'c' || log_type == 'i' || log_type == 'v' || log_type == 'l',
                   "Recoverer: invalid log type token");
+
+      // next_token_begin is set to the pos of the next token after each read
+      // the first token after the log type identifier is at position 3
+      size_t next_token_begin = 3;
 
       // if commit entry
       if (log_type == 'c') {
