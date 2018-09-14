@@ -5,6 +5,10 @@
 
 namespace opossum {
 
+/*
+ *  Used when logging is turned off, so there is nothing to recover.
+ */
+
 class NoRecoverer : public AbstractRecoverer {
  public:
   NoRecoverer(const NoRecoverer&) = delete;
@@ -15,7 +19,6 @@ class NoRecoverer : public AbstractRecoverer {
     return instance; 
   } ;
 
-  // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() final { return 0u; };
 
  private:

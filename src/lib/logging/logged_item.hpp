@@ -5,6 +5,12 @@
 
 namespace opossum {
 
+/*
+ *  Logged Items are created during recovery.
+ *  If a transaction commit is read from logfile,
+ *  .redo() is called on the corresponding Logged Items
+ */
+
 class LoggedItem {
  public:
   virtual void redo() = 0;
