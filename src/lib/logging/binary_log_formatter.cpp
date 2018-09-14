@@ -175,8 +175,9 @@ std::vector<char> BinaryLogFormatter::create_commit_entry(const TransactionID tr
   return writer.release_data();
 }
 
-std::vector<char> BinaryLogFormatter::create_value_entry(const TransactionID transaction_id, const std::string& table_name,
-                                               const RowID row_id, const std::vector<AllTypeVariant>& values) {
+std::vector<char> BinaryLogFormatter::create_value_entry(const TransactionID transaction_id,
+                                                         const std::string& table_name, const RowID row_id,
+                                                         const std::vector<AllTypeVariant>& values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
   auto entry_length =
@@ -195,8 +196,8 @@ std::vector<char> BinaryLogFormatter::create_value_entry(const TransactionID tra
   return writer.release_data();
 }
 
-std::vector<char> BinaryLogFormatter::create_invalidation_entry(const TransactionID transaction_id, const std::string& table_name,
-                                                    const RowID row_id) {
+std::vector<char> BinaryLogFormatter::create_invalidation_entry(const TransactionID transaction_id,
+                                                                const std::string& table_name, const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   EntryWriter writer(entry_length);
@@ -206,7 +207,8 @@ std::vector<char> BinaryLogFormatter::create_invalidation_entry(const Transactio
   return writer.release_data();
 }
 
-std::vector<char> BinaryLogFormatter::create_load_table_entry(const std::string& file_path, const std::string& table_name) {
+std::vector<char> BinaryLogFormatter::create_load_table_entry(const std::string& file_path,
+                                                              const std::string& table_name) {
   const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
   EntryWriter writer(entry_length);
 

@@ -31,15 +31,14 @@ class LoggedInvalidation final : public LoggedItem {
   void redo() final;
 };
 
-class LoggedValue final: public LoggedItem {
+class LoggedValue final : public LoggedItem {
  public:
-  LoggedValue(TransactionID& transaction_id, std::string& table_name, RowID& row_id, 
+  LoggedValue(TransactionID& transaction_id, std::string& table_name, RowID& row_id,
               std::vector<AllTypeVariant>& values);
   void redo() final;
 
  protected:
   std::vector<AllTypeVariant> _values;
 };
-
 
 }  // namespace opossum

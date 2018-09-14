@@ -20,11 +20,11 @@ BinaryRecoverer& BinaryRecoverer::get() {
 }
 
 template <typename T>
-  T BinaryRecoverer::_read(std::ifstream& file) {
-    T result;
-    file.read(reinterpret_cast<char*>(&result), sizeof(T));
-    return result;
-  }
+T BinaryRecoverer::_read(std::ifstream& file) {
+  T result;
+  file.read(reinterpret_cast<char*>(&result), sizeof(T));
+  return result;
+}
 
 template <>
 std::string BinaryRecoverer::_read(std::ifstream& file) {

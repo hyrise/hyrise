@@ -8,14 +8,14 @@
 namespace opossum {
 
 LoggedItem::LoggedItem(TransactionID& transaction_id, std::string& table_name, RowID& row_id)
-  : _transaction_id(transaction_id), _table_name(table_name), _row_id(row_id) {}
+    : _transaction_id(transaction_id), _table_name(table_name), _row_id(row_id) {}
 
 LoggedInvalidation::LoggedInvalidation(TransactionID& transaction_id, std::string& table_name, RowID& row_id)
-  : LoggedItem(transaction_id, table_name, row_id) {}
+    : LoggedItem(transaction_id, table_name, row_id) {}
 
-LoggedValue::LoggedValue(TransactionID& transaction_id, std::string& table_name, RowID& row_id, 
+LoggedValue::LoggedValue(TransactionID& transaction_id, std::string& table_name, RowID& row_id,
                          std::vector<AllTypeVariant>& values)
-  : LoggedItem(transaction_id, table_name, row_id), _values(values) {}
+    : LoggedItem(transaction_id, table_name, row_id), _values(values) {}
 
 void LoggedInvalidation::redo() {
   auto& chunk = *StorageManager::get().get_table(_table_name)->get_chunk(_row_id.chunk_id);

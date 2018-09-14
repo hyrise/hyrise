@@ -38,8 +38,9 @@ std::vector<char> TextLogFormatter::create_commit_entry(const TransactionID tran
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextLogFormatter::create_value_entry(const TransactionID transaction_id, const std::string& table_name,
-                                             const RowID row_id, const std::vector<AllTypeVariant>& values) {
+std::vector<char> TextLogFormatter::create_value_entry(const TransactionID transaction_id,
+                                                       const std::string& table_name, const RowID row_id,
+                                                       const std::vector<AllTypeVariant>& values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
 
@@ -57,15 +58,16 @@ std::vector<char> TextLogFormatter::create_value_entry(const TransactionID trans
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextLogFormatter::create_invalidation_entry(const TransactionID transaction_id, const std::string& table_name,
-                                                  const RowID row_id) {
+std::vector<char> TextLogFormatter::create_invalidation_entry(const TransactionID transaction_id,
+                                                              const std::string& table_name, const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
 
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextLogFormatter::create_load_table_entry(const std::string& file_path, const std::string& table_name) {
+std::vector<char> TextLogFormatter::create_load_table_entry(const std::string& file_path,
+                                                            const std::string& table_name) {
   std::stringstream ss;
   ss << "(l," << file_path.size() << "," << file_path << "," << table_name.size() << "," << table_name << ")\n";
 

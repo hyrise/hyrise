@@ -95,7 +95,8 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
   // The '\n' in the string is no newline, but two characters
   transaction.exec("INSERT INTO a_table VALUES (505, 2.04, 3.59, 'first line\\nsecond line');");
   transaction.exec("INSERT INTO a_table VALUES (0, 0.0, 0.0, '');");
-  transaction.exec("INSERT INTO a_table VALUES (111, 1.11, 1.11, 'first'); INSERT INTO a_table VALUES (222, 2.22, 2.22, 'second');");
+  transaction.exec(
+      "INSERT INTO a_table VALUES (111, 1.11, 1.11, 'first'); INSERT INTO a_table VALUES (222, 2.22, 2.22, 'second');");
   transaction.exec("DELETE FROM a_table WHERE f = 4.0;");
 
   restart_server(GetParam());

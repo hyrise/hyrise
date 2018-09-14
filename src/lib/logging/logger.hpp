@@ -39,7 +39,7 @@ class Logger {
   Logger& operator=(const Logger&) = delete;
 
   static AbstractLogger& get();
-  
+
   // Recovers from log files and returns the number of loaded tables
   static void recover();
 

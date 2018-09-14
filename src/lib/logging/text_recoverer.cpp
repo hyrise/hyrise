@@ -25,7 +25,8 @@ std::string TextRecoverer::_extract_token(const std::string& line, size_t& begin
   return token;
 }
 
-std::string TextRecoverer::_extract_token_up_to_delimiter(const std::string& line, size_t& begin, const char delimiter) {
+std::string TextRecoverer::_extract_token_up_to_delimiter(const std::string& line, size_t& begin,
+                                                          const char delimiter) {
   auto end = line.find(delimiter, begin) - 1;
   DebugAssert(end >= begin, "Recoverer: Missing token in logfile");
   return _extract_token(line, begin, end);
@@ -109,7 +110,7 @@ uint32_t TextRecoverer::recover() {
       // if invalidation
       if (log_type == 'i') {
         transactions[transaction_id].emplace_back(
-          std::make_unique<LoggedInvalidation>(LoggedInvalidation(transaction_id, table_name, row_id)));
+            std::make_unique<LoggedInvalidation>(LoggedInvalidation(transaction_id, table_name, row_id)));
         continue;
       }
 
@@ -133,7 +134,7 @@ uint32_t TextRecoverer::recover() {
       }
 
       transactions[transaction_id].emplace_back(
-        std::make_unique<LoggedValue>(LoggedValue(transaction_id, table_name, row_id, values)));
+          std::make_unique<LoggedValue>(LoggedValue(transaction_id, table_name, row_id, values)));
     }
   }
 

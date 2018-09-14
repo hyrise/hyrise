@@ -28,7 +28,7 @@ class AbstractLogger {
 
   // Log an invalidation. Used in case of delete and update.
   virtual void log_invalidation(const TransactionID transaction_id, const std::string& table_name,
-                              const RowID row_id) = 0;
+                                const RowID row_id) = 0;
 
   // Log the load table command.
   // This method should always call log_flush(), since load table does not commit.

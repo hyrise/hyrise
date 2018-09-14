@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-void AbstractRecoverer::_redo_transaction(std::map<TransactionID, std::vector<std::unique_ptr<LoggedItem>>>& transactions,
-                                          TransactionID transaction_id) {
+void AbstractRecoverer::_redo_transaction(
+    std::map<TransactionID, std::vector<std::unique_ptr<LoggedItem>>>& transactions, TransactionID transaction_id) {
   auto transaction = transactions.find(transaction_id);
   if (transaction == transactions.end()) return;
 

@@ -16,11 +16,11 @@ class AbstractLogFormatter {
 
   // Creates a value entry
   virtual std::vector<char> create_value_entry(const TransactionID transaction_id, const std::string& table_name,
-                                        const RowID row_id, const std::vector<AllTypeVariant>& values) = 0;
+                                               const RowID row_id, const std::vector<AllTypeVariant>& values) = 0;
 
   // Creates a invalidation entry
   virtual std::vector<char> create_invalidation_entry(const TransactionID transaction_id, const std::string& table_name,
-                                             const RowID row_id) = 0;
+                                                      const RowID row_id) = 0;
 
   // Creates a load table entry
   virtual std::vector<char> create_load_table_entry(const std::string& file_path, const std::string& table_name) = 0;

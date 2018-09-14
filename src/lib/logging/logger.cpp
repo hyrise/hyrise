@@ -31,12 +31,12 @@ std::unique_ptr<AbstractLogger> Logger::_logger_instance = std::unique_ptr<NoLog
 
 AbstractLogger& Logger::get() { return *_logger_instance; }
 
-void Logger::recover() { 
+void Logger::recover() {
   if (is_active()) {
     std::cout << "Running recovery." << std::endl;
     auto number_of_loaded_tables = get().get_recoverer().recover();
     std::cout << "Recovery done. Loaded " << number_of_loaded_tables << " tables." << std::endl << std::endl;
-  } 
+  }
 }
 
 void Logger::setup(std::string folder, const Implementation implementation, const Format format) {
