@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #if HYRISE_NUMA_SUPPORT
 #include <numa.h>

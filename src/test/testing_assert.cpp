@@ -10,7 +10,7 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -39,14 +39,14 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   for (auto chunk_id = opossum::ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
     auto chunk = table->get_chunk(chunk_id);
 
-    // an empty table's chunk might be missing actual columns
+    // an empty table's chunk might be missing actual segments
     if (chunk->size() == 0) continue;
 
     for (auto column_id = opossum::ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      const auto column = chunk->get_column(column_id);
+      const auto segment = chunk->get_segment(column_id);
 
       for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        matrix[row_offset + chunk_offset + 2][column_id] = (*column)[chunk_offset];
+        matrix[row_offset + chunk_offset + 2][column_id] = (*segment)[chunk_offset];
       }
     }
     row_offset += chunk->size();
@@ -145,22 +145,22 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   }
 
   //  - column names and types
-  DataType left_col_type, right_col_type;
+  DataType left_column_type, right_column_type;
   for (auto column_id = ColumnID{0}; column_id < expected_table->column_count(); ++column_id) {
-    left_col_type = opossum_table->column_data_type(column_id);
-    right_col_type = expected_table->column_data_type(column_id);
+    left_column_type = opossum_table->column_data_type(column_id);
+    right_column_type = expected_table->column_data_type(column_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (type_cmp_mode == TypeCmpMode::Lenient) {
-      if (left_col_type == DataType::Double) {
-        left_col_type = DataType::Float;
-      } else if (left_col_type == DataType::Long) {
-        left_col_type = DataType::Int;
+      if (left_column_type == DataType::Double) {
+        left_column_type = DataType::Float;
+      } else if (left_column_type == DataType::Long) {
+        left_column_type = DataType::Int;
       }
 
-      if (right_col_type == DataType::Double) {
-        right_col_type = DataType::Float;
-      } else if (right_col_type == DataType::Long) {
-        right_col_type = DataType::Int;
+      if (right_column_type == DataType::Double) {
+        right_column_type = DataType::Float;
+      } else if (right_column_type == DataType::Long) {
+        right_column_type = DataType::Int;
       }
     }
 
@@ -173,7 +173,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
       return false;
     }
 
-    if (left_col_type != right_col_type) {
+    if (left_column_type != right_column_type) {
       const std::string error_type = "Column type mismatch (column " + std::to_string(column_id) + ")";
       const std::string error_msg =
           "Actual column type: " + data_type_to_string.left.at(opossum_table->column_data_type(column_id)) + "\n" +

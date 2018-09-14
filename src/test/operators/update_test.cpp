@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_manager.hpp"
@@ -41,8 +41,9 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
                                  std::shared_ptr<Table> expected_result) {
   auto t_context = TransactionManager::get().new_transaction_context();
 
-  // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
-  auto ref_table = std::make_shared<TableScan>(table_to_update, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+  // Make input left actually referenced. Projection does NOT generate ReferenceSegments.
+  auto ref_table = std::make_shared<TableScan>(table_to_update,
+                                               OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
   ref_table->set_transaction_context(t_context);
   ref_table->execute();
 
@@ -82,7 +83,8 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto updated_table = std::make_shared<GetTable>("updateTestTable");
   updated_table->execute();
   ASSERT_NE(updated_table->get_output()->table_statistics(), nullptr);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 0u);
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 3u);
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->approx_valid_row_count(), 0u);
   EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 
@@ -155,7 +157,8 @@ TEST_F(OperatorsUpdateTest, MissingChunks) {
   gt->execute();
 
   // table scan will leave out first two chunks
-  auto table_scan1 = std::make_shared<TableScan>(gt, ColumnID{0}, PredicateCondition::Equals, "12345");
+  auto table_scan1 =
+      std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, "12345"});
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 

@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
@@ -67,7 +67,7 @@ class JoinIndexTest : public BaseTest {
   std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
-    ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{EncodingType::Dictionary});
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto chunk = table->get_chunk(chunk_id);
@@ -169,11 +169,11 @@ TYPED_TEST(JoinIndexTest, InnerJoinSingleChunk) {
 
 TYPED_TEST(JoinIndexTest, InnerRefJoin) {
   // scan that returns all rows
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -182,10 +182,11 @@ TYPED_TEST(JoinIndexTest, InnerRefJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a,
+                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 1000});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -201,11 +202,11 @@ TYPED_TEST(JoinIndexTest, InnerDictJoin) {
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
   // scan that returns all rows
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -214,10 +215,11 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a,
+                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 1000});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -232,11 +234,11 @@ TYPED_TEST(JoinIndexTest, InnerJoinBig) {
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
-  auto scan_c =
-      std::make_shared<TableScan>(this->_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = std::make_shared<TableScan>(
+      this->_table_wrapper_c, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_c->execute();
-  auto scan_d =
-      std::make_shared<TableScan>(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
+  auto scan_d = std::make_shared<TableScan>(
+      this->_table_wrapper_d, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 6});
   scan_d->execute();
 
   this->test_join_output(scan_c, scan_d, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}),
@@ -326,7 +328,7 @@ TYPED_TEST(JoinIndexTest, SmallerEqualOuterJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
-  // Joining two Integer Column
+  // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
@@ -338,7 +340,7 @@ TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoinDict) {
-  // Joining two Integer Column
+  // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
@@ -427,10 +429,10 @@ TYPED_TEST(JoinIndexTest, JoinLessThanOnDictAndDict) {
                          JoinMode::Inner, "src/test/tables/joinoperators/int_float_leq_dict.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinOnReferenceColumnAndDict) {
+TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
   // scan that returns all rows
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -438,9 +440,10 @@ TYPED_TEST(JoinIndexTest, JoinOnReferenceColumnAndDict) {
                          "src/test/tables/joinoperators/int_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceColumn) {
+TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
   // scan that returns all rows
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b,
+                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 100});
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -450,14 +453,14 @@ TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceColumn) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
   // scan that returns all rows
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_f, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_g, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
-  auto scan_c =
-      std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = std::make_shared<TableScan>(
+      this->_table_wrapper_h, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_c->execute();
 
   auto join =
@@ -472,14 +475,14 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
   // scan that returns all rows
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_f, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_g, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
-  auto scan_c =
-      std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = std::make_shared<TableScan>(
+      this->_table_wrapper_h, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_c->execute();
 
   auto join =
@@ -494,13 +497,14 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThan, 6);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_f,
+                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 6});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_g, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
-  auto scan_c =
-      std::make_shared<TableScan>(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_c = std::make_shared<TableScan>(
+      this->_table_wrapper_h, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_c->execute();
 
   auto join =
@@ -524,10 +528,10 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
                          "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinRefColumn) {
+TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
   // scan that returns all rows
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -535,10 +539,10 @@ TYPED_TEST(JoinIndexTest, RightJoinRefColumn) {
                          "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinRefColumn) {
+TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
   // scan that returns all rows
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -546,9 +550,10 @@ TYPED_TEST(JoinIndexTest, LeftJoinRefColumn) {
                          1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinEmptyRefColumn) {
+TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
   // scan that returns no rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
+  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a,
+                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 0});
   scan_a->execute();
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
@@ -556,9 +561,10 @@ TYPED_TEST(JoinIndexTest, RightJoinEmptyRefColumn) {
                          "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefColumn) {
+TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefSegment) {
   // scan that returns no rows
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
+  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b,
+                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 0});
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_b, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),

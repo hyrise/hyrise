@@ -20,9 +20,9 @@ LoggedValue::LoggedValue(TransactionID& transaction_id, std::string& table_name,
 void LoggedInvalidation::redo() {
   auto& chunk = *StorageManager::get().get_table(_table_name)->get_chunk(_row_id.chunk_id);
 
-  DebugAssert(chunk.has_mvcc_columns(), "Recovery: Table should have MVCC columns.");
-  auto mvcc_columns = chunk.mvcc_columns();
-  mvcc_columns->end_cids[_row_id.chunk_offset] = 0;
+  DebugAssert(chunk.has_mvcc_data(), "Recovery: Table should have MVCC columns.");
+  auto mvcc_data = chunk.mvcc_data();
+  mvcc_data->end_cids[_row_id.chunk_offset] = 0;
 }
 
 void LoggedValue::redo() {
@@ -30,13 +30,13 @@ void LoggedValue::redo() {
 
   chunk.append(_values);
 
-  DebugAssert(chunk.has_mvcc_columns(), "Recovery: Table should have MVCC columns.");
-  auto mvcc_columns = chunk.mvcc_columns();
+  DebugAssert(chunk.has_mvcc_data(), "Recovery: Table should have MVCC columns.");
+  auto mvcc_data = chunk.mvcc_data();
 
-  DebugAssert(mvcc_columns->begin_cids.size() - 1 == _row_id.chunk_offset,
-              "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
+  DebugAssert(mvcc_data->begin_cids.size() - 1 == _row_id.chunk_offset,
+              "recovery rowID " + std::to_string(mvcc_data->begin_cids.size() - 1) + " != logged rowID " +
                   std::to_string(_row_id.chunk_offset));
-  mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = 0;
+  mvcc_data->begin_cids[mvcc_data->begin_cids.size() - 1] = 0;
 }
 
 }  // namespace opossum

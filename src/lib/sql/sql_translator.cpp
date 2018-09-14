@@ -373,7 +373,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     selection_lqp = _translate_predicate_expression(where_expression, selection_lqp);
   }
 
-  // The update operator wants ReferenceColumns on its left side
+  // The update operator wants ReferenceSegments on its left side
   // TODO(anyone): fix this
   AssertInput(!std::dynamic_pointer_cast<StoredTableNode>(selection_lqp),
               "Unconditional updates are currently not supported");

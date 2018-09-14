@@ -22,4 +22,10 @@ std::shared_ptr<BaseColumnStatistics> BaseColumnStatistics::without_null_values(
   return clone;
 }
 
+std::shared_ptr<BaseColumnStatistics> BaseColumnStatistics::only_null_values() const {
+  auto clone = this->clone();
+  clone->_null_value_ratio = 1.0f;
+  return clone;
+}
+
 }  // namespace opossum

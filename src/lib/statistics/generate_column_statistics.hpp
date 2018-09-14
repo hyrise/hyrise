@@ -5,7 +5,7 @@
 #include "base_column_statistics.hpp"
 #include "column_statistics.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -23,17 +23,17 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
   auto max = std::numeric_limits<ColumnDataType>::lowest();
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto base_column = table.get_chunk(chunk_id)->get_column(column_id);
+    const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
 
-    resolve_column_type<ColumnDataType>(*base_column, [&](auto& column) {
-      auto iterable = create_iterable_from_column<ColumnDataType>(column);
-      iterable.for_each([&](const auto& column_value) {
-        if (column_value.is_null()) {
+    resolve_segment_type<ColumnDataType>(*base_segment, [&](auto& segment) {
+      auto iterable = create_iterable_from_segment<ColumnDataType>(segment);
+      iterable.for_each([&](const auto& segment_value) {
+        if (segment_value.is_null()) {
           ++null_value_count;
         } else {
-          distinct_set.insert(column_value.value());
-          min = std::min(min, column_value.value());
-          max = std::max(max, column_value.value());
+          distinct_set.insert(segment_value.value());
+          min = std::min(min, segment_value.value());
+          max = std::max(max, segment_value.value());
         }
       });
     });

@@ -44,14 +44,15 @@ class TableStatisticsTest : public BaseTest {
 
     std::shared_ptr<TableScan> table_scan;
     if (predicate_condition == PredicateCondition::Between) {
-      auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, column_id, PredicateCondition::GreaterThanEquals, value);
+      auto first_table_scan = std::make_shared<TableScan>(
+          table_wrapper, OperatorScanPredicate{column_id, PredicateCondition::GreaterThanEquals, value});
       first_table_scan->execute();
 
-      table_scan =
-          std::make_shared<TableScan>(first_table_scan, column_id, PredicateCondition::LessThanEquals, *value2);
+      table_scan = std::make_shared<TableScan>(
+          first_table_scan, OperatorScanPredicate{column_id, PredicateCondition::LessThanEquals, *value2});
     } else {
-      table_scan = std::make_shared<TableScan>(table_wrapper, column_id, predicate_condition, value);
+      table_scan =
+          std::make_shared<TableScan>(table_wrapper, OperatorScanPredicate{column_id, predicate_condition, value});
     }
     table_scan->execute();
 
@@ -218,9 +219,9 @@ TEST_F(TableStatisticsTest, DirectlyAccessColumnStatistics) {
      */
   auto column_statistics = _table_a_with_statistics.statistics->column_statistics();
   EXPECT_EQ(column_statistics.size(), 4u);
-  for (auto col = ColumnID{0}; col < column_statistics.size(); ++col) {
-    EXPECT_TRUE(column_statistics.at(col));
-    EXPECT_FLOAT_EQ(column_statistics.at(col)->distinct_count(), 6.f);
+  for (auto column_id = ColumnID{0}; column_id < column_statistics.size(); ++column_id) {
+    EXPECT_TRUE(column_statistics.at(column_id));
+    EXPECT_FLOAT_EQ(column_statistics.at(column_id)->distinct_count(), 6.f);
   }
 }
 

@@ -2,7 +2,7 @@
 
 #include "all_type_variant.hpp"
 #include "b_tree_index_impl.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/index/base_index.hpp"
 #include "types.hpp"
 
@@ -17,7 +17,7 @@ class BTreeIndex : public BaseIndex {
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   BTreeIndex() = delete;
-  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
+  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
   virtual uint64_t memory_consumption() const;
 
@@ -26,9 +26,9 @@ class BTreeIndex : public BaseIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _cbegin() const override;
   Iterator _cend() const override;
-  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const override;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
 
-  std::shared_ptr<const BaseColumn> _index_column;
+  std::shared_ptr<const BaseSegment> _indexed_segments;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 

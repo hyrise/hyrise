@@ -1,4 +1,4 @@
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "sql/gdfs_cache.hpp"

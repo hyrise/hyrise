@@ -8,54 +8,54 @@
 #include "concurrency/transaction_context.hpp"
 #include "logging/logger.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_encoded_column.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-// We need these classes to perform the dynamic cast into a templated ValueColumn
-class AbstractTypedColumnProcessor : public Noncopyable {
+// We need these classes to perform the dynamic cast into a templated ValueSegment
+class AbstractTypedSegmentProcessor : public Noncopyable {
  public:
-  AbstractTypedColumnProcessor() = default;
-  AbstractTypedColumnProcessor(const AbstractTypedColumnProcessor&) = delete;
-  AbstractTypedColumnProcessor& operator=(const AbstractTypedColumnProcessor&) = delete;
-  AbstractTypedColumnProcessor(AbstractTypedColumnProcessor&&) = default;
-  AbstractTypedColumnProcessor& operator=(AbstractTypedColumnProcessor&&) = default;
-  virtual ~AbstractTypedColumnProcessor() = default;
-  virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
-  virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                         std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) = 0;
+  AbstractTypedSegmentProcessor() = default;
+  AbstractTypedSegmentProcessor(const AbstractTypedSegmentProcessor&) = delete;
+  AbstractTypedSegmentProcessor& operator=(const AbstractTypedSegmentProcessor&) = delete;
+  AbstractTypedSegmentProcessor(AbstractTypedSegmentProcessor&&) = default;
+  AbstractTypedSegmentProcessor& operator=(AbstractTypedSegmentProcessor&&) = default;
+  virtual ~AbstractTypedSegmentProcessor() = default;
+  virtual void resize_vector(std::shared_ptr<BaseSegment> segment, size_t new_size) = 0;
+  virtual void copy_data(std::shared_ptr<const BaseSegment> source, size_t source_start_index,
+                         std::shared_ptr<BaseSegment> target, size_t target_start_index, size_t length) = 0;
 };
 
 template <typename T>
-class TypedColumnProcessor : public AbstractTypedColumnProcessor {
+class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
  public:
-  void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) override {
-    auto val_column = std::dynamic_pointer_cast<ValueColumn<T>>(column);
-    DebugAssert(static_cast<bool>(val_column), "Type mismatch");
-    auto& values = val_column->values();
+  void resize_vector(std::shared_ptr<BaseSegment> segment, size_t new_size) override {
+    auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
+    DebugAssert(static_cast<bool>(value_segment), "Type mismatch");
+    auto& values = value_segment->values();
 
     values.resize(new_size);
 
-    if (val_column->is_nullable()) {
-      val_column->null_values().resize(new_size);
+    if (value_segment->is_nullable()) {
+      value_segment->null_values().resize(new_size);
     }
   }
 
   // this copies
-  void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
-                 std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) override {
-    auto casted_target = std::dynamic_pointer_cast<ValueColumn<T>>(target);
+  void copy_data(std::shared_ptr<const BaseSegment> source, size_t source_start_index,
+                 std::shared_ptr<BaseSegment> target, size_t target_start_index, size_t length) override {
+    auto casted_target = std::dynamic_pointer_cast<ValueSegment<T>>(target);
     DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
     auto& values = casted_target->values();
 
     auto target_is_nullable = casted_target->is_nullable();
 
-    if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
+    if (auto casted_source = std::dynamic_pointer_cast<const ValueSegment<T>>(source)) {
       std::copy_n(casted_source->values().begin() + source_start_index, length, values.begin() + target_start_index);
 
       if (casted_source->is_nullable()) {
@@ -65,24 +65,27 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
                       casted_target->null_values().begin() + target_start_index);
         } else {
           for (const auto null_value : casted_source->null_values()) {
-            Assert(!null_value, "Trying to insert NULL into non-NULL column");
+            Assert(!null_value, "Trying to insert NULL into non-NULL segment");
           }
         }
       }
-    } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueColumn<int32_t>>(source)) {
-      // We use the column type of the Dummy table used to insert a single null value.
+    } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(source)) {
+      // We use the segment type of the Dummy table used to insert a single null value.
       // A few asserts are needed to guarantee correct behaviour.
+
+      // You may also end up here if the data types of the input and the target column mismatch. Usually, this gets
+      // caught way earlier, but if you build your own tests, this might happen.
       Assert(length == 1, "Cannot insert multiple unknown null values at once.");
-      Assert(casted_dummy_source->size() == 1, "Source column is of wrong type.");
+      Assert(casted_dummy_source->size() == 1, "Source segment is of wrong type.");
       Assert(casted_dummy_source->null_values().front() == true, "Only value in dummy table must be NULL!");
       Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target.");
 
       // Ignore source value and only set null to true
       casted_target->null_values()[target_start_index] = true;
     } else {
-      // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceColumn>(source)){
-      // since we have no guarantee that a referenceColumn references only a single other column,
-      // this would require us to find out the referenced column's type for each single row.
+      // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceSegment>(source)){
+      // since we have no guarantee that a ReferenceSegment references only a single other segment,
+      // this would require us to find out the referenced segment's type for each single row.
       // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
@@ -108,11 +111,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   _target_table = StorageManager::get().get_table(_target_table_name);
 
-  // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
-  auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
+  // These TypedSegmentProcessors kind of retrieve the template parameter of the segments.
+  auto typed_segment_processors = std::vector<std::unique_ptr<AbstractTypedSegmentProcessor>>();
   for (const auto& column_type : _target_table->column_data_types()) {
-    typed_column_processors.emplace_back(
-        make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
+    typed_segment_processors.emplace_back(
+        make_unique_by_data_type<AbstractTypedSegmentProcessor, TypedSegmentProcessor>(column_type));
   }
 
   auto total_rows_to_insert = static_cast<uint32_t>(input_table_left()->row_count());
@@ -141,13 +144,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
       // Resize MVCC vectors.
-      current_chunk->get_scoped_mvcc_columns_lock()->grow_by(rows_to_insert_this_loop, MvccColumns::MAX_COMMIT_ID);
+      current_chunk->get_scoped_mvcc_data_lock()->grow_by(rows_to_insert_this_loop, MvccData::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
       auto old_size = current_chunk->size();
       for (ColumnID column_id{0}; column_id < current_chunk->column_count(); ++column_id) {
-        typed_column_processors[column_id]->resize_vector(current_chunk->get_column(column_id),
-                                                          old_size + rows_to_insert_this_loop);
+        typed_segment_processors[column_id]->resize_vector(current_chunk->get_segment(column_id),
+                                                           old_size + rows_to_insert_this_loop);
       }
 
       remaining_rows -= rows_to_insert_this_loop;
@@ -181,10 +184,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       const auto source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
-        const auto& source_column = source_chunk->get_column(column_id);
-        typed_column_processors[column_id]->copy_data(source_column, source_chunk_start_index,
-                                                      target_chunk->get_column(column_id), target_start_index,
-                                                      num_to_insert);
+        const auto& source_segment = source_chunk->get_segment(column_id);
+        typed_segment_processors[column_id]->copy_data(source_segment, source_chunk_start_index,
+                                                       target_chunk->get_segment(column_id), target_start_index,
+                                                       num_to_insert);
       }
 
       // log values
@@ -193,7 +196,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         for (auto row_index = 0u; row_index < source_chunk->size(); ++row_index) {
           std::vector<AllTypeVariant> row_values;
           for (auto column_index = 0u; column_index < column_count; ++column_index) {
-            row_values.push_back((*source_chunk->columns()[column_index])[row_index]);
+            row_values.push_back((*source_chunk->segments()[column_index])[row_index]);
           }
 
           Logger::get().log_value(context->transaction_id(), _target_table_name,
@@ -218,7 +221,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // the transaction IDs are set here and not during the resize, because
       // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
-      target_chunk->get_scoped_mvcc_columns_lock()->tids[i] = context->transaction_id();
+      target_chunk->get_scoped_mvcc_data_lock()->tids[i] = context->transaction_id();
       _inserted_rows.emplace_back(RowID{target_chunk_id, i});
     }
 
@@ -233,9 +236,9 @@ void Insert::_on_commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
     auto chunk = _target_table->get_chunk(row_id.chunk_id);
 
-    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
-    mvcc_columns->begin_cids[row_id.chunk_offset] = cid;
-    mvcc_columns->tids[row_id.chunk_offset] = 0u;
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+    mvcc_data->begin_cids[row_id.chunk_offset] = cid;
+    mvcc_data->tids[row_id.chunk_offset] = 0u;
   }
 }
 
@@ -244,11 +247,11 @@ void Insert::_on_rollback_records() {
     auto chunk = _target_table->get_chunk(row_id.chunk_id);
     // We set the begin and end cids to 0 (effectively making it invisible for everyone) so that the ChunkCompression
     // does not think that this row is still incomplete. We need to make sure that the end is written before the begin.
-    chunk->get_scoped_mvcc_columns_lock()->end_cids[row_id.chunk_offset] = 0u;
+    chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = 0u;
     std::atomic_thread_fence(std::memory_order_release);
-    chunk->get_scoped_mvcc_columns_lock()->begin_cids[row_id.chunk_offset] = 0u;
+    chunk->get_scoped_mvcc_data_lock()->begin_cids[row_id.chunk_offset] = 0u;
 
-    chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset] = 0u;
+    chunk->get_scoped_mvcc_data_lock()->tids[row_id.chunk_offset] = 0u;
   }
 }
 
