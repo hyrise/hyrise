@@ -51,8 +51,7 @@ uint32_t BinaryRecoverer::recover() {
 
     std::map<TransactionID, std::vector<std::unique_ptr<LoggedItem>>> transactions;
 
-    char log_type;
-    log_file.read(&log_type, sizeof(char));
+    auto log_type = _read<char>(log_file);
 
     while (!log_file.eof()) {
       switch (log_type) {
