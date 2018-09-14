@@ -5,6 +5,8 @@ namespace opossum {
 template <typename T>
 class JoinHashTypesTest : public JoinHashTest {};
 
+// TODO: check why hash join changes cause recompilation of tests.
+
 using DataTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_CASE(JoinHashTypesTest, DataTypes);
 

@@ -112,7 +112,10 @@ TEST_F(JoinHashTest, ChunkCount) {
 
 TEST_F(JoinHashTest, MaterializeInput) {
   std::vector<std::shared_ptr<std::vector<size_t>>> histograms;
-  auto radix_container = materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 17);
+
+  // TODO: check for max chunk id
+  auto max_chunk_id = ChunkID{0};
+  auto radix_container = materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 17, max_chunk_id);
 
   EXPECT_EQ(radix_container.elements->size(), _table_tpch_lineitems_scanned->get_output()->row_count());
 }
@@ -120,12 +123,14 @@ TEST_F(JoinHashTest, MaterializeInput) {
 TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
   size_t radix_bit_count = 0;
   std::vector<std::shared_ptr<std::vector<size_t>>> histograms;
+  // TODO: check for max chunk id
+  auto max_chunk_id = ChunkID{0};
 
   auto table_without_nulls_scanned = std::make_shared<TableScan>(_table_with_nulls, ColumnID{0}, PredicateCondition::IsNotNull, 0);
   table_without_nulls_scanned->execute();
 
-  auto mat_with_nulls = materialize_input<int, int>(_table_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, 17, true);
-  auto mat_without_nulls = materialize_input<int, int>(_table_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, 17, false);
+  auto mat_with_nulls = materialize_input<int, int>(_table_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, 17, max_chunk_id, true);
+  auto mat_without_nulls = materialize_input<int, int>(_table_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, 17, max_chunk_id, false);
 
   // Note: due to initialization with empty Partition Elements, NULL values are not materialized but
   // size of materialized input does not shrink due to NULL values.
@@ -145,7 +150,10 @@ TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
 
 TEST_F(JoinHashTest, MaterializeInputHistograms) {
   std::vector<std::shared_ptr<std::vector<size_t>>> histograms;
-  materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 17);
+  // TODO: check for max chunk id
+  auto max_chunk_id = ChunkID{0};
+
+  materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 17, max_chunk_id);
 
   size_t histogram_offset_sum = 0;
   for (const auto& radix_count_per_chunk : histograms) {
