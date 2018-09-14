@@ -159,9 +159,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
     ints[i] = i * 2;
   }
 
-  std::random_device rd;
-  std::mt19937 random_generator(rd());
-  std::shuffle(ints.begin(), ints.end(), random_generator);
+  std::shuffle(ints.begin(), ints.end(), _rng);
 
   auto segment = create_dict_segment_by_type<int>(DataType::Int, ints);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
@@ -179,9 +177,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
     }
   }
 
-  int max_value = *std::max_element(std::begin(ints), std::end(ints));
   for (int search_item = 0; search_item < static_cast<int>(3 * test_size); search_item++) {
-    if (search_item % 2 == 0 && search_item <= max_value) continue;
+    if (search_item % 2 == 0) continue;
 
     // search for elements not existing
     EXPECT_EQ(*index->lower_bound({search_item}), *index->upper_bound({search_item}));

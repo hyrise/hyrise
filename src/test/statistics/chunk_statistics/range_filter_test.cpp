@@ -20,9 +20,13 @@ class RangeFilterTest : public ::testing::Test {
     _values = pmr_vector<T>{-1000, 2, 3, 4, 7, 8, 10, 17, 100, 101, 102, 103, 123456};
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
+
+    // value in the largest gap of the test data
+    // we changing test data, ensure that value is not part of a range in ranges unless |ranges|==1)
     _in_between = static_cast<T>(_min_value + 0.5 * (_max_value - _min_value));
-    _before_range = _min_value - 1;
-    _after_range = _max_value + 1;
+
+    _before_range = _min_value - 1;  // value smaller than the minimum
+    _after_range = _max_value + 1;  // value larger than the maximum
   }
 
   void test_varying_range_filter_size(int gap_count) {
@@ -60,6 +64,11 @@ class RangeFilterTest : public ::testing::Test {
         EXPECT_TRUE(filter->can_prune({++begin}, PredicateCondition::Equals));
       }
     }
+
+    // _in_between should always prune if we have more than one range
+    if (gap_count > 1) {
+      EXPECT_TRUE(filter->can_prune(_in_between, PredicateCondition::Equals));
+    }
   }
 
   pmr_vector<T> _values;
@@ -69,6 +78,7 @@ class RangeFilterTest : public ::testing::Test {
 using FilterTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_CASE(RangeFilterTest, FilterTypes);
 
+// a single range is basically a min/max filter
 TYPED_TEST(RangeFilterTest, SingleRange) {
   auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);
 
@@ -79,19 +89,22 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
   // testing for interval bounds
   EXPECT_TRUE(filter->can_prune({this->_min_value}, PredicateCondition::LessThan));
   EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::GreaterThan));
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
-  EXPECT_TRUE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThan));
 
   // cannot prune values in between, even though non-existent
-  EXPECT_FALSE(filter->can_prune({static_cast<TypeParam>(20)}, PredicateCondition::Equals));
+  EXPECT_FALSE(filter->can_prune({this->_in_between}, PredicateCondition::Equals));
+
+  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
+  EXPECT_TRUE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThan));
 }
 
+// create range filters with varying number of ranges/gaps
 TYPED_TEST(RangeFilterTest, MultipleRanges) {
   for (size_t i = 0; i < this->_values.size() * 2; ++i) {
     this->test_varying_range_filter_size(static_cast<int>(i));
   }
 }
 
+// create more ranges than distinct values in the test data
 TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
   auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 10'000);
 
@@ -102,10 +115,13 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
   // testing for interval bounds
   EXPECT_TRUE(filter->can_prune({this->_min_value}, PredicateCondition::LessThan));
   EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::GreaterThan));
+  EXPECT_TRUE(filter->can_prune({this->_in_between}, PredicateCondition::Equals));
   EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
   EXPECT_TRUE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThan));
 }
 
+// this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
+// for better understanding, see min_max_filter_test.cpp
 TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
@@ -125,9 +141,9 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
   EXPECT_FALSE(filter->can_prune({this->_after_range}, PredicateCondition::LessThanEquals));
 
-  // cannot check for _in_between since calculated to in range but does not need to exist
   EXPECT_TRUE(filter->can_prune({this->_before_range}, PredicateCondition::Equals));
   EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::Equals));
+  EXPECT_TRUE(filter->can_prune({this->_in_between}, PredicateCondition::Equals));
   EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::Equals));
   EXPECT_TRUE(filter->can_prune({this->_after_range}, PredicateCondition::Equals));
 

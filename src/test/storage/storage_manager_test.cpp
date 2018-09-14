@@ -117,15 +117,17 @@ TEST_F(StorageManagerTest, ListViewNames) {
 }
 
 TEST_F(StorageManagerTest, Print) {
-  std::ostringstream output;
   auto& sm = StorageManager::get();
-  sm.print(output);
+  sm.add_table("third_table", load_table("src/test/tables/int_int2.tbl", 2));
 
+  std::ostringstream output;
+  sm.print(output);
   auto output_string = output.str();
 
   EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
   EXPECT_TRUE(output_string.find("==== table >> first_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
   EXPECT_TRUE(output_string.find("==== table >> second_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> third_table << (2 columns, 4 rows in 2 chunks)") != std::string::npos);
 
   EXPECT_TRUE(output_string.find("===== Views ======") != std::string::npos);
   EXPECT_TRUE(output_string.find("==== view >> first_view <<") != std::string::npos);
