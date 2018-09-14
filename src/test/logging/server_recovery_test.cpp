@@ -92,7 +92,10 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
   transaction.exec("INSERT INTO a_table VALUES (101, 0.123, 3.21, 'xy');");
   transaction.exec("UPDATE a_table SET i = 471, d = 13.5 WHERE i = 1;");
   transaction.exec("DELETE FROM a_table WHERE i = 6;");
+  // The '\n' in the string is no newline, but two characters
+  transaction.exec("INSERT INTO a_table VALUES (505, 2.04, 3.59, 'first line\\nsecond line');");
   transaction.exec("INSERT INTO a_table VALUES (0, 0.0, 0.0, '');");
+  transaction.exec("INSERT INTO a_table VALUES (111, 1.11, 1.11, 'first'); INSERT INTO a_table VALUES (222, 2.22, 2.22, 'second');");
   transaction.exec("DELETE FROM a_table WHERE f = 4.0;");
 
   restart_server(GetParam());
@@ -101,7 +104,7 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
   pqxx::nontransaction transaction2{connection2};
   const auto result2 = transaction2.exec("SELECT * FROM a_table;");
 
-  EXPECT_EQ(result2.size(), 7u);
+  EXPECT_EQ(result2.size(), 10u);
 
   int i;
   float f;
@@ -160,10 +163,34 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
   result2[6][1].to(f);
   result2[6][2].to(d);
   result2[6][3].to(s);
+  EXPECT_EQ(i, 505);
+  EXPECT_EQ(f, 2.04f);
+  EXPECT_EQ(d, 3.59);
+  EXPECT_EQ(s, "first line\\nsecond line");
+  result2[7][0].to(i);
+  result2[7][1].to(f);
+  result2[7][2].to(d);
+  result2[7][3].to(s);
   EXPECT_EQ(i, 0);
   EXPECT_EQ(f, 0.0f);
   EXPECT_EQ(d, 0.0);
   EXPECT_EQ(s, "");
+  result2[8][0].to(i);
+  result2[8][1].to(f);
+  result2[8][2].to(d);
+  result2[8][3].to(s);
+  EXPECT_EQ(i, 111);
+  EXPECT_EQ(f, 1.11f);
+  EXPECT_EQ(d, 1.11);
+  EXPECT_EQ(s, "first");
+  result2[9][0].to(i);
+  result2[9][1].to(f);
+  result2[9][2].to(d);
+  result2[9][3].to(s);
+  EXPECT_EQ(i, 222);
+  EXPECT_EQ(f, 2.22f);
+  EXPECT_EQ(d, 2.22);
+  EXPECT_EQ(s, "second");
 }
 
 std::pair<Logger::Implementation, Logger::Format> loggings[] = {
