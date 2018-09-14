@@ -52,7 +52,10 @@ TEST_P(LogFileTest, TestWorkflow) {
   run_sql("INSERT INTO a_table VALUES (101, 0.123, 3.21, 'xy');");
   run_sql("UPDATE a_table SET i = 471, d = 13.5 WHERE i = 1;");
   run_sql("DELETE FROM a_table WHERE i = 6;");
+  // The '\n' in the string is no newline, but two characters
+  run_sql("INSERT INTO a_table VALUES (505, 2.04, 3.59, 'first line\\nsecond line');");
   run_sql("INSERT INTO a_table VALUES (0, 0.0, 0.0, '');");
+  run_sql("INSERT INTO a_table VALUES (111, 1.11, 1.11, 'first'); INSERT INTO a_table VALUES (222, 2.22, 2.22, 'second');");
   run_sql("DELETE FROM a_table WHERE f = 4.0;");
 
   std::ifstream result_file(_log_file_path);
