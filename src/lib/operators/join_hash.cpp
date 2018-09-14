@@ -139,7 +139,8 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_left_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_left_begin =
+        current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
     const auto partition_left_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
     const auto partition_size = partition_left_end - partition_left_begin;
 
@@ -208,9 +209,9 @@ constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
 
 template <typename T, typename HashedType>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                                std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
-                                                const size_t radix_bits, const unsigned int partitioning_seed,
-                                                bool keep_nulls = false) {
+                                    std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                    const size_t radix_bits, const unsigned int partitioning_seed,
+                                    bool keep_nulls = false) {
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>();
   elements->resize(in_table->row_count());
@@ -295,7 +296,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     if (elements_written < 0.25 * in_table->row_count()) {
       // Less than one quarter of the values materialized do store non-NULL values and table is rather large
       PerformanceWarning(std::string("Sparse column materialization in Hash Join, potentially causing too much ") +
-        std::string("memory being allocated and data being radix-clustered suboptimally."));
+                         std::string("memory being allocated and data being radix-clustered suboptimally."));
     }
   }
 
@@ -396,7 +397,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_begin =
+        current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
     const auto partition_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
 
     // Skip empty partitions to avoid empty output chunks
@@ -494,7 +496,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_begin =
+        current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
     const auto partition_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
 
     // Skip empty partitions to avoid empty output chunks
@@ -799,13 +802,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // materialize left table
-      materialized_left = materialize_input<LeftType, HashedType>(
-        left_in_table, _column_ids.first, histograms_left, _radix_bits, _partitioning_seed);
+      materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
+                                                                  _radix_bits, _partitioning_seed);
 
       if (_radix_bits > 0) {
         // radix partition the left table
-        radix_left = partition_radix_parallel<LeftType>(
-          materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
+        radix_left =
+            partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_left = std::move(materialized_left);
@@ -820,20 +823,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // Materialize right table. 'keep_nulls' makes sure that the relation on
       // the right materializes NULL values when executing an OUTER join.
       materialized_right = materialize_input<RightType, HashedType>(
-        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
+          right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
 
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
         radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
-                                                      _radix_bits, keep_nulls);
+                                                          _radix_bits, keep_nulls);
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_right = std::move(materialized_right);
       }
     }));
     jobs.back()->schedule();
-    
+
     CurrentScheduler::wait_for_tasks(jobs);
 
     // Probe phase
