@@ -164,7 +164,7 @@ void EntryWriter::operator()(NullValue v) {
 // uint32_t resolves to ~ 4 Billion values
 uint32_t BinaryLogFormatter::null_bitmap_size(uint32_t number_of_values) { return ceil(number_of_values / 8.0); }
 
-std::vector<char> BinaryLogFormatter::commit_entry(const TransactionID transaction_id) {
+std::vector<char> BinaryLogFormatter::create_commit_entry(const TransactionID transaction_id) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   EntryWriter writer(entry_length);
 
@@ -173,7 +173,7 @@ std::vector<char> BinaryLogFormatter::commit_entry(const TransactionID transacti
   return writer.release_data();
 }
 
-std::vector<char> BinaryLogFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
+std::vector<char> BinaryLogFormatter::create_value_entry(const TransactionID transaction_id, const std::string& table_name,
                                                const RowID row_id, const std::vector<AllTypeVariant>& values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
@@ -204,7 +204,7 @@ std::vector<char> BinaryLogFormatter::create_invalidation_entry(const Transactio
   return writer.release_data();
 }
 
-std::vector<char> BinaryLogFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
+std::vector<char> BinaryLogFormatter::create_load_table_entry(const std::string& file_path, const std::string& table_name) {
   const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
   EntryWriter writer(entry_length);
 

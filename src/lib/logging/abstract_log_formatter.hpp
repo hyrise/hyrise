@@ -12,10 +12,10 @@ namespace opossum {
 class AbstractLogFormatter {
  public:
   // Creates a commit entry
-  virtual std::vector<char> commit_entry(const TransactionID transaction_id) = 0;
+  virtual std::vector<char> create_commit_entry(const TransactionID transaction_id) = 0;
 
   // Creates a value entry
-  virtual std::vector<char> value_entry(const TransactionID transaction_id, const std::string& table_name,
+  virtual std::vector<char> create_value_entry(const TransactionID transaction_id, const std::string& table_name,
                                         const RowID row_id, const std::vector<AllTypeVariant>& values) = 0;
 
   // Creates a invalidation entry
@@ -23,7 +23,7 @@ class AbstractLogFormatter {
                                              const RowID row_id) = 0;
 
   // Creates a load table entry
-  virtual std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name) = 0;
+  virtual std::vector<char> create_load_table_entry(const std::string& file_path, const std::string& table_name) = 0;
 
   // Returns the corresponding recoverer
   virtual AbstractRecoverer& get_recoverer() = 0;

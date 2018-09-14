@@ -39,12 +39,12 @@ constexpr auto LOG_INTERVAL = std::chrono::milliseconds(1);
 
 void GroupCommitLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                                   const std::vector<AllTypeVariant>& values) {
-  const auto& data = _formatter->value_entry(transaction_id, table_name, row_id, values);
+  const auto& data = _formatter->create_value_entry(transaction_id, table_name, row_id, values);
   _write_to_buffer(data);
 }
 
 void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
-  const auto& data = _formatter->commit_entry(transaction_id);
+  const auto& data = _formatter->create_commit_entry(transaction_id);
   {
     std::scoped_lock commit_callback_lock(_commit_callback_mutex);
     _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
@@ -53,7 +53,7 @@ void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::func
 }
 
 void GroupCommitLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
-  const auto& data = _formatter->load_table_entry(file_path, table_name);
+  const auto& data = _formatter->create_load_table_entry(file_path, table_name);
   {
     std::scoped_lock buffer_lick(_buffer_mutex);
     _write_to_buffer(data);
