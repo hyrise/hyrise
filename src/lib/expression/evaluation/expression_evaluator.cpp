@@ -36,6 +36,29 @@
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+template<typename Functor>
+void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
+  // clang-format off
+  switch (predicate_condition) {
+    case PredicateCondition::Equals:            functor(boost::hana::type<EqualsEvaluator>{});            break;
+    case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
+    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator >{});         break;
+    case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
+    case PredicateCondition::GreaterThan:       functor(boost::hana::type<GreaterThanEvaluator>{});       break;
+    case PredicateCondition::GreaterThanEquals: functor(boost::hana::type<GreaterThanEqualsEvaluator>{}); break;
+
+    default:
+      Fail("PredicateCondition should be handled in different function");
+  }
+  // clang-format on
+}
+
+}  // namespace
+
 namespace opossum {
 
 ExpressionEvaluator::ExpressionEvaluator(
@@ -127,18 +150,15 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
-  // clang-format off
-  switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, EqualsEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, NotEqualsEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEqualsEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEqualsEvaluator>(left, right);  // NOLINT
+  auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
 
-    default:
-      Fail("PredicateCondition should be handled in different function");
-  }
+  // clang-format off
+  resolve_binary_predicate_evaluator(expression.predicate_condition, [&](const auto evaluator_t) {
+    using Evaluator = typename decltype(evaluator_t)::type;
+    result = _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Evaluator>(left, right);  // NOLINT
+  });
+
+  return result;
   // clang-format on
 }
 
@@ -805,21 +825,29 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
         case PredicateCondition::GreaterThan:
         case PredicateCondition::NotEquals:
         case PredicateCondition::LessThan: {
-          const auto left_result = evaluate_expression_to_result(*predicate_expression.arguments[0]);
-          const auto right_result = evaluate_expression_to_result(*predicate_expression.arguments[1]);
+          _resolve_to_expression_results(*predicate_expression.arguments[0], *predicate_expression.arguments[1], [&](const auto& left_result, const auto& right_result) {
+            using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
+            using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
 
-          _resolve_to_functor(predicate_expression.predicate_condition, [&](const auto functor) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
-              if (left_result->is_null(chunk_offset) || right_result->is_null(chunk_offset)) continue;
+            resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
+              using Evaluator = typename decltype(functor)::type;
 
-              auto value = Bool{0};
-              functor(value, left_result->value(chunk_offset), right_result->value(chunk_offset));
-              if (value != 0) {
-                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              if constexpr (Evaluator::template supports<Bool, LeftDataType, RightDataType>::value) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+
+                  auto value = Bool{0};
+                  Evaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));
+                  if (value != 0) {
+                    result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                  }
+                }
+              } else {
+                Fail("Argument types not compatible");
               }
-            }
+            });
           });
-        }
+        } break;
 
         case PredicateCondition::Between: {
           // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
@@ -833,20 +861,16 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           const auto gte_lte_expression = and_(gte_expression, lte_expression);
 
           return evaluate_expression_to_pos_list(*gte_lte_expression);
-        }
+        } break;
 
         case PredicateCondition::In:
-
-
         case PredicateCondition::Like:
         case PredicateCondition::NotLike:
         case PredicateCondition::IsNull:
         case PredicateCondition::IsNotNull:
           Fail("Not implemented");
       }
-      Fail("GCC thinks this is reachable");
-    }
-
+    } break;
 
     case ExpressionType::Logical: {
       const auto& logical_expression = static_cast<const LogicalExpression&>(expression);
@@ -870,6 +894,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
     default:
       Fail("Expression type cannot be evaluated to PosList");
   }
+
+  return result_pos_list;
 }
 
 template <>

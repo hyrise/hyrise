@@ -53,7 +53,7 @@ TEST_F(ExpressionEvaluatorToPosListTest, Predicate) {
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *greater_than_(x, 9), {0, 2}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *greater_than_(x, 9), {}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *greater_than_equals_(x, 9), {0, 1, 2}));
-  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *greater_than_equals_(x, 8), {1, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *greater_than_equals_(x, 8), {0, 2}));
 }
 
 }  // namespace opossum
