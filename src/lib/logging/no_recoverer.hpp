@@ -6,7 +6,7 @@
 namespace opossum {
 
 /*
- *  Used when logging is turned off, so there is nothing to recover.
+ *  Used when logging is turned off, so there is nothing to recover. a
  */
 
 class NoRecoverer : public AbstractRecoverer {
