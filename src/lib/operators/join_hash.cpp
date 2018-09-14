@@ -189,7 +189,7 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr Radix hash_value(const OriginalType& value, const unsigned int seed) {
+constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
   return murmur2<HashedType>(type_cast<HashedType>(value), seed);
 }
 
