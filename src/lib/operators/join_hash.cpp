@@ -206,8 +206,6 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
-  for (auto& x : *elements) x = PartitionedElement<T>();
-
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
 
