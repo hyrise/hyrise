@@ -87,7 +87,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
 void JoinHash::_on_cleanup() { _impl.reset(); }
 
-using Radix = uint16_t;
+// currently using 32bit Murmur
+using Hash = uint32_t;
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -95,11 +96,11 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  PartitionedElement() : row_id(NULL_ROW_ID), radix(0), value(T()) {}
-  PartitionedElement(RowID row, Radix radix, T val) : row_id(row), radix(radix), value(val) {}
+  PartitionedElement() : row_id(NULL_ROW_ID), partition_hash(0), value(T()) {}
+  PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
 
   RowID row_id;
-  Radix radix;
+  Hash partition_hash{0};
   T value;
 };
 
@@ -187,7 +188,7 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr Radix hash_value(const OriginalType& value, const unsigned int seed) {
+constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
   // clang-format off
   // doesn't deal with constexpr nicely
   if constexpr(!std::is_same_v<OriginalType, HashedType>) {
@@ -247,8 +248,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const Radix hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
-            const Radix radix = hashed_value & mask;
+            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -257,11 +257,13 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             */
             if constexpr (std::is_same<std::decay<decltype(typed_segment)>, ReferenceSegment>::value) {
               *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, radix, value.value()};
+                  PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, hashed_value, value.value()};
             } else {
-              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, radix, value.value()};
+              *(output_iterator++) =
+                  PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
             }
 
+            const Hash radix = hashed_value & mask;
             histogram[radix]++;
           }
           // reference_chunk_offset is only used for ReferenceSegments
@@ -296,6 +298,10 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
                                            bool keep_nulls = false) {
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
+
+  // currently, we just do one pass
+  size_t pass = 0;
+  size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
   auto output = std::make_shared<Partition<T>>();
@@ -342,7 +348,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
           continue;
         }
 
-        const auto radix = element.radix;
+        const size_t radix = element.partition_hash & mask;
 
         out[output_offsets[radix]++] = element;
       }
@@ -654,7 +660,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    _radix_bits = std::min(sizeof(Radix) * 8, static_cast<size_t>(std::ceil(std::log2(cluster_count))));
+    _radix_bits = std::ceil(std::log2(cluster_count));
   }
 
  protected:
