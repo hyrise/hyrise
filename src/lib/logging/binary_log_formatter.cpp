@@ -67,6 +67,7 @@ class LogEntry {
 
   uint32_t size() const { return cursor; }
 
+  // this operator has an out of class specialization for strings
   template <typename T>
   LogEntry& operator<<(const T& value) {
     DebugAssert(cursor + sizeof(T) <= data.size(), "Logger: value does not fit into vector, call resize() beforehand");
@@ -89,10 +90,10 @@ LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {  // NOL
   return *this;
 }
 
-// EntryWriter is used to write multiple AllTypeVariants into an entry successively.
-// It returns a boolean to indicate if something has been written into entry.
-// Therefore the visitation returns false if the AllTypeVariant is a NullValue.
-// This boolean then is used to set the corresponding bit in the null_value_bitmap.
+// EntryWriter is used to create a log entry.
+// The log information then gets written successively.
+// Except for value insertions, all data is written by the << operator.
+// AllTypeVariants from insertions are written by applying a boost visitor.
 // The current implementation resizes the entry for every value.
 // It might improve performance to iterate twice over all values:
 // Accumulate the bytes needed for all values in the first pass,
@@ -102,6 +103,7 @@ class EntryWriter : public boost::static_visitor<void> {
   explicit EntryWriter(uint32_t size) : _entry(LogEntry(size)) {}
 
   // The () operator is needed to apply a boost visitor. Therefore the mixing of << and () operators.
+  // This operator has an out of class specialization for strings and NullValues.
   template <typename T>
   void operator()(T v) {
     _entry.resize(_entry.size() + sizeof(T));
