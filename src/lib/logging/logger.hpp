@@ -41,7 +41,7 @@ class Logger {
   static AbstractLogger& get();
   
   // Recovers from log files and returns the number of loaded tables
-  static uint32_t recover();
+  static void recover();
 
   // Called by logging implementations to get their new filename
   static std::string get_new_log_path();

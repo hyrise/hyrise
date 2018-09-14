@@ -866,9 +866,7 @@ int main(int argc, char** argv) {
       return_code = Return::Quit;
     }
   } else {
-    console.out("Running recovery.\n");
-    auto number_of_loaded_tables = opossum::Logger::recover();
-    console.out("Recovery done. Loaded " + std::to_string(number_of_loaded_tables) + " tables.\n\n");
+    opossum::Logger::recover();
   }
 
   console.out("Options --chunk_size and --scheduler are currently ignored\n");
