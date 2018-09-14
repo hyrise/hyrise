@@ -57,6 +57,8 @@ void GroupCommitLogger::log_load_table(const std::string& file_path, const std::
   {
     std::scoped_lock buffer_lick(_buffer_mutex);
     _write_to_buffer(data);
+
+    // load table commands needs to be flushed, since there is no commit mechanism
     log_flush();
   }
 }
