@@ -308,6 +308,12 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
             hist->estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 3));
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%"),
             hist->estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 3));
+
+  // If the number of fixed characters is too large and the power would overflow, cap it.
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux"),
+            hist->estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 13));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge"),
+            hist->estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 13));
 }
 
 }  // namespace opossum

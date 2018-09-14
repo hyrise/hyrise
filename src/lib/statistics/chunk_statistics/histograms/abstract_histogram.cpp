@@ -1,6 +1,9 @@
 #include "abstract_histogram.hpp"
 
+#include <cmath>
+
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -504,7 +507,15 @@ float AbstractHistogram<std::string>::estimate_cardinality(const PredicateCondit
          *  There are six additional fixed characters in the string ('b', 'a', 'r', 'b', 'a', and 'z').
          */
         const auto search_prefix = value.substr(0, value.find('%'));
-        const auto additional_characters = value.length() - search_prefix.length() - any_chars_count;
+        auto additional_characters = value.length() - search_prefix.length() - any_chars_count;
+
+        // If there are too many fixed characters for the power to be calculated without overflow, cap the exponent.
+        const auto maximum_exponent =
+            std::log(std::numeric_limits<uint64_t>::max()) / std::log(_supported_characters.length());
+        if (additional_characters > maximum_exponent) {
+          additional_characters = static_cast<uint64_t>(maximum_exponent);
+        }
+
         return (estimate_cardinality(PredicateCondition::LessThan,
                                      next_value(search_prefix, _supported_characters, search_prefix.length())) -
                 estimate_cardinality(PredicateCondition::LessThan, search_prefix)) /
