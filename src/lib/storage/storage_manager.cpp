@@ -99,7 +99,7 @@ void StorageManager::print(std::ostream& out) const {
     out << "==== table >> " << table.first << " <<";
     out << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
         << table.second->chunk_count() << " chunks)";
-    out << std::endl << std::endl;
+    out << std::endl;
   }
 
   out << "==================" << std::endl;
