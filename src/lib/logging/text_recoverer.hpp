@@ -19,10 +19,10 @@ class TextRecoverer : public AbstractRecoverer {
   TextRecoverer() {}
 
   // returns substring until delimiter is found and sets begin to begin of next token: the position after delimiter
-  std::string _extract_up_to_delimiter(const std::string& line, size_t& begin, const char delimiter);
+  std::string _extract_token_up_to_delimiter(const std::string& line, size_t& begin, const char delimiter);
 
   // returns substring between begin and end. Updates begin.
-  std::string _extract(const std::string& line, size_t& begin, const size_t end);
+  std::string _extract_token(const std::string& line, size_t& begin, const size_t end);
 
   // returns string value between begin and end.
   // Updates begin, assuming there is a delimiter inbetween.

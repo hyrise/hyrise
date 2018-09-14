@@ -19,21 +19,18 @@ TextRecoverer& TextRecoverer::get() {
   return instance;
 }
 
-std::string TextRecoverer::_extract(const std::string& line, size_t& begin, const size_t end) {
+std::string TextRecoverer::_extract_token(const std::string& line, size_t& begin, const size_t end) {
   auto token = line.substr(begin, end - begin + 1);
   begin = end + 2;
   return token;
 }
 
-// returns substring until delimiter is found and sets begin to begin of next token: the position after delimiter
-std::string TextRecoverer::_extract_up_to_delimiter(const std::string& line, size_t& begin, const char delimiter) {
+std::string TextRecoverer::_extract_token_up_to_delimiter(const std::string& line, size_t& begin, const char delimiter) {
   auto end = line.find(delimiter, begin) - 1;
   DebugAssert(end >= begin, "Recoverer: Missing token in logfile");
-  return _extract(line, begin, end);
+  return _extract_token(line, begin, end);
 }
 
-// returns string value between begin and end.
-// Updates begin, assuming there is a delimiter inbetween.
 std::string TextRecoverer::_extract_string_value(std::string& line, size_t& begin, const size_t end,
                                                  std::ifstream& log_file) {
   // There might be a \n in every string, therefore the line could end in every string value
@@ -44,13 +41,12 @@ std::string TextRecoverer::_extract_string_value(std::string& line, size_t& begi
     DebugAssert(!log_file.eof(), "Recoverer: End of file reached unexpectedly");
     line += "\n" + temp_line;
   }
-  return _extract(line, begin, end);
+  return _extract_token(line, begin, end);
 }
 
-// returns substring that has its size stated beforehand. Updates begin.
 std::string TextRecoverer::_extract_next_value_with_preceding_size(std::string& line, size_t& begin,
                                                                    const char delimiter, std::ifstream& log_file) {
-  size_t size = std::stoul(_extract_up_to_delimiter(line, begin, delimiter));
+  size_t size = std::stoul(_extract_token_up_to_delimiter(line, begin, delimiter));
   size_t end = begin + size - 1;
   return _extract_string_value(line, begin, end, log_file);
 }
@@ -80,7 +76,7 @@ uint32_t TextRecoverer::recover() {
 
       // if commit entry
       if (log_type == 'c') {
-        TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')'));
+        TransactionID transaction_id = std::stoul(_extract_token_up_to_delimiter(line, next_token_begin, ')'));
         _redo_transaction(transactions, transaction_id);
         continue;
       }
@@ -98,15 +94,15 @@ uint32_t TextRecoverer::recover() {
 
       // else: value or invalidation entry
 
-      TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ','));
+      TransactionID transaction_id = std::stoul(_extract_token_up_to_delimiter(line, next_token_begin, ','));
 
       std::string table_name = _extract_next_value_with_preceding_size(line, next_token_begin, ',', log_file);
 
       // <RowID> = RowID(<chunk_id>,<chunk_offset>)
       // "RowID(".length() = 6
       next_token_begin += 6;
-      ChunkID chunk_id(std::stoul(_extract_up_to_delimiter(line, next_token_begin, ',')));
-      ChunkOffset chunk_offset(std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')')));
+      ChunkID chunk_id(std::stoul(_extract_token_up_to_delimiter(line, next_token_begin, ',')));
+      ChunkOffset chunk_offset(std::stoul(_extract_token_up_to_delimiter(line, next_token_begin, ')')));
       RowID row_id{chunk_id, chunk_offset};
 
       // if invalidation
