@@ -190,9 +190,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // log values
       if (Logger::is_active()) {
         const auto column_count = source_chunk->column_count();
-        for (auto row_index = 0; row_index < source_chunk->size(); ++row_index) {
+        for (auto row_index = 0u; row_index < source_chunk->size(); ++row_index) {
           std::vector<AllTypeVariant> row_values;
-          for (auto column_index = 0; column_index < column_count; ++column_index) {
+          for (auto column_index = 0u; column_index < column_count; ++column_index) {
             row_values.push_back((*source_chunk->columns()[column_index])[row_index]);
           }
 
