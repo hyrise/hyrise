@@ -19,6 +19,13 @@ BinaryRecoverer& BinaryRecoverer::get() {
   return instance;
 }
 
+template <typename T>
+  T BinaryRecoverer::_read(std::ifstream& file) {
+    T result;
+    file.read(reinterpret_cast<char*>(&result), sizeof(T));
+    return result;
+  }
+
 template <>
 std::string BinaryRecoverer::_read(std::ifstream& file) {
   std::string result;

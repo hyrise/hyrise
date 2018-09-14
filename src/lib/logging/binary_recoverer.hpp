@@ -22,11 +22,7 @@ class BinaryRecoverer : public AbstractRecoverer {
   AllTypeVariant _read_all_type_variant(std::ifstream& file, DataType data_type);
 
   template <typename T>
-  T _read(std::ifstream& file) {
-    T result;
-    file.read(reinterpret_cast<char*>(&result), sizeof(T));
-    return result;
-  }
+  T _read(std::ifstream& file);
 };
 
 }  // namespace opossum
