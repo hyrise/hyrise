@@ -17,7 +17,7 @@ class NoRecoverer : public AbstractRecoverer {
   static NoRecoverer& get() {
     static NoRecoverer instance;
     return instance;
-  };
+  }
 
   uint32_t recover() final { return 0u; };
 
