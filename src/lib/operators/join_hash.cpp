@@ -210,7 +210,7 @@ template <typename T, typename HashedType>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
-                                                ChunkID& max_chunk_id, bool keep_nulls = false) {
+                                                bool keep_nulls = false) {
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>();
   elements->resize(in_table->row_count());
@@ -236,15 +236,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // create histograms per chunk
   histograms.resize(chunk_offsets.size());
 
-  std::vector<size_t> max_chunk_ids(in_table->chunk_count());
-
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(in_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
       // Get information from work queue
-      auto max_chunk_id_job = ChunkID{0};
       auto output_offset = chunk_offsets[chunk_id];
       auto output_iterator = elements->begin() + output_offset;
       auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
@@ -274,10 +271,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
                   PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
             }
 
-            if (chunk_id > max_chunk_id_job) {
-              max_chunk_id_job = chunk_id;
-            }
-
             const Hash radix = hashed_value & mask;
             ++histogram[radix];
           }
@@ -287,15 +280,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           }
         });
       });
-
-      max_chunk_ids[chunk_id] = max_chunk_id_job;
     }));
     jobs.back()->schedule();
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
-
-  max_chunk_id = (in_table->chunk_count() < 2) ? 0 : *(std::max_element(max_chunk_ids.begin(), max_chunk_ids.end()));
 
   size_t table_size_considered_large = 100'000;
   if (in_table->row_count() >= table_size_considered_large) {
@@ -392,9 +381,8 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
-           std::vector<std::vector<std::pair<RowID, RowID>>>& pos_lists,
-           const ChunkID max_number_of_chunks, const JoinMode mode) {
+           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
+           std::vector<PosList>& pos_lists_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
@@ -419,13 +407,17 @@ void probe(const RadixContainer<RightType>& radix_container,
     jobs.emplace_back(std::make_shared<JobTask>([&, partition_begin, partition_end, current_partition_id]() {
       // Get information from work queue
       auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
-      std::vector<std::pair<RowID, RowID>> pos_lists_local;
-      pos_lists_local.reserve(std::max(100ul, partition_end - partition_begin));
-      // PosList pos_list_left_local;
-      // PosList pos_list_right_local;
+      PosList pos_list_left_local;
+      PosList pos_list_right_local;
 
       if (hashtables[current_partition_id].has_value()) {
         const auto& hashtable = hashtables.at(current_partition_id).value();
+
+        // simple heuristic to estimate result size: half of the partition's rows will match
+        // a more conservative pre-allocation would be the size of the left cluster
+        const size_t expected_output_size = std::max(10.0, std::ceil((partition_end - partition_begin) / 2));
+        pos_list_left_local.reserve(expected_output_size);
+        pos_list_right_local.reserve(expected_output_size);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
@@ -443,29 +435,23 @@ void probe(const RadixContainer<RightType>& radix_container,
               // Multiple matches, stored in one PosList
               for (const auto row_id : boost::get<PosList>(matching_rows_variant)) {
                 if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                  // pos_list_left_local.emplace_back(row_id);
-                  // pos_list_right_local.emplace_back(row.row_id);
-                  // TODO: correct chunk ID?
-                  pos_lists_local.emplace_back(std::make_pair(row_id, row.row_id));
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(row.row_id);
                 }
               }
             } else {
               // A single RowID
               const auto row_id = boost::get<RowID>(matching_rows_variant);
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                // pos_list_left_local.emplace_back(row_id);
-                // pos_list_right_local.emplace_back(row.row_id);
-                // TODO: correct chunk ID?
-                pos_lists_local.emplace_back(std::make_pair(row_id, row.row_id));
+                pos_list_left_local.emplace_back(row_id);
+                pos_list_right_local.emplace_back(row.row_id);
               }
             }
             // We assume that the relations have been swapped previously,
             // so that the outer relation is the probing relation.
           } else if (mode == JoinMode::Left || mode == JoinMode::Right) {
-            // pos_list_left_local.emplace_back(NULL_ROW_ID);
-            // pos_list_right_local.emplace_back(row.row_id);
-            // TODO: correct chunk ID?
-            pos_lists_local.emplace_back(std::make_pair(NULL_ROW_ID, row.row_id));
+            pos_list_left_local.emplace_back(NULL_ROW_ID);
+            pos_list_right_local.emplace_back(row.row_id);
           }
         }
       } else if (mode == JoinMode::Left || mode == JoinMode::Right) {
@@ -478,33 +464,19 @@ void probe(const RadixContainer<RightType>& radix_container,
           Hence we are going to write NULL values for each row.
           */
 
-        // TODO: resize
-        // pos_list_left_local.reserve(partition_end - partition_begin);
-        // pos_list_right_local.reserve(partition_end - partition_begin);
+        pos_list_left_local.reserve(partition_end - partition_begin);
+        pos_list_right_local.reserve(partition_end - partition_begin);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
-          // pos_list_left_local.emplace_back(NULL_ROW_ID);
-          // pos_list_right_local.emplace_back(row.row_id);
-          // TODO: correct chunk ID?
-          pos_lists_local.emplace_back(std::make_pair(NULL_ROW_ID, row.row_id));
+          pos_list_left_local.emplace_back(NULL_ROW_ID);
+          pos_list_right_local.emplace_back(row.row_id);
         }
       }
 
-      // Sorting local pos lists
-      // for (auto& chunk_matches : pos_lists_local) {
-      //   std::sort(chunk_matches.begin(), chunk_matches.end(), [](auto& r1, auto& r2) {
-      //     // TODO: correct the actual sorting
-      //     // TODO: By default, we sort by the left column.
-      //     return r1.first.chunk_offset < r2.first.chunk_offset;
-      //   });
-      // }
-
-      // if (!pos_list_left_local.empty()) {
-      if (!pos_lists_local.empty()) {
-        // pos_lists_left[current_partition_id] = std::move(pos_list_left_local);
-        // pos_lists_right[current_partition_id] = std::move(pos_list_right_local);
-        pos_lists[current_partition_id] = std::move(pos_lists_local);
+      if (!pos_list_left_local.empty()) {
+        pos_lists_left[current_partition_id] = std::move(pos_list_left_local);
+        pos_lists_right[current_partition_id] = std::move(pos_list_right_local);
       }
     }));
     jobs.back()->schedule();
@@ -516,8 +488,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
-                     std::vector<std::vector<std::pair<RowID, RowID>>>& pos_lists,
-                     const ChunkID max_number_of_chunks, const JoinMode mode) {
+                     std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
@@ -535,12 +506,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
       // Get information from work queue
       auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
 
-      // PosList pos_list_local;
-
-      // we only fill the right side (left is NULLed)
-      std::vector<std::pair<RowID, RowID>> pos_lists_local;
-      pos_lists_local.reserve(std::max(100ul, partition_end - partition_begin));
-      
+      PosList pos_list_local;
 
       if (hashtables[current_partition_id].has_value()) {
         // Valid hashtable found, so there is at least one match in this partition
@@ -558,28 +524,20 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
           if ((mode == JoinMode::Semi && it != hashtable.end()) || (mode == JoinMode::Anti && it == hashtable.end())) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
-            // pos_list_local.emplace_back(row.row_id);
-            pos_lists_local.emplace_back(std::make_pair(NULL_ROW_ID, row.row_id));
+            pos_list_local.emplace_back(row.row_id);
           }
         }
       } else if (mode == JoinMode::Anti) {
         // no hashtable on other side, but we are in Anti mode
+        pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
-          // pos_list_local.emplace_back(row.row_id);
-          pos_lists_local.emplace_back(std::make_pair(NULL_ROW_ID, row.row_id));
+          pos_list_local.emplace_back(row.row_id);
         }
       }
 
-      // // Sorting local pos lists
-      // for (auto& chunk_matches : pos_lists_local) {
-      //   std::sort(chunk_matches.begin(), chunk_matches.end(), [](auto& r1, auto& r2) {
-      //     return r1.first.chunk_offset < r2.first.chunk_offset;
-      //   });
-      // }
-
-      if (!pos_lists_local.empty()) {
-        pos_lists[current_partition_id] = std::move(pos_lists_local);
+      if (!pos_list_local.empty()) {
+        pos_lists[current_partition_id] = std::move(pos_list_local);
       }
     }));
     jobs.back()->schedule();
@@ -713,7 +671,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         optimizer selects the hash join due to such a situation, but neglects that the
         input will be switched (e.g., due to the join type), the user will be warned.
       */
-      std::string warning{"Left relation larger than right relation in hash join"};
+      std::string warning{"Left relation larger than right relation hash join"};
       warning += inputs_swapped ? " (input relations have been swapped)." : ".";
       PerformanceWarning(warning);
     }
@@ -837,13 +795,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     //                   Probing (actual Join)
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    ChunkID max_chunk_id_left, max_chunk_id_right = ChunkID{0};
 
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // materialize left table
       materialized_left = materialize_input<LeftType, HashedType>(
-        left_in_table, _column_ids.first, histograms_left, _radix_bits, _partitioning_seed, max_chunk_id_left);
+        left_in_table, _column_ids.first, histograms_left, _radix_bits, _partitioning_seed);
 
       if (_radix_bits > 0) {
         // radix partition the left table
@@ -863,7 +820,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // Materialize right table. 'keep_nulls' makes sure that the relation on
       // the right materializes NULL values when executing an OUTER join.
       materialized_right = materialize_input<RightType, HashedType>(
-        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, max_chunk_id_right, keep_nulls);
+        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
 
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
@@ -879,191 +836,31 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     
     CurrentScheduler::wait_for_tasks(jobs);
 
-    // Determine the max chunk id, which is later used to prepare output data structures
-    // Note: the max chunk id denotes the max of BOTH input relations.
-    // With `+ 1` we can use the number directly for sizing and for-loops.
-    // TODO: we could use only the max chunks size of the one to use for grouping/sorting
-    auto max_number_of_chunks = ChunkID{std::max(max_chunk_id_left, max_chunk_id_right) + 1};
-
     // Probe phase
-    // The following data structures hold maps, of which we create one per partition.
-    // Each map stores the ChunkID as the key and a vector of pairs (i.e., row IDs of matching
-    // left and right tuples).
-    // We need a vector of pairs to allow for sorting and merging the partitions' results later on.
-
+    std::vector<PosList> left_pos_lists;
+    std::vector<PosList> right_pos_lists;
     const size_t partition_count = radix_right.partition_offsets.size();
+    left_pos_lists.resize(partition_count);
+    right_pos_lists.resize(partition_count);
+    for (size_t i = 0; i < partition_count; i++) {
+      // simple heuristic: half of the rows of the right relation will match
+      const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
 
-    // This data structure is no map as we found a maps performance to be problematic compared
-    // to having direct accesses via assiative arrays (here, vector of vectors).
-    // Also memory overhead of potentially having empty PosLists should be neglectable when compared to map overhead.
-    std::vector<std::vector<std::pair<RowID, RowID>>> pos_lists(partition_count);
-
+      left_pos_lists[i].reserve(result_rows_per_partition);
+      right_pos_lists[i].reserve(result_rows_per_partition);
+    }
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
     leftP, rightP and hashtableP.
     */
     if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
-      probe_semi_anti<RightType, HashedType>(radix_right, hashtables, pos_lists, max_number_of_chunks, _mode);
+      probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode);
     } else {
-      probe<RightType, HashedType>(radix_right, hashtables, pos_lists, max_number_of_chunks, _mode);
+      probe<RightType, HashedType>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
     }
-
-    // Determine the max chunk id, which is later used to prepare output data structures
-    // Note: the max chunk id denotes the max of one particular input relation, not both
-    // auto max_chunk_id_iter = std::max_element(pos_lists.cbegin(), pos_lists.cend(), [](const auto& m1, const auto& m2) {
-    //   const std::map<ChunkID, std::vector<std::pair<RowID, RowID>>>& map_to_compare_1 = m1;
-    //   const std::map<ChunkID, std::vector<std::pair<RowID, RowID>>>& map_to_compare_2 = m2;
-    //   // std::cout << " sizes: " << map_to_compare_1.size() << " & " << map_to_compare_2.size() << std::endl;
-    //   // std::cout << " elements: " << max_chunk_id_1 << " & " << max_chunk_id_2 << std::endl;
-    //   // std::cout << "Comparing " << (*(m1.rbegin())).first << " < " << (*(m2.rbegin())).first << std::endl;
-    //   // std::cout << "Result: " << ((*(m1.rbegin())).first < (*(m2.rbegin())).first) << std::endl;
-    //   if (map_to_compare_1.empty() || map_to_compare_1.empty()) {
-    //     return false;
-    //   }
-
-    //   const ChunkID max_chunk_id_1 = map_to_compare_1.rbegin()->first;
-    //   const ChunkID max_chunk_id_2 = map_to_compare_2.rbegin()->first;
-    //   return max_chunk_id_1 < max_chunk_id_2;
-    // });
-    // ChunkID max_chunk_id = max_chunk_id_iter != pos_lists.end() ? max_chunk_id_iter->rbegin()->first : ChunkID{0};
-
-    // Determine the max chunk id, which is later used to prepare output data structures
-    // Note: the max chunk id denotes the max of one particular input relation, not both
-    // ChunkID max_number_of_chunks = ChunkID{0};
-    // for (const auto& map : pos_lists) {
-    //   if (!map.empty()) {
-    //     auto largest_chunk_id = map.rbegin()->first;
-    //     if ((largest_chunk_id + 1) > max_number_of_chunks) {
-    //       max_number_of_chunks = largest_chunk_id + 1;
-    //     }
-    //   }
-    // }
-
-    // std::cout << " max_number_of_chunks: " << max_number_of_chunks << std::endl;
-
-    // std::cout << "######################## #maps: " << pos_lists.size() << std::endl;
-    // int cunt = 0;
-    // for (const auto& blub : pos_lists) {
-    //   std::cout << "Result for #" << cunt << " (length " << blub.size() << ")" << std::endl;
-    //   for (const auto& pair : blub) {
-    //     auto key = pair.first;
-    //     auto& partition_pos_lists = pair.second;
-    //     std::cout << "Key: " << key << " - Element count: " << partition_pos_lists.size() << std::endl;
-    //     for (const auto& row_pair :  partition_pos_lists) {
-    //       std::cout << "L: <" << row_pair.first.chunk_id << "," << row_pair.first.chunk_offset;
-    //       std::cout << "> - R: <" << row_pair.second.chunk_id << "," << row_pair.second.chunk_offset << ">" << std::endl;
-    //     }
-    //   }
-    //   ++cunt;
-    // }
-    // std::cout << "############" << std::endl;
-
-    // MERGING
-    // We now have a std::map per join partition.
-    // Goal is to merge all maps into a list of position lists, grouped by chunk ID.
-    // std::vector<std::vector<std::pair<RowID, RowID>>> merged_pos_lists;
-    // if (partition_count > 1) {
-    //   merged_pos_lists.resize(max_number_of_chunks);
-    //   // merging
-    //   for (auto processed_chunk_id = ChunkID{0}; processed_chunk_id < max_number_of_chunks; ++processed_chunk_id) {
-    //     for (const auto& partition_pos_list : pos_lists) {
-    //       // check if position lists are non empty and pos list for chunk exists
-    //       if (!partition_pos_list.empty() && !partition_pos_list[processed_chunk_id].empty()) {
-    //         const auto& list1 = merged_pos_lists[processed_chunk_id];
-    //         const auto& list2 = partition_pos_list[processed_chunk_id];
-    //         std::vector<std::pair<RowID, RowID>> merged_pos_list;
-    //         merged_pos_list.reserve(list1.size() + list2.size());
-    //         // TODO: merge is unaware of ordering by first or second column
-    //         std::merge(list1.begin(), list1.end(), list2.begin(), list2.end(), std::back_inserter(merged_pos_list));
-    //         merged_pos_lists[processed_chunk_id] = std::move(merged_pos_list);
-    //       }
-    //     }
-    //   }
-    // } else {
-    //   // one single partition, we can directly forward the results
-    //   if (!pos_lists[0].empty()) {
-    //     for (const auto& partition_pos_list_map : pos_lists[0]) {
-    //       merged_pos_lists.emplace_back(std::move(partition_pos_list_map));
-    //     }
-    //   }
-    // }
-
-    // std::cout << "######################## #merged: " << merged_pos_lists.size() << std::endl;
-    // int cunt = 0;
-    // for (const auto& merged_pos_list : merged_pos_lists) {
-    //   std::cout << "Result for #" << cunt << std::endl;
-    //   for (const auto& row_pair :  merged_pos_list) {
-    //     std::cout << "L: <" << row_pair.first.chunk_id << "," << row_pair.first.chunk_offset;
-    //     std::cout << "> - R: <" << row_pair.second.chunk_id << "," << row_pair.second.chunk_offset << ">" << std::endl;
-    //   }
-    //   ++cunt;
-    // }
-
-    // Prepare resulting PosLists
-    // Sum up lengths per chunk
-    // std::vector<size_t> pos_list_sizes(max_number_of_chunks);
-
-    // for (auto chunk_id = ChunkID{0}; chunk_id < max_number_of_chunks; ++chunk_id) {
-    //   for (auto slot = size_t{0}; slot < merged_pos_lists.size(); ++slot) {
-    //     pos_list_sizes[slot] += merged_pos_lists[slot].size();
-    //   }
-    // }
-
-    std::vector<PosList> left_pos_lists;
-    std::vector<PosList> right_pos_lists;
-    left_pos_lists.resize(partition_count);
-    right_pos_lists.resize(partition_count);
-
-    // std::cout << "sizes are " << std::endl;
-    // for  (auto size : pos_list_sizes) {
-    //   std::cout << size << std::endl;
-    // }
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
-
-    // for (auto chunk_id = ChunkID{0}; chunk_id < max_number_of_chunks; ++chunk_id) {
-    //   for (auto& matched_row_ids : merged_pos_lists[chunk_id]) {
-    //     std::cout << "trying to append " << matched_row_ids.first.chunk_id << ":" << matched_row_ids.first.chunk_offset << " and "  << matched_row_ids.second.chunk_id << ":" << matched_row_ids.second.chunk_offset << std::endl;
-    //     if (!only_output_right_input) {
-    //       left_pos_lists[chunk_id].push_back(matched_row_ids.first);
-    //     }
-    //     right_pos_lists[chunk_id].push_back(matched_row_ids.second);
-    //   }
-    // }
-
-    // We resize before merging as merging might be skipped for radix_bits == 0
-    // for (auto chunk_id = ChunkID{0}; chunk_id < max_number_of_chunks; ++chunk_id) {
-    //   left_pos_lists[chunk_id].reserve(pos_list_sizes[chunk_id]);
-    //   right_pos_lists[chunk_id].reserve(pos_list_sizes[chunk_id]);
-    // }
-
-    for (auto slot = size_t{0}; slot < pos_lists.size(); ++slot) {
-      const auto& merged_pos_list = pos_lists[slot];
-      if (!only_output_right_input) {
-        left_pos_lists[slot].reserve(merged_pos_list.size());
-      }
-      right_pos_lists[slot].reserve(merged_pos_list.size());
-
-      for (auto& matched_row_ids : merged_pos_list) {
-        // std::cout << "trying to append " << matched_row_ids.first.chunk_id << ":" << matched_row_ids.first.chunk_offset << " and "  << matched_row_ids.second.chunk_id << ":" << matched_row_ids.second.chunk_offset << std::endl;
-        if (!only_output_right_input) {
-          left_pos_lists[slot].push_back(matched_row_ids.first);
-        }
-        right_pos_lists[slot].push_back(matched_row_ids.second);
-      }
-    }
-
-    // std::cout << "######################## #lists: " << left_pos_lists.size() << std::endl;
-    // cunt = 0;
-    // for (const auto& blub : left_pos_lists) {
-    //   std::cout << "Result for #" << cunt << std::endl;
-    //   for (auto i = size_t{0}; i < blub.size(); ++i) {
-    //     std::cout << "L: <" << left_pos_lists[cunt][i].chunk_id << "," << left_pos_lists[cunt][i].chunk_offset;
-    //     std::cout << "> - R: <" << right_pos_lists[cunt][i].chunk_id << "," << right_pos_lists[cunt][i].chunk_offset << ">" << std::endl;
-    //   }
-    //   ++cunt;
-    // }
 
     /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
