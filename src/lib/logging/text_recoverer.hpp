@@ -25,7 +25,7 @@ class TextRecoverer : public AbstractRecoverer {
   std::string _extract_token(const std::string& line, size_t& begin, const size_t end);
 
   // returns string value between begin and end.
-  // Updates begin, assuming there is a delimiter inbetween.
+  // Updates begin, assuming there is a delimiter in between.
   std::string _extract_string_value(std::string& line, size_t& begin, const size_t end, std::ifstream& log_file);
 
   // returns substring that has its size stated beforehand. Updates begin.
