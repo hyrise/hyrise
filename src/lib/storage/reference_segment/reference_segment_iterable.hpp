@@ -70,7 +70,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       }
       const auto typed_value = _accessors[chunk_id]->access(chunk_offset);
 
-      if(typed_value) {
+      if (typed_value) {
         return SegmentIteratorValue<T>{std::move(*typed_value), false, chunk_offset_into_ref_segment};
       } else {
         return SegmentIteratorValue<T>{T{}, true, chunk_offset_into_ref_segment};
