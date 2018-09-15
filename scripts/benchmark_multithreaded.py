@@ -68,10 +68,8 @@ def get_core_counts(args):
 
 def get_formatted_queries(args):
     queries = args.queries if args.queries else DEFAULT_TPCH_QUERIES
-    formatted_queries = []
-    for query in queries:
-        formatted_queries += ['-q', str(query)]
-    return formatted_queries
+    query_ids = ','.join([str(query) for query in queries])
+    return ['--queries', query_ids]
 
 def is_square(n):
     return n ** 0.5 == int(n ** 0.5)
