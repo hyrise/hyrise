@@ -90,7 +90,8 @@ int main(int argc, char* argv[]) {
     auto query_ids_str = std::vector<std::string>();
     boost::trim_if(comma_separated_queries, boost::is_any_of(","));
     boost::split(query_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
-    std::transform(query_ids_str.begin(), query_ids_str.end(), std::back_inserter(query_ids), boost::lexical_cast<opossum::QueryID, std::string>);
+    std::transform(query_ids_str.begin(), query_ids_str.end(), std::back_inserter(query_ids),
+                   boost::lexical_cast<opossum::QueryID, std::string>);
   }
 
   config->out << "- Benchmarking Queries: [ ";
