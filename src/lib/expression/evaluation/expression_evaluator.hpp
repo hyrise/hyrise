@@ -7,13 +7,14 @@
 
 #include "all_type_variant.hpp"
 #include "expression/logical_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
 #include "expression_result.hpp"
 #include "null_value.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class AbstractExpression;
+class AbstractOperator;
 class AbstractPredicateExpression;
 class ArithmeticExpression;
 class BaseSegment;
@@ -28,7 +29,6 @@ class UnaryMinusExpression;
 class InExpression;
 class IsNullExpression;
 class PQPColumnExpression;
-class PQPSelectExpression;
 
 /**
  * Computes a result (i.e., a Column or an ExpressionResult<Result>) from an Expression.
@@ -43,16 +43,29 @@ class ExpressionEvaluator final {
   using Bool = int32_t;
   static constexpr auto DataTypeBool = DataType::Int;
 
-  // For Expressions that do not reference any segments (e.g. in the LIMIT clause)
+  // Performance Hack:
+  //   For PQPSelectExpressions that are not correlated (i.e., that have no parameters), we pass previously
+  //   calculated results into the per-chunk evaluator so that they are only evaluated once, not per-chunk.
+  using UncorrelatedSelectResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
+
+  // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 
-  // For Expressions that reference segments from a single table
-  explicit ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id);
+  /*
+   * For Expressions that reference segments from a single table
+   * @param uncorrelated_select_results  Results from pre-computed uncorrelated selects, so they do not need to be
+   *                                     evaluated for every chunk. Solely for performance.
+   */
+  ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+                      const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
 
   std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
+
+  // Utility to populate a cache of UncorrelatedSelectResults
+  std::shared_ptr<const Table> evaluate_uncorrelated_select_expression(const PQPSelectExpression& expression);
 
  private:
   template <typename Result>
@@ -170,8 +183,10 @@ class ExpressionEvaluator final {
   std::shared_ptr<const Chunk> _chunk;
   size_t _output_row_count{1};
 
-  // One entry for each segment in the _chunk, may be nullptr if the segment hasn't (yet) been materialized
+  // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized
   std::vector<std::shared_ptr<BaseExpressionResult>> _segment_materializations;
+
+  const std::shared_ptr<const UncorrelatedSelectResults> _uncorrelated_select_results;
 };
 
 }  // namespace opossum

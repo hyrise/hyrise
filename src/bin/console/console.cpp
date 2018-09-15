@@ -358,11 +358,16 @@ int Console::_help(const std::string&) {
       "TABLENAME\n");
   out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
   out("  print TABLENAME                  - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] (noexec) SQL - Visualize a SQL query\n");
-  out("                      <if set>        - does not execute the query (only supported with single statements)\n");
-  out("             lqp                      - print the raw logical query plans\n");
-  out("             lqpopt                   - print the optimized logical query plans\n");
-  out("            <not set>                 - print the physical query plan\n");
+  out("  visualize [options] [SQL]        - Visualize a SQL query\n");
+  out("                                       Options\n");
+  out("                                         - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                          Default: noexec\n");
+  out("                                         - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives "
+      "the\n");
+  out("                                                                unoptimized lqp. Default: pqp\n");
+  out("                                       SQL\n");
+  out("                                         - Optional, a query to visualize. If not specified, the last\n");
+  out("                                           previously executed query is visualized.\n");
   out("  begin                            - Manually create a new transaction (Auto-commit is active unless begin is "
       "called)\n");
   out("  rollback                         - Roll back a manually created transaction\n");
@@ -483,39 +488,42 @@ int Console::_print_table(const std::string& args) {
 int Console::_visualize(const std::string& input) {
   /**
    * "visualize" supports three dimensions of options:
-   *    - "noexec"; or implicit, the execution of the specified query
-   *    - "lqp", "lqpopt"; or implicit "pqp"
+   *    - "noexec"; or implicit "exec", the execution of the specified query
+   *    - "lqp", "unoptlqp"; or implicit "pqp"
    *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
    */
 
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
+  const std::string EXEC = "exec";
   const std::string NOEXEC = "noexec";
+  const std::string PQP = "pqp";
   const std::string LQP = "lqp";
-  const std::string LQPOPT = "lqpopt";
-
-  const auto first_word = input_words.size() > 0 ? input_words[0] : std::string{};
-  const auto second_word = input_words.size() > 1 ? input_words[1] : std::string{};
+  const std::string UNOPTLQP = "unoptlqp";
 
   // Determine whether the specified query is to be executed before visualization
-  const bool no_execute = (first_word == NOEXEC || second_word == NOEXEC);
+  auto no_execute = false;  // Default
+  if (input_words.front() == NOEXEC || input_words.front() == EXEC) {
+    no_execute = input_words.front() == NOEXEC;
+    input_words.erase(input_words.begin());
+  }
 
   // Determine the plan type to visualize
-  enum class PlanType { LQP, LQPOpt, PQP };
+  enum class PlanType { LQP, UnoptLQP, PQP };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
-  if (first_word == LQP || second_word == LQP) {
-    plan_type = PlanType::LQP;
-    plan_type_str = "lqp";
-  } else if (first_word == LQPOPT || second_word == LQPOPT) {
-    plan_type = PlanType::LQPOpt;
-    plan_type_str = "lqpopt";
+  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP) {
+    if (input_words.front() == LQP)
+      plan_type = PlanType::LQP;
+    else if (input_words.front() == UNOPTLQP)
+      plan_type = PlanType::UnoptLQP;
+
+    plan_type_str = input_words.front();
+    input_words.erase(input_words.begin());
   }
 
   // Removes plan type and noexec (+ leading whitespace) so that only the sql string is left.
-  if (no_execute) input_words.erase(input_words.begin());
-  if (plan_type == PlanType::LQP || plan_type == PlanType::LQPOpt) input_words.erase(input_words.begin());
   const auto sql = boost::algorithm::join(input_words, " ");
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
@@ -539,7 +547,7 @@ int Console::_visualize(const std::string& input) {
   const auto img_filename = plan_type_str + ".png";
 
   // Visualize the Logical Query Plan
-  if (plan_type == PlanType::LQP || plan_type == PlanType::LQPOpt) {
+  if (plan_type == PlanType::LQP || plan_type == PlanType::UnoptLQP) {
     std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
     try {
@@ -548,8 +556,8 @@ int Console::_visualize(const std::string& input) {
         _sql_pipeline->get_result_table();
       }
 
-      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_unoptimized_logical_plans()
-                                                      : _sql_pipeline->get_optimized_logical_plans();
+      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                      : _sql_pipeline->get_unoptimized_logical_plans();
       for (const auto& lqp : lqps) {
         lqp_roots.push_back(lqp);
       }

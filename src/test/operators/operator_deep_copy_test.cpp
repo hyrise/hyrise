@@ -153,8 +153,8 @@ TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
   // build and execute table scan
-  auto scan =
-      std::make_shared<TableScan>(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan = std::make_shared<TableScan>(
+      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 
@@ -169,9 +169,12 @@ TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
 }
 
 TEST_F(OperatorDeepCopyTest, DiamondShape) {
-  auto scan_a = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-  auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
-  auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto scan_a = std::make_shared<TableScan>(
+      _table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
+  auto scan_b =
+      std::make_shared<TableScan>(scan_a, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 1000});
+  auto scan_c =
+      std::make_shared<TableScan>(scan_a, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThan, 2000});
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
   auto copied_pqp = union_positions->deep_copy();

@@ -26,6 +26,9 @@ class PQPSelectExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
+  // Returns whether this query is correlated, i.e., uses external parameters
+  bool is_correlated() const;
+
   const std::shared_ptr<AbstractOperator> pqp;
   const Parameters parameters;
 

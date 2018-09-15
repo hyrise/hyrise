@@ -193,7 +193,8 @@ TEST_F(SchedulerTest, MultipleOperators) {
   StorageManager::get().add_table("table", std::move(test_table));
 
   auto gt = std::make_shared<GetTable>("table");
-  auto ts = std::make_shared<TableScan>(gt, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto ts =
+      std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
 
   auto gt_task = std::make_shared<OperatorTask>(gt, CleanupTemporaries::Yes);
   auto ts_task = std::make_shared<OperatorTask>(ts, CleanupTemporaries::Yes);
