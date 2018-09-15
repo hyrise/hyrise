@@ -23,7 +23,7 @@ from datetime import datetime
 # python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v
 #
 # Example usage 2:
-# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1 3 6 12
+# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1 3 6 12 --clients 20
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
@@ -36,6 +36,7 @@ def get_parser():
     parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the result folder will be stored (default: \'results/\')')
     parser.add_argument('--result-name', action='store', type=str, metavar='NAME', help='Directory where the actual results will be stored (default: current datetime)')
     parser.add_argument('executable', action='store', type=str, metavar='EXECUTABLE', help='hyriseBenchmarkTPCH executable')
+    parser.add_argument('--clients', action='store', type=int, metavar='C', default=10, help='The number of clients that schedule queries in parallel')
 
     core_group = parser.add_mutually_exclusive_group()
     core_group.add_argument('-c', '--cores', action='store', type=int, metavar='C', nargs='+', help='List of cores to be used for the benchmarks')
@@ -100,6 +101,7 @@ def run_benchmarks(args, hyrise_args, core_counts, result_dir):
             '--runs', str(number_of_runs),
             '--scheduler', use_scheduler,
             '--cores', str(core_count),
+            '--clients', str(args.clients),
         ]
         if args.verbose:
             execution_command.append('--verbose')
