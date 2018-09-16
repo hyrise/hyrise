@@ -350,7 +350,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           }
 
         } else {
-          // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of failing, because that's
+          // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of Fail()ing, because that's
           // what we do for `5 IN ('Hello', 'World')
           result_values.resize(1, 0);
         }
@@ -830,14 +830,14 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
             using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
 
             resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
-              using Evaluator = typename decltype(functor)::type;
+              using ExpressionEvaluator = typename decltype(functor)::type;
 
-              if constexpr (Evaluator::template supports<Bool, LeftDataType, RightDataType>::value) {
+              if constexpr (ExpressionEvaluator::template supports<Bool, LeftDataType, RightDataType>::value) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
                   auto value = Bool{0};
-                  Evaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));
+                  ExpressionEvaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));
                   if (value != 0) {
                     result_pos_list.emplace_back(_chunk_id, chunk_offset);
                   }
@@ -861,14 +861,32 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           const auto gte_lte_expression = and_(gte_expression, lte_expression);
 
           return evaluate_expression_to_pos_list(*gte_lte_expression);
+        }
+
+        case PredicateCondition::In: {
+          const auto& in_expression = static_cast<const InExpression&>(expression)
         } break;
 
-        case PredicateCondition::In:
         case PredicateCondition::Like:
         case PredicateCondition::NotLike:
-        case PredicateCondition::IsNull:
-        case PredicateCondition::IsNotNull:
           Fail("Not implemented");
+
+        case PredicateCondition::IsNull:
+        case PredicateCondition::IsNotNull: {
+          const auto& is_null_expression = static_cast<const IsNullExpression&>(expression);
+
+          _resolve_to_expression_result_view(expression, [&](const auto& result) {
+            if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
+                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            } else {  // PredicateCondition::IsNotNull
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
+                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            }
+          });
+        }
       }
     } break;
 
@@ -889,6 +907,19 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       }
 
       return result_pos_list;
+    }
+
+    case ExpressionType::Exists: {
+      const auto& exists_expression = static_cast<const ExistsExpression&>(expression);
+      const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
+      Assert(select_expression, "Expected PQPSelectExpression");
+
+      const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+
+      std::vector<ExpressionEvaluator::Bool> result_values(select_result_tables.size());
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+        if (select_result_tables[chunk_offset]->row_count() > 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+      }
     }
 
     default:
