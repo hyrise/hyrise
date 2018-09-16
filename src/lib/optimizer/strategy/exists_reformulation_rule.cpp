@@ -19,9 +19,9 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ExistsToSemijoinRule::name() const { return "Exists to Semijoin Rule"; }
+std::string ExistsReformulationRule::name() const { return "Exists to Semijoin Rule"; }
 
-bool ExistsToSemijoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Find a predicate
   if (node->type != LQPNodeType::Predicate) {
     return _apply_to_inputs(node);

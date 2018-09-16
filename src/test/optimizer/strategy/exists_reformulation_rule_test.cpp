@@ -42,10 +42,10 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
     node_table_b_col_a = node_table_b->get_column("a");
     node_table_b_col_b = node_table_b->get_column("b");
 
-    _rule = std::make_shared<ExistsToSemijoinRule>();
+    _rule = std::make_shared<ExistsReformulationRule>();
   }
 
-  std::shared_ptr<ExistsToSemijoinRule> _rule;
+  std::shared_ptr<ExistsReformulationRule> _rule;
 
   std::shared_ptr<StoredTableNode> node_table_a, node_table_b;
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b;

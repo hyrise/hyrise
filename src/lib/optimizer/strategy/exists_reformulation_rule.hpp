@@ -17,7 +17,7 @@ class AbstractLQPNode;
 //                    (because that makes things more complicated; it is sometimes possible though)
 //                - other complex subselects (because we have not thought about all eventualities yet)
 
-class ExistsToSemijoinRule : public AbstractRule {
+class ExistsReformulationRule : public AbstractRule {
  public:
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
