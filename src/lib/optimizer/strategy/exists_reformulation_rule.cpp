@@ -1,4 +1,4 @@
-#include "exists_to_semijoin_rule.hpp"
+#include "exists_reformulation_rule.hpp"
 
 #include <unordered_map>
 
@@ -47,7 +47,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   const auto subselect = std::static_pointer_cast<LQPSelectExpression>(exists_expression->select());
 
   // We don't care about uncorrelated subselects
-  // TODO: Replace with "is_correlated" once that is in (#1095)
+  // TODO(anybody): Replace with "is_correlated" once that is in (#1095)
   if (subselect->parameter_count() == 0) {
     return _apply_to_inputs(node);
   }

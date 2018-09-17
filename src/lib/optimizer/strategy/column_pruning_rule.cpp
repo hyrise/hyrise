@@ -73,8 +73,8 @@ bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
                                                    const ExpressionUnorderedSet& referenced_columns) {
   auto lqp_changed = false;
 
-  // Collect all parents of leaves and on which input side their leave is (if a node has two leaves as inputs, it will be
-  // collected twice)
+  // Collect all parents of leaves and on which input side their leave is
+  // (if a node has two leaves as inputs, it will be collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
   visit_lqp(lqp, [&](auto& node) {
     for (const auto input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
