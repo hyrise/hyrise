@@ -21,8 +21,8 @@ class MinMaxFilterTest : public ::testing::Test {
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
     _in_between = static_cast<T>(_min_value + 0.5 * (_max_value - _min_value));  // value in between the min and max
-    _before_range = _min_value - 1;  // value smaller than the minimum
-    _after_range = _max_value + 1;  // value larger than the maximum
+    _before_range = _min_value - 1;                                              // value smaller than the minimum
+    _after_range = _max_value + 1;                                               // value larger than the maximum
   }
 
   pmr_vector<T> _values;
@@ -37,7 +37,7 @@ class MinMaxFilterTest<std::string> : public ::testing::Test {
     _values = pmr_vector<std::string>{"aa", "bb", "b", "bbbbba", "bbbbbb", "bbbbbc", "c"};
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
-    _in_between = "ba";  // value in between the min and max
+    _in_between = "ba";   // value in between the min and max
     _before_range = "a";  // value smaller/before than the minimum
     _after_range = "cc";  // value larger/beyond than the maximum
   }

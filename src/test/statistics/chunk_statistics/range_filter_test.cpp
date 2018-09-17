@@ -26,7 +26,7 @@ class RangeFilterTest : public ::testing::Test {
     _in_between = static_cast<T>(_min_value + 0.5 * (_max_value - _min_value));
 
     _before_range = _min_value - 1;  // value smaller than the minimum
-    _after_range = _max_value + 1;  // value larger than the maximum
+    _after_range = _max_value + 1;   // value larger than the maximum
   }
 
   void test_varying_range_filter_size(int gap_count) {
