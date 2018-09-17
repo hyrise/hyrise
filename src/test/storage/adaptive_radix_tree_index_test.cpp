@@ -152,40 +152,42 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
   EXPECT_FALSE(std::find(leaf02->begin(), leaf02->end(), static_cast<uint8_t>(0x00000006u)) == leaf02->end());
 }
 
-// TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
-//   size_t test_size = 10'001;
-//   std::vector<int> ints(test_size);
-//   for (auto i = 0u; i < test_size; ++i) {
-//     ints[i] = i * 2;
-//   }
+TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
+  size_t test_size = 10'001;
+  std::vector<int> ints(test_size);
+  for (auto i = 0u; i < test_size; ++i) {
+    ints[i] = i * 2;
+  }
 
-//   std::shuffle(ints.begin(), ints.end(), _rng);
+  std::shuffle(ints.begin(), ints.end(), _rng);
 
-//   auto segment = create_dict_segment_by_type<int>(DataType::Int, ints);
-//   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+  auto segment = create_dict_segment_by_type<int>(DataType::Int, ints);
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
-// for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
-//     EXPECT_EQ((*segment)[*index->lower_bound({i})], AllTypeVariant{i});
-//     EXPECT_EQ((*segment)[*index->lower_bound({i + 1})], AllTypeVariant{i + 2});
-//     EXPECT_EQ((*segment)[*index->upper_bound({i})], AllTypeVariant{i + 2});
-//     EXPECT_EQ((*segment)[*index->upper_bound({i + 1})], AllTypeVariant{i + 2});
+  for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
+    EXPECT_EQ((*segment)[*index->lower_bound({i})], AllTypeVariant{i});
+    EXPECT_EQ((*segment)[*index->lower_bound({i + 1})], AllTypeVariant{i + 2});
+    EXPECT_EQ((*segment)[*index->upper_bound({i})], AllTypeVariant{i + 2});
+    EXPECT_EQ((*segment)[*index->upper_bound({i + 1})], AllTypeVariant{i + 2});
 
-//     auto expected_lower = i;
-//     for (auto it = index->lower_bound({i}); it < index->lower_bound({i + 20}); ++it) {
-//       EXPECT_EQ((*segment)[*it], AllTypeVariant{expected_lower});
-//       expected_lower += 2;
-//     }
-//   }
+    auto expected_lower = i;
+    for (auto it = index->lower_bound({i}); it < index->lower_bound({i + 20}); ++it) {
+      EXPECT_EQ((*segment)[*it], AllTypeVariant{expected_lower});
+      expected_lower += 2;
+    }
+  }
 
-//   for (int search_item = 0; search_item < static_cast<int>(3 * test_size); search_item++) {
-//     if (search_item % 2 == 0) continue;
+  for (int search_item = 0; search_item < static_cast<int>(3 * test_size); ++search_item) {
+    if (search_item % 2 == 0 && search_item < static_cast<int>(2 * test_size)) {
+      // all multiples of two within range of $ints should exist
+      EXPECT_NE(index->lower_bound({search_item}), index->cend());
+      continue;
+    }
 
-//     // search for elements not existing
-//     EXPECT_EQ(*index->lower_bound({search_item}), *index->upper_bound({search_item}));
-//   }
-
-//   EXPECT_EQ(index->upper_bound({99999}), index->cend());
-// }
+    // search for elements not existing
+    EXPECT_EQ(index->lower_bound({search_item}), index->upper_bound({search_item}));
+  }
+}
 
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
   std::vector<int> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int>::max()};
