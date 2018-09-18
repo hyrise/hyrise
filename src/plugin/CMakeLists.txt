@@ -1,25 +1,31 @@
-# Configure TestPlugin
-add_library(TestPlugin SHARED
-    test_plugin.cpp
-    test_plugin.hpp
-)
-# Prevent the linker under macOS from complaining about undefined methods
-if (APPLE)
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        target_link_libraries(TestPlugin PRIVATE "-undefined dynamic_lookup")
-    endif()
-endif()
+function(add_plugin)
+    cmake_parse_arguments(
+        PARSED_ARGS
+        ""
+        "NAME"
+        "SRCS;DEPS"
+        ${ARGN}
+    )
+    if(NOT PARSED_ARGS_NAME)
+        message(FATAL_ERROR "You must provide a name for the plugin")
+    endif(NOT PARSED_ARGS_NAME)
 
-# Configure NonInstantiablePlugin
-add_library(NonInstantiablePlugin SHARED
-    non_instantiable_plugin.cpp
-)
-# Prevent the linker under macOS from complaining about undefined methods
-if (APPLE)
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        target_link_libraries(NonInstantiablePlugin PRIVATE "-undefined dynamic_lookup")
+    add_library(${PARSED_ARGS_NAME} SHARED)
+    foreach(src ${PARSED_ARGS_SRCS})
+        target_sources(${PARSED_ARGS_NAME} PRIVATE ${src})
+    endforeach(src)
+
+    # Prevent the linker under macOS from complaining about undefined methods
+    if (APPLE)
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            target_link_libraries(${PARSED_ARGS_NAME} PRIVATE "-undefined dynamic_lookup")
+        endif()
     endif()
-endif()
+endfunction(add_plugin)
+
+add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
+add_plugin(NAME NonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
+
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
