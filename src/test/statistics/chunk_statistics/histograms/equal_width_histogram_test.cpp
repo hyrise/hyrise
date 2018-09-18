@@ -18,6 +18,7 @@ class EqualWidthHistogramTest : public BaseTest {
     _int_int4 = load_table("src/test/tables/int_int4.tbl");
     _string3 = load_table("src/test/tables/string3.tbl");
     _string_with_prefix = load_table("src/test/tables/string_with_prefix.tbl");
+    _string_like_pruning = load_table("src/test/tables/string_like_pruning.tbl");
   }
 
  protected:
@@ -26,6 +27,7 @@ class EqualWidthHistogramTest : public BaseTest {
   std::shared_ptr<Table> _int_int4;
   std::shared_ptr<Table> _string3;
   std::shared_ptr<Table> _string_with_prefix;
+  std::shared_ptr<Table> _string_like_pruning;
 };
 
 TEST_F(EqualWidthHistogramTest, Basic) {
@@ -852,6 +854,114 @@ TEST_F(EqualWidthHistogramTest, StringCommonPrefix) {
                    19.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 19.f * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    19.f * ipow(26, 0) + 1 - hist_min) /
                       hist_width * bin_count);
+}
+
+TEST_F(EqualWidthHistogramTest, StringLikePruning) {
+  /**
+   * This test makes sure that LIKE pruning works if the bin count of all covering bins is 0.
+   * We construct a histogram with more bins than supported characters,
+   * which means that for a character that no value in the column starts with, e.g., 'd', the histogram might be able
+   * to prune the value "g%".
+   * This is not guaranteed, because not all bins exclusively cover only values with one starting character, obviously.
+   * As an example, we are not able to prune "c%" because the bin [booo, ccc] is part of "c%"
+   * and also contains the value "bums".
+   *
+   * For more details see AbstractHistogram::can_prune.
+   *
+   * For reference, these are the bins:
+   * [aa, annm],
+   * [annn, bbaz],
+   * [bbb, boon],
+   * [booo, ccc],
+   * [ccca, cppo],
+   * [cppp, ddda],
+   * [dddb, dqqp],
+   * [dqqq, eeeb],
+   * [eeec, errq],
+   * [errr, fffc],
+   * [fffd, fssr],
+   * [fsss, gggd],
+   * [ggge, gtts],
+   * [gttt, hhhe],
+   * [hhhf, huut],
+   * [huuu, iiif],
+   * [iiig, ivvu],
+   * [ivvv, jjjg],
+   * [jjjh, jwwv],
+   * [jwww, kkkh],
+   * [kkki, kxxw],
+   * [kxxx, llli],
+   * [lllj, lyyx],
+   * [lyyy, mmmj],
+   * [mmmk, mzzy],
+   * [mzzz, nnnk],
+   * [nnnl, obax],
+   * [obay, oook],
+   * [oool, pcbw],
+   * [pcbx, pppj],
+   * [pppk, qdcv],
+   * [qdcw, qqqi],
+   * [qqqj, redu],
+   * [redv, rrrh],
+   * [rrri, sfet],
+   * [sfeu, sssg],
+   * [sssh, tgfs],
+   * [tgft, tttf],
+   * [tttg, uhgr],
+   * [uhgs, uuue],
+   * [uuuf, vihq],
+   * [vihr, vvvd],
+   * [vvve, wjip],
+   * [wjiq, wwwc],
+   * [wwwd, xkjo],
+   * [xkjp, xxxb],
+   * [xxxc, ylkn],
+   * [ylko, yyya],
+   * [yyyb, zmlm],
+   * [zmln, zzz]
+   */
+  auto hist = EqualWidthHistogram<std::string>::from_segment(
+      _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 50u, "abcdefghijklmnopqrstuvwxyz", 4u);
+
+  // Not prunable, because values start with the character.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "a%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "b%"));
+
+  // Theoretically prunable, but not with these bin edges.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "c%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "d%"));
+
+  // Not prunable, because values start with the character.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "e%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "f%"));
+
+  // Prunable, because all bins covering the value are 0.
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "g%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "h%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "i%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "j%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "k%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "l%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "m%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "n%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "o%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "p%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "q%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "r%"));
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "s%"));
+
+  // Not prunable, because values start with the character.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "t%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "u%"));
+
+  // Theoretically prunable, but not with these bin edges.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "v%"));
+
+  // Not prunable, because values start with the character.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "w%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "x%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "y%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "z%"));
 }
 
 }  // namespace opossum

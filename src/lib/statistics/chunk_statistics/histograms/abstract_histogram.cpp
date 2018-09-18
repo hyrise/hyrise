@@ -289,11 +289,64 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
       const auto match_all_index = value.find('%');
       if (match_all_index != std::string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
-        const auto upper_bound = next_value(search_prefix, _supported_characters, search_prefix.length());
-        return can_prune(PredicateCondition::GreaterThanEquals, search_prefix) ||
-               can_prune(PredicateCondition::LessThan, upper_bound) ||
-               (_bin_for_value(search_prefix) == INVALID_BIN_ID && _bin_for_value(upper_bound) == INVALID_BIN_ID &&
-                _upper_bound_for_value(search_prefix) == _upper_bound_for_value(upper_bound));
+        if (can_prune(PredicateCondition::GreaterThanEquals, search_prefix)) {
+          return true;
+        }
+
+        const auto search_prefix_next_value = next_value(search_prefix, _supported_characters, search_prefix.length());
+
+        // If the next value is the same as the prefix, it means that there is no larger value in the domain
+        // of substrings. In that case we cannot prune, because otherwise we previous check would already return true.
+        if (search_prefix == search_prefix_next_value) {
+          return false;
+        }
+
+        if (can_prune(PredicateCondition::LessThan, search_prefix_next_value)) {
+          return true;
+        }
+
+        const auto search_prefix_bin = _bin_for_value(search_prefix);
+        const auto search_prefix_next_value_bin = _bin_for_value(search_prefix_next_value);
+
+        if (search_prefix_bin == INVALID_BIN_ID) {
+          const auto search_prefix_upper_bound_bin = _upper_bound_for_value(search_prefix);
+
+          // In an EqualNumElementsHistogram, if both values fall into the same gap, we can prune the predicate.
+          // We need to have at least two bins to rule out pruning if search_prefix < min
+          // and search_prefix_next_value > max.
+          if (search_prefix_next_value_bin == INVALID_BIN_ID && num_bins() > 1ul &&
+              search_prefix_upper_bound_bin == _upper_bound_for_value(search_prefix_next_value)) {
+            return true;
+          }
+
+          // In an EqualNumElementsHistogram, if the search_prefix_next_value is exactly the lower bin edge of
+          // the upper bound of search_prefix, we can also prune.
+          // That's because search_prefix_next_value does not belong to the range covered by the pattern,
+          // but is the next value after it.
+          if (search_prefix_next_value_bin != INVALID_BIN_ID &&
+              search_prefix_upper_bound_bin == search_prefix_next_value_bin &&
+              _bin_min(search_prefix_next_value_bin) == search_prefix_next_value) {
+            return true;
+          }
+        }
+
+        // In an EqualWidthHistogram, if both values fall into a bin that has no elements,
+        // and there are either no bins in between or none of them have any elements, we can also prune the predicate.
+        // If the count of search_prefix_next_value_bin is not 0 but search_prefix_next_value is the lower bin edge,
+        // we can still prune, because search_prefix_next_value is not part of the range (same as above).
+        if (search_prefix_bin != INVALID_BIN_ID && search_prefix_next_value_bin != INVALID_BIN_ID &&
+            _bin_count(search_prefix_bin) == 0u &&
+            (_bin_count(search_prefix_next_value_bin) == 0u ||
+             _bin_min(search_prefix_next_value_bin) == search_prefix_next_value)) {
+          for (auto current_bin = search_prefix_bin + 1; current_bin < search_prefix_next_value_bin; current_bin++) {
+            if (_bin_count(current_bin) > 0u) {
+              return false;
+            }
+          }
+          return true;
+        }
+
+        return false;
       }
 
       return false;
@@ -516,9 +569,16 @@ float AbstractHistogram<std::string>::estimate_cardinality(const PredicateCondit
           additional_characters = static_cast<uint64_t>(maximum_exponent);
         }
 
-        return (estimate_cardinality(PredicateCondition::LessThan,
-                                     next_value(search_prefix, _supported_characters, search_prefix.length())) -
-                estimate_cardinality(PredicateCondition::LessThan, search_prefix)) /
+        const auto search_prefix_next_value = next_value(search_prefix, _supported_characters, search_prefix.length());
+
+        // If the next value is the same as the prefix, it means that there is no larger value in the domain
+        // of substrings. In that case all values (total_count()) are smaller than search_prefix_next_value.
+        const auto count_smaller_next_value =
+            search_prefix == search_prefix_next_value
+                ? total_count()
+                : estimate_cardinality(PredicateCondition::LessThan, search_prefix_next_value);
+
+        return (count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix)) /
                ipow(_supported_characters.length(), additional_characters);
       }
 

@@ -18,6 +18,7 @@ class EqualNumElementsHistogramTest : public BaseTest {
     _string2 = load_table("src/test/tables/string2.tbl");
     _string3 = load_table("src/test/tables/string3.tbl");
     _string_with_prefix = load_table("src/test/tables/string_with_prefix.tbl");
+    _string_like_pruning = load_table("src/test/tables/string_like_pruning.tbl");
   }
 
  protected:
@@ -26,6 +27,7 @@ class EqualNumElementsHistogramTest : public BaseTest {
   std::shared_ptr<Table> _string2;
   std::shared_ptr<Table> _string3;
   std::shared_ptr<Table> _string_with_prefix;
+  std::shared_ptr<Table> _string_like_pruning;
 };
 
 TEST_F(EqualNumElementsHistogramTest, Basic) {
@@ -705,6 +707,59 @@ TEST_F(EqualNumElementsHistogramTest, StringCommonPrefix) {
                            1) *
                           3.f +
                       4.f + 4.f);
+}
+
+TEST_F(EqualNumElementsHistogramTest, StringLikeEdgePruning) {
+  /**
+   * This test makes sure that pruning works even if the next value after the search prefix is part of a bin.
+   * In this case, we check "d%", which is handled as the range [d, e).
+   * "e" is the lower edge of the bin that appears after the gap in which "d" falls.
+   * A similar situation arises for "v%", but "w" should also be in a gap,
+   * because the last bin starts with the next value after "w", i.e., "wa".
+   * bins: [aa, bums], [e, uuu], [wa, zzz]
+   * For more details see AbstractHistogram::can_prune.
+   * We test all the other one-letter prefixes as well, because, why not.
+   */
+  auto hist = EqualNumElementsHistogram<std::string>::from_segment(
+      _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
+
+  // Not prunable, because values start with the character.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "a%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "b%"));
+
+  // Prunable, because in a gap.
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "c%"));
+
+  // This is the interesting part.
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "d%"));
+
+  // Not prunable, because bin range is [e, uuu].
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "e%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "f%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "g%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "h%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "i%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "j%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "k%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "l%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "m%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "n%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "o%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "p%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "q%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "r%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "s%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "t%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "u%"));
+
+  // The second more interesting test.
+  EXPECT_TRUE(hist->can_prune(PredicateCondition::Like, "v%"));
+
+  // Not prunable, because bin range is [wa, zzz].
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "w%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "x%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "y%"));
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Like, "z%"));
 }
 
 }  // namespace opossum
