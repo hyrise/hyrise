@@ -163,10 +163,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_ta
     const std::shared_ptr<AbstractOperator>& input_operator) const {
   Assert(operator_scan_predicate.predicate_condition != PredicateCondition::In, "TableScan doesn't support IN yet");
 
-  const auto column_id = operator_scan_predicate.column_id;
-  const auto predicate_condition = operator_scan_predicate.predicate_condition;
-
-  return std::make_shared<TableScan>(input_operator, column_id, predicate_condition, operator_scan_predicate.value);
+  return std::make_shared<TableScan>(input_operator, operator_scan_predicate);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
@@ -181,7 +178,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto value2_variant = std::optional<AllTypeVariant>{};
 
   // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
-  // Our IndexScan implementation does not work on reference columns yet.
+  // Our IndexScan implementation does not work on reference segments yet.
   Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
 
   const auto predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(node->predicate);
@@ -214,28 +211,29 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
+    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
       indexed_chunks.emplace_back(chunk_id);
     }
   }
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids,
+  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
   // See explanation for BETWEEN handling in _translate_predicate_node above.
   std::shared_ptr<TableScan> table_scan;
   if (predicate->predicate_condition == PredicateCondition::Between) {
     Assert(value2_variant, "Need value2 for Between");
-    auto table_scan_gt =
-        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value_variant);
+    auto table_scan_gt = std::make_shared<TableScan>(
+        input_operator, OperatorScanPredicate{column_id, PredicateCondition::GreaterThanEquals, value_variant});
     table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
 
-    table_scan =
-        std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals, *value2_variant);
+    table_scan = std::make_shared<TableScan>(
+        table_scan_gt, OperatorScanPredicate{column_id, PredicateCondition::LessThanEquals, *value2_variant});
   } else {
-    table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate->predicate_condition, value_variant);
+    table_scan = std::make_shared<TableScan>(
+        input_operator, OperatorScanPredicate{column_id, predicate->predicate_condition, value_variant});
   }
 
   index_scan->set_included_chunk_ids(indexed_chunks);
@@ -476,6 +474,16 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
      */
 
     visit_expression(pqp_expression, [&](auto& expression) {
+      // Try to resolve the Expression to a column from the input node
+      const auto column_id = node->find_column_id(*expression);
+      if (column_id) {
+        const auto referenced_expression = node->column_expressions()[*column_id];
+        expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
+                                                           referenced_expression->is_nullable(),
+                                                           referenced_expression->as_column_name());
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
       // Resolve SubSelectExpression
       if (expression->type == ExpressionType::LQPSelect) {
         const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
@@ -504,16 +512,6 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         } else {
           expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_parameters);
         }
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      // Try to resolve the Expression to a column from the input node
-      const auto column_id = node->find_column_id(*expression);
-      if (column_id) {
-        const auto referenced_expression = node->column_expressions()[*column_id];
-        expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                           referenced_expression->is_nullable(),
-                                                           referenced_expression->as_column_name());
         return ExpressionVisitation::DoNotVisitArguments;
       }
 

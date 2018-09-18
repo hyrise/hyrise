@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/maintenance/show_tables.hpp"
@@ -40,10 +40,10 @@ TEST_F(ShowTablesTest, CanShowTables) {
   EXPECT_EQ(out->row_count(), 2u) << "ShowTables returned wrong number of tables";
   EXPECT_EQ(out->column_count(), 1u) << "ShowTables returned wrong number of columns";
 
-  auto column =
-      std::static_pointer_cast<const ValueColumn<std::string>>(out->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
-  EXPECT_EQ(column->values()[0], "first_table");
-  EXPECT_EQ(column->values()[1], "second_table");
+  auto segment =
+      std::static_pointer_cast<const ValueSegment<std::string>>(out->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+  EXPECT_EQ(segment->values()[0], "first_table");
+  EXPECT_EQ(segment->values()[1], "second_table");
 }
 
 TEST_F(ShowTablesTest, NoTables) {

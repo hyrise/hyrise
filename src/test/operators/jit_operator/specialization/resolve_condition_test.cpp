@@ -1,6 +1,6 @@
 #include <llvm/IR/IRBuilder.h>
 
-#include "../../../base_test.hpp"
+#include "base_test.hpp"
 #include "operators/jit_operator/specialization/jit_repository.hpp"
 #include "operators/jit_operator/specialization/llvm_extensions.hpp"
 

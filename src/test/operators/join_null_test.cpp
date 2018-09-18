@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "join_test.hpp"
 
@@ -37,7 +37,7 @@ class JoinNullTest : public JoinTest {
     _table_wrapper_a_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
     _table_wrapper_a_null->execute();
 
-    // load and create DictionaryColumn tables
+    // load and create DictionarySegment tables
     auto table = load_table("src/test/tables/int_float_with_null.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
 
@@ -77,11 +77,11 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
-  auto scan_a =
-      std::make_shared<TableScan>(this->_table_wrapper_m, ColumnID{1}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_a = std::make_shared<TableScan>(
+      this->_table_wrapper_m, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 0});
   scan_a->execute();
-  auto scan_b =
-      std::make_shared<TableScan>(this->_table_wrapper_n, ColumnID{1}, PredicateCondition::GreaterThanEquals, 0);
+  auto scan_b = std::make_shared<TableScan>(
+      this->_table_wrapper_n, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 0});
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),

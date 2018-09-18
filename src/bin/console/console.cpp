@@ -247,7 +247,10 @@ int Console::_eval_sql(const std::string& sql) {
   if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
   try {
-    _sql_pipeline->get_result_table();
+    _sql_pipeline->get_result_tables();
+    Assert(!_sql_pipeline->failed_pipeline_statement(),
+           "The transaction has failed. This should never happen in the console, where only one statement gets "
+           "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
@@ -350,12 +353,17 @@ int Console::_help(const std::string&) {
   out("  load FILE TABLENAME              - Load table from disc specified by filepath FILE, store it with name "
       "TABLENAME\n");
   out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                  - Fully print the given table (including MVCC columns)\n");
-  out("  visualize [options] (noexec) SQL - Visualize a SQL query\n");
-  out("                      <if set>        - does not execute the query (only supported with single statements)\n");
-  out("             lqp                      - print the raw logical query plans\n");
-  out("             lqpopt                   - print the optimized logical query plans\n");
-  out("            <not set>                 - print the physical query plan\n");
+  out("  print TABLENAME                  - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]        - Visualize a SQL query\n");
+  out("                                       Options\n");
+  out("                                         - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                          Default: noexec\n");
+  out("                                         - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives "
+      "the\n");
+  out("                                                                unoptimized lqp. Default: pqp\n");
+  out("                                       SQL\n");
+  out("                                         - Optional, a query to visualize. If not specified, the last\n");
+  out("                                           previously executed query is visualized.\n");
   out("  begin                            - Manually create a new transaction (Auto-commit is active unless begin is "
       "called)\n");
   out("  rollback                         - Roll back a manually created transaction\n");
@@ -471,42 +479,56 @@ int Console::_print_table(const std::string& args) {
 }
 
 int Console::_visualize(const std::string& input) {
+  /**
+   * "visualize" supports three dimensions of options:
+   *    - "noexec"; or implicit "exec", the execution of the specified query
+   *    - "lqp", "unoptlqp"; or implicit "pqp"
+   *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
+   */
+
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  const std::string noexec_string = "noexec";
-  const std::string lqp_string = "lqp";
-  const std::string lqpopt_string = "lqpopt";
+  const std::string EXEC = "exec";
+  const std::string NOEXEC = "noexec";
+  const std::string PQP = "pqp";
+  const std::string LQP = "lqp";
+  const std::string UNOPTLQP = "unoptlqp";
 
-  std::string first_word, second_word;
-  if (!input_words.empty()) {
-    first_word = input_words[0];
+  // Determine whether the specified query is to be executed before visualization
+  auto no_execute = false;  // Default
+  if (input_words.front() == NOEXEC || input_words.front() == EXEC) {
+    no_execute = input_words.front() == NOEXEC;
+    input_words.erase(input_words.begin());
   }
 
-  if (input_words.size() > 1) {
-    second_word = input_words[1];
+  // Determine the plan type to visualize
+  enum class PlanType { LQP, UnoptLQP, PQP };
+  auto plan_type = PlanType::PQP;
+  auto plan_type_str = std::string{"pqp"};
+  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP) {
+    if (input_words.front() == LQP)
+      plan_type = PlanType::LQP;
+    else if (input_words.front() == UNOPTLQP)
+      plan_type = PlanType::UnoptLQP;
+
+    plan_type_str = input_words.front();
+    input_words.erase(input_words.begin());
   }
 
-  const bool no_execute = (first_word == noexec_string || second_word == noexec_string);
-
-  std::string mode;
-  if (first_word == lqp_string || first_word == lqpopt_string)
-    mode = first_word;
-  else if (second_word == lqp_string || second_word == lqpopt_string)
-    mode = second_word;
-
-  // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
-  const auto noexec_size = no_execute ? noexec_string.length() : 0u;
-  auto sql_begin_pos = mode.size() + noexec_size;
-
-  // If we have both words present, we need to remove additional whitespace
-  if (no_execute && !mode.empty()) sql_begin_pos++;
-
-  const auto sql = input.substr(sql_begin_pos, input.size());
+  // Removes plan type and noexec (+ leading whitespace) so that only the sql string is left.
+  const auto sql = boost::algorithm::join(input_words, " ");
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
   if (!sql.empty()) {
     if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  }
+
+  // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
+  // nor was there a previous execution), return an error
+  if (!_sql_pipeline) {
+    out("Nothing to visualize.\n");
+    return ReturnCode::Error;
   }
 
   if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
@@ -514,10 +536,11 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  std::string graph_filename, img_filename;
+  const auto graph_filename = "." + plan_type_str + ".dot";
+  const auto img_filename = plan_type_str + ".png";
 
   // Visualize the Logical Query Plan
-  if (mode == lqp_string || mode == lqpopt_string) {
+  if (plan_type == PlanType::LQP || plan_type == PlanType::UnoptLQP) {
     std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
     try {
@@ -526,8 +549,8 @@ int Console::_visualize(const std::string& input) {
         _sql_pipeline->get_result_table();
       }
 
-      const auto& lqps = (mode == lqp_string) ? _sql_pipeline->get_unoptimized_logical_plans()
-                                              : _sql_pipeline->get_optimized_logical_plans();
+      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                      : _sql_pipeline->get_unoptimized_logical_plans();
       for (const auto& lqp : lqps) {
         lqp_roots.push_back(lqp);
       }
@@ -537,8 +560,6 @@ int Console::_visualize(const std::string& input) {
       return ReturnCode::Error;
     }
 
-    graph_filename = "." + mode + ".dot";
-    img_filename = mode + ".png";
     LQPVisualizer visualizer;
     visualizer.visualize(lqp_roots, graph_filename, img_filename);
 
@@ -562,8 +583,6 @@ int Console::_visualize(const std::string& input) {
       return ReturnCode::Error;
     }
 
-    graph_filename = ".queryplan.dot";
-    img_filename = "queryplan.png";
     SQLQueryPlanVisualizer visualizer;
     visualizer.visualize(query_plan, graph_filename, img_filename);
   }

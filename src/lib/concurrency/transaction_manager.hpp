@@ -13,7 +13,7 @@
  * A good description of MVCC which we used as basis for our implementation is given here:
  * http://15721.courses.cs.cmu.edu/spring2016/papers/schwalb-imdm2014.pdf
  *
- * Conceptually, the idea is that each row has additional columns which are used to mark rows as locked for a
+ * Conceptually, the idea is that each row has additional "columns" which are used to mark rows as locked for a
  * transaction and to describe when the row was created and deleted to ensure correct visibility. These vectors are
  * written to by AbstractReadWriteOperators, i.e., Insert, Update and Delete.
  *
@@ -26,8 +26,8 @@
  * The TransactionManager is a thread-safe singleton that hands out TransactionContexts with monotonically increasing
  * IDs and ensures all transactions are committed in the correct order. It also holds a global last commit ID, which is
  * the commit ID of the last transaction that has been committed. When a new transaction context is created, it retains
- * a copy of the current last commit ID, stored as snapshot_commit_id, which represents a snapshot of the database. The 
- * snapshot commit ID together with the MVCC columns is used to filter out any changes made after the creation
+ * a copy of the current last commit ID, stored as snapshot_commit_id, which represents a snapshot of the database. The
+ * snapshot commit ID together with the MVCC data is used to filter out any changes made after the creation
  * transaction context.
  *
  * TransactionContext contains data used by a transaction, mainly its ID, the snapshot commit ID explained above, and,
@@ -57,6 +57,12 @@ class TransactionManager : public Singleton<TransactionManager> {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
+  // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
+  // not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
+  // deleted in the same transaction (which has not yet committed)
+  static constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
+  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+
  private:
   TransactionManager();
 
@@ -67,8 +73,6 @@ class TransactionManager : public Singleton<TransactionManager> {
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
 
   std::atomic<TransactionID> _next_transaction_id;
-  // TransactionID = 0 means "not set" in the MVCC columns
-  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
 
   std::atomic<CommitID> _last_commit_id;
   // We use commit_id=0 for rows that were inserted and then rolled back. Also, this can be used for rows that have
