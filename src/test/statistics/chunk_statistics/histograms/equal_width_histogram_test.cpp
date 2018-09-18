@@ -725,6 +725,10 @@ TEST_F(EqualWidthHistogramTest, StringLessThan) {
 
   EXPECT_FALSE(hist->can_prune(PredicateCondition::LessThan, "zzzz"));
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzz"), total_count);
+
+  // Make sure that strings longer than the prefix length do not lead to errors.
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::LessThan, "zzzzzzzz"));
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzzzzzz"), total_count);
 }
 
 TEST_F(EqualWidthHistogramTest, StringLikePrefix) {

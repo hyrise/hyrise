@@ -256,7 +256,14 @@ BinID EqualWidthHistogram<std::string>::_bin_for_value(const std::string value) 
   // We calculate numerical values for strings with substrings, and the bin edge calculation works with that.
   // Therefore, if the search string is longer than the supported prefix length and starts with the upper bin edge,
   // we have to return the next bin.
-  return bin_id + (value.length() > _string_prefix_length && value.find(_bin_max(bin_id)) == 0 ? 1 : 0);
+  // The exception is if this is the last bin, then it is actually part of the last bin,
+  // because that edge is stored separately and therefore not trimmed to the prefix length.
+  // We checked earlier that it is not larger than max().
+  if (value.length() > _string_prefix_length && value.find(_bin_max(bin_id)) == 0 && bin_id < this->num_bins() - 1) {
+    return bin_id + 1;
+  }
+
+  return bin_id;
 }
 
 template <typename T>
