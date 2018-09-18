@@ -752,7 +752,7 @@ int Console::_load_plugin(const std::string& args) {
 
   PluginManager::get().load_plugin(plugin_path);
 
-  std::cout << "Plugin (" << plugin_name << ") successfully loaded." << std::endl;
+  out("Plugin (" + plugin_name + ") successfully loaded.\n");
 
   return ReturnCode::Ok;
 }
@@ -775,7 +775,7 @@ int Console::_unload_plugin(const std::string& input) {
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
   SQLQueryCache<SQLQueryPlan>::get().clear();
 
-  std::cout << "Plugin (" << plugin_name << ") stopped." << std::endl;
+  out("Plugin (" + plugin_name + ") stopped.\n");
 
   return ReturnCode::Ok;
 }
