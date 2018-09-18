@@ -11,9 +11,14 @@ function(add_plugin)
     endif(NOT PARSED_ARGS_NAME)
 
     add_library(${PARSED_ARGS_NAME} SHARED)
+
     foreach(src ${PARSED_ARGS_SRCS})
         target_sources(${PARSED_ARGS_NAME} PRIVATE ${src})
     endforeach(src)
+
+    foreach(dep ${PARSED_ARGS_DEPS})
+        add_dependencies(${PARSED_ARGS_NAME} ${dep})
+    endforeach(dep)
 
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
