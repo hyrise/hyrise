@@ -18,7 +18,6 @@ public:
 
 private:
     void _traverse(const std::shared_ptr<const AbstractOperator> & op);
-    void _extract_features(const std::shared_ptr<const AbstractOperator> &op);
 
     std::map<std::string, nlohmann::json> _operators;
     CalibrationConfiguration _configuration;

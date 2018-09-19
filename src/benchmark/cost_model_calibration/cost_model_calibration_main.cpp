@@ -29,6 +29,6 @@ int main(int argc, char* argv[]) {
   std::ifstream json_file{argv[1]};
   json_file >> json_config;
 
-  const auto calibration_config = opossum::CalibrationConfiguration::parse_json_configuration(json_config);
+  const opossum::CalibrationConfiguration calibration_config = json_config;
   opossum::CostModelCalibration(calibration_config).calibrate();
 }
