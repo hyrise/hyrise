@@ -35,7 +35,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
 
   /**
-   * If the predicate is a not simple `<column> <predicate_condition> <value/column/placeholder>` predicate, 
+   * If the predicate is not a simple `<column> <predicate_condition> <value/column/placeholder>` predicate, 
    * then we have to fall back to a selectivity of 1 atm, because computing statistics for complex predicates is
    * not implemented.
    * E.g. we cannot right now compute statistics for IN or nestings of AND/OR.
