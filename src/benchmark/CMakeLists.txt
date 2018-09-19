@@ -31,11 +31,8 @@ add_executable(
 
     cost_model_calibration/cost_model_calibration_main.cpp
 
-        cost_model_calibration/configuration/calibration_column_specification.cpp
         cost_model_calibration/configuration/calibration_column_specification.hpp
-        cost_model_calibration/configuration/calibration_configuration.cpp
         cost_model_calibration/configuration/calibration_configuration.hpp
-        cost_model_calibration/configuration/calibration_table_specification.cpp
         cost_model_calibration/configuration/calibration_table_specification.hpp
         cost_model_calibration/cost_model_calibration.cpp
         cost_model_calibration/cost_model_calibration.hpp
