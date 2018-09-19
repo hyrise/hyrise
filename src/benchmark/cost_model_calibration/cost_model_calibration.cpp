@@ -9,9 +9,9 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "operators/table_scan.hpp"
-#include "storage/base_encoded_column.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/load_table.hpp"
@@ -100,7 +100,7 @@ void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperato
 
 void CostModelCalibration::_extract_features(const std::shared_ptr<const AbstractOperator> &op) {
   auto description = op->name();
-  auto time = op->base_performance_data().walltime;
+  auto time = op->performance_data().walltime;
   auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
   if (const auto& output = op->get_output()) {
@@ -142,26 +142,26 @@ void CostModelCalibration::_extract_features(const std::shared_ptr<const Abstrac
       auto chunk_count = left_input_table->chunk_count();
 
       if (chunk_count > ChunkID{0}) {
-        auto scan_column = left_input_table->get_chunk(ChunkID{0})->get_column(table_scan_op->left_column_id());
+        auto scan_column = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
 
         auto scan_column_data_type = scan_column->data_type();
         auto scan_column_memory_usage_bytes = scan_column->estimate_memory_usage();
 
-        auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(scan_column);
+        auto reference_column = std::dynamic_pointer_cast<ReferenceSegment>(scan_column);
         // TODO: All TableScans operate on ReferenceColumns, feature might be irrelevant
         operator_result["is_scan_column_reference_column"] = reference_column ? true : false;
 
         // Dereference ReferenceColumn for detailed features
         if (reference_column && reference_column->referenced_table()->chunk_count() > ChunkID{0}) {
-          auto underlying_column = reference_column->referenced_table()->get_chunk(ChunkID{0})->get_column(reference_column->referenced_column_id());
-          auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(underlying_column);
+          auto underlying_column = reference_column->referenced_table()->get_chunk(ChunkID{0})->get_segment(reference_column->referenced_column_id());
+          auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_column);
           if (encoded_scan_column) {
             operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
           } else {
             operator_result["scan_column_encoding"] = EncodingType::Unencoded;
           }
         } else {
-          auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(scan_column);
+          auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedSegment>(scan_column);
           if (encoded_scan_column) {
             operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
           } else {
