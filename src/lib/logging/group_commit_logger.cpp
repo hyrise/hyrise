@@ -55,7 +55,7 @@ void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::func
 void GroupCommitLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
   const auto& data = _formatter->create_load_table_entry(file_path, table_name);
   {
-    std::scoped_lock buffer_lick(_buffer_mutex);
+    std::scoped_lock buffer_lock(_buffer_mutex);
     _write_to_buffer(data);
 
     // load table commands needs to be flushed, since there is no commit mechanism
