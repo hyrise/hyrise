@@ -162,4 +162,11 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   EXPECT_TRUE(filter->can_prune({this->_after_range}, PredicateCondition::GreaterThan));
 }
 
+// larger value range                                                                                                                                                                  test
+TYPED_TEST(RangeFilterTest, MultipleRanges) {
+  for (size_t i = 0; i < this->_values.size() * 2; ++i) {
+    this->test_varying_range_filter_size(static_cast<int>(i));
+  }
+}
+
 }  // namespace opossum
