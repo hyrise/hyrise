@@ -250,12 +250,15 @@ TEST_F(TableStatisticsTest, TwoColumnScan) {
   const auto post_predicate_statistics = std::make_shared<TableStatistics>(
       int_int_float_statistics.estimate_predicate(ColumnID{0}, PredicateCondition::NotEquals, ColumnID{1}));
 
-  // Make sure that row count decreased.
+  // Make sure that row count decreased according to NotEquals logic.
   EXPECT_FLOAT_EQ(post_predicate_statistics->row_count(), int_int_float_statistics.row_count() * 2.f / 3.f);
 
   // Make sure that the column statistics for both columns have been updated.
   EXPECT_NE(int_int_float_statistics.column_statistics()[0], post_predicate_statistics->column_statistics()[0]);
   EXPECT_NE(int_int_float_statistics.column_statistics()[1], post_predicate_statistics->column_statistics()[1]);
+
+  // Sanity check that the third column's statistics have not been updated, since the predicate does not concern them.
+  EXPECT_EQ(int_int_float_statistics.column_statistics()[2], post_predicate_statistics->column_statistics()[2]);
 
   // Make sure that the distinct counts are still the same, because we don't know better for NotEquals predicates.
   // This test is intended to make sure that the correct statistics for the column are at the correct index.
