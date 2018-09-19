@@ -46,10 +46,8 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
 
-    std::vector<ColumnID> columns{1};
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      columns[0] = column_id;
-      chunk->create_index<AdaptiveRadixTreeIndex>(columns);
+      chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
     }
   }
 

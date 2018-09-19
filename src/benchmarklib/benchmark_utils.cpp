@@ -220,7 +220,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   json_file >> encoding_config_json;
 
   const auto encoding_spec_from_json = [](const nlohmann::json& json_spec) {
-    Assert(json_spec.count("encoding"), "Need to specify encoding type for column.");
+    Assert(json_spec.count("encoding"), "Need to specify encoding type.");
     const auto encoding_str = json_spec["encoding"];
     const auto compression_str = json_spec.value("compression", "");
     return EncodingConfig::encoding_spec_from_strings(encoding_str, compression_str);
@@ -248,7 +248,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     }
   }
 
-  TableColumnEncodingMapping custom_encoding_mapping;
+  TableSegmentEncodingMapping custom_encoding_mapping;
   const auto has_custom_encoding = encoding_config_json.find("custom") != encoding_config_json.end();
 
   if (has_custom_encoding) {
@@ -259,13 +259,14 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       const auto& table_name = table.key();
       const auto& columns = table.value();
 
-      Assert(columns.is_object(), "The custom column encoding needs to be specified as a json object.");
-      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, ColumnEncodingSpec>());
+      Assert(columns.is_object(), "The custom encoding for column types needs to be specified as a json object.");
+      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, SegmentEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
         const auto& column_name = column.key();
         const auto& encoding_info = column.value();
-        Assert(encoding_info.is_object(), "The custom encoding info needs to be specified as a json object.");
+        Assert(encoding_info.is_object(),
+               "The custom encoding for column types needs to be specified as a json object.");
         custom_encoding_mapping[table_name][column_name] = encoding_spec_from_json(encoding_info);
       }
     }
@@ -278,25 +279,25 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
   return options.help() + BenchmarkConfig::description + EncodingConfig::description;
 }
 
-EncodingConfig::EncodingConfig() : EncodingConfig{ColumnEncodingSpec{EncodingType::Dictionary}} {}
+EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec)
+EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec)
     : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
-                               TableColumnEncodingMapping encoding_mapping)
+EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+                               TableSegmentEncodingMapping encoding_mapping)
     : default_encoding_spec{std::move(default_encoding_spec)},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
-EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{ColumnEncodingSpec{EncodingType::Unencoded}}; }
+EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}; }
 
-ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
-                                                              const std::string& compression_str) {
+SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
+                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
 
-  return compression ? ColumnEncodingSpec{encoding, *compression} : ColumnEncodingSpec{encoding};
+  return compression ? SegmentEncodingSpec{encoding, *compression} : SegmentEncodingSpec{encoding};
 }
 
 EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
@@ -315,7 +316,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
 }
 
 nlohmann::json EncodingConfig::to_json() const {
-  const auto encoding_spec_to_string_map = [](const ColumnEncodingSpec& spec) {
+  const auto encoding_spec_to_string_map = [](const SegmentEncodingSpec& spec) {
     nlohmann::json mapping{};
     mapping["encoding"] = encoding_type_to_string.left.at(spec.encoding_type);
     if (spec.vector_compression_type) {
@@ -367,10 +368,10 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (table_has_custom_encoding) {
       const auto& column_name = table->column_name(column_id);
       const auto& encoding_by_column_name = column_mapping_it->second;
-      const auto& column_encoding = encoding_by_column_name.find(column_name);
-      if (column_encoding != encoding_by_column_name.end()) {
-        // The column has a custom encoding
-        chunk_spec.push_back(column_encoding->second);
+      const auto& segment_encoding = encoding_by_column_name.find(column_name);
+      if (segment_encoding != encoding_by_column_name.end()) {
+        // The column type has a custom encoding
+        chunk_spec.push_back(segment_encoding->second);
         continue;
       }
     }
@@ -411,7 +412,7 @@ CLI options.
 
 {
   "verbose": true,
-  "scale": 0.01
+  "scale": 0.1
 }
 )";
 
@@ -420,11 +421,11 @@ const char* EncodingConfig::description = R"(
 ======================
 Encoding Configuration
 ======================
-The encoding config represents the column encodings specified for a benchmark.
+The encoding config represents the segment encodings specified for a benchmark.
+All segments of a given share column the same encoding.
 If encoding (and vector compression) were specified via command line args,
-this will contain no custom encoding mapping but only the column default.
-This will lead to each column in each chunk to be encoded/compressed by this
-default. If a JSON config was provided, a column- and/or type-specific
+all segments are compressed using the default encoding.
+If a JSON config was provided, a column- and/or type-specific
 encoding/compression can be chosen (same in each chunk). The JSON config must
 look like this:
 
@@ -450,16 +451,16 @@ The encoding is always required, the compression is optional.
 
   "custom": {
     <TABLE_NAME>: {
-      <COLUMN_NAME>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       },
-      <COLUMN_NAME>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>
       }
     },
     <TABLE_NAME>: {
-      <COLUMN_NAME>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       }

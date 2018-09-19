@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/dictionary_column.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
@@ -167,66 +167,66 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
-  // Iterating over all columns of this chunk and exporting them
+  // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
     auto visitor =
-        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
-    resolve_data_and_column_type(*chunk->get_column(column_id),
-                                 [&](const auto data_type_t, const auto& resolved_column) {
-                                   visitor->handle_column(resolved_column, context);
-                                 });
+        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
+    resolve_data_and_segment_type(*chunk->get_segment(column_id),
+                                  [&](const auto data_type_t, const auto& resolved_segment) {
+                                    visitor->handle_segment(resolved_segment, context);
+                                  });
   }
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment& base_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<const ValueColumn<T>&>(base_column);
+  const auto& segment = static_cast<const ValueSegment<T>&>(base_segment);
 
-  export_value(context->ofstream, BinaryColumnType::value_column);
+  export_value(context->ofstream, BinarySegmentType::value_segment);
 
-  if (column.is_nullable()) {
-    export_values(context->ofstream, column.null_values());
+  if (segment.is_nullable()) {
+    export_values(context->ofstream, segment.null_values());
   }
 
-  export_values(context->ofstream, column.values());
+  export_values(context->ofstream, segment.values());
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& ref_column,
-                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment& ref_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
-  // We materialize reference columns and save them as value columns
-  export_value(context->ofstream, BinaryColumnType::value_column);
+  // We materialize reference segments and save them as value segments
+  export_value(context->ofstream, BinarySegmentType::value_segment);
 
-  // Unfortunately, we have to iterate over all values of the reference column
+  // Unfortunately, we have to iterate over all values of the reference segment
   // to materialize its contents. Then we can write them to the file
-  for (ChunkOffset row = 0; row < ref_column.size(); ++row) {
-    export_value(context->ofstream, type_cast<T>(ref_column[row]));
+  for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
+    export_value(context->ofstream, type_cast<T>(ref_segment[row]));
   }
 }
 
-// handle_column implementation for string columns
+// handle_segment implementation for string segments
 template <>
-void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const ReferenceColumn& ref_column,
-                                                                   std::shared_ptr<ColumnVisitorContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(
+    const ReferenceSegment& ref_segment, std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
-  // We materialize reference columns and save them as value columns
-  export_value(context->ofstream, BinaryColumnType::value_column);
+  // We materialize reference segments and save them as value segments
+  export_value(context->ofstream, BinarySegmentType::value_segment);
 
   // If there is no data, we can skip all of the coming steps.
-  if (ref_column.size() == 0) return;
+  if (ref_segment.size() == 0) return;
 
   std::stringstream values;
   std::string value;
-  std::vector<size_t> string_lengths(ref_column.size());
+  std::vector<size_t> string_lengths(ref_segment.size());
 
   // We export the values materialized
-  for (ChunkOffset row = 0; row < ref_column.size(); ++row) {
-    value = type_cast<std::string>(ref_column[row]);
+  for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
+    value = type_cast<std::string>(ref_segment[row]);
     string_lengths[row] = value.length();
     values << value;
   }
@@ -236,12 +236,12 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const Referen
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySegment& base_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   const auto is_fixed_size_byte_aligned = [&]() {
-    switch (base_column.compressed_vector_type()) {
+    switch (base_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
       case CompressedVectorType::FixedSize2ByteAligned:
       case CompressedVectorType::FixedSize1ByteAligned:
@@ -255,10 +255,10 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
     Fail("Does only support fixed-size byte-aligned compressed attribute vectors.");
   }
 
-  export_value(context->ofstream, BinaryColumnType::dictionary_column);
+  export_value(context->ofstream, BinarySegmentType::dictionary_segment);
 
   const auto attribute_vector_width = [&]() {
-    switch (base_column.compressed_vector_type()) {
+    switch (base_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
         return 4u;
       case CompressedVectorType::FixedSize2ByteAligned:
@@ -273,28 +273,28 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
   // Write attribute vector width
   export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
 
-  if (base_column.encoding_type() == EncodingType::FixedStringDictionary) {
-    const auto& column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
+  if (base_segment.encoding_type() == EncodingType::FixedStringDictionary) {
+    const auto& segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
-    export_values(context->ofstream, *column.dictionary());
+    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_values(context->ofstream, *segment.dictionary());
   } else {
-    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+    const auto& segment = static_cast<const DictionarySegment<T>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
-    export_values(context->ofstream, *column.dictionary());
+    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_values(context->ofstream, *segment.dictionary());
   }
 
   // Write attribute vector
-  _export_attribute_vector(context->ofstream, base_column.compressed_vector_type(), *base_column.attribute_vector());
+  _export_attribute_vector(context->ofstream, base_segment.compressed_vector_type(), *base_segment.attribute_vector());
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseEncodedColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
-  Fail("Binary export not implemented yet for encoded columns.");
+void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseEncodedSegment& base_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
+  Fail("Binary export not implemented yet for encoded segments.");
 }
 
 template <typename T>

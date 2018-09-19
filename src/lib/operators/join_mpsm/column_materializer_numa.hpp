@@ -8,7 +8,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -27,23 +27,23 @@ template <typename T>
 using MaterializedValueAllocator = PolymorphicAllocator<MaterializedValue<T>>;
 
 template <typename T>
-using MaterializedChunk = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
+using MaterializedSegment = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
 
 template <typename T>
 struct MaterializedNUMAPartition {
   NodeID _node_id;
   MaterializedValueAllocator<T> _alloc;
-  std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
+  std::vector<std::shared_ptr<MaterializedSegment<T>>> _materialized_segments;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
-      : _node_id{node_id}, _alloc{Topology::get().get_memory_resource(node_id)}, _chunk_columns(reserve_size) {}
+      : _node_id{node_id}, _alloc{Topology::get().get_memory_resource(node_id)}, _materialized_segments(reserve_size) {}
 
   MaterializedNUMAPartition() {}
 
   void shrink_to_fit() {
-    _chunk_columns.erase(
-        std::remove(_chunk_columns.begin(), _chunk_columns.end(), std::shared_ptr<MaterializedChunk<T>>{}),
-        _chunk_columns.end());
+    _materialized_segments.erase(std::remove(_materialized_segments.begin(), _materialized_segments.end(),
+                                             std::shared_ptr<MaterializedSegment<T>>{}),
+                                 _materialized_segments.end());
   }
 };
 
@@ -119,68 +119,68 @@ class ColumnMaterializerNUMA {
     // This allocator ensures that materialized values are colocated with the actual values.
     auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
-    const auto column = input->get_chunk(chunk_id)->get_column(column_id);
+    const auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
     return std::make_shared<JobTask>(
-        [this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
-          resolve_column_type<T>(*column, [&](auto& typed_column) {
-            _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
+        [this, &output, &null_rows_output, segment, chunk_id, alloc, numa_node_id] {
+          resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
+            _materialize_segment(typed_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
           });
         },
         false);
   }
 
   /**
-   * Materialization works for all types of columns
+   * Materialization works for all types of segments
    */
-  template <typename ColumnType>
-  void _materialize_column(const ColumnType& column, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
-                           MaterializedNUMAPartition<T>& partition) {
-    auto output = std::make_shared<MaterializedChunk<T>>(partition._alloc);
+  template <typename SegmentType>
+  void _materialize_segment(const SegmentType& segment, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
+                            MaterializedNUMAPartition<T>& partition) {
+    auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
 
-    output->reserve(column.size());
+    output->reserve(segment.size());
 
-    auto iterable = create_iterable_from_column<T>(column);
+    auto iterable = create_iterable_from_segment<T>(segment);
 
-    iterable.for_each([&](const auto& column_value) {
-      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-      if (column_value.is_null()) {
+    iterable.for_each([&](const auto& segment_value) {
+      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
+      if (segment_value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output->emplace_back(row_id, column_value.value());
+        output->emplace_back(row_id, segment_value.value());
       }
     });
 
-    partition._chunk_columns[chunk_id] = output;
+    partition._materialized_segments[chunk_id] = output;
   }
 
   /**
-   * Specialization for dictionary columns
+   * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedChunk<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
-                                                            std::unique_ptr<PosList>& null_rows_output,
-                                                            MaterializedValueAllocator<T> alloc) {
-    auto output = MaterializedChunk<T>{alloc};
-    output.reserve(column.size());
+  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
+                                                               std::unique_ptr<PosList>& null_rows_output,
+                                                               MaterializedValueAllocator<T> alloc) {
+    auto output = MaterializedSegment<T>{alloc};
+    output.reserve(segment.size());
 
-    auto value_ids = column.attribute_vector();
-    auto dict = column.dictionary();
+    auto value_ids = segment.attribute_vector();
+    auto dict = segment.dictionary();
 
-    auto iterable = create_iterable_from_column(column);
-    iterable.for_each([&](const auto& column_value) {
-      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-      if (column_value.is_null()) {
+    auto iterable = create_iterable_from_segment(segment);
+    iterable.for_each([&](const auto& segment_value) {
+      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
+      if (segment_value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, column_value.value());
+        output.emplace_back(row_id, segment_value.value());
       }
     });
 
-    return std::make_shared<MaterializedChunk<T>>(std::move(output));
+    return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
 
  private:

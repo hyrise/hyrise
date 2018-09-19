@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "import_export/binary.hpp"
@@ -104,7 +104,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   EXPECT_TRUE(compare_files("src/test/binary/MultipleChunkSingleFloatColumn.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
+TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
@@ -120,10 +120,10 @@ TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringValueColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringValueSegment.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
+TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
@@ -141,10 +141,10 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringDictionarySegment.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, FixedStringDictionaryColumn) {
+TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
@@ -162,10 +162,10 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionaryColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringDictionarySegment.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
+TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
   column_definitions.emplace_back("b", DataType::Int);
@@ -186,10 +186,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueSegment.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
+TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
   column_definitions.emplace_back("b", DataType::Int);
@@ -213,7 +213,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionaryColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionarySegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
@@ -242,10 +242,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesMixColumn.bin", filename));
 }
 
-// A table with reference columns is materialized while exporting. The content of the export file should not be
-// different from a exported table with ValueColumns and the same content.
+// A table with reference segments is materialized while exporting. The content of the export file should not be
+// different from a exported table with ValueSegments and the same content.
 // They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
-TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
+TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
   column_definitions.emplace_back("b", DataType::Int);
@@ -263,17 +263,18 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
+  auto scan =
+      std::make_shared<TableScan>(table_wrapper, OperatorScanPredicate{ColumnID{1}, PredicateCondition::NotEquals, 5});
   scan->execute();
 
   auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumnMaxChunkSize.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueSegmentMaxChunkSize.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
+TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
@@ -291,10 +292,10 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsValueColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsValueSegment.bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
+TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
 
@@ -314,7 +315,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsDictionaryColumn.bin", filename));
+  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsDictionarySegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {

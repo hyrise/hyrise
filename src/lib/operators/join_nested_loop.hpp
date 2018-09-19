@@ -49,21 +49,21 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time from twelve minutes to less than three.
 
   static void __attribute__((noinline))
-  _join_two_untyped_columns(const std::shared_ptr<const BaseColumn>& column_left,
-                            const std::shared_ptr<const BaseColumn>& column_right, const ChunkID chunk_id_left,
-                            const ChunkID chunk_id_right, JoinParams& params);
+  _join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& segment_left,
+                             const std::shared_ptr<const BaseSegment>& segment_right, const ChunkID chunk_id_left,
+                             const ChunkID chunk_id_right, JoinParams& params);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   static void __attribute__((noinline))
-  _join_two_typed_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                          RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                          const ChunkID chunk_id_right, JoinParams& params);
+  _join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                           RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                           const ChunkID chunk_id_right, JoinParams& params);
 
   static void _process_match(RowID left_row_id, RowID right_row_id, JoinParams& params);
 
   void _create_table_structure();
 
-  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table>& input_table,
+  void _write_output_chunks(Segments& segments, const std::shared_ptr<const Table>& input_table,
                             const std::shared_ptr<PosList>& pos_list);
 
   void _on_cleanup() override;

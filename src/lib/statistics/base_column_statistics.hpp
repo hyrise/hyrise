@@ -50,6 +50,11 @@ class BaseColumnStatistics {
   std::shared_ptr<BaseColumnStatistics> without_null_values() const;
 
   /**
+   * @return a clone() of this, with the null_value_ratio set to 1
+   */
+  std::shared_ptr<BaseColumnStatistics> only_null_values() const;
+
+  /**
    * @defgroup Cardinality estimation
    * @{
    */

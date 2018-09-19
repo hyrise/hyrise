@@ -1,5 +1,6 @@
 #include "operator_scan_predicate.hpp"
 
+#include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/parameter_expression.hpp"
@@ -15,14 +16,12 @@ using namespace opossum::expression_functional;  // NOLINT
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {
   auto value = AllParameterVariant{};
-  auto value_column_id = std::optional<ColumnID>{};
 
-  if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression); value_expression) {
+  if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression)) {
     value = value_expression->value;
-  } else if (value_column_id = node.find_column_id(expression); value_column_id) {
-    value = *value_column_id;
-  } else if (const auto parameter_expression = dynamic_cast<const ParameterExpression*>(&expression);
-             parameter_expression) {
+  } else if (const auto column_id = node.find_column_id(expression)) {
+    value = *column_id;
+  } else if (const auto parameter_expression = dynamic_cast<const ParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
   } else {
     return std::nullopt;
@@ -34,6 +33,22 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 }  // namespace
 
 namespace opossum {
+
+std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>& table) const {
+  std::string column_name_left = std::string("Column #") + std::to_string(column_id);
+  if (table) {
+    column_name_left = table->column_name(column_id);
+  }
+
+  std::string right = opossum::to_string(value);
+  if (table && is_column_id(value)) {
+    right = table->column_name(boost::get<ColumnID>(value));
+  }
+
+  std::stringstream stream;
+  stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
+  return stream.str();
+}
 
 std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_expression(
     const AbstractExpression& expression, const AbstractLQPNode& node) {

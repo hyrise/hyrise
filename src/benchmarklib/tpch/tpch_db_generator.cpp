@@ -89,12 +89,12 @@ class TableBuilder {
   }
 
   void append_row(DataTypes&&... column_values) {
-    // Create a tuple ([&column_vector0, value0], ...)
+    // Create a tuple ([&data_vector0, value0], ...)
     auto vectors_and_values = boost::hana::zip_with(
         [](auto& vector, auto&& value) { return boost::hana::make_tuple(std::reference_wrapper(vector), value); },
-        _column_vectors, boost::hana::make_tuple(std::forward<DataTypes>(column_values)...));
+        _data_vectors, boost::hana::make_tuple(std::forward<DataTypes>(column_values)...));
 
-    // Add the values to their respective column vector
+    // Add the values to their respective data vector
     boost::hana::for_each(vectors_and_values, [](auto vector_and_value) {
       vector_and_value[boost::hana::llong_c<0>].get().push_back(vector_and_value[boost::hana::llong_c<1>]);
     });
@@ -107,21 +107,21 @@ class TableBuilder {
  private:
   std::shared_ptr<opossum::Table> _table;
   opossum::UseMvcc _use_mvcc;
-  boost::hana::tuple<opossum::pmr_concurrent_vector<DataTypes>...> _column_vectors;
+  boost::hana::tuple<opossum::pmr_concurrent_vector<DataTypes>...> _data_vectors;
 
-  size_t _current_chunk_row_count() const { return _column_vectors[boost::hana::llong_c<0>].size(); }
+  size_t _current_chunk_row_count() const { return _data_vectors[boost::hana::llong_c<0>].size(); }
 
   void _emit_chunk() {
-    opossum::ChunkColumns chunk_columns;
+    opossum::Segments segments;
 
-    // Create a column from each column vector and add it to the Chunk, then re-initialize the vector
-    boost::hana::for_each(_column_vectors, [&](auto&& vector) {
+    // Create a segment from each data vector and add it to the Chunk, then re-initialize the vector
+    boost::hana::for_each(_data_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
       // reason for nolint: clang-tidy wants this to be a forward, but that doesn't work
-      chunk_columns.push_back(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));  // NOLINT
+      segments.push_back(std::make_shared<opossum::ValueSegment<T>>(std::move(vector)));  // NOLINT
       vector = std::decay_t<decltype(vector)>();
     });
-    _table->append_chunk(chunk_columns);
+    _table->append_chunk(segments);
   }
 };
 

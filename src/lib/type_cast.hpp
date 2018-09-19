@@ -5,8 +5,8 @@
 #include <boost/hana/not_equal.hpp>
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
-#include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <string>
 
 #include "all_type_variant.hpp"
@@ -17,7 +17,7 @@ namespace hana = boost::hana;
 
 namespace detail {
 
-// Returns the index of type T in an ColumnIterable
+// Returns the index of type T in an SegmentIterable
 template <typename Sequence, typename T>
 constexpr auto index_of(Sequence const& sequence, T const& element) {
   constexpr auto size = decltype(hana::size(hana::take_while(sequence, hana::not_equal.to(element)))){};

@@ -191,6 +191,9 @@ SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+
 -- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;
 ---- SELECT * FROM mixed WHERE b = NULL;
