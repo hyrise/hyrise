@@ -137,16 +137,19 @@ TEST_F(StorageManagerTest, Print) {
 TEST_F(StorageManagerTest, ExportTables) {
   std::ostringstream output;
   auto& sm = StorageManager::get();
+
+  // first, we remove empty test tables
   sm.drop_table("first_table");
   sm.drop_table("second_table");
 
+  // add a non-empty table
   sm.add_table("third_table", load_table("src/test/tables/int_float.tbl"));
 
   sm.export_all_tables_as_csv(opossum::test_data_path);
 
   const std::string filename = opossum::test_data_path + "/third_table.csv";
   EXPECT_TRUE(filesystem::exists(filename));
-  std::remove(filename.c_str());
+  filesystem::remove(filename);
 }
 
 }  // namespace opossum

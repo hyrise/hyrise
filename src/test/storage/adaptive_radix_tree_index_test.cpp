@@ -195,6 +195,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
   auto segment = create_dict_segment_by_type<int>(DataType::Int, values);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
+  // We check whether the index answer (i.e., position(s) for a search value) is correct
   EXPECT_EQ(*index->cbegin(), 0);
   EXPECT_EQ(*index->lower_bound({0}), 0);
   EXPECT_EQ(*index->upper_bound({0}), 5);
@@ -207,13 +208,12 @@ TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
 }
 
 /**
-* The following two tests try to test two rather extreme tests that both test the node overflow
-* handling of the ART implementation:
+* The following two cases try to test two rather extreme situations that both
+* test the node overflow handling of the ART implementation:
 *   - sparse vector: wide range of values (between 1 and MAX_INT) with large gaps
 *   - dense vector: expenential distribution, rounded to integer values
 **/
 TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
-  // Increase temporaliy when working on the ART
   size_t test_size = 1'000;
   std::uniform_int_distribution<int> uni(1, std::numeric_limits<int>::max() - 1);
 
@@ -224,7 +224,6 @@ TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfRandomInts) {
-  // Increase temporaliy when working on the ART
   size_t test_size = 5'000;
   std::exponential_distribution<double> exp(1.0);
 

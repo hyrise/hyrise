@@ -29,7 +29,7 @@ class MinMaxFilterTest : public ::testing::Test {
   T _before_range, _min_value, _max_value, _after_range, _in_between;
 };
 
-// the test data for strings needs to handled differently from numerics
+// the test data for strings needs to be handled differently from numerics
 template <>
 class MinMaxFilterTest<std::string> : public ::testing::Test {
  protected:

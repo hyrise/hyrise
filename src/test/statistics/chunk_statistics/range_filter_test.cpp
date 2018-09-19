@@ -1,3 +1,4 @@
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -21,8 +22,8 @@ class RangeFilterTest : public ::testing::Test {
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
 
-    // value in the largest gap of the test data
-    // we changing test data, ensure that value is not part of a range in ranges unless |ranges|==1)
+    // `_in_between` in a value in the largest gap of the test data.
+    // When test data is changed, ensure that value is not part of a range in ranges unless |ranges| == 1.
     _in_between = static_cast<T>(_min_value + 0.5 * (_max_value - _min_value));
 
     _before_range = _min_value - 1;  // value smaller than the minimum
@@ -37,8 +38,9 @@ class RangeFilterTest : public ::testing::Test {
       EXPECT_FALSE(filter->can_prune({value}, PredicateCondition::Equals));
     }
 
-    // find $gap_count largest gaps
-    auto value_set = std::set<T>(_values.begin(), _values.end());
+    // Find `gap_count` largest gaps. We use an std::{{set}} to discard repeated
+    // values and directly iterate over an sorted order.
+    auto value_set = std::set<T>(_values.begin(), _values.end(), std::less<T>());
     std::vector<std::pair<T, T>> begin_length_pairs;
 
     for (auto it = value_set.begin(); it != std::prev(value_set.end()); ++it) {
