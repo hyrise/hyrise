@@ -38,7 +38,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
    * If the predicate is not a simple `<column> <predicate_condition> <value/column/placeholder>` predicate, 
    * then we have to fall back to a selectivity of 1 atm, because computing statistics for complex predicates
    * is not implemented.
-   * E.g. we cannot right now compute statistics for IN or nestings of AND/OR.
+   * Currently, we cannot compute statistics for, e.g., IN or nestings of AND/OR.
    */
 
   const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate, *left_input);
