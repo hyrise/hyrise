@@ -1,5 +1,6 @@
 #include <functional>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -30,7 +31,7 @@ class RangeFilterTest : public ::testing::Test {
     _after_range = _max_value + 1;   // value larger than the maximum
   }
 
-  void test_varying_range_filter_size(int gap_count) {
+  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(size_t gap_count, pmr_vector<T> value) {
     // RangeFilter constructor takes range count, not gap count
     auto filter = RangeFilter<T>::build_filter(_values, gap_count + 1);
 
@@ -52,8 +53,8 @@ class RangeFilterTest : public ::testing::Test {
     std::sort(begin_length_pairs.begin(), begin_length_pairs.end(),
               [](auto& left, auto& right) { return left.second > right.second; });
 
-    for (int i = 0; i < gap_count && i < static_cast<int>(begin_length_pairs.size()); ++i) {
-      auto gap = begin_length_pairs[i];
+    for (auto gap_index = size_t{0}; gap_index < gap_count && gap_index < begin_length_pairs.size(); ++gap_index) {
+      auto gap = begin_length_pairs[gap_index];
       auto begin = gap.first;
       auto length = gap.second;
       auto end = begin + length;
@@ -71,11 +72,24 @@ class RangeFilterTest : public ::testing::Test {
     if (gap_count > 1) {
       EXPECT_TRUE(filter->can_prune(_in_between, PredicateCondition::Equals));
     }
+
+    return filter;
   }
 
   pmr_vector<T> _values;
   T _before_range, _min_value, _max_value, _after_range, _in_between;
 };
+
+template <typename T>
+T get_random_number(std::mt19937& rng, T min, T max) {
+  if constexpr (std::is_same_v<T, int>) {
+    std::uniform_int_distribution<T> uni(min, max);
+    return uni(rng);
+  } else {
+    std::uniform_real_distribution<T> uni(min, max);
+    return uni(rng);
+  }
+}
 
 using FilterTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_CASE(RangeFilterTest, FilterTypes);
@@ -101,8 +115,8 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
 
 // create range filters with varying number of ranges/gaps
 TYPED_TEST(RangeFilterTest, MultipleRanges) {
-  for (size_t i = 0; i < this->_values.size() * 2; ++i) {
-    this->test_varying_range_filter_size(static_cast<int>(i));
+  for (auto gap_count = size_t{0}; gap_count < this->_values.size() * 2; ++gap_count) {
+    this->test_varying_range_filter_size(gap_count, this->_values);
   }
 }
 
@@ -162,11 +176,30 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   EXPECT_TRUE(filter->can_prune({this->_after_range}, PredicateCondition::GreaterThan));
 }
 
-// larger value range                                                                                                                                                                  test
-TYPED_TEST(RangeFilterTest, MultipleRanges) {
-  for (size_t i = 0; i < this->_values.size() * 2; ++i) {
-    this->test_varying_range_filter_size(static_cast<int>(i));
+// test larger value ranges
+TYPED_TEST(RangeFilterTest, LargeValueDomain) {
+  std::random_device rd;
+  auto rng = std::mt19937(rd());
+
+  // values on which is the range filter is later built on
+  pmr_vector<TypeParam> values;
+
+  // We randomly create values between min_value(TypeParam) to -1000 and 1000 to max(TypeParam).
+  // Any value in between should be prunable for values between -999 and 999
+  for (auto i = size_t{0}; i < 10'000; ++i) {
+    values.push_back(get_random_number<TypeParam>(rng, std::numeric_limits<TypeParam>::lowest(), -1000));
+    values.push_back(get_random_number<TypeParam>(rng, 1000, std::numeric_limits<TypeParam>::max()));
+  }
+
+  std::vector<size_t> gap_counts = {1, 2, 4, 8, 16, 32, 64, values.size() + 1};
+  for (auto gap_count : gap_counts) {
+    // execute general tests and receive created range filter
+    auto filter = this->test_varying_range_filter_size(gap_count, values);
+
+    // additionally, test for further values
+    for (auto i = size_t{0}; i < 100; ++i) {
+      EXPECT_TRUE(filter->can_prune({get_random_number<TypeParam>(rng, 1000, 1000)}, PredicateCondition::Equals));
+    }
   }
 }
-
 }  // namespace opossum
