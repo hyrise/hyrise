@@ -599,7 +599,7 @@ set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
 add_custom_command (
     OUTPUT ${PROVIDER_FILE}
     DEPENDS utils/tracing/provider.d
-    COMMAND dtrace -h -s ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/provider.d -o ${PROVIDER_FILE}
+    COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
 set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
