@@ -38,6 +38,7 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "tpch/tpch_db_generator.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -109,7 +110,8 @@ Console::Console()
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
-  register_command("generate", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
+  register_command("gentpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
+  register_command("gentpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
@@ -352,35 +354,33 @@ int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 int Console::_help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate [TABLENAME]             - Generate available TPC-C tables, or a specific table if TABLENAME is "
+  out("  gentpcc [TABLENAME]                - Generate available TPC-C tables, or a specific table if TABLENAME is "
       "specified\n");
-  out("  load FILE TABLENAME              - Load table from disc specified by filepath FILE, store it with name "
+  out("  gentpch SCALE_FACTOR [CHUNK_SIZE]  - Generate all TPC-H tables\n");
+  out("  load FILE TABLENAME                - Load table from disc specified by filepath FILE, store it with name "
       "TABLENAME\n");
-  out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                  - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] [SQL]        - Visualize a SQL query\n");
-  out("                                       Options\n");
-  out("                                         - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                          Default: noexec\n");
-  out("                                         - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives "
+  out("  script SCRIPTFILE                  - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                    - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]          - Visualize a SQL query\n");
+  out("                                         Options\n");
+  out("                                           - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                            Default: noexec\n");
+  out("                                           - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives "
       "the\n");
-  out("                                                                unoptimized lqp. Default: pqp\n");
-  out("                                       SQL\n");
-  out("                                         - Optional, a query to visualize. If not specified, the last\n");
-  out("                                           previously executed query is visualized.\n");
-  out("  begin                            - Manually create a new transaction (Auto-commit is active unless begin is "
+  out("                                                                  unoptimized lqp. Default: pqp\n");
+  out("                                         SQL\n");
+  out("                                           - Optional, a query to visualize. If not specified, the last\n");
+  out("                                             previously executed query is visualized.\n");
+  out("  begin                              - Manually create a new transaction (Auto-commit is active unless begin is "
       "called)\n");
-  out("  rollback                         - Roll back a manually created transaction\n");
-  out("  commit                           - Commit a manually created transaction\n");
-  out("  txinfo                           - Print information on the current transaction\n");
-  out("  pwd                              - Print current working directory\n");
-  out("  quit                             - Exit the HYRISE Console\n");
-  out("  help                             - Show this message\n\n");
-  out("  setting [property] [value]       - Change a runtime setting\n\n");
-  out("           scheduler (on|off)      - Turn the scheduler on (default) or off\n\n");
-  out("After TPC-C tables are generated, SQL queries can be executed.\n");
-  out("Example:\n");
-  out("SELECT * FROM DISTRICT\n");
+  out("  rollback                           - Roll back a manually created transaction\n");
+  out("  commit                             - Commit a manually created transaction\n");
+  out("  txinfo                             - Print information on the current transaction\n");
+  out("  pwd                                - Print current working directory\n");
+  out("  quit                               - Exit the HYRISE Console\n");
+  out("  help                               - Show this message\n\n");
+  out("  setting [property] [value]         - Change a runtime setting\n\n");
+  out("           scheduler (on|off)        - Turn the scheduler on (default) or off\n\n");
   return Console::ReturnCode::Ok;
 }
 
@@ -402,6 +402,42 @@ int Console::_generate_tpcc(const std::string& tablename) {
   }
 
   opossum::StorageManager::get().add_table(tablename, table);
+  return ReturnCode::Ok;
+}
+
+int Console::_generate_tpch(const std::string& args) {
+  auto input = args;
+  boost::algorithm::trim<std::string>(input);
+  auto arguments = std::vector<std::string>{};
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  // Check whether there are one or two arguments.
+  auto args_valid = !arguments.empty() && arguments.size() <= 2;
+
+  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
+  // and that's not actually an argument
+  auto scale_factor = 1.0f;
+  if (!arguments.empty() && !arguments[0].empty()) {
+    scale_factor = std::stof(arguments[0]);
+  } else {
+    args_valid = false;
+  }
+
+  auto chunk_size = Chunk::MAX_SIZE;
+  if (arguments.size() > 1) {
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+  }
+
+  if (!args_valid) {
+    out("Usage: ");
+    out("  gentpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
+    out("                                      Chunk size is unlimited by default. \n");
+    return ReturnCode::Error;
+  }
+
+  out("Generating all TPCH tables (this might take a while) ...\n");
+  TpchDbGenerator{scale_factor, chunk_size}.generate_and_store();
+
   return ReturnCode::Ok;
 }
 
@@ -760,8 +796,8 @@ char** Console::_command_completion(const char* text, int start, int end) {
   // Choose completion function depending on the input. If it starts with "generate",
   // suggest TPC-C tablenames for completion.
   const std::string& first_word = tokens.at(0);
-  if (first_word == "generate") {
-    // Completion only for two words, "generate", and the TABLENAME
+  if (first_word == "gentpch") {
+    // Completion only for two words, "gentpch", and the TABLENAME
     if (tokens.size() <= 2) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_tpcc);
     }
@@ -870,7 +906,6 @@ int main(int argc, char** argv) {
   // Display welcome message if Console started normally
   if (argc == 1) {
     console.out("HYRISE SQL Interface\n");
-    console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
     console.out("Type 'help' for more information.\n\n");
 
     console.out("Hyrise is running a ");
