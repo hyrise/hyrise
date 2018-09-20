@@ -38,7 +38,8 @@ class PQPSelectExpressionTest : public ::testing::Test {
 
     // Build a Select returning a TABLE and taking NO PARAMETERS
     const auto get_table_b = std::make_shared<GetTable>("int_float");
-    const auto table_scan_b = std::make_shared<TableScan>(get_table_b, ColumnID{0}, PredicateCondition::GreaterThan, 5);
+    const auto table_scan_b = std::make_shared<TableScan>(
+        get_table_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 5});
     pqp_table = table_scan_b;
     select_table = std::make_shared<PQPSelectExpression>(pqp_table);
   }

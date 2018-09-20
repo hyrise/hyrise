@@ -14,6 +14,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -167,9 +168,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThan);
-  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(5));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{1});
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::LessThan);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(5));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
@@ -191,9 +192,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeLike) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Like);
-  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant("hello%"));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{1});
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::Like);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant("hello%"));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
@@ -215,9 +216,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::IsNotNull);
-  EXPECT_TRUE(is_variant(table_scan_op->right_parameter()));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{1});
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::IsNotNull);
+  EXPECT_TRUE(is_variant(table_scan_op->predicate().value));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
@@ -239,15 +240,15 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
    */
   const auto upper_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp);
   ASSERT_TRUE(upper_bound_scan_op);
-  EXPECT_EQ(upper_bound_scan_op->left_column_id(), ColumnID{1});
-  EXPECT_EQ(upper_bound_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
-  EXPECT_EQ(upper_bound_scan_op->right_parameter(), AllParameterVariant(5));
+  EXPECT_EQ(upper_bound_scan_op->predicate().column_id, ColumnID{1});
+  EXPECT_EQ(upper_bound_scan_op->predicate().predicate_condition, PredicateCondition::GreaterThanEquals);
+  EXPECT_EQ(upper_bound_scan_op->predicate().value, AllParameterVariant(5));
 
   const auto lower_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp->input_left());
   ASSERT_TRUE(lower_bound_scan_op);
-  EXPECT_EQ(lower_bound_scan_op->left_column_id(), ColumnID{0});
-  EXPECT_EQ(lower_bound_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
-  EXPECT_EQ(lower_bound_scan_op->right_parameter(), AllParameterVariant(5));
+  EXPECT_EQ(lower_bound_scan_op->predicate().column_id, ColumnID{0});
+  EXPECT_EQ(lower_bound_scan_op->predicate().predicate_condition, PredicateCondition::LessThanEquals);
+  EXPECT_EQ(lower_bound_scan_op->predicate().value, AllParameterVariant(5));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left()->input_left());
   ASSERT_TRUE(get_table_op);
@@ -419,9 +420,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "b" */);
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{1} /* "b" */);
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
@@ -436,15 +437,15 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
    */
   const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
   ASSERT_TRUE(table_scan_op2);
-  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{0} /* "a" */);
-  EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::LessThanEquals);
-  EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(1337));
+  EXPECT_EQ(table_scan_op2->predicate().column_id, ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op2->predicate().predicate_condition, PredicateCondition::LessThanEquals);
+  EXPECT_EQ(table_scan_op2->predicate().value, AllParameterVariant(1337));
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{0} /* "a" */);
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
-  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::GreaterThanEquals);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
@@ -477,9 +478,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Equals);
-  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(42));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
@@ -513,16 +514,16 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
-  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1} /* "a" */);
-  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
-  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(1337));
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::LessThanEquals);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(1337));
 
   const auto table_scan_op2 = std::dynamic_pointer_cast<const TableScan>(table_scan_op->input_left());
   ASSERT_TRUE(table_scan_op2);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
-  EXPECT_EQ(table_scan_op2->left_column_id(), ColumnID{1} /* "a" */);
-  EXPECT_EQ(table_scan_op2->predicate_condition(), PredicateCondition::GreaterThanEquals);
-  EXPECT_EQ(table_scan_op2->right_parameter(), AllParameterVariant(42));
+  EXPECT_EQ(table_scan_op2->predicate().column_id, ColumnID{1} /* "a" */);
+  EXPECT_EQ(table_scan_op2->predicate().predicate_condition, PredicateCondition::GreaterThanEquals);
+  EXPECT_EQ(table_scan_op2->predicate().value, AllParameterVariant(42));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
@@ -658,11 +659,11 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
 
   const auto predicate_op_left = std::dynamic_pointer_cast<const TableScan>(join_op->input_left());
   ASSERT_TRUE(predicate_op_left);
-  EXPECT_EQ(predicate_op_left->predicate_condition(), PredicateCondition::Equals);
+  EXPECT_EQ(predicate_op_left->predicate().predicate_condition, PredicateCondition::Equals);
 
   const auto predicate_op_right = std::dynamic_pointer_cast<const TableScan>(join_op->input_right());
   ASSERT_TRUE(predicate_op_right);
-  EXPECT_EQ(predicate_op_right->predicate_condition(), PredicateCondition::GreaterThan);
+  EXPECT_EQ(predicate_op_right->predicate().predicate_condition, PredicateCondition::GreaterThan);
 
   const auto get_table_op_left = std::dynamic_pointer_cast<const GetTable>(predicate_op_left->input_left());
   ASSERT_TRUE(get_table_op_left);
@@ -737,6 +738,72 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   ASSERT_NE(pqp->input_right()->input_left(), nullptr);
   EXPECT_EQ(pqp->input_left()->input_left(), pqp->input_right()->input_left());
   EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
+}
+
+TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
+  // If the result of a (sub)expression is available in an input column, the expression should not be redundantly
+  // evaluated
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than_(add_(add_(int_float_a, int_float_b), 3), 2),
+    ProjectionNode::make(expression_vector(add_(add_(int_float_a, int_float_b), 3)),
+      ProjectionNode::make(expression_vector(5, add_(int_float_a, int_float_b)),
+        int_float_node)));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
+
+  const auto table_scan = std::dynamic_pointer_cast<const TableScan>(pqp);
+  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp->input_left());
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->input_left()->input_left());
+
+  ASSERT_NE(table_scan, nullptr);
+  ASSERT_NE(projection_a, nullptr);
+  ASSERT_NE(projection_b, nullptr);
+
+  const auto a_plus_b_in_temporary_column = column_(ColumnID{1}, DataType::Float, false, "a + b");
+
+  EXPECT_EQ(table_scan->predicate().column_id, ColumnID{0});
+  EXPECT_EQ(*projection_a->expressions.at(0), *add_(a_plus_b_in_temporary_column, 3));
+}
+
+TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
+  // Test that select expressions whose result is available in an output column of the input operator are not evaluated
+  // redundantly
+
+  // clang-format off
+  const auto select_lqp =
+  ProjectionNode::make(expression_vector(add_(1, 2)),
+    DummyTableNode::make());
+
+  const auto select_a = select_(select_lqp);
+  const auto select_b = select_(select_lqp);
+
+  const auto lqp =
+  ProjectionNode::make(expression_vector(add_(select_a, 3)),
+    ProjectionNode::make(expression_vector(5, select_b),
+      int_float_node));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+
+  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp);
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(pqp->input_left());
+
+  ASSERT_NE(projection_a, nullptr);
+  ASSERT_NE(projection_b, nullptr);
+
+  const auto select_in_temporary_column = column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
+
+  EXPECT_EQ(*projection_a->expressions.at(0), *add_(select_in_temporary_column, 3));
 }
 
 }  // namespace opossum

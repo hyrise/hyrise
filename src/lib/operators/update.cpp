@@ -8,7 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
 #include "insert.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
@@ -31,7 +31,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
-  // 1. Create insert_table with ReferenceColumns that contain all rows that should be updated
+  // 1. Create insert_table with ReferenceSegments that contain all rows that should be updated
   TableColumnDefinitions insert_table_column_definitions;
   for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
     insert_table_column_definitions.emplace_back(table_to_update->column_name(column_id),
@@ -50,8 +50,8 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     for (auto i = 0u; i < input_table_right()->get_chunk(chunk_id)->size(); ++i) {
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
         current_row_in_left_chunk = 0u;
-        current_pos_list = std::static_pointer_cast<const ReferenceColumn>(
-                               input_table_left()->get_chunk(current_left_chunk_id)->get_column(ColumnID{0}))
+        current_pos_list = std::static_pointer_cast<const ReferenceSegment>(
+                               input_table_left()->get_chunk(current_left_chunk_id)->get_segment(ColumnID{0}))
                                ->pos_list();
         current_left_chunk_id++;
       }
@@ -60,13 +60,13 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       current_row_in_left_chunk++;
     }
 
-    // Add ReferenceColumns with built poslist.
-    ChunkColumns insert_table_columns;
+    // Add ReferenceSegments with built poslist.
+    Segments insert_table_segments;
     for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-      insert_table_columns.push_back(std::make_shared<ReferenceColumn>(table_to_update, column_id, pos_list));
+      insert_table_segments.push_back(std::make_shared<ReferenceSegment>(table_to_update, column_id, pos_list));
     }
 
-    insert_table->append_chunk(insert_table_columns);
+    insert_table->append_chunk(insert_table_segments);
   }
 
   // 2. Replace the columns to update in insert_table with the updated data from input_table_right
@@ -76,11 +76,11 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto right_chunk = input_table_right()->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-      auto right_col = right_chunk->get_column(column_id);
+      auto right_segment = right_chunk->get_segment(column_id);
 
-      auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk->get_column(column_id));
+      auto left_segment = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_segment(column_id));
 
-      insert_chunk->replace_column(left_col->referenced_column_id(), right_col);
+      insert_chunk->replace_segment(left_segment->referenced_column_id(), right_segment);
     }
   }
 
@@ -109,7 +109,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
 }
 
 /**
- * input_table_left must be a table with at least one chunk, containing at least one ReferenceColumn
+ * input_table_left must be a table with at least one chunk, containing at least one ReferenceSegment
  * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
  * must match the count and types in input_table_right.
  */
@@ -127,8 +127,8 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk->references_exactly_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<const ReferenceColumn>(chunk->get_column(ColumnID{0}));
-    if (table_to_update != first_column->referenced_table()) return false;
+    const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
+    if (table_to_update != first_segment->referenced_table()) return false;
   }
 
   return true;

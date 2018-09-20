@@ -57,8 +57,8 @@ class ColumnStatisticsTest : public BaseTest {
       for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
         auto result_container = column_statistics[column_1]->estimate_predicate_with_column(
             predicate_condition, *column_statistics[column_2]);
-        auto table_scan =
-            std::make_shared<TableScan>(table_wrapper, ColumnID{column_1}, predicate_condition, ColumnID{column_2});
+        auto table_scan = std::make_shared<TableScan>(
+            table_wrapper, OperatorScanPredicate{ColumnID{column_1}, predicate_condition, ColumnID{column_2}});
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,
@@ -270,30 +270,30 @@ TEST_F(ColumnStatisticsTest, StoredProcedureBetweenTest) {
 TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
   PredicateCondition predicate_condition = PredicateCondition::Equals;
 
-  auto col_stat1 = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, 0, 10);
-  auto col_stat2 = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, -10, 20);
+  auto column_stat1 = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, 0, 10);
+  auto column_stat2 = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, -10, 20);
 
-  auto result1 = col_stat1->estimate_predicate_with_column(predicate_condition, *col_stat2);
-  auto result2 = col_stat2->estimate_predicate_with_column(predicate_condition, *col_stat1);
+  auto result1 = column_stat1->estimate_predicate_with_column(predicate_condition, *column_stat2);
+  auto result2 = column_stat2->estimate_predicate_with_column(predicate_condition, *column_stat1);
   float expected_selectivity = (11.f / 31.f) / 10.f;
 
   EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
   EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
 
-  auto col_stat3 = std::make_shared<ColumnStatistics<float>>(0.0f, 10.f, 0.f, 10.f);
-  auto col_stat4 = std::make_shared<ColumnStatistics<float>>(0.0f, 3.f, -10.f, 20.f);
+  auto column_stat3 = std::make_shared<ColumnStatistics<float>>(0.0f, 10.f, 0.f, 10.f);
+  auto column_stat4 = std::make_shared<ColumnStatistics<float>>(0.0f, 3.f, -10.f, 20.f);
 
-  auto result3 = col_stat3->estimate_predicate_with_column(predicate_condition, *col_stat4);
-  auto result4 = col_stat4->estimate_predicate_with_column(predicate_condition, *col_stat3);
+  auto result3 = column_stat3->estimate_predicate_with_column(predicate_condition, *column_stat4);
+  auto result4 = column_stat4->estimate_predicate_with_column(predicate_condition, *column_stat3);
   expected_selectivity = (10.f / 30.f) / 10.f;
 
   EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
   EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
 
-  auto col_stat5 = std::make_shared<ColumnStatistics<float>>(0.0f, 10.f, 20.f, 30.f);
+  auto column_stat5 = std::make_shared<ColumnStatistics<float>>(0.0f, 10.f, 20.f, 30.f);
 
-  auto result5 = col_stat3->estimate_predicate_with_column(predicate_condition, *col_stat5);
-  auto result6 = col_stat5->estimate_predicate_with_column(predicate_condition, *col_stat3);
+  auto result5 = column_stat3->estimate_predicate_with_column(predicate_condition, *column_stat5);
+  auto result6 = column_stat5->estimate_predicate_with_column(predicate_condition, *column_stat3);
   expected_selectivity = 0.f;
 
   EXPECT_FLOAT_EQ(result5.selectivity, expected_selectivity);
@@ -303,26 +303,26 @@ TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
 TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
   PredicateCondition predicate_condition = PredicateCondition::LessThan;
 
-  auto col_stat1 = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, 1, 20);
-  auto col_stat2 = std::make_shared<ColumnStatistics<int>>(0.0f, 30.f, 11, 40);
+  auto column_stat1 = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, 1, 20);
+  auto column_stat2 = std::make_shared<ColumnStatistics<int>>(0.0f, 30.f, 11, 40);
 
-  auto result1 = col_stat1->estimate_predicate_with_column(predicate_condition, *col_stat2);
+  auto result1 = column_stat1->estimate_predicate_with_column(predicate_condition, *column_stat2);
   auto expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f + (10.f / 20.f) +
                               (20.f / 30.f) - (10.f / 20.f) * (20.f / 30.f);
   EXPECT_FLOAT_EQ(result1.selectivity, expected_selectivity);
 
-  auto result2 = col_stat2->estimate_predicate_with_column(predicate_condition, *col_stat1);
+  auto result2 = column_stat2->estimate_predicate_with_column(predicate_condition, *column_stat1);
   expected_selectivity = ((10.f / 20.f) * (10.f / 30.f) - 0.5f * 1.f / 30.f) * 0.5f;
   EXPECT_FLOAT_EQ(result2.selectivity, expected_selectivity);
 
-  auto col_stat3 = std::make_shared<ColumnStatistics<float>>(0.0f, 6.f, 0, 10);
-  auto col_stat4 = std::make_shared<ColumnStatistics<float>>(0.0f, 12.f, -10, 30);
+  auto column_stat3 = std::make_shared<ColumnStatistics<float>>(0.0f, 6.f, 0, 10);
+  auto column_stat4 = std::make_shared<ColumnStatistics<float>>(0.0f, 12.f, -10, 30);
 
-  auto result3 = col_stat3->estimate_predicate_with_column(predicate_condition, *col_stat4);
+  auto result3 = column_stat3->estimate_predicate_with_column(predicate_condition, *column_stat4);
   expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (20.f / 40.f);
   EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
 
-  auto result4 = col_stat4->estimate_predicate_with_column(predicate_condition, *col_stat3);
+  auto result4 = column_stat4->estimate_predicate_with_column(predicate_condition, *column_stat3);
   expected_selectivity = ((10.f / 10.f) * (10.f / 40.f) - 1.f / (4 * 6)) * 0.5f + (10.f / 40.f);
   EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
 }
@@ -412,24 +412,24 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
 
 TEST_F(ColumnStatisticsTest, Dummy) {
   {
-    auto dummy_col_statistics = ColumnStatistics<int>::dummy();
-    EXPECT_EQ(dummy_col_statistics.min(), 0);
-    EXPECT_EQ(dummy_col_statistics.max(), 0);
+    auto dummy_column_statistics = ColumnStatistics<int>::dummy();
+    EXPECT_EQ(dummy_column_statistics.min(), 0);
+    EXPECT_EQ(dummy_column_statistics.max(), 0);
   }
   {
-    auto dummy_col_statistics = ColumnStatistics<float>::dummy();
-    EXPECT_EQ(dummy_col_statistics.min(), 0.0f);
-    EXPECT_EQ(dummy_col_statistics.max(), 0.0f);
+    auto dummy_column_statistics = ColumnStatistics<float>::dummy();
+    EXPECT_EQ(dummy_column_statistics.min(), 0.0f);
+    EXPECT_EQ(dummy_column_statistics.max(), 0.0f);
   }
   {
-    auto dummy_col_statistics = ColumnStatistics<double>::dummy();
-    EXPECT_EQ(dummy_col_statistics.min(), 0.0);
-    EXPECT_EQ(dummy_col_statistics.max(), 0.0);
+    auto dummy_column_statistics = ColumnStatistics<double>::dummy();
+    EXPECT_EQ(dummy_column_statistics.min(), 0.0);
+    EXPECT_EQ(dummy_column_statistics.max(), 0.0);
   }
   {
-    auto dummy_col_statistics = ColumnStatistics<std::string>::dummy();
-    EXPECT_EQ(dummy_col_statistics.min(), "");
-    EXPECT_EQ(dummy_col_statistics.max(), "");
+    auto dummy_column_statistics = ColumnStatistics<std::string>::dummy();
+    EXPECT_EQ(dummy_column_statistics.min(), "");
+    EXPECT_EQ(dummy_column_statistics.max(), "");
   }
 }
 

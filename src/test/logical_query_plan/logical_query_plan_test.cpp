@@ -423,4 +423,18 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   EXPECT_NE(copied_sub_select_b->lqp, sub_select->lqp);
 }
 
+TEST_F(LogicalQueryPlanTest, OutputResetOnNodeDelete) {
+  auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
+  auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "y"}});
+  auto join_node = JoinNode::make(JoinMode::Cross, mock_node_a, mock_node_b);
+
+  EXPECT_EQ(mock_node_a->output_count(), 1u);
+  EXPECT_EQ(mock_node_b->output_count(), 1u);
+
+  join_node.reset();
+
+  EXPECT_EQ(mock_node_a->output_count(), 0u);
+  EXPECT_EQ(mock_node_b->output_count(), 0u);
+}
+
 }  // namespace opossum

@@ -7,13 +7,13 @@
 #include "scheduler/job_task.hpp"
 
 #include "storage/index/base_index.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnIndexType index_type,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, in},
@@ -72,15 +72,15 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
 
-    ChunkColumns columns;
+    Segments segments;
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
-      auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-      columns.push_back(ref_column_out);
+      auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
+      segments.push_back(ref_segment_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->append_chunk(columns, chunk->get_allocator(), chunk->access_counter());
+    _out_table->append_chunk(segments, chunk->get_allocator(), chunk->access_counter());
   });
 
   job_task->schedule();
@@ -111,7 +111,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index != nullptr, "Index of specified type not found for column (vector).");
+  Assert(index != nullptr, "Index of specified type not found for segment (vector).");
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {

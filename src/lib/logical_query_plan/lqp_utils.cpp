@@ -83,7 +83,8 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node) {
   DebugAssert(replacement_node->outputs().empty(), "Node can't have outputs");
-  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(), "Node can't have inputs");
+  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(),
+              "Replacement node can't have inputs");
 
   const auto outputs = original_node->outputs();
   const auto input_sides = original_node->get_input_sides();

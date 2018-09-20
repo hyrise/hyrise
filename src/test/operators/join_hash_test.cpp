@@ -1,6 +1,6 @@
 #include <type_traits>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/join_hash.hpp"

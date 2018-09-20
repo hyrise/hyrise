@@ -10,9 +10,9 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
-#include "storage/value_column.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -169,78 +169,78 @@ void resolve_data_type(DataType data_type, const Functor& func) {
 }
 
 /**
- * Given a BaseColumn and its known column type, resolve the column implementation and call the lambda
+ * Given a BaseSegment and its known column type, resolve the segment implementation and call the lambda
  *
- * @param func is a generic lambda or similar accepting a reference to a specialized column (value, dictionary,
+ * @param func is a generic lambda or similar accepting a reference to a specialized segment (value, dictionary,
  * reference)
  *
  *
  * Example:
  *
  *   template <typename T>
- *   void process_column(ValueColumn<T>& column);
+ *   void process_segment(ValueSegment<T>& segment);
  *
  *   template <typename T>
- *   void process_column(DictionaryColumn<T>& column);
+ *   void process_segment(DictionarySegment<T>& segment);
  *
- *   void process_column(ReferenceColumn& column);
+ *   void process_segment(ReferenceSegment& segment);
  *
- *   resolve_column_type<T>(base_column, [&](auto& typed_column) {
- *     process_column(typed_column);
+ *   resolve_segment_type<T>(base_segment, [&](auto& typed_segment) {
+ *     process_segment(typed_segment);
  *   });
  */
 template <typename In, typename Out>
 using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out, Out>;
 
-template <typename ColumnDataType, typename BaseColumnType, typename Functor>
-// BaseColumnType allows column to be const and non-const
-std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-/*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
-  using ValueColumnPtr = ConstOutIfConstIn<BaseColumnType, ValueColumn<ColumnDataType>>*;
-  using ReferenceColumnPtr = ConstOutIfConstIn<BaseColumnType, ReferenceColumn>*;
-  using EncodedColumnPtr = ConstOutIfConstIn<BaseColumnType, BaseEncodedColumn>*;
+template <typename ColumnDataType, typename BaseSegmentType, typename Functor>
+// BaseSegmentType allows segment to be const and non-const
+std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
+/*void*/ resolve_segment_type(BaseSegmentType& segment, const Functor& func) {
+  using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<ColumnDataType>>*;
+  using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
+  using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
-  if (auto value_column = dynamic_cast<ValueColumnPtr>(&column)) {
-    func(*value_column);
-  } else if (auto ref_column = dynamic_cast<ReferenceColumnPtr>(&column)) {
-    func(*ref_column);
-  } else if (auto encoded_column = dynamic_cast<EncodedColumnPtr>(&column)) {
-    resolve_encoded_column_type<ColumnDataType>(*encoded_column, func);
+  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
+    func(*value_segment);
+  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
+    func(*ref_segment);
+  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
+    resolve_encoded_segment_type<ColumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");
   }
 }
 
 /**
- * Resolves a data type by passing a hana::type object and the downcasted column on to a generic lambda
+ * Resolves a data type by passing a hana::type object and the downcasted segment on to a generic lambda
  *
  * @param data_type is an enum value of any of the supported column types
  * @param func is a generic lambda or similar accepting two parameters: a hana::type object and
- *   a reference to a specialized column (value, dictionary, reference)
+ *   a reference to a specialized segment (value, dictionary, reference)
  *
  *
  * Example:
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, ValueColumn<T>& column);
+ *   void process_segment(hana::basic_type<T> type, ValueSegment<T>& segment);
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, DictionaryColumn<T>& column);
+ *   void process_segment(hana::basic_type<T> type, DictionarySegment<T>& segment);
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, ReferenceColumn& column);
+ *   void process_segment(hana::basic_type<T> type, ReferenceSegment& segment);
  *
- *   resolve_data_and_column_type(base_column, [&](auto type, auto& typed_column) {
- *     process_column(type, typed_column);
+ *   resolve_data_and_segment_type(base_segment, [&](auto type, auto& typed_segment) {
+ *     process_segment(type, typed_segment);
  *   });
  */
-template <typename Functor, typename BaseColumnType>  // BaseColumnType allows column to be const and non-const
-std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-/*void*/ resolve_data_and_column_type(BaseColumnType& column, const Functor& func) {
-  resolve_data_type(column.data_type(), [&](auto type) {
+template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows segment to be const and non-const
+std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
+/*void*/ resolve_data_and_segment_type(BaseSegmentType& segment, const Functor& func) {
+  resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
-    resolve_column_type<ColumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
+    resolve_segment_type<ColumnDataType>(segment, [&](auto& typed_segment) { func(type, typed_segment); });
   });
 }
 

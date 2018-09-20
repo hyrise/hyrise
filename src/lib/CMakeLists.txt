@@ -17,6 +17,11 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    cost_model/abstract_cost_estimator.cpp
+    cost_model/abstract_cost_estimator.hpp
+    cost_model/cost.hpp
+    cost_model/cost_model_logical.cpp
+    cost_model/cost_model_logical.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
@@ -25,9 +30,6 @@ set(
     expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
-    expression/expression_precedence.hpp
-    expression/list_expression.cpp
-    expression/list_expression.hpp
     expression/between_expression.cpp
     expression/between_expression.hpp
     expression/binary_predicate_expression.cpp
@@ -36,17 +38,18 @@ set(
     expression/case_expression.hpp
     expression/cast_expression.cpp
     expression/cast_expression.hpp
-    expression/exists_expression.cpp
-    expression/exists_expression.hpp
     expression/evaluation/expression_evaluator.cpp
     expression/evaluation/expression_evaluator.hpp
+    expression/evaluation/expression_functors.hpp
     expression/evaluation/expression_result.hpp
     expression/evaluation/expression_result_views.hpp
-    expression/evaluation/expression_functors.hpp
     expression/evaluation/like_matcher.cpp
     expression/evaluation/like_matcher.hpp
+    expression/exists_expression.cpp
+    expression/exists_expression.hpp
     expression/expression_functional.cpp
     expression/expression_functional.hpp
+    expression/expression_precedence.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
     expression/extract_expression.cpp
@@ -57,20 +60,22 @@ set(
     expression/in_expression.hpp
     expression/is_null_expression.cpp
     expression/is_null_expression.hpp
+    expression/list_expression.cpp
+    expression/list_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
-    expression/unary_minus_expression.cpp
-    expression/unary_minus_expression.hpp
     expression/parameter_expression.cpp
     expression/parameter_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
     expression/pqp_select_expression.cpp
     expression/pqp_select_expression.hpp
+    expression/unary_minus_expression.cpp
+    expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
     import_export/binary.hpp
@@ -82,27 +87,14 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
-    cost_model/abstract_cost_feature_proxy.cpp
-    cost_model/abstract_cost_feature_proxy.hpp
-    cost_model/abstract_cost_model.cpp
-    cost_model/abstract_cost_model.hpp
-    cost_model/cost_feature.cpp
-    cost_model/cost_feature.hpp
-    cost_model/cost_feature_lqp_node_proxy.cpp
-    cost_model/cost_feature_lqp_node_proxy.hpp
-    cost_model/cost_feature_operator_proxy.cpp
-    cost_model/cost_feature_operator_proxy.hpp
-    cost_model/cost.hpp
-    cost_model/cost_model_logical.cpp
-    cost_model/cost_model_logical.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
-    logical_query_plan/alias_node.cpp
-    logical_query_plan/alias_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
-    logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/alias_node.cpp
+    logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
+    logical_query_plan/base_non_query_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -155,11 +147,9 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
-    operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/operator_performance_data.cpp
-    operators/operator_performance_data.hpp
+    operators/aggregate/aggregate_traits.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
     operators/delete.cpp
@@ -181,26 +171,22 @@ set(
     operators/insert.cpp
     operators/insert.hpp
     operators/join_hash.cpp
-    operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
+    operators/join_hash/hash_traits.hpp
     operators/join_index.cpp
     operators/join_index.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
-    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
+    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
-    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
+    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
-    operators/operator_scan_predicate.cpp
-    operators/operator_scan_predicate.hpp
-    operators/operator_join_predicate.cpp
-    operators/operator_join_predicate.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
@@ -210,6 +196,12 @@ set(
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
+    operators/operator_join_predicate.cpp
+    operators/operator_join_predicate.hpp
+    operators/operator_performance_data.cpp
+    operators/operator_performance_data.hpp
+    operators/operator_scan_predicate.cpp
+    operators/operator_scan_predicate.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -218,13 +210,13 @@ set(
     operators/projection.hpp
     operators/sort.cpp
     operators/sort.hpp
+    operators/table_scan.cpp
+    operators/table_scan.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
-    operators/table_scan.cpp
-    operators/table_scan.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
@@ -241,29 +233,32 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    statistics/statistics_import_export.cpp
-    statistics/statistics_import_export.hpp
-    statistics/chunk_statistics/abstract_filter.hpp
-    statistics/chunk_statistics/chunk_column_statistics.cpp
-    statistics/chunk_statistics/chunk_column_statistics.hpp
-    statistics/chunk_statistics/chunk_statistics.cpp
-    statistics/chunk_statistics/chunk_statistics.hpp
-    statistics/chunk_statistics/min_max_filter.hpp
-    statistics/chunk_statistics/range_filter.hpp
+    optimizer/join_ordering/dp_ccp.cpp
+    optimizer/join_ordering/dp_ccp.hpp
+    optimizer/join_ordering/enumerate_ccp.cpp
+    optimizer/join_ordering/enumerate_ccp.hpp
+    optimizer/join_ordering/join_graph.cpp
+    optimizer/join_ordering/join_graph.hpp
+    optimizer/join_ordering/join_graph_builder.cpp
+    optimizer/join_ordering/join_graph_builder.hpp
+    optimizer/join_ordering/join_graph_edge.cpp
+    optimizer/join_ordering/join_graph_edge.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
-    optimizer/strategy/column_pruning_rule.cpp
-    optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/constant_calculation_rule.cpp
     optimizer/strategy/constant_calculation_rule.hpp
+    optimizer/strategy/column_pruning_rule.cpp
+    optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
+    optimizer/strategy/join_ordering_rule.cpp
+    optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/predicate_pushdown_rule.cpp
     optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -310,16 +305,6 @@ set(
     server/types.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    statistics/base_column_statistics.cpp
-    statistics/base_column_statistics.hpp
-    statistics/column_statistics.cpp
-    statistics/column_statistics.cpp
-    statistics/generate_table_statistics.cpp
-    statistics/generate_table_statistics.hpp
-    statistics/generate_column_statistics.cpp
-    statistics/generate_column_statistics.hpp
-    statistics/table_statistics.cpp
-    statistics/table_statistics.hpp
     sql/abstract_cache.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
@@ -327,68 +312,80 @@ set(
     sql/gds_cache.hpp
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
-    sql/random_cache.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
-    sql/sql_pipeline_builder.cpp
-    sql/sql_pipeline_builder.hpp
-    sql/sql_pipeline.cpp
-    sql/sql_pipeline.hpp
-    sql/sql_pipeline_statement.cpp
-    sql/sql_pipeline_statement.hpp
-    sql/sql_query_cache.hpp
-    sql/sql_query_plan.cpp
-    sql/sql_query_plan.hpp
+    sql/random_cache.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_resolver.cpp
     sql/sql_identifier_resolver.hpp
     sql/sql_identifier_resolver_proxy.cpp
     sql/sql_identifier_resolver_proxy.hpp
+    sql/sql_pipeline.cpp
+    sql/sql_pipeline.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
+    sql/sql_pipeline_statement.cpp
+    sql/sql_pipeline_statement.hpp
+    sql/sql_query_cache.hpp
+    sql/sql_query_plan.cpp
+    sql/sql_query_plan.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_column.cpp
-    storage/base_column_encoder.hpp
-    storage/base_column.hpp
-    storage/base_dictionary_column.hpp
-    storage/base_encoded_column.cpp
-    storage/base_encoded_column.hpp
-    storage/base_value_column.hpp
+    statistics/base_column_statistics.cpp
+    statistics/base_column_statistics.hpp
+    statistics/chunk_statistics/abstract_filter.hpp
+    statistics/chunk_statistics/chunk_statistics.cpp
+    statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.hpp
+    statistics/chunk_statistics/segment_statistics.cpp
+    statistics/chunk_statistics/segment_statistics.hpp
+    statistics/chunk_statistics/counting_quotient_filter.hpp
+    statistics/chunk_statistics/counting_quotient_filter.cpp
+    statistics/column_statistics.cpp
+    statistics/column_statistics.cpp
+    statistics/generate_column_statistics.cpp
+    statistics/generate_column_statistics.hpp
+    statistics/generate_table_statistics.cpp
+    statistics/generate_table_statistics.hpp
+    statistics/statistics_import_export.cpp
+    statistics/statistics_import_export.hpp
+    statistics/table_statistics.cpp
+    statistics/table_statistics.hpp
+    storage/abstract_segment_visitor.hpp
+    storage/base_segment_accessor.hpp
+    storage/base_dictionary_segment.hpp
+    storage/base_encoded_segment.cpp
+    storage/base_encoded_segment.hpp
+    storage/base_segment.cpp
+    storage/base_segment.hpp
+    storage/base_segment_encoder.hpp
+    storage/base_value_segment.hpp
+    storage/chunk.cpp
+    storage/chunk.hpp
     storage/chunk_access_counter.cpp
     storage/chunk_access_counter.hpp
-    storage/chunk.cpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/chunk.hpp
-    storage/column_encoding_utils.cpp
-    storage/column_encoding_utils.hpp
-    storage/column_iterables/any_column_iterable.hpp
-    storage/column_iterables/any_column_iterator.hpp
-    storage/column_iterables/base_column_iterators.hpp
-    storage/column_iterables/chunk_offset_mapping.cpp
-    storage/column_iterables/chunk_offset_mapping.hpp
-    storage/column_iterables/column_iterator_values.hpp
-    storage/column_iterables/create_iterable_from_attribute_vector.hpp
-    storage/column_iterables.hpp
-    storage/abstract_column_visitor.hpp
-    storage/create_iterable_from_column.hpp
-    storage/dictionary_column/attribute_vector_iterable.hpp
-    storage/dictionary_column.cpp
-    storage/dictionary_column/dictionary_column_iterable.hpp
-    storage/dictionary_column/dictionary_encoder.hpp
-    storage/dictionary_column.hpp
+    storage/create_iterable_from_segment.hpp
+    storage/dictionary_segment.cpp
+    storage/dictionary_segment.hpp
+    storage/dictionary_segment/attribute_vector_iterable.hpp
+    storage/dictionary_segment/dictionary_encoder.hpp
+    storage/dictionary_segment/dictionary_segment_iterable.hpp
     storage/encoding_type.hpp
-    storage/fixed_string_dictionary_column.cpp
-    storage/fixed_string_dictionary_column.hpp
-    storage/fixed_string_dictionary_column/fixed_string.cpp
-    storage/fixed_string_dictionary_column/fixed_string.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector.cpp
-    storage/fixed_string_dictionary_column/fixed_string_vector.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
-    storage/frame_of_reference_column.cpp
-    storage/frame_of_reference_column.hpp
+    storage/fixed_string_dictionary_segment.cpp
+    storage/fixed_string_dictionary_segment.hpp
+    storage/fixed_string_dictionary_segment/fixed_string.cpp
+    storage/fixed_string_dictionary_segment/fixed_string.hpp
+    storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
+    storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
+    storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp
     storage/frame_of_reference/frame_of_reference_iterable.hpp
+    storage/frame_of_reference_segment.cpp
+    storage/frame_of_reference_segment.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -399,49 +396,58 @@ set(
     storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/base_index.cpp
     storage/index/base_index.hpp
-    storage/index/column_index_type.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key_base.cpp
-    storage/index/group_key/variable_length_key_base.hpp
     storage/index/group_key/variable_length_key.cpp
     storage/index/group_key/variable_length_key.hpp
+    storage/index/group_key/variable_length_key_base.cpp
+    storage/index/group_key/variable_length_key_base.hpp
     storage/index/group_key/variable_length_key_proxy.cpp
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
-    statistics/chunk_statistics/counting_quotient_filter.hpp
-    statistics/chunk_statistics/counting_quotient_filter.cpp
+    storage/index/segment_index_type.hpp
+    storage/lqp_view.cpp
+    storage/lqp_view.hpp
     storage/materialize.hpp
-    storage/mvcc_columns.cpp
-    storage/mvcc_columns.hpp
+    storage/mvcc_data.cpp
+    storage/mvcc_data.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
     storage/proxy_chunk.hpp
-    storage/reference_column.cpp
-    storage/reference_column.hpp
-    storage/reference_column/reference_column_iterable.hpp
-    storage/resolve_encoded_column_type.hpp
-    storage/run_length_column.cpp
-    storage/run_length_column.hpp
-    storage/run_length_column/run_length_column_iterable.hpp
-    storage/run_length_column/run_length_encoder.hpp
-    storage/lqp_view.cpp
-    storage/lqp_view.hpp
+    storage/reference_segment.cpp
+    storage/reference_segment.hpp
+    storage/reference_segment/reference_segment_iterable.hpp
+    storage/resolve_encoded_segment_type.hpp
+    storage/run_length_segment.cpp
+    storage/run_length_segment.hpp
+    storage/run_length_segment/run_length_encoder.hpp
+    storage/run_length_segment/run_length_segment_iterable.hpp
+    storage/segment_accessor.hpp
+    storage/segment_encoding_utils.cpp
+    storage/segment_encoding_utils.hpp
+    storage/segment_iterables.hpp
+    storage/segment_iterables/any_segment_iterable.hpp
+    storage/segment_iterables/any_segment_iterator.hpp
+    storage/segment_iterables/base_segment_iterators.hpp
+    storage/segment_iterables/chunk_offset_mapping.cpp
+    storage/segment_iterables/chunk_offset_mapping.hpp
+    storage/segment_iterables/create_iterable_from_attribute_vector.hpp
+    storage/segment_iterables/segment_iterator_values.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
-    storage/table_column_definition.cpp
-    storage/table_column_definition.hpp
     storage/table.cpp
     storage/table.hpp
-    storage/value_column.cpp
-    storage/value_column.hpp
-    storage/value_column/null_value_vector_iterable.hpp
-    storage/value_column/value_column_iterable.hpp
+    storage/table_column_definition.cpp
+    storage/table_column_definition.hpp
+    storage/value_segment.cpp
+    storage/value_segment.hpp
+    storage/value_segment/null_value_vector_iterable.hpp
+    storage/value_segment/value_segment_iterable.hpp
     storage/vector_compression/base_compressed_vector.hpp
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
@@ -516,6 +522,7 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    utils/tracing/probes.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -583,6 +590,16 @@ endif()
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
+
+# Generate header file in order to define probes needed for dtrace
+set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
+add_custom_command (
+    OUTPUT ${PROVIDER_FILE}
+    DEPENDS utils/tracing/provider.d
+    COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
+)
+
+set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})

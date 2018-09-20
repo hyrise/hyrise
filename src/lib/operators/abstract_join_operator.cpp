@@ -27,8 +27,8 @@ const ColumnIDPair& AbstractJoinOperator::column_ids() const { return _column_id
 PredicateCondition AbstractJoinOperator::predicate_condition() const { return _predicate_condition; }
 
 const std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
-  std::string column_name_left = std::string("Col #") + std::to_string(_column_ids.first);
-  std::string column_name_right = std::string("Col #") + std::to_string(_column_ids.second);
+  std::string column_name_left = std::string("Column #") + std::to_string(_column_ids.first);
+  std::string column_name_right = std::string("Column #") + std::to_string(_column_ids.second);
 
   if (input_table_left()) column_name_left = input_table_left()->column_name(_column_ids.first);
   if (input_table_right()) column_name_right = input_table_right()->column_name(_column_ids.second);

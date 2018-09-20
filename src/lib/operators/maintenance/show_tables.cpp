@@ -10,7 +10,7 @@
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -30,12 +30,12 @@ std::shared_ptr<const Table> ShowTables::_on_execute() {
   auto table = std::make_shared<Table>(TableColumnDefinitions{{"table_name", DataType::String}}, TableType::Data);
 
   const auto table_names = StorageManager::get().table_names();
-  const auto column = std::make_shared<ValueColumn<std::string>>(
+  const auto segment = std::make_shared<ValueSegment<std::string>>(
       tbb::concurrent_vector<std::string>(table_names.begin(), table_names.end()));
 
-  ChunkColumns columns;
-  columns.push_back(column);
-  table->append_chunk(columns);
+  Segments segments;
+  segments.push_back(segment);
+  table->append_chunk(segments);
 
   return table;
 }

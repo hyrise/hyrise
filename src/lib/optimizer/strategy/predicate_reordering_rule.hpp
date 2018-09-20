@@ -29,7 +29,7 @@ class PredicateReorderingRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  bool _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
+  bool _reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
 };
 
 }  // namespace opossum
