@@ -177,9 +177,12 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
     }
   }
 
-  for (int search_item = 0; search_item < static_cast<int>(3 * test_size); ++search_item) {
-    if (search_item % 2 == 0 && search_item < static_cast<int>(2 * test_size)) {
-      // all multiples of two within range of $ints should exist
+  // In the following tests, we iterate over all integers from 0 to 3*test_size. The largest elements are known to
+  // be of size 2*test_size. When items are within the test_size range and even, we should find the item in the index.
+  // If it is odd or above the test range, we should not find the item.
+  for (auto search_item = int32_t{0}; search_item < static_cast<int32_t>(3 * test_size); ++search_item) {
+    if (search_item % 2 == 0 && search_item < static_cast<int32_t>(2 * test_size)) {
+      // all multiples of two within range of `ints` should exist
       EXPECT_NE(index->lower_bound({search_item}), index->cend());
       continue;
     }
