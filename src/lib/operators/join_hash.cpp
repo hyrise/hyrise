@@ -167,7 +167,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         auto& element = partition_left[partition_offset];
 
-        auto [it, inserted] =
+        auto [it, inserted] =  // NOLINT
             hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
         if (!inserted) {
           // We already have the value in the map
