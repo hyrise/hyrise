@@ -8,7 +8,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "types.hpp"
@@ -24,10 +24,10 @@ class CountingQuotientFilterTest : public BaseTest {
     string_value_counts["apple"] = 9;
     string_value_counts["charlie"] = 3;
     string_value_counts["inbox"] = 1;
-    string_column = std::make_shared<ValueColumn<std::string>>();
+    string_segment = std::make_shared<ValueSegment<std::string>>();
     for (auto value_and_count : string_value_counts) {
       for (size_t i = 0; i < value_and_count.second; i++) {
-        string_column->append(value_and_count.first);
+        string_segment->append(value_and_count.first);
       }
     }
 
@@ -37,10 +37,10 @@ class CountingQuotientFilterTest : public BaseTest {
     int_value_counts[1234] = 21;
     int_value_counts[12345] = 8;
     int_value_counts[123456] = 6;
-    int_column = std::make_shared<ValueColumn<int>>();
+    int_segment = std::make_shared<ValueSegment<int>>();
     for (auto value_and_count : int_value_counts) {
       for (size_t i = 0; i < value_and_count.second; i++) {
-        int_column->append(value_and_count.first);
+        int_segment->append(value_and_count.first);
       }
     }
 
@@ -49,22 +49,22 @@ class CountingQuotientFilterTest : public BaseTest {
     string_cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, 8);
     string_cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, 16);
     string_cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, 32);
-    string_cqf2->populate(string_column);
-    string_cqf4->populate(string_column);
-    string_cqf8->populate(string_column);
-    string_cqf16->populate(string_column);
-    string_cqf32->populate(string_column);
+    string_cqf2->populate(string_segment);
+    string_cqf4->populate(string_segment);
+    string_cqf8->populate(string_segment);
+    string_cqf16->populate(string_segment);
+    string_cqf32->populate(string_segment);
 
     int_cqf2 = std::make_shared<CountingQuotientFilter<int>>(4, 2);
     int_cqf4 = std::make_shared<CountingQuotientFilter<int>>(4, 4);
     int_cqf8 = std::make_shared<CountingQuotientFilter<int>>(4, 8);
     int_cqf16 = std::make_shared<CountingQuotientFilter<int>>(4, 16);
     int_cqf32 = std::make_shared<CountingQuotientFilter<int>>(4, 32);
-    int_cqf2->populate(int_column);
-    int_cqf4->populate(int_column);
-    int_cqf8->populate(int_column);
-    int_cqf16->populate(int_column);
-    int_cqf32->populate(int_column);
+    int_cqf2->populate(int_segment);
+    int_cqf4->populate(int_segment);
+    int_cqf8->populate(int_segment);
+    int_cqf16->populate(int_segment);
+    int_cqf32->populate(int_segment);
   }
 
   std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf2;
@@ -77,8 +77,8 @@ class CountingQuotientFilterTest : public BaseTest {
   std::shared_ptr<CountingQuotientFilter<int>> int_cqf8;
   std::shared_ptr<CountingQuotientFilter<int>> int_cqf16;
   std::shared_ptr<CountingQuotientFilter<int>> int_cqf32;
-  std::shared_ptr<ValueColumn<std::string>> string_column;
-  std::shared_ptr<ValueColumn<int>> int_column;
+  std::shared_ptr<ValueSegment<std::string>> string_segment;
+  std::shared_ptr<ValueSegment<int>> int_segment;
   std::map<std::string, size_t> string_value_counts;
   std::map<int, size_t> int_value_counts;
 

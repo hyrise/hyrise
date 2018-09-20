@@ -10,7 +10,7 @@
 #include "cqf32.hpp"
 #include "types.hpp"
 
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "abstract_filter.hpp"
 
 
@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-/* Counting Quotient Filters allow you to keep track of which values are present in a column and how often. Filters
+/* Counting Quotient Filters allow you to keep track of which values are present in a segment and how often. Filters
 work approximately. If a membership query yields a positive result, the value is probably present but there is
 a chance of a false positive. If the query delivers a negative result, the item is guaranteed to not be contained.
 In the same way, items can be over counted but not under counted.
@@ -32,7 +32,7 @@ class CountingQuotientFilter : AbstractFilter {
   virtual ~CountingQuotientFilter();
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
-  void populate(std::shared_ptr<const BaseColumn> column);
+  void populate(std::shared_ptr<const BaseSegment> segment);
   uint64_t count(ElementType value) const;
   uint64_t count_all_type(AllTypeVariant value) const;
   uint64_t memory_consumption() const;

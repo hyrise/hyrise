@@ -8,38 +8,14 @@
 #include "resolve_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "types.hpp"
 
-using gqf2::qf_init;
-using gqf4::qf_init;
-using gqf8::qf_init;
-using gqf16::qf_init;
-using gqf32::qf_init;
-
-using gqf2::qf_destroy;
-using gqf4::qf_destroy;
-using gqf8::qf_destroy;
-using gqf16::qf_destroy;
-using gqf32::qf_destroy;
-
-using gqf2::qf_memory_consumption;
-using gqf4::qf_memory_consumption;
-using gqf8::qf_memory_consumption;
-using gqf16::qf_memory_consumption;
-using gqf32::qf_memory_consumption;
-
-using gqf2::qf_count_key_value;
-using gqf4::qf_count_key_value;
-using gqf8::qf_count_key_value;
-using gqf16::qf_count_key_value;
-using gqf32::qf_count_key_value;
-
-using gqf2::qf_insert;
-using gqf4::qf_insert;
-using gqf8::qf_insert;
-using gqf16::qf_insert;
-using gqf32::qf_insert;
+using namespace gqf2; // NOLINT
+using namespace gqf4; // NOLINT
+using namespace gqf8; // NOLINT
+using namespace gqf16; // NOLINT
+using namespace gqf32; // NOLINT
 
 namespace opossum {
 
@@ -128,9 +104,9 @@ uint64_t CountingQuotientFilter<std::string>::_hash(std::string value) const {
 }
 
 template <typename ElementType>
-void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseColumn> column) {
-  resolve_column_type<ElementType>(*column, [&](const auto& typed_column) {
-    auto iterable_left = create_iterable_from_column<ElementType>(typed_column);
+void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseSegment> segment) {
+  resolve_segment_type<ElementType>(*segment, [&](const auto& typed_segment) {
+    auto iterable_left = create_iterable_from_segment<ElementType>(typed_segment);
     iterable_left.for_each([&](const auto& value) {
       if (value.is_null()) return;
       insert(value.value());
