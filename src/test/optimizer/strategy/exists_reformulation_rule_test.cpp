@@ -94,6 +94,10 @@ TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
   EXPECT_TRUE(lqp_contains_exists(unopt_lqp, false));
   EXPECT_FALSE(lqp_contains_join_with_mode(unopt_lqp, JoinMode::Semi));
 
+  std::cout << "####### OPTIMIZED" << std::endl;
+  unopt_lqp->print();
+  std::cout << std::endl;
+
   auto modified_lqp = unopt_lqp->deep_copy();
   apply_rule(_rule, modified_lqp);
   EXPECT_TRUE(lqp_contains_join_with_mode(modified_lqp, JoinMode::Semi));
@@ -155,34 +159,54 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
-  if (!IS_DEBUG) return;
+  // if (!IS_DEBUG) return;
 
-  auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_b.a = table_a.a)";
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-  const auto& unopt_lqp = sql_pipeline.get_unoptimized_logical_plan();
+  // auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_b.a = table_a.a)";
+  // auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
+  // const auto& unopt_lqp = sql_pipeline.get_unoptimized_logical_plan();
 
-  auto modified_lqp = unopt_lqp->deep_copy();
-  apply_rule(_rule, modified_lqp);
+  const auto subselect_lqp = PredicateNode::make(equals_(node_table_a_col_a, node_table_b_col_a), node_table_b);
+  const auto subselect = select_(subselect_lqp);
 
-  const auto manual_lqp = ProjectionNode::make(
-      expression_vector(node_table_a_col_a, node_table_a_col_b),
-      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_a_col_b), node_table_a, node_table_b));
+  const auto xxx = ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b));
+  const auto yyy = PredicateNode::make(equals_(exists_(subselect), 0), xxx);
 
-  EXPECT_LQP_EQ(modified_lqp, manual_lqp);
+  const auto input_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), yyy, node_table_a);
+
+  std::cout << "####### OPTIMIZED" << std::endl;
+  input_lqp->print();
+  std::cout << std::endl;
+
+  auto modified_lqp = input_lqp->deep_copy();
+  std::cout << "Applying rule" << std::endl;
+  StrategyBaseTest::apply_rule(_rule, modified_lqp);
+
+  std::cout << "####### " << std::endl;
+  modified_lqp->print();
+  std::cout << std::endl;
+
+  const auto compare_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_a_col_b),
+        ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
+        node_table_b));
+
+  EXPECT_LQP_EQ(modified_lqp, compare_lqp);
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
-  if (!IS_DEBUG) return;
-
   auto query = "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a)";
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-  const auto& opt_lqp = sql_pipeline.get_optimized_logical_plan();
+  const auto& input_lqp = sql_pipeline.get_unoptimized_logical_plan();
 
-  const auto manual_lqp = ProjectionNode::make(
-      expression_vector(node_table_a_col_a, node_table_a_col_b),
-      JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_a_col_b), node_table_a, node_table_b));
+  auto modified_lqp = input_lqp->deep_copy();
+  StrategyBaseTest::apply_rule(_rule, modified_lqp);
 
-  EXPECT_LQP_EQ(opt_lqp, manual_lqp);
+  const auto compare_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+      JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
+        ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
+        node_table_b));
+
+  EXPECT_LQP_EQ(modified_lqp, compare_lqp);
 }
 
 }  // namespace opossum
