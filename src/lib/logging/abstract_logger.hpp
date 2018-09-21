@@ -37,14 +37,14 @@ class AbstractLogger {
   // Flushes log to disk.
   virtual void log_flush() = 0;
 
-  // Returns the corresponding recoverer
-  virtual AbstractRecoverer& get_recoverer() { return _formatter->get_recoverer(); }
-
   virtual ~AbstractLogger() = default;
 
  protected:
   friend class Logger;
   explicit AbstractLogger(std::unique_ptr<AbstractLogFormatter> formatter);
+
+  // Returns the corresponding recoverer
+  virtual AbstractRecoverer& get_recoverer() { return _formatter->get_recoverer(); }
 
  protected:
   void _open_logfile();
