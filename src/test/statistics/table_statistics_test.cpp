@@ -44,14 +44,15 @@ class TableStatisticsTest : public BaseTest {
 
     std::shared_ptr<TableScan> table_scan;
     if (predicate_condition == PredicateCondition::Between) {
-      auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, column_id, PredicateCondition::GreaterThanEquals, value);
+      auto first_table_scan = std::make_shared<TableScan>(
+          table_wrapper, OperatorScanPredicate{column_id, PredicateCondition::GreaterThanEquals, value});
       first_table_scan->execute();
 
-      table_scan =
-          std::make_shared<TableScan>(first_table_scan, column_id, PredicateCondition::LessThanEquals, *value2);
+      table_scan = std::make_shared<TableScan>(
+          first_table_scan, OperatorScanPredicate{column_id, PredicateCondition::LessThanEquals, *value2});
     } else {
-      table_scan = std::make_shared<TableScan>(table_wrapper, column_id, predicate_condition, value);
+      table_scan =
+          std::make_shared<TableScan>(table_wrapper, OperatorScanPredicate{column_id, predicate_condition, value});
     }
     table_scan->execute();
 

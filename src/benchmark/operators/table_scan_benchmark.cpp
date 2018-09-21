@@ -12,10 +12,12 @@ namespace opossum {
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,
                               const AllParameterVariant right_parameter) {
-  auto warm_up = std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
+  auto warm_up =
+      std::make_shared<TableScan>(in, OperatorScanPredicate{left_column_id, predicate_condition, right_parameter});
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
+    auto table_scan =
+        std::make_shared<TableScan>(in, OperatorScanPredicate{left_column_id, predicate_condition, right_parameter});
     table_scan->execute();
   }
 }
@@ -56,9 +58,9 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
 
   while (state.KeepRunning()) {
     for (const auto& column_name_and_pattern : column_names_and_patterns) {
-      auto table_scan = std::make_shared<TableScan>(lineitem_wrapper,
-                                                    lineitem_table->column_id_by_name(column_name_and_pattern.first),
-                                                    PredicateCondition::Like, column_name_and_pattern.second);
+      auto table_scan = std::make_shared<TableScan>(
+          lineitem_wrapper, OperatorScanPredicate{lineitem_table->column_id_by_name(column_name_and_pattern.first),
+                                                  PredicateCondition::Like, column_name_and_pattern.second});
       table_scan->execute();
     }
   }

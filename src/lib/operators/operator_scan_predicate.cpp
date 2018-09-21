@@ -1,5 +1,6 @@
 #include "operator_scan_predicate.hpp"
 
+#include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/parameter_expression.hpp"
@@ -32,6 +33,22 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 }  // namespace
 
 namespace opossum {
+
+std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>& table) const {
+  std::string column_name_left = std::string("Column #") + std::to_string(column_id);
+  if (table) {
+    column_name_left = table->column_name(column_id);
+  }
+
+  std::string right = opossum::to_string(value);
+  if (table && is_column_id(value)) {
+    right = table->column_name(boost::get<ColumnID>(value));
+  }
+
+  std::stringstream stream;
+  stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
+  return stream.str();
+}
 
 std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_expression(
     const AbstractExpression& expression, const AbstractLQPNode& node) {

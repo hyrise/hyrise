@@ -18,7 +18,8 @@ class MaterializeTest : public EncodingTest {
     const auto table_wrapper = std::make_shared<TableWrapper>(_data_table);
     table_wrapper->execute();
 
-    const auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    const auto table_scan = std::make_shared<TableScan>(
+        table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
     table_scan->execute();
     _references_table = table_scan->get_output();
   }

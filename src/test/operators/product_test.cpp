@@ -39,8 +39,9 @@ TEST_F(OperatorsProductTest, ValueSegments) {
 }
 
 TEST_F(OperatorsProductTest, ReferenceAndValueSegments) {
-  auto table_scan =
-      std::make_shared<opossum::TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto table_scan = std::make_shared<TableScan>(
+      _table_wrapper_a,
+      OperatorScanPredicate{OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234}});
   table_scan->execute();
 
   auto product = std::make_shared<Product>(table_scan, _table_wrapper_b);
