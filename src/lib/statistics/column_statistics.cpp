@@ -57,7 +57,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // distinction between integers and floats
       // for integers "< value" means that the new max is value <= value - 1
       // for floats "< value" means that the new max is value <= value - ε
-      if (std::is_integral_v<ColumnDataType>) {
+      if constexpr (std::is_integral_v<ColumnDataType>) {
         return estimate_range(_min, value - 1);
       }
       // intentionally no break
@@ -71,7 +71,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // distinction between integers and floats
       // for integers "> value" means that the new min value is >= value + 1
       // for floats "> value" means that the new min value is >= value + ε
-      if (std::is_integral_v<ColumnDataType>) {
+      if constexpr (std::is_integral_v<ColumnDataType>) {
         return estimate_range(value + 1, _max);
       }
       // intentionally no break
@@ -241,7 +241,7 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
   auto right_below_overlapping_ratio = 0.f;
   auto right_above_overlapping_ratio = 0.f;
 
-  if (std::is_integral<ColumnDataType>::value) {
+  if constexpr (std::is_integral_v<ColumnDataType>) {
     left_below_overlapping_ratio = estimate_range_selectivity(_min, overlapping_range_min - 1);
     left_above_overlapping_ratio = estimate_range_selectivity(overlapping_range_max + 1, _max);
     right_below_overlapping_ratio =
