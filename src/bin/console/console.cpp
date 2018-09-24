@@ -352,35 +352,34 @@ void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
 int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
+  // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  gentpcc [TABLENAME]                - Generate available TPC-C tables, or a specific table if TABLENAME is "
-      "specified\n");
-  out("  gentpch SCALE_FACTOR [CHUNK_SIZE]  - Generate all TPC-H tables\n");
-  out("  load FILE TABLENAME                - Load table from disc specified by filepath FILE, store it with name "
-      "TABLENAME\n");
-  out("  script SCRIPTFILE                  - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                    - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] [SQL]          - Visualize a SQL query\n");
-  out("                                         Options\n");
-  out("                                           - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                            Default: noexec\n");
-  out("                                           - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives "
-      "the\n");
-  out("                                                                  unoptimized lqp. Default: pqp\n");
-  out("                                         SQL\n");
-  out("                                           - Optional, a query to visualize. If not specified, the last\n");
-  out("                                             previously executed query is visualized.\n");
-  out("  begin                              - Manually create a new transaction (Auto-commit is active unless begin is "
-      "called)\n");
-  out("  rollback                           - Roll back a manually created transaction\n");
-  out("  commit                             - Commit a manually created transaction\n");
-  out("  txinfo                             - Print information on the current transaction\n");
-  out("  pwd                                - Print current working directory\n");
-  out("  quit                               - Exit the HYRISE Console\n");
-  out("  help                               - Show this message\n\n");
-  out("  setting [property] [value]         - Change a runtime setting\n\n");
-  out("           scheduler (on|off)        - Turn the scheduler on (default) or off\n\n");
+  out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
+  out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
+  out("  load FILE TABLENAME                     - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");  // NOLINT
+  out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                         - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]               - Visualize a SQL query\n");
+  out("                                               Options\n");
+  out("                                                - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                                 Default: noexec\n");
+  out("                                                - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
+  out("                                                                       unoptimized lqp. Default: pqp\n");
+  out("                                              SQL\n");
+  out("                                                - Optional, a query to visualize. If not specified, the last\n");
+  out("                                                  previously executed query is visualized.\n");
+  out("  begin                                   - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
+  out("  rollback                                - Roll back a manually created transaction\n");
+  out("  commit                                  - Commit a manually created transaction\n");
+  out("  txinfo                                  - Print information on the current transaction\n");
+  out("  pwd                                     - Print current working directory\n");
+  out("  quit                                    - Exit the HYRISE Console\n");
+  out("  help                                    - Show this message\n\n");
+  out("  setting [property] [value]              - Change a runtime setting\n\n");
+  out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
+  // clang-format on
+
   return Console::ReturnCode::Ok;
 }
 
@@ -430,8 +429,8 @@ int Console::_generate_tpch(const std::string& args) {
 
   if (!args_valid) {
     out("Usage: ");
-    out("  gentpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                      Chunk size is unlimited by default. \n");
+    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
+    out("                                            Chunk size is unlimited by default. \n");
     return ReturnCode::Error;
   }
 
@@ -796,8 +795,8 @@ char** Console::_command_completion(const char* text, int start, int end) {
   // Choose completion function depending on the input. If it starts with "generate",
   // suggest TPC-C tablenames for completion.
   const std::string& first_word = tokens.at(0);
-  if (first_word == "gentpch") {
-    // Completion only for two words, "gentpch", and the TABLENAME
+  if (first_word == "generate_tpcc") {
+    // Completion only for two words, "generate_tpcc", and the TABLENAME
     if (tokens.size() <= 2) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_tpcc);
     }
