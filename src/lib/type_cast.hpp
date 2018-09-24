@@ -45,7 +45,7 @@ inline __attribute__((always_inline)) auto&& type_cast(U&& value) {
 // If trivial conversion failed, continues here:
 // Template specialization for everything but integral types
 template <typename T, typename U>
-std::enable_if_t<!std::is_integral<T>::value, T> type_cast(const U& value) {
+std::enable_if_t<!std::is_integral_v<T>, T> type_cast(const U& value) {
   // For AllTypeVariants, check if it contains the type that we want. In that case, we don't need to convert anything.
   if constexpr (std::is_same_v<U, AllTypeVariant>) {
     if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
@@ -56,7 +56,7 @@ std::enable_if_t<!std::is_integral<T>::value, T> type_cast(const U& value) {
 
 // Template specialization for integral types
 template <typename T, typename U>
-std::enable_if_t<std::is_integral<T>::value, T> type_cast(const U& value) {
+std::enable_if_t<std::is_integral_v<T>, T> type_cast(const U& value) {
   if constexpr (std::is_same_v<U, AllTypeVariant>) {
     if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
   }
