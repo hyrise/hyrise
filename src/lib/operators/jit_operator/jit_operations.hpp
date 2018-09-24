@@ -91,13 +91,13 @@ const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(
 
 const auto jit_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string, std::regex_constants::icase};
+  const auto regex = std::regex{regex_string};
   return std::regex_match(a, regex);
 };
 
 const auto jit_not_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string, std::regex_constants::icase};
+  const auto regex = std::regex{regex_string};
   return !std::regex_match(a, regex);
 };
 
