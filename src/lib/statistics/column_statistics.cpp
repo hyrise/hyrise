@@ -57,8 +57,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // distinction between integers and floats
       // for integers "< value" means that the new max is value <= value - 1
       // for floats "< value" means that the new max is value <= value - ε
-      // we do not use constexpr in the if clause because clang-tidy complains
-      if (std::is_integral_v<ColumnDataType>) {
+      if constexpr (std::is_integral_v<ColumnDataType>) {  // NOLINT
         return estimate_range(_min, value - 1);
       }
       // intentionally no break
@@ -72,8 +71,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // distinction between integers and floats
       // for integers "> value" means that the new min value is >= value + 1
       // for floats "> value" means that the new min value is >= value + ε
-      // we do not use constexpr in the if clause because clang-tidy complains
-      if (std::is_integral_v<ColumnDataType>) {
+      if constexpr (std::is_integral_v<ColumnDataType>) {  // NOLINT
         return estimate_range(value + 1, _max);
       }
       // intentionally no break
