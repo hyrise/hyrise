@@ -110,8 +110,8 @@ Console::Console()
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
-  register_command("gentpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
-  register_command("gentpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
+  register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
+  register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
