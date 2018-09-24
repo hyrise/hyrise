@@ -549,7 +549,8 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithBrokenPrecalculated) {
 
   const auto table_wrapper_c = std::make_shared<TableWrapper>(table_a);
   table_wrapper_c->execute();
-  const auto table_scan_c = std::make_shared<TableScan>(table_wrapper_c, ColumnID{0}, PredicateCondition::Equals, 3);
+  const auto table_scan_c =
+      std::make_shared<TableScan>(table_wrapper_c, OperatorScanPredicate(ColumnID{0}, PredicateCondition::Equals, 3));
   table_scan_c->execute();
   const auto projection_c =
       std::make_shared<Projection>(table_scan_c, expression_vector(PQPColumnExpression::from_table(*table_a, "b")));
@@ -616,8 +617,8 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
   const auto parameter_a = parameter_(ParameterID{0});
   const auto a_plus_x_projection =
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
-  const auto a_plus_x_eq_13_scan =
-      std::make_shared<TableScan>(a_plus_x_projection, ColumnID{0}, PredicateCondition::Equals, 13);
+  const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(
+      a_plus_x_projection, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 13});
   const auto pqp_select_expression =
       select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
