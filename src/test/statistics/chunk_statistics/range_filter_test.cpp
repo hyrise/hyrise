@@ -63,7 +63,7 @@ class RangeFilterTest : public ::testing::Test {
       if constexpr (std::numeric_limits<T>::is_iec559) {
         auto value_in_gap = begin + 0.5 * length;
         EXPECT_TRUE(filter->can_prune({value_in_gap}, PredicateCondition::Equals));
-      } else if constexpr (std::is_integral_v<T>) {
+      } else if constexpr (std::is_integral_v<T>) {  // NOLINT
         if (length > 1) {
           EXPECT_TRUE(filter->can_prune({++begin}, PredicateCondition::Equals));
         }
