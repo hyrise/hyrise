@@ -57,6 +57,59 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
   // clang-format on
 }
 
+std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExpression& expression) {
+  // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
+  // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
+  // combinations and thus lengthen compile time and increase binary size notably.
+
+  const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
+  Assert(between_expression, "Expected BetweenExpression");
+
+  const auto gte_expression = greater_than_equals_(between_expression->value(), between_expression->lower_bound());
+  const auto lte_expression = less_than_equals_(between_expression->value(), between_expression->upper_bound());
+
+  return and_(gte_expression, lte_expression);
+}
+
+std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const AbstractExpression& expression) {
+  /**
+   * To keep the code simple for now, transform the InExpression like this:
+   * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+   *
+   * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
+   * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+   * "5 IN (6, 5, "Hello")
+   */
+
+  const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
+  Assert(in_expression, "Expected InExpression");
+
+  const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression->set());
+  Assert(list_expression, "Expected ListExpression");
+
+  const auto left_is_string = in_expression->data_type() == DataType::String;
+  std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+  for (const auto& element : list_expression->elements()) {
+    if ((element->data_type() == DataType::String) == left_is_string) {
+      type_compatible_elements.emplace_back(element);
+    }
+  }
+
+  if (type_compatible_elements.empty()) {
+    // `5 IN ()` is FALSE as is `NULL IN ()`
+    return value_(0);
+  }
+
+  std::shared_ptr<AbstractExpression> predicate_disjunction =
+  equals_(in_expression->value(), type_compatible_elements.front());
+  for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+    const auto equals_element = equals_(in_expression->value(), type_compatible_elements[element_idx]);
+    predicate_disjunction = or_(predicate_disjunction, equals_element);
+  }
+
+  return predicate_disjunction;
+}
+
 }  // namespace
 
 namespace opossum {
@@ -261,6 +314,73 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null
   Fail("Can only evaluate predicates to bool");
 }
 
+//template<typename RowResultFn>
+//void ExpressionEvaluator::_evaluate_in_expression_impl(const InExpression& in_expression, const RowResultFn& row_result_fn) {
+//  /**
+//   * Implementation for `a IN (SELECT...)` calling `row_result_fn(chunk_offset, result_value, result_null)` for each
+//   * row.
+//   */
+//
+//  const auto& left_expression = *in_expression.value();
+//  const auto& right_expression = *in_expression.set();
+//
+//  Assert(right_expression.type == ExpressionType::PQPSelect, "Expected PQPSelectExpression as right operand");
+//
+//  const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
+//  Assert(select_expression, "Expected PQPSelectExpression");
+//
+//  resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
+//    using SelectDataType = typename decltype(select_data_type_t)::type;
+//
+//    const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+//    const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
+//
+//    Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
+//           "Unexpected number of lists returned from Select. "
+//           "Should be one (if the Select is not correlated), or one per row (if it is)");
+//
+//    _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
+//      using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
+//
+//      if constexpr (EqualsEvaluator::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
+//        const auto result_size = _result_size(left_view.size(), select_results.size());
+//
+//        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+//          // If the SELECT returned just one list, always perform the IN check with that one list
+//          // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
+//          // against the list of the current row
+//          const auto& list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
+//
+//          auto list_contains_null = false;
+//          auto result_value = false;
+//
+//          for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
+//            // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
+//            // here as well.
+//            EqualsEvaluator{}(result_value,  // NOLINT - complains about missing spaces before "{"...
+//                              list.value(list_element_idx), left_view.value(chunk_offset));
+//            if (result_value) break;
+//
+//            list_contains_null |= list.is_null(list_element_idx);
+//          }
+//
+//          // `NULL IN (...)` is NULL and `a IN (elements)` is null, if `a` has no match in `elements` and `elements`
+//          // contains a NULL.
+//          auto result_null = (result_value && list_contains_null) || left_view.is_null(chunk_offset);
+//
+//          row_result_fn
+//        }
+//
+//      } else {
+//        // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of Fail()ing, because that's
+//        // what we do for `5 IN ('Hello', 'World')
+//        row_result_fn(Chunk
+//        false, false);
+//      }
+//    });
+//  });
+//}
+
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const InExpression& in_expression) {
@@ -271,37 +391,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   std::vector<bool> result_nulls;
 
   if (right_expression.type == ExpressionType::List) {
-    const auto& array_expression = static_cast<const ListExpression&>(right_expression);
-
-    /**
-     * To keep the code simple for now, transform the InExpression like this:
-     * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
-     *
-     * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
-     * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
-     * "5 IN (6, 5, "Hello")
-     */
-    const auto left_is_string = left_expression.data_type() == DataType::String;
-    std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-    for (const auto& element : array_expression.elements()) {
-      if ((element->data_type() == DataType::String) == left_is_string) {
-        type_compatible_elements.emplace_back(element);
-      }
-    }
-
-    if (type_compatible_elements.empty()) {
-      // `5 IN ()` is FALSE as is `NULL IN ()`
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
-    }
-
-    std::shared_ptr<AbstractExpression> predicate_disjunction =
-        equals_(in_expression.value(), type_compatible_elements.front());
-    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
-      const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
-      predicate_disjunction = or_(predicate_disjunction, equals_element);
-    }
-
-    return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*predicate_disjunction);
+    return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
 
   } else if (right_expression.type == ExpressionType::PQPSelect) {
     const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
@@ -345,6 +435,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               list_contains_null |= list.is_null(list_element_idx);
             }
 
+            // `NULL IN (...)` is NULL and `a IN (elements)` is null, if `a` has no match in `elements` and `elements`
+            // contains a NULL.
             result_nulls[chunk_offset] =
                 (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
           }
@@ -396,19 +488,8 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
-    case PredicateCondition::Between: {
-      // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
-      // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
-      // combinations and thus lengthen compile time and increase binary size notably.
-
-      const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
-      const auto gte_expression = greater_than_equals_(between_expression.value(), between_expression.lower_bound());
-      const auto lte_expression = less_than_equals_(between_expression.value(), between_expression.upper_bound());
-
-      const auto gte_lte_expression = and_(gte_expression, lte_expression);
-
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*gte_lte_expression);
-    }
+    case PredicateCondition::Between:
+      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_between_expression(predicate_expression));
 
     case PredicateCondition::In:
       return _evaluate_in_expression<ExpressionEvaluator::Bool>(static_cast<const InExpression&>(predicate_expression));
@@ -849,24 +930,10 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           });
         } break;
 
-        case PredicateCondition::Between: {
-          // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
-          // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
-          // combinations and thus lengthen compile time and increase binary size notably.
+        case PredicateCondition::Between:
+          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
 
-          const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
-          const auto gte_expression = greater_than_equals_(between_expression.value(), between_expression.lower_bound());
-          const auto lte_expression = less_than_equals_(between_expression.value(), between_expression.upper_bound());
-
-          const auto gte_lte_expression = and_(gte_expression, lte_expression);
-
-          return evaluate_expression_to_pos_list(*gte_lte_expression);
-        }
-
-        case PredicateCondition::In: {
-          const auto& in_expression = static_cast<const InExpression&>(expression)
-        } break;
-
+        case PredicateCondition::In:
         case PredicateCondition::Like:
         case PredicateCondition::NotLike:
           Fail("Not implemented");
