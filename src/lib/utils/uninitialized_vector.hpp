@@ -158,7 +158,7 @@ class uninitialized_vector : private Alloc {
         _begin(allocate(other.size())),
         _end(_begin + other.size()),
         _endOfStorage(_end) {
-    memcpy(_begin, other._begin, other.size() * sizeof(Tp));
+    if (other._begin) memcpy(_begin, other._begin, other.size() * sizeof(Tp));
   }
 
   /** @brief Copy construct a uninitialized_vector with custom allocator.
@@ -167,7 +167,7 @@ class uninitialized_vector : private Alloc {
 	 */
   uninitialized_vector(const uninitialized_vector<Tp, Alloc>& other, const allocator_type& allocator)
       : Alloc(allocator), _begin(allocate(other.size())), _end(_begin + other.size()), _endOfStorage(_end) {
-    memcpy(_begin, other._begin, other.size() * sizeof(Tp));
+    if (other._begin) memcpy(_begin, other._begin, other.size() * sizeof(Tp));
   }
 
   /** @brief Move construct a uninitialized_vector.
@@ -280,8 +280,10 @@ class uninitialized_vector : private Alloc {
     if (capacity() < n) {
       size_t newSize = enlarge_size(n);
       pointer newStorage = allocate(newSize);
-      memcpy(newStorage, _begin, size() * sizeof(Tp));
-      deallocate();
+      if (_begin) {
+        memcpy(newStorage, _begin, size() * sizeof(Tp));
+        deallocate();
+      }
       _begin = newStorage;
       _endOfStorage = _begin + newSize;
     }
@@ -301,8 +303,10 @@ class uninitialized_vector : private Alloc {
     size_t oldSize = size();
     if (capacity() < n) {
       pointer newStorage = allocate(n);
-      memcpy(newStorage, _begin, size() * sizeof(Tp));
-      deallocate();
+      if (_begin) {
+        memcpy(newStorage, _begin, size() * sizeof(Tp));
+        deallocate();
+      }
       _begin = newStorage;
       _endOfStorage = _begin + n;
     }
@@ -330,8 +334,10 @@ class uninitialized_vector : private Alloc {
     if (capacity() < n) {
       const size_t curSize = size();
       pointer newStorage = allocate(n);
-      memcpy(newStorage, _begin, curSize * sizeof(Tp));
-      deallocate();
+      if (_begin) {
+        memcpy(newStorage, _begin, curSize * sizeof(Tp));
+        deallocate();
+      }
       _begin = newStorage;
       _end = newStorage + curSize;
       _endOfStorage = _begin + n;
@@ -353,8 +359,10 @@ class uninitialized_vector : private Alloc {
       _endOfStorage = nullptr;
     } else if (curSize < capacity()) {
       pointer newStorage = allocate(curSize);
-      memcpy(newStorage, _begin, curSize * sizeof(Tp));
-      deallocate();
+      if (_begin) {
+        memcpy(newStorage, _begin, curSize * sizeof(Tp));
+        deallocate();
+      }
       _begin = newStorage;
       _end = newStorage + curSize;
       _endOfStorage = _begin + curSize;
@@ -860,8 +868,10 @@ class uninitialized_vector : private Alloc {
 
   void enlarge(size_t newSize) {
     pointer newStorage = allocate(newSize);
-    memcpy(newStorage, _begin, size() * sizeof(Tp));
-    deallocate();
+    if (_begin) {
+      memcpy(newStorage, _begin, size() * sizeof(Tp));
+      deallocate();
+    }
     _end = newStorage + size();
     _begin = newStorage;
     _endOfStorage = _begin + newSize;
@@ -869,10 +879,12 @@ class uninitialized_vector : private Alloc {
 
   void enlarge_for_insert(size_t newSize, size_t insert_position, size_t insert_count) {
     pointer newStorage = allocate(newSize);
-    memcpy(newStorage, _begin, insert_position * sizeof(Tp));
-    memcpy(newStorage + insert_position + insert_count, _begin + insert_position,
-           (size() - insert_position) * sizeof(Tp));
-    deallocate();
+    if (_begin) {
+      memcpy(newStorage, _begin, insert_position * sizeof(Tp));
+      memcpy(newStorage + insert_position + insert_count, _begin + insert_position,
+             (size() - insert_position) * sizeof(Tp));
+      deallocate();
+    }
     _end = newStorage + size() + insert_count;
     _begin = newStorage;
     _endOfStorage = _begin + newSize;
@@ -888,7 +900,7 @@ class uninitialized_vector : private Alloc {
       _end = _begin + n;
       _endOfStorage = _end;
     }
-    memcpy(_begin, other._begin, n * sizeof(Tp));
+    if (n > 0) memcpy(_begin, other._begin, n * sizeof(Tp));
     return *this;
   }
 
@@ -903,7 +915,7 @@ class uninitialized_vector : private Alloc {
       _begin = newStorage;
       _end = _begin + n;
       _endOfStorage = _end;
-      memcpy(_begin, other._begin, n * sizeof(Tp));
+      if (n > 0) memcpy(_begin, other._begin, n * sizeof(Tp));
       Alloc::operator=(static_cast<Alloc&>(other));
     }
     return *this;

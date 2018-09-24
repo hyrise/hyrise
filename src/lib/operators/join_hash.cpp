@@ -273,7 +273,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
         });
       });
 
-      if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {
+      if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
         // Because the vector is uninitialized, we need to manually fill up all slots that we did not use
         auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
         while (output_iterator != elements->begin() + output_offset_end) {
