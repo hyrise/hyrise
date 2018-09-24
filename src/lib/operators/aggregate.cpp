@@ -620,8 +620,8 @@ They are separate and templated to avoid compiler errors for invalid type/functi
 */
 // MIN, MAX, SUM write the current aggregated value
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<
-    func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
+std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum,
+                 void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
                        std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
                                                           std::hash<AggregateKey>>>
@@ -647,7 +647,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // COUNT writes the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggregate_values(
+std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
         std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
@@ -666,7 +666,7 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggr
 
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type write_aggregate_values(
+std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
         std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
@@ -685,11 +685,11 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type wr
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                          std::hash<AggregateKey>>>
-                           results) {
+std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    std::shared_ptr<
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        results) {
   DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
   auto& values = segment->values();
@@ -711,10 +711,10 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>>,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                          std::hash<AggregateKey>>>) {
+std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>>,
+    std::shared_ptr<
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>) {
   Fail("Invalid aggregate");
 }
 

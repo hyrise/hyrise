@@ -27,8 +27,8 @@ class Table;
 extern std::string test_data_path;
 
 template <typename ParamType>
-class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
-                                                  ::testing::TestWithParam<ParamType>>::type {
+class BaseTestWithParam
+    : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
