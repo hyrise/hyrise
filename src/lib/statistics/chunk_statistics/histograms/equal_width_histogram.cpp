@@ -206,16 +206,17 @@ T EqualWidthHistogram<T>::_bin_max(const BinID index) const {
   // upper edge of this one.
   // Otherwise, add the index to compensate one element for every bin preceding this bin.
   // Add at most _bin_count_with_larger_range - 1 because we already start adding from the next bin's lower edge.
-  const auto index_offset = std::min(static_cast<size_t>(index), _bin_count_with_larger_range - 1u);
   if constexpr (std::is_same_v<T, std::string>) {
     const auto num_min = this->_convert_string_to_number_representation(_min);
     const auto num_max = this->_convert_string_to_number_representation(_max);
     const auto base = num_min + (index + 1u) * ((num_max - num_min + 1) / bin_count());
-    const auto bin_max = _bin_count_with_larger_range == 0u ? previous_value(base) : base + index_offset;
+    const auto bin_max = _bin_count_with_larger_range == 0u ? previous_value(base)
+                                                            : base + std::min(index, _bin_count_with_larger_range - 1u);
     return this->_convert_number_representation_to_string(bin_max);
   } else {
     const auto base = _min + (index + 1u) * _bin_width(bin_count() - 1u);
-    return _bin_count_with_larger_range == 0u ? previous_value(base) : base + index_offset;
+    return _bin_count_with_larger_range == 0u ? previous_value(base)
+                                              : base + std::min(index, _bin_count_with_larger_range - 1u);
   }
 }
 

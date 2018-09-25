@@ -83,7 +83,7 @@ class EqualElementCountHistogram : public AbstractHistogram<T> {
   size_t _distinct_count_per_bin;
 
   // Number of bins which have an additional distinct value.
-  size_t _bin_count_with_extra_value;
+  BinID _bin_count_with_extra_value;
 };
 
 }  // namespace opossum

@@ -165,7 +165,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
   std::vector<size_t> _distinct_counts;
 
   // Number of bins that are one element wider (only used for integral and string histograms).
-  size_t _bin_count_with_larger_range;
+  BinID _bin_count_with_larger_range;
 };
 
 }  // namespace opossum
