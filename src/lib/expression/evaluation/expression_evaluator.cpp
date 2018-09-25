@@ -772,7 +772,7 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
       pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-        values[chunk_offset] = view.value(chunk_offset);
+        values[chunk_offset] = std::move(view.value(chunk_offset));
       }
 
       if (view.is_nullable()) {
