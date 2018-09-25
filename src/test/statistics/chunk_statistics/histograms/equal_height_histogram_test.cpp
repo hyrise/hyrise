@@ -75,7 +75,7 @@ TEST_F(EqualHeightHistogramTest, UnevenBins) {
   // Even though we requested five bins we will only get four because of the value distribution.
   // This has consequences for the cardinality estimation,
   // because the bin count is now assumed to be 24 / 4 = 6, rather than 24 / 5 = 4.8 => 5.
-  EXPECT_EQ(hist->num_bins(), 4u);
+  EXPECT_EQ(hist->bin_count(), 4u);
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::Equals, 0));
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0), 0.f);
@@ -188,7 +188,7 @@ TEST_F(EqualHeightHistogramTest, LessThan) {
   // Even though we requested three bins we will only get two because of the value distribution.
   // This has consequences for the cardinality estimation,
   // because the bin count is now assumed to be 7 / 2 = 3.5 => 4, rather than 7 / 3 ~= 2.333 => 3.
-  EXPECT_EQ(hist->num_bins(), 2u);
+  EXPECT_EQ(hist->bin_count(), 2u);
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::LessThan, AllTypeVariant{12}));
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12), 0.f);

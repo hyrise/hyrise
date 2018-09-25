@@ -31,7 +31,7 @@ AbstractHistogram<std::string>::AbstractHistogram() {
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
-                                                  const uint64_t string_prefix_length)
+                                                  const size_t string_prefix_length)
     : _supported_characters(supported_characters), _string_prefix_length(string_prefix_length) {
   DebugAssert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
 }
@@ -40,37 +40,26 @@ template <typename T>
 std::string AbstractHistogram<T>::description() const {
   std::stringstream stream;
   stream << histogram_type_to_string.at(histogram_type()) << std::endl;
-  stream << "  distinct    " << total_count_distinct() << std::endl;
+  stream << "  distinct    " << total_distinct_count() << std::endl;
   stream << "  min         " << min() << std::endl;
   stream << "  max         " << max() << std::endl;
   // TODO(tim): consider non-null ratio in histograms
   // stream << "  non-null " << non_null_value_ratio() << std::endl;
-  stream << "  bins        " << num_bins() << std::endl;
+  stream << "  bins        " << bin_count() << std::endl;
 
   stream << "  edges / counts " << std::endl;
-  for (BinID bin = 0u; bin < num_bins(); bin++) {
+  for (BinID bin = 0u; bin < bin_count(); bin++) {
     stream << "              [" << _bin_min(bin) << ", " << _bin_max(bin) << "]: ";
-    stream << _bin_count(bin) << std::endl;
+    stream << _bin_height(bin) << std::endl;
   }
 
   return stream.str();
 }
 
 template <typename T>
-std::vector<std::pair<T, uint64_t>> AbstractHistogram<T>::_sort_value_counts(
-    const std::unordered_map<T, uint64_t>& value_counts) {
-  std::vector<std::pair<T, uint64_t>> result(value_counts.cbegin(), value_counts.cend());
-
-  std::sort(result.begin(), result.end(),
-            [](const std::pair<T, uint64_t>& lhs, const std::pair<T, uint64_t>& rhs) { return lhs.first < rhs.first; });
-
-  return result;
-}
-
-template <typename T>
-std::vector<std::pair<T, uint64_t>> AbstractHistogram<T>::_calculate_value_counts(
+std::vector<std::pair<T, size_t>> AbstractHistogram<T>::_value_counts_in_segment(
     const std::shared_ptr<const BaseSegment>& segment) {
-  std::unordered_map<T, uint64_t> value_counts;
+  std::unordered_map<T, size_t> value_counts;
 
   resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
     auto iterable = create_iterable_from_segment<T>(typed_segment);
@@ -81,7 +70,11 @@ std::vector<std::pair<T, uint64_t>> AbstractHistogram<T>::_calculate_value_count
     });
   });
 
-  return AbstractHistogram<T>::_sort_value_counts(value_counts);
+  std::vector<std::pair<T, size_t>> result(value_counts.cbegin(), value_counts.cend());
+  std::sort(result.begin(), result.end(),
+            [](const std::pair<T, size_t>& lhs, const std::pair<T, size_t>& rhs) { return lhs.first < rhs.first; });
+
+  return result;
 }
 
 template <typename T>
@@ -91,7 +84,7 @@ T AbstractHistogram<T>::min() const {
 
 template <typename T>
 T AbstractHistogram<T>::max() const {
-  return _bin_max(num_bins() - 1u);
+  return _bin_max(bin_count() - 1u);
 }
 
 template <>
@@ -106,26 +99,26 @@ std::string AbstractHistogram<std::string>::_convert_number_representation_to_st
 
 template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::_bin_width(const BinID index) const {
-  DebugAssert(index < num_bins(), "Index is not a valid bin.");
-  return get_next_value(_bin_max(index) - _bin_min(index));
+  DebugAssert(index < bin_count(), "Index is not a valid bin.");
+  return _get_next_value(_bin_max(index) - _bin_min(index));
 }
 
 template <>
 AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
-  DebugAssert(index < num_bins(), "Index is not a valid bin.");
+  DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto num_min = this->_convert_string_to_number_representation(_bin_min(index));
-  const auto num_max = this->_convert_string_to_number_representation(_bin_max(index));
+  const auto num_min = _convert_string_to_number_representation(_bin_min(index));
+  const auto num_max = _convert_string_to_number_representation(_bin_max(index));
   return num_max - num_min + 1u;
 }
 
 template <typename T>
-T AbstractHistogram<T>::get_next_value(const T value) const {
+T AbstractHistogram<T>::_get_next_value(const T value) const {
   return next_value(value);
 }
 
 template <>
-std::string AbstractHistogram<std::string>::get_next_value(const std::string value) const {
+std::string AbstractHistogram<std::string>::_get_next_value(const std::string value) const {
   return next_value(value, _supported_characters);
 }
 
@@ -188,7 +181,7 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
     case PredicateCondition::Equals: {
       const auto bin_id = _bin_for_value(value);
       // It is possible for EqualWidthHistograms to have empty bins.
-      return bin_id == INVALID_BIN_ID || _bin_count(bin_id) == 0ul;
+      return bin_id == INVALID_BIN_ID || _bin_height(bin_id) == 0ul;
     }
     case PredicateCondition::NotEquals:
       return min() == value && max() == value;
@@ -215,19 +208,19 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
       const auto value_bin = _bin_for_value(value);
       const auto value2_bin = _bin_for_value(value2);
 
-      // In an EqualNumElementsHistogram, if both values fall into the same gap, we can prune the predicate.
+      // In an EqualElementCountHistogram, if both values fall into the same gap, we can prune the predicate.
       // We need to have at least two bins to rule out pruning if value < min and value2 > max.
-      if (value_bin == INVALID_BIN_ID && value2_bin == INVALID_BIN_ID && num_bins() > 1ul &&
+      if (value_bin == INVALID_BIN_ID && value2_bin == INVALID_BIN_ID && bin_count() > 1ul &&
           _upper_bound_for_value(value) == _upper_bound_for_value(value2)) {
         return true;
       }
 
       // In an EqualWidthHistogram, if both values fall into a bin that has no elements,
       // and there are either no bins in between or none of them have any elements, we can also prune the predicate.
-      if (value_bin != INVALID_BIN_ID && value2_bin != INVALID_BIN_ID && _bin_count(value_bin) == 0 &&
-          _bin_count(value2_bin) == 0) {
+      if (value_bin != INVALID_BIN_ID && value2_bin != INVALID_BIN_ID && _bin_height(value_bin) == 0 &&
+          _bin_height(value2_bin) == 0) {
         for (auto current_bin = value_bin + 1; current_bin < value2_bin; current_bin++) {
-          if (_bin_count(current_bin) > 0ul) {
+          if (_bin_height(current_bin) > 0ul) {
             return false;
           }
         }
@@ -311,15 +304,15 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
         if (search_prefix_bin == INVALID_BIN_ID) {
           const auto search_prefix_upper_bound_bin = _upper_bound_for_value(search_prefix);
 
-          // In an EqualNumElementsHistogram, if both values fall into the same gap, we can prune the predicate.
+          // In an EqualElementCountHistogram, if both values fall into the same gap, we can prune the predicate.
           // We need to have at least two bins to rule out pruning if search_prefix < min
           // and search_prefix_next_value > max.
-          if (search_prefix_next_value_bin == INVALID_BIN_ID && num_bins() > 1ul &&
+          if (search_prefix_next_value_bin == INVALID_BIN_ID && bin_count() > 1ul &&
               search_prefix_upper_bound_bin == _upper_bound_for_value(search_prefix_next_value)) {
             return true;
           }
 
-          // In an EqualNumElementsHistogram, if the search_prefix_next_value is exactly the lower bin edge of
+          // In an EqualElementCountHistogram, if the search_prefix_next_value is exactly the lower bin edge of
           // the upper bound of search_prefix, we can also prune.
           // That's because search_prefix_next_value does not belong to the range covered by the pattern,
           // but is the next value after it.
@@ -335,11 +328,11 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
         // If the count of search_prefix_next_value_bin is not 0 but search_prefix_next_value is the lower bin edge,
         // we can still prune, because search_prefix_next_value is not part of the range (same as above).
         if (search_prefix_bin != INVALID_BIN_ID && search_prefix_next_value_bin != INVALID_BIN_ID &&
-            _bin_count(search_prefix_bin) == 0u &&
-            (_bin_count(search_prefix_next_value_bin) == 0u ||
+            _bin_height(search_prefix_bin) == 0u &&
+            (_bin_height(search_prefix_next_value_bin) == 0u ||
              _bin_min(search_prefix_next_value_bin) == search_prefix_next_value)) {
           for (auto current_bin = search_prefix_bin + 1; current_bin < search_prefix_next_value_bin; current_bin++) {
-            if (_bin_count(current_bin) > 0u) {
+            if (_bin_height(current_bin) > 0u) {
               return false;
             }
           }
@@ -403,12 +396,12 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
   switch (predicate_type) {
     case PredicateCondition::Equals: {
       const auto index = _bin_for_value(value);
-      const auto bin_count_distinct = _bin_count_distinct(index);
+      const auto bin_count_distinct = _bin_distinct_count(index);
 
       // This should never be false because can_prune should have been true further up if this was the case.
       DebugAssert(bin_count_distinct > 0u, "0 distinct values in bin.");
 
-      return static_cast<float>(_bin_count(index)) / static_cast<float>(bin_count_distinct);
+      return static_cast<float>(_bin_height(index)) / static_cast<float>(bin_count_distinct);
     }
     case PredicateCondition::NotEquals:
       return total_count() - _estimate_cardinality(PredicateCondition::Equals, variant_value);
@@ -428,12 +421,12 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
         // Therefore, we need to sum up the counts of all bins with a max < value.
         index = _upper_bound_for_value(value);
       } else {
-        cardinality += _bin_share(index, value) * _bin_count(index);
+        cardinality += _bin_share(index, value) * _bin_height(index);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.
       for (BinID bin = 0u; bin < index; bin++) {
-        cardinality += _bin_count(bin);
+        cardinality += _bin_height(bin);
       }
 
       /**
@@ -443,7 +436,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
        * This is due to the way EqualHeightHistograms store the count for a bin,
        * which is in a single value (count_per_bin) for all bins rather than a vector (one value for each bin).
        * Consequently, this value is the desired count for all bins.
-       * In practice, _bin_count(n) >= _count_per_bin for n < num_bins() - 1,
+       * In practice, _bin_count(n) >= _count_per_bin for n < bin_count() - 1,
        * because bins are filled up until the count is at least _count_per_bin.
        * The last bin typically has a count lower than _count_per_bin.
        * Therefore, if we calculate the share of the last bin based on _count_per_bin
@@ -452,7 +445,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
       return std::min(cardinality, static_cast<float>(total_count()));
     }
     case PredicateCondition::LessThanEquals:
-      return estimate_cardinality(PredicateCondition::LessThan, get_next_value(value));
+      return estimate_cardinality(PredicateCondition::LessThan, _get_next_value(value));
     case PredicateCondition::GreaterThanEquals:
       return total_count() - estimate_cardinality(PredicateCondition::LessThan, variant_value);
     case PredicateCondition::GreaterThan:

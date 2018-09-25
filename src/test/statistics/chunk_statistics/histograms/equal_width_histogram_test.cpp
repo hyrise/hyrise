@@ -142,7 +142,7 @@ TEST_F(EqualWidthHistogramTest, UnevenBins) {
 TEST_F(EqualWidthHistogramTest, MoreBinsThanDistinctValuesIntEquals) {
   auto hist =
       EqualWidthHistogram<int32_t>::from_segment(_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 10u);
-  EXPECT_EQ(hist->num_bins(), 10u);
+  EXPECT_EQ(hist->bin_count(), 10u);
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::Equals, 11));
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 11), 0.f);
@@ -190,7 +190,7 @@ TEST_F(EqualWidthHistogramTest, MoreBinsThanDistinctValuesIntEquals) {
 TEST_F(EqualWidthHistogramTest, MoreBinsThanDistinctValuesIntLessThan) {
   auto hist =
       EqualWidthHistogram<int32_t>::from_segment(_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 10u);
-  EXPECT_EQ(hist->num_bins(), 10u);
+  EXPECT_EQ(hist->bin_count(), 10u);
 
   constexpr auto hist_min = 12;
   constexpr auto hist_max = 123'456;
@@ -257,7 +257,7 @@ TEST_F(EqualWidthHistogramTest, MoreBinsThanRepresentableValues) {
   auto hist =
       EqualWidthHistogram<int32_t>::from_segment(_int_int4->get_chunk(ChunkID{0})->get_segment(ColumnID{1}), 19u);
   // There must not be more bins than representable values in the column domain.
-  EXPECT_EQ(hist->num_bins(), 17 - 0 + 1);
+  EXPECT_EQ(hist->bin_count(), 17 - 0 + 1);
 
   EXPECT_TRUE(hist->can_prune(PredicateCondition::Equals, -1));
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, -1), 0.f);
@@ -823,7 +823,7 @@ TEST_F(EqualWidthHistogramTest, StringCommonPrefix) {
 
   // We can only calculate bin edges for width-balanced histograms based on the prefix length.
   // In this case, the common prefix of all values is the prefix length, so there is only one bin.
-  EXPECT_EQ(hist->num_bins(), 1u);
+  EXPECT_EQ(hist->bin_count(), 1u);
 
   const auto hist_min = 0.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                         0.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 0.f * (ipow(26, 1) + ipow(26, 0)) + 1 +

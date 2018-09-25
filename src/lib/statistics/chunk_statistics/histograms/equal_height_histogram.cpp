@@ -11,8 +11,8 @@
 namespace opossum {
 
 template <typename T>
-EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& maxs, const std::vector<uint64_t>& distinct_counts,
-                                              T min, const uint64_t total_count)
+EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& maxs, const std::vector<size_t>& distinct_counts,
+                                              T min, const size_t total_count)
     : AbstractHistogram<T>(), _maxs(maxs), _distinct_counts(distinct_counts), _min(min), _total_count(total_count) {
   DebugAssert(total_count > 0, "Cannot have histogram without any values.");
   DebugAssert(maxs.size() > 0, "Cannot have histogram without any bins.");
@@ -30,10 +30,10 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& maxs, const 
 
 template <>
 EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::string>& maxs,
-                                                        const std::vector<uint64_t>& distinct_counts,
-                                                        const std::string& min, const uint64_t total_count,
+                                                        const std::vector<size_t>& distinct_counts,
+                                                        const std::string& min, const size_t total_count,
                                                         const std::string& supported_characters,
-                                                        const uint64_t string_prefix_length)
+                                                        const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
       _maxs(maxs),
       _distinct_counts(distinct_counts),
@@ -55,23 +55,23 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::s
 }
 
 template <typename T>
-EqualHeightBinStats<T> EqualHeightHistogram<T>::_get_bin_stats(const std::vector<std::pair<T, uint64_t>>& value_counts,
-                                                               const size_t max_num_bins) {
+EqualHeightBinStats<T> EqualHeightHistogram<T>::_get_bin_stats(const std::vector<std::pair<T, size_t>>& value_counts,
+                                                               const size_t max_bin_count) {
   const auto min = value_counts.front().first;
   // If there are fewer distinct values than the number of desired bins use that instead.
-  const auto num_bins = max_num_bins <= value_counts.size() ? max_num_bins : value_counts.size();
+  const auto bin_count = max_bin_count <= value_counts.size() ? max_bin_count : value_counts.size();
 
   // Bins shall have (approximately) the same height.
-  const auto total_count = std::accumulate(value_counts.cbegin(), value_counts.cend(), uint64_t{0},
-                                           [](uint64_t a, const std::pair<T, uint64_t>& b) { return a + b.second; });
+  const auto total_count = std::accumulate(value_counts.cbegin(), value_counts.cend(), size_t{0},
+                                           [](size_t a, const std::pair<T, size_t>& b) { return a + b.second; });
 
   // Make sure that we never create more bins than requested.
-  const auto count_per_bin = total_count / num_bins + (total_count % num_bins > 0u ? 1 : 0);
+  const auto count_per_bin = total_count / bin_count + (total_count % bin_count > 0u ? 1 : 0);
 
   std::vector<T> maxs;
-  std::vector<uint64_t> distinct_counts;
-  maxs.reserve(num_bins);
-  distinct_counts.reserve(num_bins);
+  std::vector<size_t> distinct_counts;
+  maxs.reserve(bin_count);
+  distinct_counts.reserve(bin_count);
 
   auto current_begin = 0ul;
   auto current_height = 0ul;
@@ -92,15 +92,15 @@ EqualHeightBinStats<T> EqualHeightHistogram<T>::_get_bin_stats(const std::vector
 
 template <typename T>
 std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
-    const std::shared_ptr<const BaseSegment>& segment, const size_t max_num_bins,
-    const std::optional<std::string>& supported_characters, const std::optional<uint64_t>& string_prefix_length) {
-  const auto value_counts = AbstractHistogram<T>::_calculate_value_counts(segment);
+    const std::shared_ptr<const BaseSegment>& segment, const size_t max_bin_count,
+    const std::optional<std::string>& supported_characters, const std::optional<size_t>& string_prefix_length) {
+  const auto value_counts = AbstractHistogram<T>::_value_counts_in_segment(segment);
 
   if (value_counts.empty()) {
     return nullptr;
   }
 
-  const auto bin_stats = EqualHeightHistogram<T>::_get_bin_stats(value_counts, max_num_bins);
+  const auto bin_stats = EqualHeightHistogram<T>::_get_bin_stats(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
@@ -121,7 +121,7 @@ HistogramType EqualHeightHistogram<T>::histogram_type() const {
 }
 
 template <typename T>
-size_t EqualHeightHistogram<T>::num_bins() const {
+size_t EqualHeightHistogram<T>::bin_count() const {
   return _maxs.size();
 }
 
@@ -153,7 +153,7 @@ BinID EqualHeightHistogram<T>::_upper_bound_for_value(const T value) const {
 
 template <typename T>
 T EqualHeightHistogram<T>::_bin_min(const BinID index) const {
-  DebugAssert(index < this->num_bins(), "Index is not a valid bin.");
+  DebugAssert(index < this->bin_count(), "Index is not a valid bin.");
 
   // If it's the first bin, return _min.
   if (index == 0u) {
@@ -161,7 +161,7 @@ T EqualHeightHistogram<T>::_bin_min(const BinID index) const {
   }
 
   // Otherwise, return the next representable value of the previous bin's max.
-  return this->get_next_value(this->_bin_max(index - 1));
+  return this->_get_next_value(this->_bin_max(index - 1));
 }
 
 template <typename T>
@@ -171,25 +171,25 @@ T EqualHeightHistogram<T>::_bin_max(const BinID index) const {
 }
 
 template <typename T>
-uint64_t EqualHeightHistogram<T>::_bin_count(const BinID index) const {
-  DebugAssert(index < this->num_bins(), "Index is not a valid bin.");
-  return total_count() / num_bins() + (total_count() % num_bins() > 0 ? 1 : 0);
+size_t EqualHeightHistogram<T>::_bin_height(const BinID index) const {
+  DebugAssert(index < this->bin_count(), "Index is not a valid bin.");
+  return total_count() / bin_count() + (total_count() % bin_count() > 0 ? 1 : 0);
 }
 
 template <typename T>
-uint64_t EqualHeightHistogram<T>::_bin_count_distinct(const BinID index) const {
+size_t EqualHeightHistogram<T>::_bin_distinct_count(const BinID index) const {
   DebugAssert(index < _distinct_counts.size(), "Index is not a valid bin.");
   return _distinct_counts[index];
 }
 
 template <typename T>
-uint64_t EqualHeightHistogram<T>::total_count() const {
+size_t EqualHeightHistogram<T>::total_count() const {
   return _total_count;
 }
 
 template <typename T>
-uint64_t EqualHeightHistogram<T>::total_count_distinct() const {
-  return std::accumulate(_distinct_counts.cbegin(), _distinct_counts.cend(), uint64_t{0});
+size_t EqualHeightHistogram<T>::total_distinct_count() const {
+  return std::accumulate(_distinct_counts.cbegin(), _distinct_counts.cend(), size_t{0});
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualHeightHistogram);

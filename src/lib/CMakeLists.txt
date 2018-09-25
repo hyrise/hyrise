@@ -339,10 +339,10 @@ set(
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/histograms/abstract_histogram.cpp
     statistics/chunk_statistics/histograms/abstract_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_element_count_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_element_count_histogram.hpp
     statistics/chunk_statistics/histograms/equal_height_histogram.cpp
     statistics/chunk_statistics/histograms/equal_height_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_num_elements_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_num_elements_histogram.hpp
     statistics/chunk_statistics/histograms/equal_width_histogram.cpp
     statistics/chunk_statistics/histograms/equal_width_histogram.hpp
     statistics/chunk_statistics/histograms/histogram_utils.cpp

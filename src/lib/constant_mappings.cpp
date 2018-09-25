@@ -118,7 +118,7 @@ const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string
 
 const std::unordered_map<HistogramType, std::string> histogram_type_to_string = {
     {HistogramType::EqualHeight, "EqualHeightHistogram"},
-    {HistogramType::EqualNumElements, "EqualNumElementsHistogram"},
+    {HistogramType::EqualElementCount, "EqualElementCountHistogram"},
     {HistogramType::EqualWidth, "EqualWidthHistogram"},
 };
 

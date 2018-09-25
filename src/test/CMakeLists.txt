@@ -117,8 +117,8 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_element_count_histogram_test.cpp
     statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_num_elements_histogram_test.cpp
     statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
     statistics/chunk_statistics/histograms/histogram_utils_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp

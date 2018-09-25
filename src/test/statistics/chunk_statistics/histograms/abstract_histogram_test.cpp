@@ -4,8 +4,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "statistics/chunk_statistics/histograms/equal_element_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
-#include "statistics/chunk_statistics/histograms/equal_num_elements_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
@@ -21,7 +21,7 @@ class AbstractHistogramIntTest : public BaseTest {
 };
 
 using HistogramIntTypes =
-    ::testing::Types<EqualNumElementsHistogram<int32_t>, EqualWidthHistogram<int32_t>, EqualHeightHistogram<int32_t>>;
+    ::testing::Types<EqualElementCountHistogram<int32_t>, EqualWidthHistogram<int32_t>, EqualHeightHistogram<int32_t>>;
 TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes);
 
 TYPED_TEST(AbstractHistogramIntTest, EqualsPruning) {
@@ -153,7 +153,7 @@ class AbstractHistogramStringTest : public BaseTest {
   std::shared_ptr<Table> _int_string_like_containing2;
 };
 
-using HistogramStringTypes = ::testing::Types<EqualNumElementsHistogram<std::string>, EqualWidthHistogram<std::string>,
+using HistogramStringTypes = ::testing::Types<EqualElementCountHistogram<std::string>, EqualWidthHistogram<std::string>,
                                               EqualHeightHistogram<std::string>>;
 TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes);
 
