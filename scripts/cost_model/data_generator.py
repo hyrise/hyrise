@@ -7,8 +7,8 @@ import numpy as np
 import json
 
 def load_table_specification(file):
-	with open(file) as f:
-		config = json.load(f)
+    with open(file) as f:
+        config = json.load(f)
         return config['table_specifications']
 
 def type_to_function(column_type):
@@ -57,21 +57,21 @@ def generate_table(table_specification):
     return pd.concat(list(column_data.values()), axis=1)
 
 # Write CSV from table
-def write_csv(table_name, table):
-    table.to_csv(table_name + '.tbl', index=False, sep="|")
+def write_csv(table_path, table):
+    table.to_csv(table_path, index=False, sep="|")
     print('CSV written')
 
 def execute(table_specification):
     table = generate_table(table_specification)
     types = {name: column['type'] for name, column in table_specification['columns'].items()}
     table = pd.concat([pd.DataFrame(types, index=[0]), table], ignore_index=True)
-    write_csv(table_specification['table_name'], table)
-    
+    write_csv(table_specification['table_path'], table)
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Table specification json is missing")
         sys.exit(1)
 
-    table_specification = load_table_specification(sys.argv[1])
+    table_specifications = load_table_specification(sys.argv[1])
     for table_specification in table_specifications:
         execute(table_specification)
