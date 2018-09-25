@@ -31,8 +31,6 @@ class PluginManager : public Singleton<PluginManager> {
   // Have a look at base_test.hpp to see the correct order of resetting things.
   static void reset();
 
-  PluginManager(PluginManager&&) = delete;
-
  protected:
   friend class Singleton;
 
