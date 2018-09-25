@@ -16,6 +16,6 @@ void TestPlugin::start() const {
 
 void TestPlugin::stop() const { StorageManager::get().drop_table("DummyTable"); }
 
-EXPORT(TestPlugin)
+EXPORT_PLUGIN(TestPlugin)
 
 }  // namespace opossum
