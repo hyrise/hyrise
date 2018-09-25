@@ -6,6 +6,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 
+import pandas as pd
 import numpy as np
 from math import sqrt
 from training_data_pipeline import transform_to_dataframe, split_data
@@ -41,8 +42,9 @@ def regression_metrics(model, data):
 	print('R2 Score: ' + str(r2_score(yValues, y_predicted)))
 
 def feature_importances(model, column_names):
-	print(column_names)
-	print(model.feature_importances_)
+	print(pd.DataFrame([model.feature_importances_], columns=column_names))
+
+
 
 def print_predictions(df, model, columns, label):
 	import matplotlib.pyplot as plt
