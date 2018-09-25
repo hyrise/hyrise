@@ -68,10 +68,10 @@ def execute(table_specification):
     write_csv(table_specification['table_name'], table)
     
 if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print("Table specification json is missing")
-		sys.exit(1)
+    if len(sys.argv) != 2:
+        print("Table specification json is missing")
+        sys.exit(1)
 
-	table_specification = load_table_specification(sys.argv[1])
-	for table_specification in table_specifications:
+    table_specification = load_table_specification(sys.argv[1])
+    for table_specification in table_specifications:
         execute(table_specification)
