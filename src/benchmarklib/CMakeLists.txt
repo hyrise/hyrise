@@ -4,6 +4,7 @@ set(
     SOURCES
 
     benchmark_utilities/abstract_benchmark_table_generator.hpp
+    benchmark_utilities/table_builder.hpp
     benchmark_utilities/random_generator.hpp
 
     tpcc/constants.hpp
@@ -16,8 +17,8 @@ set(
 
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
-    tpch/tpch_db_generator.cpp
-    tpch/tpch_db_generator.hpp
+    tpch/tpch_table_generator.cpp
+    tpch/tpch_table_generator.hpp
 
     table_generator.cpp
     table_generator.hpp

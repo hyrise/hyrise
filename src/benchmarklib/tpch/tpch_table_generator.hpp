@@ -5,15 +5,12 @@
 #include <unordered_map>
 #include <vector>
 
-#include "boost/hana/for_each.hpp"
-#include "boost/hana/integral_constant.hpp"
-#include "boost/hana/zip_with.hpp"
-
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
+#include "benchmark_utilities/abstract_benchmark_table_generator.hpp"
 
 namespace opossum {
 
@@ -30,19 +27,22 @@ extern std::unordered_map<opossum::TpchTable, std::string> tpch_table_names;
  *
  * NOT thread safe because the underlying tpch-dbgen is not since it has global data and malloc races.
  */
-class TpchDbGenerator final {
+class TpchTableGenerator : AbstractBenchmarkTableGenerator {
  public:
-  explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = Chunk::MAX_SIZE);
+  explicit TpchTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::MAX_SIZE,
+    EncodingConfig config = EncodingConfig{}, bool store = false);
 
-  std::unordered_map<TpchTable, std::shared_ptr<Table>> generate();
+  std::map<std::string, std::shared_ptr<Table>> generate();
 
   /**
    * Generate the TPCH tables and store them in the StorageManager
    */
   void generate_and_store();
 
+protected:
+  std::map<std::string, std::shared_ptr<opossum::Table>> _generate_all_tables() override;
+
  private:
   float _scale_factor;
-  size_t _chunk_size;
 };
 }  // namespace opossum

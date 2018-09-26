@@ -22,10 +22,9 @@
 namespace opossum {
 
 TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size,
-                                       EncodingConfig encoding_config)
-    : AbstractBenchmarkTableGenerator(chunk_size),
-      _warehouse_size(warehouse_size),
-      _encoding_config(std::move(encoding_config)) {}
+                                       EncodingConfig encoding_config, bool store)
+    : AbstractBenchmarkTableGenerator(chunk_size, std::move(encoding_config), store),
+      _warehouse_size(warehouse_size) {}
 
 std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
@@ -468,7 +467,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   return table;
 }
 
-std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_tables() {
+std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::_generate_all_tables() {
   std::vector<std::thread> threads;
   auto item_table = std::async(std::launch::async, &TpccTableGenerator::generate_items_table, this);
   auto warehouse_table = std::async(std::launch::async, &TpccTableGenerator::generate_warehouse_table, this);
@@ -529,6 +528,118 @@ std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& tab
 
 void TpccTableGenerator::_encode_table(const std::string& table_name, const std::shared_ptr<Table>& table) {
   BenchmarkTableEncoder::encode(table_name, table, _encoding_config);
+}
+
+template <typename T>
+void TpccTableGenerator::add_column(std::vector<opossum::Segments>& segments_by_chunk,
+                opossum::TableColumnDefinitions& column_definitions, std::string name,
+                std::shared_ptr<std::vector<size_t>> cardinalities,
+                const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
+  bool is_first_column = column_definitions.size() == 0;
+
+  auto data_type = opossum::data_type_from_type<T>();
+  column_definitions.emplace_back(name, data_type);
+
+  /**
+   * Calculate the total row count for this column based on the cardinalities of the influencing tables.
+   * For the CUSTOMER table this calculates 1*10*3000
+   */
+  auto loop_count =
+      std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
+
+  tbb::concurrent_vector<T> data;
+  data.reserve(_chunk_size);
+
+  /**
+   * The loop over all records that the final column of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
+   */
+  size_t row_index = 0;
+
+  for (size_t loop_index = 0; loop_index < loop_count; loop_index++) {
+    std::vector<size_t> indices(cardinalities->size());
+
+    /**
+     * Calculate indices for internal loops
+     *
+     * We have to take care of writing IDs for referenced table correctly, e.g. when they are used as foreign key.
+     * In that case the 'generator_function' has to be able to access the current index of our loops correctly,
+     * which we ensure by defining them here.
+     *
+     * For example for CUSTOMER:
+     * WAREHOUSE_ID | DISTRICT_ID | CUSTOMER_ID
+     * indices[0]   | indices[1]  | indices[2]
+     */
+    for (size_t loop = 0; loop < cardinalities->size(); loop++) {
+      auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
+                                     std::multiplies<size_t>());
+      indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
+    }
+
+    /**
+     * Actually generating and adding values.
+     * Pass in the previously generated indices to use them in 'generator_function',
+     * e.g. when generating IDs.
+     * We generate a vector of values with variable length
+     * and iterate it to add to the output segment.
+     */
+    auto values = generator_function(indices);
+    for (T& value : values) {
+      data.push_back(value);
+
+      // write output chunks if segment size has reached chunk_size
+      if (row_index % _chunk_size == _chunk_size - 1) {
+        auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(data));
+
+        if (is_first_column) {
+          segments_by_chunk.emplace_back();
+          segments_by_chunk.back().push_back(value_segment);
+        } else {
+          opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
+          segments_by_chunk[chunk_id].push_back(value_segment);
+        }
+
+        // reset data
+        data.clear();
+        data.reserve(_chunk_size);
+      }
+      row_index++;
+    }
+  }
+
+  // write partially filled last chunk
+  if (row_index % _chunk_size != 0) {
+    auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(data));
+
+    // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
+    if (is_first_column) {
+      segments_by_chunk.emplace_back();
+      segments_by_chunk.back().push_back(value_segment);
+    } else {
+      opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
+      segments_by_chunk[chunk_id].push_back(value_segment);
+    }
+  }
+}
+
+/**
+ * This method simplifies the interface for columns
+ * where only a single element is added in the inner loop.
+ *
+ * @tparam T                  the type of the column
+ * @param table               the column shall be added to this table as well as column metadata
+ * @param name                the name of the column
+ * @param cardinalities       the cardinalities of the different 'nested loops',
+ *                            e.g. 10 districts per warehouse results in {1, 10}
+ * @param generator_function  a lambda function to generate a value for this column
+ */
+template <typename T>
+void TpccTableGenerator::add_column(std::vector<opossum::Segments>& segments_by_chunk,
+                opossum::TableColumnDefinitions& column_definitions, std::string name,
+                std::shared_ptr<std::vector<size_t>> cardinalities,
+                const std::function<T(std::vector<size_t>)>& generator_function) {
+  const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
+      [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
+  add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
 }
 
 }  // namespace opossum

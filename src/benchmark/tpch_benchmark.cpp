@@ -18,7 +18,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 
 /**
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 
   config->out << "- Generating TPCH Tables with scale_factor=" << scale_factor << " ..." << std::endl;
 
-  const auto tables = opossum::TpchDbGenerator(scale_factor, config->chunk_size).generate();
+  const auto tables = opossum::TpchTableGenerator(scale_factor, config->chunk_size).generate();
 
   for (auto& tpch_table : tables) {
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);

@@ -11,7 +11,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
