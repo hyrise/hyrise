@@ -90,7 +90,7 @@ TEST_F(PluginManagerTest, LoadingNotExistingLibrary) {
 TEST_F(PluginManagerTest, LoadingNonInstantiableLibrary) {
   auto& pm = PluginManager::get();
 
-  EXPECT_THROW(pm.load_plugin(build_dylib_path("libNonInstantiablePlugin")), std::exception);
+  EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestNonInstantiablePlugin")), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {

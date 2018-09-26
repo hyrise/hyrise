@@ -29,7 +29,7 @@ function(add_plugin)
 endfunction(add_plugin)
 
 add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
-add_plugin(NAME NonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
+add_plugin(NAME TestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
