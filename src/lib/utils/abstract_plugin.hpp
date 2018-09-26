@@ -23,9 +23,9 @@ class AbstractPlugin {
  public:
   virtual const std::string description() const = 0;
 
-  virtual void start() const = 0;
+  virtual void start() = 0;
 
-  virtual void stop() const = 0;
+  virtual void stop() = 0;
 };
 
 }  // namespace opossum

@@ -14,9 +14,9 @@ class NonInstantiablePlugin : public AbstractPlugin, public Singleton<NonInstant
     return "This is a not working Plugin because it does not export itself";
   }
 
-  void start() const final {}
+  void start() final {}
 
-  void stop() const final {}
+  void stop() final {}
 };
 
 }  // namespace opossum

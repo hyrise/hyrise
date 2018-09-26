@@ -12,9 +12,9 @@ class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {
 
   const std::string description() const final;
 
-  void start() const final;
+  void start() final;
 
-  void stop() const final;
+  void stop() final;
 
   StorageManager& sm;
 };
