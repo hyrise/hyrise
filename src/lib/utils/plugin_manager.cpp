@@ -40,7 +40,9 @@ void PluginManager::load_plugin(const filesystem::path& path) {
   // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
   // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
   void* factory = dlsym(plugin_handle, "factory");
-  Assert(factory, "Instantiating plugin failed: Have you implemented and exported the factory method?");
+  Assert(factory,
+         "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
+         "for your plugin!");
 
   using Instantiator = AbstractPlugin* (*)();
   auto instantiate = reinterpret_cast<Instantiator>(factory);
