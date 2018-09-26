@@ -109,6 +109,7 @@ class Console {
   int _exit(const std::string& args);
   int _help(const std::string& args);
   int _generate_tpcc(const std::string& tablename);
+  int _generate_tpch(const std::string& args);
   int _load_table(const std::string& args);
   int _exec_script(const std::string& script_file);
   int _print_table(const std::string& args);
