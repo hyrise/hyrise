@@ -370,9 +370,8 @@ int Console::_help(const std::string&) {
   out("  commit                                  - Commit a manually created transaction\n");
   out("  txinfo                                  - Print information on the current transaction\n");
   out("  pwd                                     - Print current working directory\n");
-  out("  load_plugin FILE                        - Load and start plugin specified by filepath FILE. It is stored under its ");  // NOLINT
-  out("                                               name which is the filename without the \"lib\" prefix and without the file extension\n");  // NOLINT
-  out("  unload_plugin NAME                      - Stop and unload plugin NAME (also clears the query cache)\n");
+  out("  load_plugin FILE                        - Load and start plugin stored at FILE\n");
+  out("  unload_plugin NAME                      - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");
   out("  quit                                    - Exit the HYRISE Console\n");
   out("  help                                    - Show this message\n\n");
   out("  setting [property] [value]              - Change a runtime setting\n\n");
