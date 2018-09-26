@@ -9,8 +9,6 @@ from sklearn.metrics import r2_score
 import pandas as pd
 import numpy as np
 from math import sqrt
-from training_data_pipeline import transform_to_dataframe, split_data
-from train_model import train_cost_model 
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -26,7 +24,7 @@ def cross_validation(model_class, data, scores = [
 	for score in scores:
 		result = cross_val_score(model_class, data['X'], data['Y'], scoring=score, cv=10)
 		print(model_class.__class__.__name__ + " - " + score + ":")
-		print(result)
+		print(str( np.array(result).mean() ))
 
 def regression_metrics(model, data):
 	xValues = data['X'].values
@@ -42,9 +40,11 @@ def regression_metrics(model, data):
 	print('R2 Score: ' + str(r2_score(yValues, y_predicted)))
 
 def feature_importances(model, column_names):
-	print(pd.DataFrame([model.feature_importances_], columns=column_names))
+	return pd.DataFrame([model.feature_importances_], columns=column_names)
 
-
+def mean_absolute_percentage_error(y_true, y_pred):
+	y_true, y_pred = np.array(y_true), np.array(y_pred)
+	return np.mean(np.abs((y_true - y_pred) / y_true))
 
 def print_predictions(df, model, columns, label):
 	import matplotlib.pyplot as plt

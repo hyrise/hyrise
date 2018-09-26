@@ -30,7 +30,7 @@ namespace opossum {
         s.value_distribution = j.value("value_distribution", "uniform");
         s.sorted = j.value("sorted", false);
         s.distinct_values = j.value("distinct_values", 100);
-        auto encoding_string = j.value("encoding", "unencoded");
+        auto encoding_string = j.value("encoding", "Unencoded");
         if (encoding_type_to_string.right.find(encoding_string) == encoding_type_to_string.right.end()) {
             Fail("Unsupported encoding");
         }

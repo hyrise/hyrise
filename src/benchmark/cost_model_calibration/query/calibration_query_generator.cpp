@@ -132,8 +132,8 @@ namespace opossum {
       auto column_definitions = table_definition.columns;
 
       std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 3);
-//      auto number_of_predicates = number_of_predicates_dist(engine);
-      size_t number_of_predicates = 1;
+      auto number_of_predicates = number_of_predicates_dist(engine);
+//      size_t number_of_predicates = 1;
 
       std::stringstream predicate_stream;
 
