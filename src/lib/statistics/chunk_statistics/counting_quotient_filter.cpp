@@ -52,7 +52,7 @@ CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType value, uint64_t count) {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
-  uint64_t hash = bitmask & _hash(element);
+  uint64_t hash = bitmask & _hash(value);
   for (size_t i = 0; i < count; i++) {
     boost::apply_visitor([&](auto& filter) {qf_insert(&filter, hash, 0, 1);}, _quotient_filter);
   }
@@ -60,7 +60,7 @@ void CountingQuotientFilter<ElementType>::insert(ElementType value, uint64_t cou
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType value) {
-  insert(element, 1);
+  insert(value, 1);
 }
 
 template <typename ElementType>
@@ -79,7 +79,7 @@ bool CountingQuotientFilter<ElementType>::can_prune(const AllTypeVariant& value,
 template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::count(ElementType value) const {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
-  uint64_t hash = bitmask & _hash(element);
+  uint64_t hash = bitmask & _hash(value);
   uint64_t count;
   boost::apply_visitor([&](auto& filter) {count = qf_count_key_value(&filter, hash, 0);}, _quotient_filter);
   return count;
