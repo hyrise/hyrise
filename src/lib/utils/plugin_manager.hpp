@@ -10,6 +10,9 @@
 
 namespace opossum {
 
+using PluginHandle = void*;
+using PluginName = std::string;
+
 struct PluginHandleWrapper {
   PluginHandle handle;
   AbstractPlugin* plugin;
