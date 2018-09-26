@@ -6,7 +6,7 @@
 #include "utils/singleton.hpp"
 
 #include "./plugin_test_utils.hpp"
-#include "./test_plugin.hpp"
+#include "../../plugins/test_plugin.hpp"
 
 namespace opossum {
 

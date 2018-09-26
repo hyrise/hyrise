@@ -100,7 +100,7 @@ endif()
 add_subdirectory(benchmarklib)
 add_subdirectory(bin)
 add_subdirectory(lib)
-add_subdirectory(plugin)
+add_subdirectory(plugins)
 
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")
