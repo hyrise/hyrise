@@ -34,7 +34,7 @@ std::enable_if_t<std::is_floating_point_v<T>, T> next_value(const T value) {
  * at most length `string_prefix_length` and the possible character set of `supported_characters`.
  */
 std::string next_value(const std::string& value, const std::string& supported_characters,
-                       const uint64_t string_prefix_length);
+                       const uint32_t string_prefix_length);
 
 /**
  * Return the next representable string after `value` in the domain of all strings with the
@@ -53,7 +53,7 @@ uint64_t ipow(uint64_t base, uint64_t exp);
  * Returns the number of possible strings with at most length `string_prefix_length` - 1
  * in the possible character set of `supported_characters`.
  */
-uint64_t base_value_for_prefix_length(const uint64_t string_prefix_length, const std::string& supported_characters);
+uint64_t base_value_for_prefix_length(const uint32_t string_prefix_length, const std::string& supported_characters);
 
 /**
  * Returns the numerical representation of a string in the domain of all strings
@@ -61,14 +61,14 @@ uint64_t base_value_for_prefix_length(const uint64_t string_prefix_length, const
  * The numerical representation is the number of possible strings in that domain alphabetically smaller than `value`.
  */
 uint64_t convert_string_to_number_representation(const std::string& value, const std::string& supported_characters,
-                                                 const uint64_t string_prefix_length);
+                                                 const uint32_t string_prefix_length);
 
 /**
  * Returns the string for a numerical representation of a string in the domain of all strings
  * with at most length `string_prefix_length` and in the possible character set of `supported_characters`.
  */
 std::string convert_number_representation_to_string(const uint64_t value, const std::string& supported_characters,
-                                                    const uint64_t string_prefix_length);
+                                                    const uint32_t string_prefix_length);
 
 /**
  * Returns a pair of supported characters and prefix length.
@@ -94,7 +94,7 @@ bool check_prefix_settings(const std::string& supported_characters);
  * Checks that the prefix length is valid for the set of supported characters.
  * Also checks the supported characters by calling check_prefix_settings() for the supported_characters alone.
  */
-bool check_prefix_settings(const std::string& supported_characters, const uint64_t string_prefix_length);
+bool check_prefix_settings(const std::string& supported_characters, const uint32_t string_prefix_length);
 
 /**
  * Returns the length of the common prefix of `string1` and `string2`.

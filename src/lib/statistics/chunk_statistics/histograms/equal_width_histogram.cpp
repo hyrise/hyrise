@@ -12,9 +12,9 @@
 namespace opossum {
 
 template <typename T>
-EqualWidthHistogram<T>::EqualWidthHistogram(const T min, const T max, const std::vector<size_t>& heights,
-                                            const std::vector<size_t>& distinct_counts,
-                                            const size_t bin_count_with_larger_range)
+EqualWidthHistogram<T>::EqualWidthHistogram(const T min, const T max, const std::vector<HistogramCountType>& heights,
+                                            const std::vector<HistogramCountType>& distinct_counts,
+                                            const BinID bin_count_with_larger_range)
     : AbstractHistogram<T>(),
       _min(min),
       _max(max),
@@ -33,11 +33,11 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T min, const T max, const std:
 
 template <>
 EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& min, const std::string& max,
-                                                      const std::vector<size_t>& heights,
-                                                      const std::vector<size_t>& distinct_counts,
-                                                      const size_t bin_count_with_larger_range,
+                                                      const std::vector<HistogramCountType>& heights,
+                                                      const std::vector<HistogramCountType>& distinct_counts,
+                                                      const BinID bin_count_with_larger_range,
                                                       const std::string& supported_characters,
-                                                      const size_t string_prefix_length)
+                                                      const uint32_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
       _min(min),
       _max(max),
@@ -54,8 +54,8 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& min, co
 
 template <>
 EqualWidthBinStats<std::string> EqualWidthHistogram<std::string>::_get_bin_stats(
-    const std::vector<std::pair<std::string, size_t>>& value_counts, const size_t max_bin_count,
-    const std::string& supported_characters, const size_t string_prefix_length) {
+    const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
+    const std::string& supported_characters, const uint32_t string_prefix_length) {
   // Bins shall have the same range.
   const auto min = value_counts.front().first;
   const auto max = value_counts.back().first;
@@ -67,13 +67,13 @@ EqualWidthBinStats<std::string> EqualWidthHistogram<std::string>::_get_bin_stats
   // Never have more bins than representable values.
   const auto bin_count = max_bin_count <= base_width ? max_bin_count : base_width;
 
-  std::vector<size_t> counts;
-  std::vector<size_t> distinct_counts;
+  std::vector<HistogramCountType> counts;
+  std::vector<HistogramCountType> distinct_counts;
   counts.reserve(bin_count);
   distinct_counts.reserve(bin_count);
 
   const auto bin_width = base_width / bin_count;
-  const size_t bin_count_with_larger_range = base_width % bin_count;
+  const BinID bin_count_with_larger_range = base_width % bin_count;
 
   auto repr_current_begin_value =
       convert_string_to_number_representation(min, supported_characters, string_prefix_length);
@@ -90,8 +90,9 @@ EqualWidthBinStats<std::string> EqualWidthHistogram<std::string>::_get_bin_stats
       next_begin_it++;
     }
 
-    counts.emplace_back(std::accumulate(current_begin_it, next_begin_it, size_t{0},
-                                        [](size_t a, std::pair<std::string, size_t> b) { return a + b.second; }));
+    counts.emplace_back(std::accumulate(
+        current_begin_it, next_begin_it, HistogramCountType{0},
+        [](HistogramCountType a, std::pair<std::string, HistogramCountType> b) { return a + b.second; }));
     distinct_counts.emplace_back(std::distance(current_begin_it, next_begin_it));
 
     current_begin_it = next_begin_it;
@@ -103,8 +104,8 @@ EqualWidthBinStats<std::string> EqualWidthHistogram<std::string>::_get_bin_stats
 
 template <typename T>
 std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
-    const std::shared_ptr<const BaseSegment>& segment, const size_t max_bin_count,
-    const std::optional<std::string>& supported_characters, const std::optional<size_t>& string_prefix_length) {
+    const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
+    const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
   const auto value_counts = AbstractHistogram<T>::_value_counts_in_segment(segment);
 
   if (value_counts.empty()) {
@@ -134,28 +135,28 @@ HistogramType EqualWidthHistogram<T>::histogram_type() const {
 }
 
 template <typename T>
-size_t EqualWidthHistogram<T>::bin_count() const {
+BinID EqualWidthHistogram<T>::bin_count() const {
   return _heights.size();
 }
 
 template <typename T>
-size_t EqualWidthHistogram<T>::_bin_height(const BinID index) const {
+HistogramCountType EqualWidthHistogram<T>::_bin_height(const BinID index) const {
   DebugAssert(index < _heights.size(), "Index is not a valid bin.");
   return _heights[index];
 }
 
 template <typename T>
-size_t EqualWidthHistogram<T>::total_count() const {
-  return std::accumulate(_heights.cbegin(), _heights.cend(), size_t{0});
+HistogramCountType EqualWidthHistogram<T>::total_count() const {
+  return std::accumulate(_heights.cbegin(), _heights.cend(), HistogramCountType{0});
 }
 
 template <typename T>
-size_t EqualWidthHistogram<T>::total_distinct_count() const {
-  return std::accumulate(_distinct_counts.cbegin(), _distinct_counts.cend(), size_t{0});
+HistogramCountType EqualWidthHistogram<T>::total_distinct_count() const {
+  return std::accumulate(_distinct_counts.cbegin(), _distinct_counts.cend(), HistogramCountType{0});
 }
 
 template <typename T>
-size_t EqualWidthHistogram<T>::_bin_distinct_count(const BinID index) const {
+HistogramCountType EqualWidthHistogram<T>::_bin_distinct_count(const BinID index) const {
   DebugAssert(index < _distinct_counts.size(), "Index is not a valid bin.");
   return _distinct_counts[index];
 }
@@ -174,7 +175,7 @@ typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_w
 }
 
 template <>
-typename AbstractHistogram<std::string>::HistogramWidthType EqualWidthHistogram<std::string>::_bin_width(
+AbstractHistogram<std::string>::HistogramWidthType EqualWidthHistogram<std::string>::_bin_width(
     const BinID index) const {
   return AbstractHistogram<std::string>::_bin_width(index);
 }

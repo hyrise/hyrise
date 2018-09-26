@@ -12,7 +12,7 @@
 namespace opossum {
 
 std::string next_value(const std::string& value, const std::string& supported_characters,
-                       const uint64_t string_prefix_length) {
+                       const uint32_t string_prefix_length) {
   DebugAssert(value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
   DebugAssert(check_string_sorted_and_without_gaps(supported_characters),
               "Supported characters must be sorted and without gaps.");
@@ -73,7 +73,7 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   return result;
 }
 
-uint64_t base_value_for_prefix_length(const uint64_t string_prefix_length, const std::string& supported_characters) {
+uint64_t base_value_for_prefix_length(const uint32_t string_prefix_length, const std::string& supported_characters) {
   DebugAssert(string_prefix_length > 0, "Prefix length must be greater than 0.");
 
   auto result = 1ul;
@@ -84,7 +84,7 @@ uint64_t base_value_for_prefix_length(const uint64_t string_prefix_length, const
 }
 
 uint64_t convert_string_to_number_representation(const std::string& value, const std::string& supported_characters,
-                                                 const uint64_t string_prefix_length) {
+                                                 const uint32_t string_prefix_length) {
   DebugAssert(value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
 
   if (value.empty()) {
@@ -106,7 +106,7 @@ uint64_t convert_string_to_number_representation(const std::string& value, const
 }
 
 std::string convert_number_representation_to_string(const uint64_t value, const std::string& supported_characters,
-                                                    const uint64_t string_prefix_length) {
+                                                    const uint32_t string_prefix_length) {
   DebugAssert(convert_string_to_number_representation(std::string(string_prefix_length, supported_characters.back()),
                                                       supported_characters, string_prefix_length) >= value,
               "Value is not in valid range for supported_characters and string_prefix_length.");
@@ -141,7 +141,7 @@ bool check_prefix_settings(const std::string& supported_characters) {
   return check_string_sorted_and_without_gaps(supported_characters);
 }
 
-bool check_prefix_settings(const std::string& supported_characters, const uint64_t string_prefix_length) {
+bool check_prefix_settings(const std::string& supported_characters, const uint32_t string_prefix_length) {
   if (!check_prefix_settings(supported_characters) || string_prefix_length == 0) {
     return false;
   }

@@ -31,7 +31,7 @@ AbstractHistogram<std::string>::AbstractHistogram() {
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
-                                                  const size_t string_prefix_length)
+                                                  const uint32_t string_prefix_length)
     : _supported_characters(supported_characters), _string_prefix_length(string_prefix_length) {
   DebugAssert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
 }
@@ -57,9 +57,9 @@ std::string AbstractHistogram<T>::description() const {
 }
 
 template <typename T>
-std::vector<std::pair<T, size_t>> AbstractHistogram<T>::_value_counts_in_segment(
+std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_value_counts_in_segment(
     const std::shared_ptr<const BaseSegment>& segment) {
-  std::unordered_map<T, size_t> value_counts;
+  std::unordered_map<T, HistogramCountType> value_counts;
 
   resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
     auto iterable = create_iterable_from_segment<T>(typed_segment);
@@ -70,9 +70,11 @@ std::vector<std::pair<T, size_t>> AbstractHistogram<T>::_value_counts_in_segment
     });
   });
 
-  std::vector<std::pair<T, size_t>> result(value_counts.cbegin(), value_counts.cend());
+  std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
   std::sort(result.begin(), result.end(),
-            [](const std::pair<T, size_t>& lhs, const std::pair<T, size_t>& rhs) { return lhs.first < rhs.first; });
+            [](const std::pair<T, HistogramCountType>& lhs, const std::pair<T, HistogramCountType>& rhs) {
+              return lhs.first < rhs.first;
+            });
 
   return result;
 }

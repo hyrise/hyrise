@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -12,6 +13,17 @@
 #include "types.hpp"
 
 namespace opossum {
+
+using BinID = size_t;
+constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};
+
+/**
+ * Every chunk can hold at most ChunkOffset values.
+ * Consequently, there can be at most be ChunkOffset distinct values in a bin,
+ * and a bin can have a maximum height of ChunkOffset.
+ * We use this alias to automatically adapt if the type of ChunkOffset is changed.
+ */
+using HistogramCountType = ChunkOffset;
 
 /**
  * Abstract class for various histogram types.
@@ -41,9 +53,13 @@ template <typename T>
 class AbstractHistogram : public AbstractFilter {
  public:
   AbstractHistogram();
-  AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
+  AbstractHistogram(const std::string& supported_characters, const uint32_t string_prefix_length);
   virtual ~AbstractHistogram() = default;
 
+  /**
+   * Strings are internally transformed to a number, such that a bin can have a numerical width.
+   * This transformation is based on uint64_t.
+   */
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
 
   virtual HistogramType histogram_type() const = 0;
@@ -91,26 +107,27 @@ class AbstractHistogram : public AbstractFilter {
    * Returns the number of bins actually present in the histogram.
    * This number can differ from the number of bins requested when creating a histogram.
    */
-  virtual size_t bin_count() const = 0;
+  virtual BinID bin_count() const = 0;
 
   /**
    * Returns the number of values represented in the histogram.
    * This is equal to the length of the segment during creation, without null values.
    */
-  virtual size_t total_count() const = 0;
+  virtual HistogramCountType total_count() const = 0;
 
   /**
    * Returns the number of distinct values represented in the histogram.
    * This is equal to the number of distinct values in the segment during creation.
    */
-  virtual size_t total_distinct_count() const = 0;
+  virtual HistogramCountType total_distinct_count() const = 0;
 
  protected:
   /**
    * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.
    * The list is sorted by distinct value from lowest to highest.
    */
-  static std::vector<std::pair<T, size_t>> _value_counts_in_segment(const std::shared_ptr<const BaseSegment>& segment);
+  static std::vector<std::pair<T, HistogramCountType>> _value_counts_in_segment(
+      const std::shared_ptr<const BaseSegment>& segment);
 
   /**
    * Calculates the estimated cardinality for predicate types supported by all data types.
@@ -181,17 +198,17 @@ class AbstractHistogram : public AbstractFilter {
   /**
    * Returns the number of values in a bin.
    */
-  virtual size_t _bin_height(const BinID index) const = 0;
+  virtual HistogramCountType _bin_height(const BinID index) const = 0;
 
   /**
    * Returns the number of distinct values in a bin.
    */
-  virtual size_t _bin_distinct_count(const BinID index) const = 0;
+  virtual HistogramCountType _bin_distinct_count(const BinID index) const = 0;
 
   // String histogram-specific members.
   // See general explanation for details.
   std::string _supported_characters;
-  size_t _string_prefix_length;
+  uint32_t _string_prefix_length;
 };
 
 }  // namespace opossum
