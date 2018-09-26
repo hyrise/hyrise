@@ -28,11 +28,12 @@ corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 
 template <typename ElementType>
 class CountingQuotientFilter : AbstractFilter {
  public:
-  CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_size);
+  CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size);
   virtual ~CountingQuotientFilter();
+  CountingQuotientFilter(const CountingQuotientFilter& filter) = default;
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
-  void populate(std::shared_ptr<const BaseSegment> segment);
+  void populate(const std::shared_ptr<const BaseSegment>& segment);
   uint64_t count(ElementType value) const;
   uint64_t count_all_type(AllTypeVariant value) const;
   uint64_t memory_consumption() const;

@@ -50,7 +50,7 @@ CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
 }
 
 template <typename ElementType>
-void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t count) {
+void CountingQuotientFilter<ElementType>::insert(ElementType value, uint64_t count) {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
   for (size_t i = 0; i < count; i++) {
@@ -59,7 +59,7 @@ void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t c
 }
 
 template <typename ElementType>
-void CountingQuotientFilter<ElementType>::insert(ElementType element) {
+void CountingQuotientFilter<ElementType>::insert(ElementType value) {
   insert(element, 1);
 }
 
@@ -77,7 +77,7 @@ bool CountingQuotientFilter<ElementType>::can_prune(const AllTypeVariant& value,
 }
 
 template <typename ElementType>
-uint64_t CountingQuotientFilter<ElementType>::count(ElementType element) const {
+uint64_t CountingQuotientFilter<ElementType>::count(ElementType value) const {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
   uint64_t count;
@@ -104,7 +104,7 @@ uint64_t CountingQuotientFilter<std::string>::_hash(std::string value) const {
 }
 
 template <typename ElementType>
-void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseSegment> segment) {
+void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const BaseSegment>& segment) {
   resolve_segment_type<ElementType>(*segment, [&](const auto& typed_segment) {
     auto iterable_left = create_iterable_from_segment<ElementType>(typed_segment);
     iterable_left.for_each([&](const auto& value) {
