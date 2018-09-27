@@ -91,13 +91,42 @@ class CountingQuotientFilterTest : public BaseTest {
   }
 
   template <typename DataType>
-  void test_can_prune(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
+  void test_can_not_prune(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
       value_counts) {
     for (auto value_and_count : value_counts) {
         EXPECT_FALSE(cqf->can_prune(value_and_count.first, PredicateCondition::Equals));
     }
   }
+
+  template <typename DataType>
+  DataType get_test_value(int run) {
+    throw std::logic_error("specialize this method");
+  }
+
+  template <typename DataType>
+  void test_false_positive_rate(std::shared_ptr<CountingQuotientFilter<DataType>> cqf) {
+    int runs = 1000;
+    int false_positives = 0;
+    for (int run = 0; run < runs; run++) {
+      auto test_value = get_test_value<DataType>(run);
+      if(!cqf->can_prune(test_value, PredicateCondition::Equals)) {
+        false_positives++;
+      }
+    }
+    double false_positive_rate = false_positives / static_cast<double>(runs);
+    EXPECT_TRUE(false_positive_rate < 0.1);
+  }
 };
+
+template <>
+int CountingQuotientFilterTest::get_test_value<int>(int run) {
+  return 123457 + run;
+}
+
+template <>
+std::string CountingQuotientFilterTest::get_test_value<std::string>(int run) {
+  return std::string("test_value") + std::to_string(run);
+}
 
 TEST_F(CountingQuotientFilterTest, NoUndercountsString) {
   test_value_counts<std::string>(string_cqf2, string_value_counts);
@@ -115,20 +144,36 @@ TEST_F(CountingQuotientFilterTest, NoUndercountsInt) {
   test_value_counts<int>(int_cqf32, int_value_counts);
 }
 
-TEST_F(CountingQuotientFilterTest, CanPruneString) {
-  test_can_prune<std::string>(string_cqf2, string_value_counts);
-  test_can_prune<std::string>(string_cqf4, string_value_counts);
-  test_can_prune<std::string>(string_cqf8, string_value_counts);
-  test_can_prune<std::string>(string_cqf16, string_value_counts);
-  test_can_prune<std::string>(string_cqf32, string_value_counts);
+TEST_F(CountingQuotientFilterTest, CanNotPruneString) {
+  test_can_not_prune<std::string>(string_cqf2, string_value_counts);
+  test_can_not_prune<std::string>(string_cqf4, string_value_counts);
+  test_can_not_prune<std::string>(string_cqf8, string_value_counts);
+  test_can_not_prune<std::string>(string_cqf16, string_value_counts);
+  test_can_not_prune<std::string>(string_cqf32, string_value_counts);
 }
 
-TEST_F(CountingQuotientFilterTest, CanPruneInt) {
-  test_can_prune<int>(int_cqf2, int_value_counts);
-  test_can_prune<int>(int_cqf4, int_value_counts);
-  test_can_prune<int>(int_cqf8, int_value_counts);
-  test_can_prune<int>(int_cqf16, int_value_counts);
-  test_can_prune<int>(int_cqf32, int_value_counts);
+TEST_F(CountingQuotientFilterTest, CanNotPruneInt) {
+  test_can_not_prune<int>(int_cqf2, int_value_counts);
+  test_can_not_prune<int>(int_cqf4, int_value_counts);
+  test_can_not_prune<int>(int_cqf8, int_value_counts);
+  test_can_not_prune<int>(int_cqf16, int_value_counts);
+  test_can_not_prune<int>(int_cqf32, int_value_counts);
+}
+
+TEST_F(CountingQuotientFilterTest, FalsePositiveRateInt) {
+  test_false_positive_rate<int>(int_cqf2);
+  test_false_positive_rate<int>(int_cqf4);
+  test_false_positive_rate<int>(int_cqf8);
+  test_false_positive_rate<int>(int_cqf16);
+  test_false_positive_rate<int>(int_cqf32);
+}
+
+TEST_F(CountingQuotientFilterTest, FalsePositiveRateString) {
+  test_false_positive_rate<std::string>(string_cqf2);
+  test_false_positive_rate<std::string>(string_cqf4);
+  test_false_positive_rate<std::string>(string_cqf8);
+  test_false_positive_rate<std::string>(string_cqf16);
+  test_false_positive_rate<std::string>(string_cqf32);
 }
 
 }  // namespace opossum
