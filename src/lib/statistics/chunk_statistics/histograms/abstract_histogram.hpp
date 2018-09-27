@@ -4,7 +4,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -28,7 +27,6 @@ using HistogramCountType = ChunkOffset;
 /**
  * Abstract class for various histogram types.
  * Provides logic for estimating cardinality and making pruning decisions.
- * Inheriting classes have to implement a variety of helper functions.
  *
  * A histogram consists of a collection of bins.
  * These bins are responsible for a certain range of values, and the histogram stores,
@@ -41,6 +39,7 @@ using HistogramCountType = ChunkOffset;
  * Histograms are supported for all five data column types we support.
  * String histograms, however, are implemented slightly different because of their non-numerical property.
  * Strings are converted to a numerical representation. This is only possible for strings of a fixed length.
+ * The conversion is done in histogram_utils::convert_string_to_number_representation().
  * This length is stored in the member `_string_prefix_length`.
  * Additionally, as of now, we only support a range of ASCII characters, that is stored as a string
  * in `_supported_characters`. This range must not include gaps and the string has to be sorted.
@@ -63,6 +62,7 @@ class AbstractHistogram : public AbstractFilter {
   using HistogramWidthType = std::conditional_t<std::is_same_v<T, std::string>, uint64_t, T>;
 
   virtual HistogramType histogram_type() const = 0;
+  virtual std::string histogram_name() const = 0;
 
   /**
    * Returns a string with detailed information about the histogram, including the edges of the individual bins.
@@ -70,14 +70,14 @@ class AbstractHistogram : public AbstractFilter {
   std::string description() const;
 
   /**
-   * Returns the estimated selectivity given a predicate type and its parameter(s).
+   * Returns the estimated selectivity, given a predicate type and its parameter(s).
    * It will always be between 0 and 1.
    */
   float estimate_selectivity(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                              const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * Returns the estimated cardinality given a predicate type and its parameter(s).
+   * Returns the estimated cardinality, given a predicate type and its parameter(s).
    * It will always be between 0 and total_count().
    * This method is specialized for strings to handle predicates uniquely applicable to string columns.
    */
@@ -105,13 +105,15 @@ class AbstractHistogram : public AbstractFilter {
 
   /**
    * Returns the number of bins actually present in the histogram.
-   * This number can differ from the number of bins requested when creating a histogram.
+   * This number can be smaller than the number of bins requested when creating a histogram.
+   * See implementations of this method in specific histograms for details.
    */
   virtual BinID bin_count() const = 0;
 
   /**
    * Returns the number of values represented in the histogram.
-   * This is equal to the length of the segment during creation, without null values.
+   * This is equal to the number of rows in the segment during the generation of the bins for the histogram,
+   * without null values.
    */
   virtual HistogramCountType total_count() const = 0;
 
@@ -126,7 +128,7 @@ class AbstractHistogram : public AbstractFilter {
    * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.
    * The list is sorted by distinct value from lowest to highest.
    */
-  static std::vector<std::pair<T, HistogramCountType>> _value_counts_in_segment(
+  static std::vector<std::pair<T, HistogramCountType>> _gather_value_distribution(
       const std::shared_ptr<const BaseSegment>& segment);
 
   /**
@@ -142,28 +144,28 @@ class AbstractHistogram : public AbstractFilter {
                   const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * Given a value return the next representable value.
+   * Given a value, returns the next representable value.
    * This method is a wrapper for the functions in histogram_utils.
    */
   T _get_next_value(const T value) const;
 
   /**
-   * Given a value return its numerical representation.
+   * Given a value, returns its numerical representation.
    * This method is a wrapper for the functions in histogram_utils.
    */
   uint64_t _convert_string_to_number_representation(const std::string& value) const;
 
   /**
-   * Given a numerical representation of a string return the string.
+   * Given a numerical representation of a string, returns the string.
    * This method is a wrapper for the functions in histogram_utils.
    */
   std::string _convert_number_representation_to_string(const uint64_t value) const;
 
   /**
-   * Returns the share of values in a bin that are lower than `value`.
+   * Returns the share of values in a bin that are smaller than `value`.
    * This method is specialized for strings.
    */
-  float _bin_share(const BinID bin_id, const T value) const;
+  float _share_of_bin_less_than_value(const BinID bin_id, const T value) const;
 
   /**
    * Returns the width of a bin.

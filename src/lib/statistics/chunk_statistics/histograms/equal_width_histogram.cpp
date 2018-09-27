@@ -54,7 +54,7 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
 }
 
 template <>
-EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_get_bin_stats(
+EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
     const std::string& supported_characters, const uint32_t string_prefix_length) {
   // Bins shall have the same range.
@@ -107,7 +107,7 @@ template <typename T>
 std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
     const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
-  const auto value_counts = AbstractHistogram<T>::_value_counts_in_segment(segment);
+  const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
     return nullptr;
@@ -116,24 +116,27 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    const auto bin_stats =
-        EqualWidthHistogram<T>::_get_bin_stats(value_counts, max_bin_count, characters, prefix_length);
-    return std::make_shared<EqualWidthHistogram<T>>(bin_stats.minimum, bin_stats.maximum, bin_stats.bin_counts,
-                                                    bin_stats.bin_distinct_counts,
-                                                    bin_stats.bin_count_with_larger_range, characters, prefix_length);
+    const auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, characters, prefix_length);
+    return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, bins.bin_counts,
+                                                    bins.bin_distinct_counts, bins.bin_count_with_larger_range,
+                                                    characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    const auto bin_stats = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count);
-    return std::make_shared<EqualWidthHistogram<T>>(bin_stats.minimum, bin_stats.maximum, bin_stats.bin_counts,
-                                                    bin_stats.bin_distinct_counts,
-                                                    bin_stats.bin_count_with_larger_range);
+    const auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count);
+    return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, bins.bin_counts,
+                                                    bins.bin_distinct_counts, bins.bin_count_with_larger_range);
   }
 }
 
 template <typename T>
 HistogramType EqualWidthHistogram<T>::histogram_type() const {
   return HistogramType::EqualWidth;
+}
+
+template <typename T>
+std::string EqualWidthHistogram<T>::histogram_name() const {
+  return "EqualWidth";
 }
 
 template <typename T>

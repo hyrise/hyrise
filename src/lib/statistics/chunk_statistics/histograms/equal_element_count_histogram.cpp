@@ -113,32 +113,37 @@ template <typename T>
 std::shared_ptr<EqualElementCountHistogram<T>> EqualElementCountHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
     const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
-  const auto value_counts = AbstractHistogram<T>::_value_counts_in_segment(segment);
+  const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
     return nullptr;
   }
 
-  const auto bin_stats = EqualElementCountHistogram<T>::_build_bins(value_counts, max_bin_count);
+  const auto bins = EqualElementCountHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<EqualElementCountHistogram<T>>(
-        bin_stats.bin_minimums, bin_stats.bin_maximums, bin_stats.bin_heights, bin_stats.distinct_count_per_bin,
-        bin_stats.bin_count_with_extra_value, characters, prefix_length);
+    return std::make_shared<EqualElementCountHistogram<T>>(bins.bin_minimums, bins.bin_maximums, bins.bin_heights,
+                                                           bins.distinct_count_per_bin, bins.bin_count_with_extra_value,
+                                                           characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<EqualElementCountHistogram<T>>(bin_stats.bin_minimums, bin_stats.bin_maximums,
-                                                           bin_stats.bin_heights, bin_stats.distinct_count_per_bin,
-                                                           bin_stats.bin_count_with_extra_value);
+    return std::make_shared<EqualElementCountHistogram<T>>(bins.bin_minimums, bins.bin_maximums, bins.bin_heights,
+                                                           bins.distinct_count_per_bin,
+                                                           bins.bin_count_with_extra_value);
   }
 }
 
 template <typename T>
 HistogramType EqualElementCountHistogram<T>::histogram_type() const {
   return HistogramType::EqualElementCount;
+}
+
+template <typename T>
+std::string EqualElementCountHistogram<T>::histogram_name() const {
+  return "EqualElementCount";
 }
 
 template <typename T>

@@ -55,8 +55,19 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
       const std::optional<uint32_t>& string_prefix_length = std::nullopt);
 
   HistogramType histogram_type() const override;
+  std::string histogram_name() const override;
   HistogramCountType total_distinct_count() const override;
   HistogramCountType total_count() const override;
+
+  /**
+   * Returns the number of bins actually present in the histogram.
+   * This number can be smaller than the number of bins requested when creating a histogram.
+   * The number of bins is capped at the number of possible values in the range of the segment for integers and strings.
+   * That is, if the minimum and maximum value in an integer segment are 1 and 100, there will be at most 100 bins.
+   * Otherwise, there would be values which belonged to more than one bin.
+   * This is a theoretical problem for floating point numbers as well, but not solved,
+   * because the number of representable floating point numbers in a range is not trivial to determine.
+   */
   BinID bin_count() const override;
 
  protected:
@@ -144,7 +155,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    *
    * This method is only implemented for strings.
    */
-  static EqualWidthBinData<std::string> _get_bin_stats(
+  static EqualWidthBinData<std::string> _build_bins(
       const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
       const std::string& supported_characters, const uint32_t string_prefix_length);
 

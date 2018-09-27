@@ -76,8 +76,8 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
 uint64_t base_value_for_prefix_length(const uint32_t string_prefix_length, const std::string& supported_characters) {
   DebugAssert(string_prefix_length > 0, "Prefix length must be greater than 0.");
 
-  auto result = 1ul;
-  for (auto exp = 1ul; exp < string_prefix_length; exp++) {
+  auto result = uint64_t{1};
+  for (auto exp = uint32_t{1}; exp < string_prefix_length; exp++) {
     result += ipow(supported_characters.length(), exp);
   }
   return result;
@@ -151,10 +151,10 @@ bool check_prefix_settings(const std::string& supported_characters, const uint32
          std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1);
 }
 
-std::pair<std::string, uint64_t> get_default_or_check_string_histogram_prefix_settings(
-    const std::optional<std::string>& supported_characters, const std::optional<uint64_t>& string_prefix_length) {
+std::pair<std::string, uint32_t> get_default_or_check_string_histogram_prefix_settings(
+    const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
   std::string characters;
-  uint64_t prefix_length;
+  uint32_t prefix_length;
 
   if (supported_characters) {
     characters = *supported_characters;
@@ -162,7 +162,7 @@ std::pair<std::string, uint64_t> get_default_or_check_string_histogram_prefix_se
     if (string_prefix_length) {
       prefix_length = *string_prefix_length;
     } else {
-      prefix_length = static_cast<uint64_t>(63 / std::log(characters.length() + 1));
+      prefix_length = static_cast<uint32_t>(63 / std::log(characters.length() + 1));
     }
   } else {
     DebugAssert(!string_prefix_length, "Cannot set prefix length without also setting supported characters.");

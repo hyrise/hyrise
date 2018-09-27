@@ -49,8 +49,16 @@ class EqualHeightHistogram : public AbstractHistogram<T> {
       const std::optional<uint32_t>& string_prefix_length = std::nullopt);
 
   HistogramType histogram_type() const override;
+  std::string histogram_name() const override;
   HistogramCountType total_distinct_count() const override;
   HistogramCountType total_count() const override;
+
+  /**
+   * Returns the number of bins actually present in the histogram.
+   * This number can be smaller than the number of bins requested when creating a histogram.
+   * The number of bins is capped at the number of distinct values in the segment.
+   * Otherwise, there would be empty bins without any benefit.
+   */
   BinID bin_count() const override;
 
  protected:

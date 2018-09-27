@@ -103,31 +103,35 @@ template <typename T>
 std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
     const std::shared_ptr<const BaseSegment>& segment, const BinID max_bin_count,
     const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
-  const auto value_counts = AbstractHistogram<T>::_value_counts_in_segment(segment);
+  const auto value_counts = AbstractHistogram<T>::_gather_value_distribution(segment);
 
   if (value_counts.empty()) {
     return nullptr;
   }
 
-  const auto bin_stats = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
+  const auto bins = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<EqualHeightHistogram<T>>(bin_stats.bin_maximums, bin_stats.bin_distinct_counts,
-                                                     bin_stats.minimum, bin_stats.total_count, characters,
-                                                     prefix_length);
+    return std::make_shared<EqualHeightHistogram<T>>(bins.bin_maximums, bins.bin_distinct_counts, bins.minimum,
+                                                     bins.total_count, characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<EqualHeightHistogram<T>>(bin_stats.bin_maximums, bin_stats.bin_distinct_counts,
-                                                     bin_stats.minimum, bin_stats.total_count);
+    return std::make_shared<EqualHeightHistogram<T>>(bins.bin_maximums, bins.bin_distinct_counts, bins.minimum,
+                                                     bins.total_count);
   }
 }
 
 template <typename T>
 HistogramType EqualHeightHistogram<T>::histogram_type() const {
   return HistogramType::EqualHeight;
+}
+
+template <typename T>
+std::string EqualHeightHistogram<T>::histogram_name() const {
+  return "EqualHeight";
 }
 
 template <typename T>

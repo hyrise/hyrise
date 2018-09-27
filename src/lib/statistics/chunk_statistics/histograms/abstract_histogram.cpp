@@ -4,9 +4,9 @@
 
 #include <algorithm>
 #include <limits>
+#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -14,7 +14,6 @@
 #include "histogram_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
-#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
@@ -39,7 +38,7 @@ AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_c
 template <typename T>
 std::string AbstractHistogram<T>::description() const {
   std::stringstream stream;
-  stream << histogram_type_to_string.at(histogram_type()) << std::endl;
+  stream << histogram_name() << std::endl;
   stream << "  distinct    " << total_distinct_count() << std::endl;
   stream << "  min         " << minimum() << std::endl;
   stream << "  max         " << maximum() << std::endl;
@@ -57,9 +56,9 @@ std::string AbstractHistogram<T>::description() const {
 }
 
 template <typename T>
-std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_value_counts_in_segment(
+std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_value_distribution(
     const std::shared_ptr<const BaseSegment>& segment) {
-  std::unordered_map<T, HistogramCountType> value_counts;
+  std::map<T, HistogramCountType> value_counts;
 
   resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
     auto iterable = create_iterable_from_segment<T>(typed_segment);
@@ -71,11 +70,6 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_value_count
   });
 
   std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
-  std::sort(result.begin(), result.end(),
-            [](const std::pair<T, HistogramCountType>& lhs, const std::pair<T, HistogramCountType>& rhs) {
-              return lhs.first < rhs.first;
-            });
-
   return result;
 }
 
@@ -125,12 +119,12 @@ std::string AbstractHistogram<std::string>::_get_next_value(const std::string va
 }
 
 template <typename T>
-float AbstractHistogram<T>::_bin_share(const BinID bin_id, const T value) const {
+float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
   return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
 }
 
 template <>
-float AbstractHistogram<std::string>::_bin_share(const BinID bin_id, const std::string value) const {
+float AbstractHistogram<std::string>::_share_of_bin_less_than_value(const BinID bin_id, const std::string value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -423,7 +417,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
         // Therefore, we need to sum up the counts of all bins with a max < value.
         index = _upper_bound_for_value(value);
       } else {
-        cardinality += _bin_share(index, value) * _bin_height(index);
+        cardinality += _share_of_bin_less_than_value(index, value) * _bin_height(index);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.
