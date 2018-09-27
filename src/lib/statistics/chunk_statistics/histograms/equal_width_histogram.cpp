@@ -275,7 +275,7 @@ BinID EqualWidthHistogram<std::string>::_bin_for_value(const std::string value) 
 }
 
 template <typename T>
-BinID EqualWidthHistogram<T>::_upper_bound_for_value(const T value) const {
+BinID EqualWidthHistogram<T>::_next_bin(const T value) const {
   if (value < _minimum) {
     return 0ul;
   }

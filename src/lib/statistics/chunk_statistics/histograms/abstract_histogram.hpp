@@ -185,7 +185,7 @@ class AbstractHistogram : public AbstractFilter {
    * In that case return the bin right after the gap.
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
-  virtual BinID _upper_bound_for_value(const T value) const = 0;
+  virtual BinID _next_bin(const T value) const = 0;
 
   /**
    * Returns the smallest value in the bin.

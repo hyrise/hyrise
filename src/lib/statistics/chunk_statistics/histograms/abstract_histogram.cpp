@@ -207,7 +207,7 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
       // In an EqualElementCountHistogram, if both values fall into the same gap, we can prune the predicate.
       // We need to have at least two bins to rule out pruning if value < min and value2 > max.
       if (value_bin == INVALID_BIN_ID && value2_bin == INVALID_BIN_ID && bin_count() > 1ul &&
-          _upper_bound_for_value(value) == _upper_bound_for_value(value2)) {
+          _next_bin(value) == _next_bin(value2)) {
         return true;
       }
 
@@ -298,13 +298,13 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
         const auto search_prefix_next_value_bin = _bin_for_value(search_prefix_next_value);
 
         if (search_prefix_bin == INVALID_BIN_ID) {
-          const auto search_prefix_upper_bound_bin = _upper_bound_for_value(search_prefix);
+          const auto search_prefix_next_bin = _next_bin(search_prefix);
 
           // In an EqualElementCountHistogram, if both values fall into the same gap, we can prune the predicate.
           // We need to have at least two bins to rule out pruning if search_prefix < min
           // and search_prefix_next_value > max.
           if (search_prefix_next_value_bin == INVALID_BIN_ID && bin_count() > 1ul &&
-              search_prefix_upper_bound_bin == _upper_bound_for_value(search_prefix_next_value)) {
+              search_prefix_next_bin == _next_bin(search_prefix_next_value)) {
             return true;
           }
 
@@ -313,7 +313,7 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
           // That's because search_prefix_next_value does not belong to the range covered by the pattern,
           // but is the next value after it.
           if (search_prefix_next_value_bin != INVALID_BIN_ID &&
-              search_prefix_upper_bound_bin == search_prefix_next_value_bin &&
+              search_prefix_next_bin == search_prefix_next_value_bin &&
               _bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value) {
             return true;
           }
@@ -415,7 +415,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
       if (index == INVALID_BIN_ID) {
         // The value is within the range of the histogram, but does not belong to a bin.
         // Therefore, we need to sum up the counts of all bins with a max < value.
-        index = _upper_bound_for_value(value);
+        index = _next_bin(value);
       } else {
         cardinality += _share_of_bin_less_than_value(index, value) * _bin_height(index);
       }

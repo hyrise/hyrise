@@ -164,7 +164,7 @@ BinID EqualElementCountHistogram<T>::_bin_for_value(const T value) const {
 }
 
 template <typename T>
-BinID EqualElementCountHistogram<T>::_upper_bound_for_value(const T value) const {
+BinID EqualElementCountHistogram<T>::_next_bin(const T value) const {
   const auto it = std::upper_bound(_bin_maximums.cbegin(), _bin_maximums.cend(), value);
 
   if (it == _bin_maximums.cend()) {

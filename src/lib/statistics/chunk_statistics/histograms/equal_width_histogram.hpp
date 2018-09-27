@@ -72,7 +72,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
 
  protected:
   BinID _bin_for_value(const T value) const override;
-  BinID _upper_bound_for_value(const T value) const override;
+  BinID _next_bin(const T value) const override;
 
   T _bin_minimum(const BinID index) const override;
   T _bin_maximum(const BinID index) const override;
