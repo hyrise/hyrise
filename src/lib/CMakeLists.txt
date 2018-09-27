@@ -529,7 +529,7 @@ set(
     LIBRARIES
     pthread
     sqlparser
-    boost_container
+    ${Boost_CONTAINER_LIBRARY}
     ${TBB_LIBRARY}
 )
 
