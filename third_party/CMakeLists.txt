@@ -16,6 +16,7 @@ add_library(
     benchmark/src/json_reporter.cc
     benchmark/src/reporter.cc
     benchmark/src/sleep.cc
+    benchmark/src/statistics.cc
     benchmark/src/string_util.cc
     benchmark/src/sysinfo.cc
     benchmark/src/timers.cc
