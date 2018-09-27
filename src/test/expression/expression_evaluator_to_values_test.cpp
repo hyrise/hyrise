@@ -448,6 +448,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, InListLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(null_(), 5, null_())), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(null_(), 6, null_())), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(1.0, 3.0)), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_("Hello", 1.0, "You", 3.0)), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_("You", list_("Hello", 1.0, "You", 3.0)), {1}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, InListSeries) {

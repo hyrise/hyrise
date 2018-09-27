@@ -87,7 +87,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const AbstractExp
   const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression->set());
   Assert(list_expression, "Expected ListExpression");
 
-  const auto left_is_string = in_expression->data_type() == DataType::String;
+  const auto left_is_string = in_expression->value()->data_type() == DataType::String;
   std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
   for (const auto& element : list_expression->elements()) {
     if ((element->data_type() == DataType::String) == left_is_string) {
@@ -313,73 +313,6 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null
     const IsNullExpression& expression) {
   Fail("Can only evaluate predicates to bool");
 }
-
-//template<typename RowResultFn>
-//void ExpressionEvaluator::_evaluate_in_expression_impl(const InExpression& in_expression, const RowResultFn& row_result_fn) {
-//  /**
-//   * Implementation for `a IN (SELECT...)` calling `row_result_fn(chunk_offset, result_value, result_null)` for each
-//   * row.
-//   */
-//
-//  const auto& left_expression = *in_expression.value();
-//  const auto& right_expression = *in_expression.set();
-//
-//  Assert(right_expression.type == ExpressionType::PQPSelect, "Expected PQPSelectExpression as right operand");
-//
-//  const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
-//  Assert(select_expression, "Expected PQPSelectExpression");
-//
-//  resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
-//    using SelectDataType = typename decltype(select_data_type_t)::type;
-//
-//    const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
-//    const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
-//
-//    Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
-//           "Unexpected number of lists returned from Select. "
-//           "Should be one (if the Select is not correlated), or one per row (if it is)");
-//
-//    _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
-//      using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
-//
-//      if constexpr (EqualsEvaluator::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
-//        const auto result_size = _result_size(left_view.size(), select_results.size());
-//
-//        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-//          // If the SELECT returned just one list, always perform the IN check with that one list
-//          // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
-//          // against the list of the current row
-//          const auto& list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
-//
-//          auto list_contains_null = false;
-//          auto result_value = false;
-//
-//          for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
-//            // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
-//            // here as well.
-//            EqualsEvaluator{}(result_value,  // NOLINT - complains about missing spaces before "{"...
-//                              list.value(list_element_idx), left_view.value(chunk_offset));
-//            if (result_value) break;
-//
-//            list_contains_null |= list.is_null(list_element_idx);
-//          }
-//
-//          // `NULL IN (...)` is NULL and `a IN (elements)` is null, if `a` has no match in `elements` and `elements`
-//          // contains a NULL.
-//          auto result_null = (result_value && list_contains_null) || left_view.is_null(chunk_offset);
-//
-//          row_result_fn
-//        }
-//
-//      } else {
-//        // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of Fail()ing, because that's
-//        // what we do for `5 IN ('Hello', 'World')
-//        row_result_fn(Chunk
-//        false, false);
-//      }
-//    });
-//  });
-//}
 
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
