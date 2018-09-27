@@ -151,7 +151,7 @@ bool check_prefix_settings(const std::string& supported_characters, const uint32
          std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1);
 }
 
-std::pair<std::string, uint64_t> get_default_or_check_prefix_settings(
+std::pair<std::string, uint64_t> get_default_or_check_string_histogram_prefix_settings(
     const std::optional<std::string>& supported_characters, const std::optional<uint64_t>& string_prefix_length) {
   std::string characters;
   uint64_t prefix_length;
@@ -165,8 +165,7 @@ std::pair<std::string, uint64_t> get_default_or_check_prefix_settings(
       prefix_length = static_cast<uint64_t>(63 / std::log(characters.length() + 1));
     }
   } else {
-    DebugAssert(!static_cast<bool>(string_prefix_length),
-                "Cannot set prefix length without also setting supported characters.");
+    DebugAssert(!string_prefix_length, "Cannot set prefix length without also setting supported characters.");
 
     // Support most of ASCII with maximum prefix length for number of characters.
     characters = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";

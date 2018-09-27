@@ -13,11 +13,11 @@
 namespace opossum {
 
 template <typename T>
-struct EqualWidthBinStats {
-  T min;
-  T max;
-  std::vector<HistogramCountType> counts;
-  std::vector<HistogramCountType> distinct_counts;
+struct EqualWidthBinData {
+  T minimum;
+  T maximum;
+  std::vector<HistogramCountType> bin_counts;
+  std::vector<HistogramCountType> bin_distinct_counts;
   BinID bin_count_with_larger_range;
 };
 
@@ -31,11 +31,14 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
 
-  EqualWidthHistogram(const T min, const T max, const std::vector<HistogramCountType>& heights,
-                      const std::vector<HistogramCountType>& distinct_counts, const BinID bin_count_with_larger_range);
-  EqualWidthHistogram(const std::string& min, const std::string& max, const std::vector<HistogramCountType>& heights,
-                      const std::vector<HistogramCountType>& distinct_counts, const BinID bin_count_with_larger_range,
-                      const std::string& supported_characters, const uint32_t string_prefix_length);
+  EqualWidthHistogram(const T minimum, const T maximum, const std::vector<HistogramCountType>& bin_heights,
+                      const std::vector<HistogramCountType>& bin_distinct_counts,
+                      const BinID bin_count_with_larger_range);
+  EqualWidthHistogram(const std::string& minimum, const std::string& maximum,
+                      const std::vector<HistogramCountType>& bin_heights,
+                      const std::vector<HistogramCountType>& bin_distinct_counts,
+                      const BinID bin_count_with_larger_range, const std::string& supported_characters,
+                      const uint32_t string_prefix_length);
 
   /**
    * Create a histogram based on the data in a given segment.
@@ -60,8 +63,8 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
   BinID _bin_for_value(const T value) const override;
   BinID _upper_bound_for_value(const T value) const override;
 
-  T _bin_min(const BinID index) const override;
-  T _bin_max(const BinID index) const override;
+  T _bin_minimum(const BinID index) const override;
+  T _bin_maximum(const BinID index) const override;
   HistogramCountType _bin_height(const BinID index) const override;
   HistogramCountType _bin_distinct_count(const BinID index) const override;
 
@@ -72,7 +75,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    * It is only enabled for numerical types.
    */
   template <typename Q = T>
-  static std::enable_if_t<std::is_arithmetic_v<Q>, EqualWidthBinStats<T>> _get_bin_stats(
+  static std::enable_if_t<std::is_arithmetic_v<Q>, EqualWidthBinData<T>> _build_bins(
       const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count) {
     // Bins shall have the same range.
     const auto min = value_counts.front().first;
@@ -94,19 +97,19 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
       bin_count_with_larger_range = 0ul;
     }
 
-    std::vector<HistogramCountType> counts;
-    std::vector<HistogramCountType> distinct_counts;
-    counts.reserve(bin_count);
-    distinct_counts.reserve(bin_count);
+    std::vector<HistogramCountType> bin_counts;
+    std::vector<HistogramCountType> bin_distinct_counts;
+    bin_counts.reserve(bin_count);
+    bin_distinct_counts.reserve(bin_count);
 
-    T current_begin_value = min;
-    auto current_begin_it = value_counts.cbegin();
+    T current_bin_begin_value = min;
+    auto current_bin_begin_it = value_counts.cbegin();
     for (auto current_bin_id = 0ul; current_bin_id < bin_count; current_bin_id++) {
-      T next_begin_value = current_begin_value + bin_width;
+      T next_bin_begin_value = current_bin_begin_value + bin_width;
 
       if constexpr (std::is_integral_v<T>) {
         if (current_bin_id < bin_count_with_larger_range) {
-          next_begin_value++;
+          next_bin_begin_value++;
         }
       }
 
@@ -115,25 +118,25 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
         // Adding up floating point numbers adds an error over time.
         // So this is how we make sure that the last bin contains the rest of the values.
         if (current_bin_id == bin_count - 1) {
-          next_begin_value = next_value(max);
+          next_bin_begin_value = next_value(max);
         }
       }
 
-      auto next_begin_it = current_begin_it;
-      while (next_begin_it != value_counts.cend() && (*next_begin_it).first < next_begin_value) {
-        next_begin_it++;
+      auto next_bin_begin_it = current_bin_begin_it;
+      while (next_bin_begin_it != value_counts.cend() && (*next_bin_begin_it).first < next_bin_begin_value) {
+        next_bin_begin_it++;
       }
 
-      counts.emplace_back(std::accumulate(
-          current_begin_it, next_begin_it, HistogramCountType{0},
+      bin_counts.emplace_back(std::accumulate(
+          current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
           [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; }));
-      distinct_counts.emplace_back(std::distance(current_begin_it, next_begin_it));
+      bin_distinct_counts.emplace_back(std::distance(current_bin_begin_it, next_bin_begin_it));
 
-      current_begin_value = next_begin_value;
-      current_begin_it = next_begin_it;
+      current_bin_begin_value = next_bin_begin_value;
+      current_bin_begin_it = next_bin_begin_it;
     }
 
-    return {min, max, counts, distinct_counts, bin_count_with_larger_range};
+    return {min, max, bin_counts, bin_distinct_counts, bin_count_with_larger_range};
   }
 
   /**
@@ -141,7 +144,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    *
    * This method is only implemented for strings.
    */
-  static EqualWidthBinStats<std::string> _get_bin_stats(
+  static EqualWidthBinData<std::string> _get_bin_stats(
       const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
       const std::string& supported_characters, const uint32_t string_prefix_length);
 
@@ -152,17 +155,21 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
   typename AbstractHistogram<T>::HistogramWidthType _bin_width(const BinID index) const override;
 
  private:
+  /**
+   * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
+   */
+
   // Minimum value of the histogram.
-  T _min;
+  T _minimum;
 
   // Maximum value of the histogram.
-  T _max;
+  T _maximum;
 
   // Number of values on a per-bin basis.
-  std::vector<HistogramCountType> _heights;
+  std::vector<HistogramCountType> _bin_heights;
 
   // Number of distinct values on a per-bin basis.
-  std::vector<HistogramCountType> _distinct_counts;
+  std::vector<HistogramCountType> _bin_distinct_counts;
 
   // Number of bins that are one element wider (only used for integral and string histograms).
   BinID _bin_count_with_larger_range;

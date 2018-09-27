@@ -11,10 +11,10 @@
 namespace opossum {
 
 template <typename T>
-struct EqualElementCountBinStats {
-  std::vector<T> mins;
-  std::vector<T> maxs;
-  std::vector<HistogramCountType> heights;
+struct EqualElementCountBinData {
+  std::vector<T> bin_minimums;
+  std::vector<T> bin_maximums;
+  std::vector<HistogramCountType> bin_heights;
   HistogramCountType distinct_count_per_bin;
   BinID bin_count_with_extra_value;
 };
@@ -28,11 +28,11 @@ template <typename T>
 class EqualElementCountHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
-  EqualElementCountHistogram(const std::vector<T>& mins, const std::vector<T>& maxs,
-                             const std::vector<HistogramCountType>& heights,
+  EqualElementCountHistogram(const std::vector<T>& bin_minimums, const std::vector<T>& bin_maximums,
+                             const std::vector<HistogramCountType>& bin_heights,
                              const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value);
-  EqualElementCountHistogram(const std::vector<std::string>& mins, const std::vector<std::string>& maxs,
-                             const std::vector<HistogramCountType>& heights,
+  EqualElementCountHistogram(const std::vector<std::string>& bin_minimums, const std::vector<std::string>& bin_maximums,
+                             const std::vector<HistogramCountType>& bin_heights,
                              const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                              const std::string& supported_characters, const uint32_t string_prefix_length);
 
@@ -59,26 +59,30 @@ class EqualElementCountHistogram : public AbstractHistogram<T> {
   /**
    * Creates bins and their statistics.
    */
-  static EqualElementCountBinStats<T> _get_bin_stats(const std::vector<std::pair<T, HistogramCountType>>& value_counts,
-                                                     const BinID max_bin_count);
+  static EqualElementCountBinData<T> _build_bins(const std::vector<std::pair<T, HistogramCountType>>& value_counts,
+                                                 const BinID max_bin_count);
 
   BinID _bin_for_value(const T value) const override;
   BinID _upper_bound_for_value(const T value) const override;
 
-  T _bin_min(const BinID index) const override;
-  T _bin_max(const BinID index) const override;
+  T _bin_minimum(const BinID index) const override;
+  T _bin_maximum(const BinID index) const override;
   HistogramCountType _bin_height(const BinID index) const override;
   HistogramCountType _bin_distinct_count(const BinID index) const override;
 
  private:
+  /**
+   * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
+   */
+
   // Min values on a per-bin basis.
-  std::vector<T> _mins;
+  std::vector<T> _bin_minimums;
 
   // Max values on a per-bin basis.
-  std::vector<T> _maxs;
+  std::vector<T> _bin_maximums;
 
   // Number of values on a per-bin basis.
-  std::vector<HistogramCountType> _heights;
+  std::vector<HistogramCountType> _bin_heights;
 
   // Number of distinct values per bin.
   HistogramCountType _distinct_count_per_bin;

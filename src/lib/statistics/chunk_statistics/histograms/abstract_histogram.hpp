@@ -95,13 +95,13 @@ class AbstractHistogram : public AbstractFilter {
    * Returns the lower bound (minimum value) of the histogram.
    * This is equal to the smallest value in the segment.
    */
-  T min() const;
+  T minimum() const;
 
   /**
    * Returns the upper bound (maximum value) of the histogram.
    * This is equal to the largest value in the segment.
    */
-  T max() const;
+  T maximum() const;
 
   /**
    * Returns the number of bins actually present in the histogram.
@@ -188,12 +188,12 @@ class AbstractHistogram : public AbstractFilter {
   /**
    * Returns the smallest value in the bin.
    */
-  virtual T _bin_min(const BinID index) const = 0;
+  virtual T _bin_minimum(const BinID index) const = 0;
 
   /**
    * Returns the largest value in a bin.
    */
-  virtual T _bin_max(const BinID index) const = 0;
+  virtual T _bin_maximum(const BinID index) const = 0;
 
   /**
    * Returns the number of values in a bin.

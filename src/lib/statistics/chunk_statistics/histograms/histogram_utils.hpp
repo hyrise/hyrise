@@ -76,7 +76,7 @@ std::string convert_number_representation_to_string(const uint64_t value, const 
  * If no set of supported characters is given, it will return ASCII characters 32 - 126,
  * which are the vast majority of printable ASCII characters, and the maximum prefix length for that set (9).
  */
-std::pair<std::string, uint64_t> get_default_or_check_prefix_settings(
+std::pair<std::string, uint64_t> get_default_or_check_string_histogram_prefix_settings(
     const std::optional<std::string>& supported_characters = std::nullopt,
     const std::optional<uint64_t>& string_prefix_length = std::nullopt);
 

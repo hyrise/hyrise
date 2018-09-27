@@ -11,52 +11,58 @@
 namespace opossum {
 
 template <typename T>
-EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& maxs,
-                                              const std::vector<HistogramCountType>& distinct_counts, T min,
+EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& bin_maximums,
+                                              const std::vector<HistogramCountType>& bin_distinct_counts, T minimum,
                                               const HistogramCountType total_count)
-    : AbstractHistogram<T>(), _maxs(maxs), _distinct_counts(distinct_counts), _min(min), _total_count(total_count) {
+    : AbstractHistogram<T>(),
+      _bin_maximums(bin_maximums),
+      _bin_distinct_counts(bin_distinct_counts),
+      _minimum(minimum),
+      _total_count(total_count) {
   DebugAssert(total_count > 0, "Cannot have histogram without any values.");
-  DebugAssert(maxs.size() > 0, "Cannot have histogram without any bins.");
-  DebugAssert(maxs.size() == distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
-  DebugAssert(min <= maxs[0], "Must have maxs and distinct counts for each bin.");
+  DebugAssert(bin_maximums.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
+  DebugAssert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
 
-  for (auto bin_id = 0u; bin_id < maxs.size(); bin_id++) {
-    DebugAssert(distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
+  for (BinID bin_id = 0; bin_id < bin_maximums.size(); bin_id++) {
+    DebugAssert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
 
-    if (bin_id < maxs.size() - 1) {
-      DebugAssert(maxs[bin_id] < maxs[bin_id + 1], "Bins must be sorted and cannot overlap.");
+    if (bin_id < bin_maximums.size() - 1) {
+      DebugAssert(bin_maximums[bin_id] < bin_maximums[bin_id + 1], "Bins must be sorted and cannot overlap.");
     }
   }
 }
 
 template <>
-EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::string>& maxs,
-                                                        const std::vector<HistogramCountType>& distinct_counts,
-                                                        const std::string& min, const HistogramCountType total_count,
+EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::string>& bin_maximums,
+                                                        const std::vector<HistogramCountType>& bin_distinct_counts,
+                                                        const std::string& minimum,
+                                                        const HistogramCountType total_count,
                                                         const std::string& supported_characters,
                                                         const uint32_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _maxs(maxs),
-      _distinct_counts(distinct_counts),
-      _min(min),
+      _bin_maximums(bin_maximums),
+      _bin_distinct_counts(bin_distinct_counts),
+      _minimum(minimum),
       _total_count(total_count) {
   DebugAssert(total_count > 0, "Cannot have histogram without any values.");
-  DebugAssert(maxs.size() > 0, "Cannot have histogram without any bins.");
-  DebugAssert(maxs.size() == distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
-  DebugAssert(min <= maxs[0], "Must have maxs and distinct counts for each bin.");
+  DebugAssert(bin_maximums.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
+  DebugAssert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
 
-  for (auto bin_id = 0u; bin_id < maxs.size(); bin_id++) {
-    DebugAssert(distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-    DebugAssert(maxs[bin_id].find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  for (BinID bin_id = 0; bin_id < bin_maximums.size(); bin_id++) {
+    DebugAssert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
+    DebugAssert(bin_maximums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+                "Unsupported characters.");
 
-    if (bin_id < maxs.size() - 1) {
-      DebugAssert(maxs[bin_id] < maxs[bin_id + 1], "Bins must be sorted and cannot overlap.");
+    if (bin_id < bin_maximums.size() - 1) {
+      DebugAssert(bin_maximums[bin_id] < bin_maximums[bin_id + 1], "Bins must be sorted and cannot overlap.");
     }
   }
 }
 
 template <typename T>
-EqualHeightBinStats<T> EqualHeightHistogram<T>::_get_bin_stats(
+EqualHeightBinData<T> EqualHeightHistogram<T>::_build_bins(
     const std::vector<std::pair<T, HistogramCountType>>& value_counts, const BinID max_bin_count) {
   const auto min = value_counts.front().first;
   // If there are fewer distinct values than the number of desired bins use that instead.
@@ -70,26 +76,27 @@ EqualHeightBinStats<T> EqualHeightHistogram<T>::_get_bin_stats(
   // Make sure that we never create more bins than requested.
   const auto count_per_bin = total_count / bin_count + (total_count % bin_count > 0u ? 1 : 0);
 
-  std::vector<T> maxs;
-  std::vector<HistogramCountType> distinct_counts;
-  maxs.reserve(bin_count);
-  distinct_counts.reserve(bin_count);
+  std::vector<T> bin_maximums;
+  std::vector<HistogramCountType> bin_distinct_counts;
+  bin_maximums.reserve(bin_count);
+  bin_distinct_counts.reserve(bin_count);
 
-  auto current_begin = 0ul;
-  auto current_height = 0ul;
-  for (auto current_end = 0ul; current_end < value_counts.size(); current_end++) {
-    current_height += value_counts[current_end].second;
+  auto current_bin_first_value_idx = size_t{0};
+  auto current_bin_height = size_t{0};
+  for (auto current_end_first_value_idx = size_t{0}; current_end_first_value_idx < value_counts.size();
+       current_end_first_value_idx++) {
+    current_bin_height += value_counts[current_end_first_value_idx].second;
 
     // Make sure to create last bin.
-    if (current_height >= count_per_bin || current_end == value_counts.size() - 1) {
-      maxs.emplace_back(value_counts[current_end].first);
-      distinct_counts.emplace_back(current_end - current_begin + 1);
-      current_height = 0ul;
-      current_begin = current_end + 1;
+    if (current_bin_height >= count_per_bin || current_end_first_value_idx == value_counts.size() - 1) {
+      bin_maximums.emplace_back(value_counts[current_end_first_value_idx].first);
+      bin_distinct_counts.emplace_back(current_end_first_value_idx - current_bin_first_value_idx + 1);
+      current_bin_height = 0ul;
+      current_bin_first_value_idx = current_end_first_value_idx + 1;
     }
   }
 
-  return {maxs, distinct_counts, min, total_count};
+  return {bin_maximums, bin_distinct_counts, min, total_count};
 }
 
 template <typename T>
@@ -102,18 +109,19 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
     return nullptr;
   }
 
-  const auto bin_stats = EqualHeightHistogram<T>::_get_bin_stats(value_counts, max_bin_count);
+  const auto bin_stats = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
-        get_default_or_check_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<EqualHeightHistogram<T>>(bin_stats.maxs, bin_stats.distinct_counts, bin_stats.min,
-                                                     bin_stats.total_count, characters, prefix_length);
+        get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
+    return std::make_shared<EqualHeightHistogram<T>>(bin_stats.bin_maximums, bin_stats.bin_distinct_counts,
+                                                     bin_stats.minimum, bin_stats.total_count, characters,
+                                                     prefix_length);
   } else {
-    DebugAssert(!static_cast<bool>(supported_characters) && !static_cast<bool>(string_prefix_length),
+    DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<EqualHeightHistogram<T>>(bin_stats.maxs, bin_stats.distinct_counts, bin_stats.min,
-                                                     bin_stats.total_count);
+    return std::make_shared<EqualHeightHistogram<T>>(bin_stats.bin_maximums, bin_stats.bin_distinct_counts,
+                                                     bin_stats.minimum, bin_stats.total_count);
   }
 }
 
@@ -124,52 +132,52 @@ HistogramType EqualHeightHistogram<T>::histogram_type() const {
 
 template <typename T>
 BinID EqualHeightHistogram<T>::bin_count() const {
-  return _maxs.size();
+  return _bin_maximums.size();
 }
 
 template <typename T>
 BinID EqualHeightHistogram<T>::_bin_for_value(const T value) const {
-  if (value < _min) {
+  if (value < _minimum) {
     return INVALID_BIN_ID;
   }
 
-  const auto it = std::lower_bound(_maxs.cbegin(), _maxs.cend(), value);
+  const auto it = std::lower_bound(_bin_maximums.cbegin(), _bin_maximums.cend(), value);
 
-  if (it == _maxs.cend()) {
+  if (it == _bin_maximums.cend()) {
     return INVALID_BIN_ID;
   }
 
-  return static_cast<BinID>(std::distance(_maxs.cbegin(), it));
+  return static_cast<BinID>(std::distance(_bin_maximums.cbegin(), it));
 }
 
 template <typename T>
 BinID EqualHeightHistogram<T>::_upper_bound_for_value(const T value) const {
-  const auto it = std::upper_bound(_maxs.cbegin(), _maxs.cend(), value);
+  const auto it = std::upper_bound(_bin_maximums.cbegin(), _bin_maximums.cend(), value);
 
-  if (it == _maxs.cend()) {
+  if (it == _bin_maximums.cend()) {
     return INVALID_BIN_ID;
   }
 
-  return static_cast<BinID>(std::distance(_maxs.cbegin(), it));
+  return static_cast<BinID>(std::distance(_bin_maximums.cbegin(), it));
 }
 
 template <typename T>
-T EqualHeightHistogram<T>::_bin_min(const BinID index) const {
+T EqualHeightHistogram<T>::_bin_minimum(const BinID index) const {
   DebugAssert(index < this->bin_count(), "Index is not a valid bin.");
 
-  // If it's the first bin, return _min.
+  // If it's the first bin, return _minimum.
   if (index == 0u) {
-    return _min;
+    return _minimum;
   }
 
   // Otherwise, return the next representable value of the previous bin's max.
-  return this->_get_next_value(this->_bin_max(index - 1));
+  return this->_get_next_value(_bin_maximum(index - 1));
 }
 
 template <typename T>
-T EqualHeightHistogram<T>::_bin_max(const BinID index) const {
-  DebugAssert(index < _maxs.size(), "Index is not a valid bin.");
-  return _maxs[index];
+T EqualHeightHistogram<T>::_bin_maximum(const BinID index) const {
+  DebugAssert(index < _bin_maximums.size(), "Index is not a valid bin.");
+  return _bin_maximums[index];
 }
 
 template <typename T>
@@ -180,8 +188,8 @@ HistogramCountType EqualHeightHistogram<T>::_bin_height(const BinID index) const
 
 template <typename T>
 HistogramCountType EqualHeightHistogram<T>::_bin_distinct_count(const BinID index) const {
-  DebugAssert(index < _distinct_counts.size(), "Index is not a valid bin.");
-  return _distinct_counts[index];
+  DebugAssert(index < _bin_distinct_counts.size(), "Index is not a valid bin.");
+  return _bin_distinct_counts[index];
 }
 
 template <typename T>
@@ -191,7 +199,7 @@ HistogramCountType EqualHeightHistogram<T>::total_count() const {
 
 template <typename T>
 HistogramCountType EqualHeightHistogram<T>::total_distinct_count() const {
-  return std::accumulate(_distinct_counts.cbegin(), _distinct_counts.cend(), HistogramCountType{0});
+  return std::accumulate(_bin_distinct_counts.cbegin(), _bin_distinct_counts.cend(), HistogramCountType{0});
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualHeightHistogram);

@@ -24,7 +24,7 @@ AbstractHistogram<T>::AbstractHistogram() : _supported_characters(""), _string_p
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram() {
-  const auto pair = get_default_or_check_prefix_settings();
+  const auto pair = get_default_or_check_string_histogram_prefix_settings();
   _supported_characters = pair.first;
   _string_prefix_length = pair.second;
 }
@@ -41,15 +41,15 @@ std::string AbstractHistogram<T>::description() const {
   std::stringstream stream;
   stream << histogram_type_to_string.at(histogram_type()) << std::endl;
   stream << "  distinct    " << total_distinct_count() << std::endl;
-  stream << "  min         " << min() << std::endl;
-  stream << "  max         " << max() << std::endl;
+  stream << "  min         " << minimum() << std::endl;
+  stream << "  max         " << maximum() << std::endl;
   // TODO(tim): consider non-null ratio in histograms
   // stream << "  non-null " << non_null_value_ratio() << std::endl;
   stream << "  bins        " << bin_count() << std::endl;
 
   stream << "  edges / counts " << std::endl;
   for (BinID bin = 0u; bin < bin_count(); bin++) {
-    stream << "              [" << _bin_min(bin) << ", " << _bin_max(bin) << "]: ";
+    stream << "              [" << _bin_minimum(bin) << ", " << _bin_maximum(bin) << "]: ";
     stream << _bin_height(bin) << std::endl;
   }
 
@@ -80,13 +80,13 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_value_count
 }
 
 template <typename T>
-T AbstractHistogram<T>::min() const {
-  return _bin_min(0u);
+T AbstractHistogram<T>::minimum() const {
+  return _bin_minimum(0u);
 }
 
 template <typename T>
-T AbstractHistogram<T>::max() const {
-  return _bin_max(bin_count() - 1u);
+T AbstractHistogram<T>::maximum() const {
+  return _bin_maximum(bin_count() - 1u);
 }
 
 template <>
@@ -102,15 +102,15 @@ std::string AbstractHistogram<std::string>::_convert_number_representation_to_st
 template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::_bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
-  return _get_next_value(_bin_max(index) - _bin_min(index));
+  return _get_next_value(_bin_maximum(index) - _bin_minimum(index));
 }
 
 template <>
 AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto num_min = _convert_string_to_number_representation(_bin_min(index));
-  const auto num_max = _convert_string_to_number_representation(_bin_max(index));
+  const auto num_min = _convert_string_to_number_representation(_bin_minimum(index));
+  const auto num_max = _convert_string_to_number_representation(_bin_maximum(index));
   return num_max - num_min + 1u;
 }
 
@@ -126,7 +126,7 @@ std::string AbstractHistogram<std::string>::_get_next_value(const std::string va
 
 template <typename T>
 float AbstractHistogram<T>::_bin_share(const BinID bin_id, const T value) const {
-  return static_cast<float>(value - _bin_min(bin_id)) / _bin_width(bin_id);
+  return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
 }
 
 template <>
@@ -161,8 +161,8 @@ float AbstractHistogram<std::string>::_bin_share(const BinID bin_id, const std::
    *  of the substring after the common prefix.
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
-  const auto bin_min = _bin_min(bin_id);
-  const auto bin_max = _bin_max(bin_id);
+  const auto bin_min = _bin_minimum(bin_id);
+  const auto bin_max = _bin_maximum(bin_id);
   const auto common_prefix_len = common_prefix_length(bin_min, bin_max);
 
   DebugAssert(value.substr(0, common_prefix_len) == bin_min.substr(0, common_prefix_len),
@@ -186,15 +186,15 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
       return bin_id == INVALID_BIN_ID || _bin_height(bin_id) == 0ul;
     }
     case PredicateCondition::NotEquals:
-      return min() == value && max() == value;
+      return minimum() == value && maximum() == value;
     case PredicateCondition::LessThan:
-      return value <= min();
+      return value <= minimum();
     case PredicateCondition::LessThanEquals:
-      return value < min();
+      return value < minimum();
     case PredicateCondition::GreaterThanEquals:
-      return value > max();
+      return value > maximum();
     case PredicateCondition::GreaterThan:
-      return value >= max();
+      return value >= maximum();
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
 
@@ -320,7 +320,7 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
           // but is the next value after it.
           if (search_prefix_next_value_bin != INVALID_BIN_ID &&
               search_prefix_upper_bound_bin == search_prefix_next_value_bin &&
-              _bin_min(search_prefix_next_value_bin) == search_prefix_next_value) {
+              _bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value) {
             return true;
           }
         }
@@ -332,7 +332,7 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
         if (search_prefix_bin != INVALID_BIN_ID && search_prefix_next_value_bin != INVALID_BIN_ID &&
             _bin_height(search_prefix_bin) == 0u &&
             (_bin_height(search_prefix_next_value_bin) == 0u ||
-             _bin_min(search_prefix_next_value_bin) == search_prefix_next_value)) {
+             _bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value)) {
           for (auto current_bin = search_prefix_bin + 1; current_bin < search_prefix_next_value_bin; current_bin++) {
             if (_bin_height(current_bin) > 0u) {
               return false;
@@ -372,8 +372,8 @@ bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicat
       const auto match_all_index = value.find('%');
       if (match_all_index != std::string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
-        if (search_prefix == min().substr(0, search_prefix.length()) &&
-            search_prefix == max().substr(0, search_prefix.length())) {
+        if (search_prefix == minimum().substr(0, search_prefix.length()) &&
+            search_prefix == maximum().substr(0, search_prefix.length())) {
           return true;
         }
       }
@@ -408,12 +408,12 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
     case PredicateCondition::NotEquals:
       return total_count() - _estimate_cardinality(PredicateCondition::Equals, variant_value);
     case PredicateCondition::LessThan: {
-      if (value > max()) {
+      if (value > maximum()) {
         return total_count();
       }
 
       // This should never be false because can_prune should have been true further up if this was the case.
-      DebugAssert(value >= min(), "Value smaller than min of histogram.");
+      DebugAssert(value >= minimum(), "Value smaller than min of histogram.");
 
       auto index = _bin_for_value(value);
       auto cardinality = 0.f;
