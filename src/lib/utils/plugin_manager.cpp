@@ -44,10 +44,10 @@ void PluginManager::load_plugin(const filesystem::path& path) {
          "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
          "for your plugin!");
 
-  using Instantiator = AbstractPlugin* (*)();
-  auto instantiate = reinterpret_cast<Instantiator>(factory);
+  using PluginGetter = AbstractPlugin* (*)();
+  auto plugin_get = reinterpret_cast<PluginGetter>(factory);
 
-  auto plugin = instantiate();
+  auto plugin = plugin_get();
   PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, plugin};
   Assert(!_is_duplicate(plugin_handle_wrapper.plugin),
          "Loading plugin failed: There can only be one instance of every plugin.");
