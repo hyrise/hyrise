@@ -30,7 +30,11 @@ class CountingQuotientFilter : AbstractFilter {
  public:
   CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size);
   virtual ~CountingQuotientFilter();
-  CountingQuotientFilter(const CountingQuotientFilter& filter) = default;
+  CountingQuotientFilter(const CountingQuotientFilter& filter) = delete;
+  CountingQuotientFilter(CountingQuotientFilter&& filter) = default;
+  CountingQuotientFilter& operator=(const CountingQuotientFilter& filter) = delete;
+  CountingQuotientFilter& operator=(CountingQuotientFilter&& filter) = default;
+
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
   void populate(const std::shared_ptr<const BaseSegment>& segment);
