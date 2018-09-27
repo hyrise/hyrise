@@ -1,6 +1,5 @@
 #include "numa_memory_resource.hpp"
 
-#include <boost/math/common_factor_rt.hpp>
 #include <string>
 
 #if HYRISE_NUMA_SUPPORT
@@ -16,7 +15,7 @@ NUMAMemoryResource::NUMAMemoryResource(int node_id, const std::string& name)
     : _memory_source(numa::MemSource::create(node_id, NUMA_MEMORY_RESOURCE_ARENA_SIZE, name.c_str())) {}
 
 void* NUMAMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
-  return _memory_source.allocAligned(boost::math::lcm(_alignment, alignment), bytes);
+  return _memory_source.allocAligned(boost::integer::lcm(_alignment, alignment), bytes);
 }
 
 void NUMAMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { numa::MemSource::free(p); }
