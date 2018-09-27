@@ -15,12 +15,6 @@
 
 namespace opossum {
 
-// singleton
-StorageManager& StorageManager::get() {
-  static StorageManager instance;
-  return instance;
-}
-
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");

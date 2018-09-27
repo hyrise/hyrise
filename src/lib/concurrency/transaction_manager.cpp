@@ -8,11 +8,6 @@
 
 namespace opossum {
 
-TransactionManager& TransactionManager::get() {
-  static TransactionManager instance;
-  return instance;
-}
-
 void TransactionManager::reset() {
   auto& manager = get();
   manager._next_transaction_id = INITIAL_TRANSACTION_ID;

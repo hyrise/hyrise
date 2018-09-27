@@ -16,7 +16,7 @@ class AbstractScheduler;
  */
 class CurrentScheduler {
  public:
-  static const std::shared_ptr<AbstractScheduler>& get();
+  inline static const std::shared_ptr<AbstractScheduler>& get() { return _instance; }
   static void set(const std::shared_ptr<AbstractScheduler>& instance);
 
   /**
