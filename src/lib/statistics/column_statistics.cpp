@@ -57,7 +57,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // distinction between integers and floats
       // for integers "< value" means that the new max is value <= value - 1
       // for floats "< value" means that the new max is value <= value - ε
-      if (std::is_integral_v<ColumnDataType>) {
+      if constexpr (std::is_integral_v<ColumnDataType>) {  // NOLINT
         return estimate_range(_min, value - 1);
       }
       // intentionally no break
@@ -71,7 +71,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // distinction between integers and floats
       // for integers "> value" means that the new min value is >= value + 1
       // for floats "> value" means that the new min value is >= value + ε
-      if (std::is_integral_v<ColumnDataType>) {
+      if constexpr (std::is_integral_v<ColumnDataType>) {  // NOLINT
         return estimate_range(value + 1, _max);
       }
       // intentionally no break
@@ -231,11 +231,6 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
   const auto overlapping_range_min = std::max(_min, right_column_statistics.min());
   const auto overlapping_range_max = std::min(_max, right_column_statistics.max());
 
-  // if no overlapping range exists, the result is empty
-  if (overlapping_range_min > overlapping_range_max) {
-    return {0.f, without_null_values(), right_column_statistics.without_null_values()};
-  }
-
   // calculate ratio of values before, in and above the common value range
   const auto left_overlapping_ratio = estimate_range_selectivity(overlapping_range_min, overlapping_range_max);
   const auto right_overlapping_ratio =
@@ -246,21 +241,13 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
   auto right_below_overlapping_ratio = 0.f;
   auto right_above_overlapping_ratio = 0.f;
 
-  if (std::is_integral<ColumnDataType>::value) {
-    if (_min < overlapping_range_min) {
-      left_below_overlapping_ratio = estimate_range_selectivity(_min, overlapping_range_min - 1);
-    }
-    if (overlapping_range_max < _max) {
-      left_above_overlapping_ratio = estimate_range_selectivity(overlapping_range_max + 1, _max);
-    }
-    if (right_column_statistics.min() < overlapping_range_min) {
-      right_below_overlapping_ratio =
-          right_column_statistics.estimate_range_selectivity(right_column_statistics.min(), overlapping_range_min - 1);
-    }
-    if (overlapping_range_max < right_column_statistics.max()) {
-      right_above_overlapping_ratio =
-          right_column_statistics.estimate_range_selectivity(overlapping_range_max + 1, right_column_statistics.max());
-    }
+  if constexpr (std::is_integral_v<ColumnDataType>) {
+    left_below_overlapping_ratio = estimate_range_selectivity(_min, overlapping_range_min - 1);
+    left_above_overlapping_ratio = estimate_range_selectivity(overlapping_range_max + 1, _max);
+    right_below_overlapping_ratio =
+        right_column_statistics.estimate_range_selectivity(right_column_statistics.min(), overlapping_range_min - 1);
+    right_above_overlapping_ratio =
+        right_column_statistics.estimate_range_selectivity(overlapping_range_max + 1, right_column_statistics.max());
   } else {
     left_below_overlapping_ratio = estimate_range_selectivity(min(), overlapping_range_min);
     left_above_overlapping_ratio = estimate_range_selectivity(overlapping_range_max, max());
@@ -391,19 +378,24 @@ std::string ColumnStatistics<ColumnDataType>::description() const {
 template <typename ColumnDataType>
 float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnDataType minimum,
                                                                    const ColumnDataType maximum) const {
-  DebugAssert(minimum <= maximum, "Minimum parameter is larger than maximum parameter.");
-  // minimum must be smaller or equal than maximum
+  if (minimum > _max || maximum < _min || minimum > maximum) {
+    return 0.f;
+  }
+
+  if (_min == _max) {
+    return 1.f;
+  }
+
+  const auto min = std::max(_min, minimum);
+  const auto max = std::min(_max, maximum);
+
   // distinction between integers and decimals
   // for integers the number of possible integers is used within the inclusive ranges
   // for decimals the size of the range is used
-  if (std::is_integral<ColumnDataType>::value) {
-    return static_cast<float>(maximum - minimum + 1) / static_cast<float>(_max - _min + 1);
+  if constexpr (std::is_integral_v<ColumnDataType>) {
+    return static_cast<float>(max - min + 1) / static_cast<float>(_max - _min + 1);
   } else {
-    if (_max == _min) {
-      return 1.0f;
-    } else {
-      return static_cast<float>(maximum - minimum) / static_cast<float>(_max - _min);
-    }
+    return static_cast<float>(max - min) / static_cast<float>(_max - _min);
   }
 }
 

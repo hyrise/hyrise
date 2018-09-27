@@ -132,6 +132,7 @@ target_compile_options(
     pqxx
     PRIVATE
     -O3 -std=c++1z
+    -DPQXX_HIDE_EXP_OPTIONAL
 )
 
 target_include_directories(

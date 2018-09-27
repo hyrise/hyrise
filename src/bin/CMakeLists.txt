@@ -61,6 +61,7 @@ target_link_libraries(
     ncurses
     ${READLINE_LIBRARY}
     ${FILESYSTEM_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 target_include_directories(
     hyriseConsole

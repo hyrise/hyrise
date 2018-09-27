@@ -496,6 +496,7 @@ set(
     types.cpp
     types.hpp
     uid_allocator.hpp
+    utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
@@ -517,12 +518,18 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/plugin_manager.cpp
+    utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
+    utils/singleton.hpp
+    utils/string_utils.cpp
+    utils/string_utils.hpp
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
+    utils/uninitialized_vector.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -531,7 +538,7 @@ set(
     pthread
     sqlparser
     cqf
-    boost_container
+    ${Boost_CONTAINER_LIBRARY}
     ${TBB_LIBRARY}
 )
 
@@ -603,5 +610,10 @@ set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
-target_link_libraries(hyrise ${LIBRARIES})
+
+# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
+target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
+
+# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
+target_compile_options(hyrise PRIVATE -fPIC)
