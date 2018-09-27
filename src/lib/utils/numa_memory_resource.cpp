@@ -1,6 +1,5 @@
 #include "numa_memory_resource.hpp"
 
-#include <boost/math/common_factor_rt.hpp>
 #include <string>
 
 #if HYRISE_NUMA_SUPPORT
