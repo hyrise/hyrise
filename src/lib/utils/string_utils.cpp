@@ -15,7 +15,7 @@ std::vector<std::string> trim_and_split(const std::string& input) {
   return arguments;
 }
 
-const std::string plugin_name_from_path(const filesystem::path& path) {
+const std::string plugin_name_from_path(const std::filesystem::path& path) {
   const auto filename = path.stem().string();
 
   // Remove "lib" prefix of shared library file
