@@ -6,6 +6,7 @@
 #include "cost_model_calibration.hpp"
 #include "cost_model_feature_extractor.hpp"
 #include "query/calibration_query_generator.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -41,6 +42,9 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
 void CostModelCalibration::calibrate() {
   auto number_of_iterations = _configuration.calibration_runs;
 
+  const auto scheduler = std::make_shared<NodeQueueScheduler>();
+  CurrentScheduler::set(scheduler);
+
   for (size_t i = 0; i < number_of_iterations; i++) {
     // Regenerate Queries for each iteration...
     auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
@@ -50,11 +54,7 @@ void CostModelCalibration::calibrate() {
       SQLQueryCache<SQLQueryPlan>::get().clear();
 
       auto pipeline_builder = SQLPipelineBuilder{query};
-
-      if (i % 2 == 0) {
-          pipeline_builder.disable_mvcc();
-      }
-
+      pipeline_builder.disable_mvcc();
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
 
