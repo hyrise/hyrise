@@ -7,6 +7,7 @@
 #include "cost_model_feature_extractor.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "storage/chunk_encoder.hpp"
