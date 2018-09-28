@@ -50,7 +50,7 @@ class TpccTableGenerator : AbstractBenchmarkTableGenerator {
 
   std::shared_ptr<Table> generate_new_order_table();
 
-  std::map<std::string, std::shared_ptr<Table>> _generate_all_tables() override;
+  std::map<std::string, std::shared_ptr<Table>> generate_all_tables() override;
 
   static TpccTableGeneratorFunctions table_generator_functions();
 
@@ -58,7 +58,6 @@ class TpccTableGenerator : AbstractBenchmarkTableGenerator {
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
-  const EncodingConfig _encoding_config;
   TpccRandomGenerator _random_gen;
 
  protected:
@@ -100,7 +99,7 @@ class TpccTableGenerator : AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::Segments>& segments_by_chunk,
+  void _add_column(std::vector<opossum::Segments>& segments_by_chunk,
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function);
@@ -117,7 +116,7 @@ class TpccTableGenerator : AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::Segments>& segments_by_chunk,
+  void _add_column(std::vector<opossum::Segments>& segments_by_chunk,
                   opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function);

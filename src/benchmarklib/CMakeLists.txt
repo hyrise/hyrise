@@ -4,7 +4,6 @@ set(
     SOURCES
 
     benchmark_utilities/abstract_benchmark_table_generator.hpp
-    benchmark_utilities/table_builder.hpp
     benchmark_utilities/random_generator.hpp
 
     tpcc/constants.hpp

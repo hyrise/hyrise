@@ -8,7 +8,6 @@ extern "C" {
 
 #include <utility>
 
-#include "benchmark_utilities/table_builder.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -109,7 +108,7 @@ std::unordered_map<TpchTable, std::string> tpch_table_names = {
 TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size, EncodingConfig config, bool store)
     : AbstractBenchmarkTableGenerator(chunk_size, std::move(config), store), _scale_factor(scale_factor) {}
 
-std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchTableGenerator::generate() {
+std::map<std::string, std::shared_ptr<Table>> TpchTableGenerator::generate_all_tables() {
   TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes};
   TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes};
   TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes};
@@ -209,23 +208,20 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchTableGenerator::genera
    */
   dbgen_cleanup();
 
-  return {
-      {TpchTable::Customer, customer_builder.finish_table()}, {TpchTable::Orders, order_builder.finish_table()},
-      {TpchTable::LineItem, lineitem_builder.finish_table()}, {TpchTable::Part, part_builder.finish_table()},
-      {TpchTable::PartSupp, partsupp_builder.finish_table()}, {TpchTable::Supplier, supplier_builder.finish_table()},
-      {TpchTable::Nation, nation_builder.finish_table()},     {TpchTable::Region, region_builder.finish_table()}};
-}
+  std::map<std::string, std::shared_ptr<Table>> tables =
+    {{"CUSTOMER", customer_builder.finish_table()}, {"ORDERS", order_builder.finish_table()},
+    {"LINEITEM", lineitem_builder.finish_table()}, {"PART", part_builder.finish_table()},
+    {"PARTSUPP", partsupp_builder.finish_table()}, {"SUPPLIER", supplier_builder.finish_table()},
+    {"NATION", nation_builder.finish_table()},     {"REGION", region_builder.finish_table()}};
 
-void TpchTableGenerator::generate_and_store() {
-  const auto tables = generate();
 
   for (auto& table : tables) {
-    StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
+    BenchmarkTableEncoder::encode(table.first, table.second, _encoding_config);
+    if (_store) {
+      StorageManager::get().add_table(table.first, table.second);
+    }
   }
-}
 
-std::map<std::string, std::shared_ptr<opossum::Table>> TpchTableGenerator::_generate_all_tables() {
-  auto tables = generate();
   return tables;
 }
 
