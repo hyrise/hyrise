@@ -62,14 +62,13 @@ add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 # Global flags and include directories
 # When generating a dtrace header file, symbols containing dollar-signs are created This file needs to be compiled as well.
 # Hence, the `-Wno-dollar-in-identifier-extension` flag is required.
-add_compile_options(-std=c++17 -pthread -Wall -Wextra -Wshadow-all -pedantic -Werror -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-shadow-field-in-constructor -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default)
+add_compile_options(-std=c++17 -pthread -Wall -Wextra -Wshadow-all -pedantic -Werror -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-shadow-field-in-constructor -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default -Wno-unused-macros -Wno-newline-eof -Wno-missing-variable-declarations -Wno-weak-template-vtables)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
-    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
@@ -79,9 +78,10 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
-# Include JSON as system library to silence some warnings
+# Include these libraries as system libraries to silence some warnings caused by -Weverything
 include_directories(
     SYSTEM
+    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
     ${PROJECT_SOURCE_DIR}/third_party/json
 )
 
