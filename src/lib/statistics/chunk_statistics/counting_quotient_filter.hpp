@@ -23,18 +23,21 @@ work approximately. If a membership query yields a positive result, the value is
 a chance of a false positive. If the query delivers a negative result, the item is guaranteed to not be contained.
 In the same way, items can be over counted but not under counted.
 CQF can be configured with quotient size, which determines the number of slots, and the remainder size, which
-corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32. */
+corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32.
+
+"When you configure the CQF the number of slots in the CQF must be at least the number of the distinct elements in your
+input dataset plus the sum of logs of all the counts divided by the remainder size. You must have some estimate of the
+number distinct elements in your dataset to configure the CQF correctly. For example, if in a dataset there are `M`
+integers and `N` distinct integers. And let's assume each integer appears M/N times. Then the number of slots `S` you
+would need would be `S = N*(1 + log(M/N)/r)`. Since the number of slots can only be a power of two, we choose the
+smallest number greater than `S` that is a power of 2 as the number of slots." - Prashant Pandey
+*/
 
 template <typename ElementType>
-class CountingQuotientFilter : AbstractFilter {
+class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
  public:
   CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size);
   virtual ~CountingQuotientFilter();
-  CountingQuotientFilter(const CountingQuotientFilter& filter) = delete;
-  CountingQuotientFilter(CountingQuotientFilter&& filter) = default;
-  CountingQuotientFilter& operator=(const CountingQuotientFilter& filter) = delete;
-  CountingQuotientFilter& operator=(CountingQuotientFilter&& filter) = default;
-
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
   void populate(const std::shared_ptr<const BaseSegment>& segment);
@@ -48,9 +51,9 @@ class CountingQuotientFilter : AbstractFilter {
 
  private:
   boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
-  uint8_t _remainder_size;
-  uint64_t _number_of_slots;
-  uint64_t _hash_bits;
+  const uint8_t _remainder_size;
+  const uint64_t _number_of_slots;
+  const uint64_t _hash_bits;
   uint64_t _hash(ElementType value) const;
   const uint32_t _seed = std::rand();
 };

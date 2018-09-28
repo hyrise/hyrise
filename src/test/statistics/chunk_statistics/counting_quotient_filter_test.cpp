@@ -99,17 +99,17 @@ class CountingQuotientFilterTest : public BaseTest {
   }
 
   template <typename DataType>
-  DataType get_test_value(int run) {
+  DataType get_test_value(size_t run) {
     throw std::logic_error("specialize this method");
   }
 
   template <typename DataType>
   void test_false_positive_rate(std::shared_ptr<CountingQuotientFilter<DataType>> cqf) {
-    int runs = 1000;
-    int false_positives = 0;
-    for (int run = 0; run < runs; run++) {
+    size_t runs = 1000;
+    size_t false_positives = 0;
+    for (size_t run = 0; run < runs; run++) {
       auto test_value = get_test_value<DataType>(run);
-      if(!cqf->can_prune(test_value, PredicateCondition::Equals)) {
+      if (!cqf->can_prune(test_value, PredicateCondition::Equals)) {
         false_positives++;
       }
     }
@@ -119,12 +119,12 @@ class CountingQuotientFilterTest : public BaseTest {
 };
 
 template <>
-int CountingQuotientFilterTest::get_test_value<int>(int run) {
+int CountingQuotientFilterTest::get_test_value<int>(size_t run) {
   return 123457 + run;
 }
 
 template <>
-std::string CountingQuotientFilterTest::get_test_value<std::string>(int run) {
+std::string CountingQuotientFilterTest::get_test_value<std::string>(size_t run) {
   return std::string("test_value") + std::to_string(run);
 }
 

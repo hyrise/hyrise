@@ -20,15 +20,13 @@ using namespace gqf32; // NOLINT
 namespace opossum {
 
 template <typename ElementType>
-CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size) {
+CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size)
+    : _remainder_size(remainder_size), _number_of_slots(std::pow(2, quotient_size)),
+      _hash_bits(quotient_size + remainder_size) {
   Assert(quotient_size > 0, "quotient size can not be zero.");
   Assert(quotient_size + static_cast<uint8_t>(remainder_size) <= 64, "The hash length can not exceed 64 bits.");
   Assert(remainder_size == 2 || remainder_size == 4 || remainder_size == 8 || remainder_size == 16
     || remainder_size == 32, "remainder size must be 2, 4, 8, 16, or 32");
-
-  _remainder_size = remainder_size;
-  _number_of_slots = std::pow(2, quotient_size);
-  _hash_bits = quotient_size + remainder_size;
 
 if (remainder_size == 2) {
     _quotient_filter = gqf2::quotient_filter();
@@ -117,7 +115,7 @@ void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const B
 template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
   uint64_t consumption = 0;
-  boost::apply_visitor([&](auto& filter) {consumption += qf_memory_consumption(filter);}, _quotient_filter);
+  boost::apply_visitor([&](auto& filter) {consumption = qf_memory_consumption(filter);}, _quotient_filter);
   return consumption;
 }
 
