@@ -26,6 +26,7 @@ class AbstractSegmentIteratorValue {
  public:
   virtual const T& value() const = 0;
   virtual bool is_null() const = 0;
+  virtual ~AbstractSegmentIteratorValue() = default;
 
   /**
    * @brief Returns the chunk offset of the current value.

@@ -57,13 +57,13 @@ class PerformanceWarningDisabler {
   }
 };
 
-#ifndef __FILENAME__
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
+#ifndef TRIMMED_FILENAME
+#define TRIMMED_FILENAME (__FILE__ + SOURCE_PATH_SIZE)
 #endif
-#define PerformanceWarning(text)                                                                 \
-  {                                                                                              \
-    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILENAME__) + \
-                                        ":" BOOST_PP_STRINGIZE(__LINE__));                       \
+#define PerformanceWarning(text)                                                                     \
+  {                                                                                                  \
+    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(TRIMMED_FILENAME) + \
+                                        ":" BOOST_PP_STRINGIZE(__LINE__));                           \
   }  // NOLINT
 
 }  // namespace opossum
