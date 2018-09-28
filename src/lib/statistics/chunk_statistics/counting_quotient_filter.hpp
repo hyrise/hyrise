@@ -38,8 +38,7 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
  public:
   CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size);
   virtual ~CountingQuotientFilter();
-  void insert(ElementType value, uint64_t count);
-  void insert(ElementType value);
+  void insert(ElementType value, uint64_t count = 1);
   void populate(const std::shared_ptr<const BaseSegment>& segment);
   uint64_t count(ElementType value) const;
   uint64_t count_all_type(AllTypeVariant value) const;
