@@ -7,6 +7,7 @@
 
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
+#include "utils/singleton.hpp"
 
 namespace boost {
 namespace container {
@@ -39,10 +40,8 @@ struct TopologyNode final {
  *
  * The static 'use_*_topology()' methods replace the current topology information by the new one, and should be used carefully.
  */
-class Topology final {
+class Topology final : public Singleton<Topology> {
  public:
-  static Topology& get();
-
   /**
    * Use the default system topology.
    *
@@ -90,6 +89,8 @@ class Topology final {
 
  private:
   Topology();
+
+  friend class Singleton;
 
   void _init_default_topology();
   void _init_numa_topology(uint32_t max_num_cores = 0);

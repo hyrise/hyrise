@@ -31,8 +31,8 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
 
   resolve_data_and_segment_type(*left_segment, [&](auto left_type, auto& typed_left_segment) {
     resolve_data_and_segment_type(*right_segment, [&](auto right_type, auto& typed_right_segment) {
-      using LeftSegmentType = typename std::decay<decltype(typed_left_segment)>::type;
-      using RightSegmentType = typename std::decay<decltype(typed_right_segment)>::type;
+      using LeftSegmentType = std::decay_t<decltype(typed_left_segment)>;
+      using RightSegmentType = std::decay_t<decltype(typed_right_segment)>;
 
       using LeftType = typename decltype(left_type)::type;
       using RightType = typename decltype(right_type)::type;

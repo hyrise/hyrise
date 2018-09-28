@@ -248,7 +248,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
             values from different inputs (important for Multi Joins).
             */
-            if constexpr (std::is_same<std::decay<decltype(typed_segment)>, ReferenceSegment>::value) {
+            if constexpr (std::is_same_v<std::decay<decltype(typed_segment)>, ReferenceSegment>) {
               *(output_iterator++) =
                   PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, hashed_value, value.value()};
             } else {
@@ -260,7 +260,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             histogram[radix]++;
           }
           // reference_chunk_offset is only used for ReferenceSegments
-          if constexpr (std::is_same<std::decay<decltype(typed_segment)>, ReferenceSegment>::value) {
+          if constexpr (std::is_same_v<std::decay<decltype(typed_segment)>, ReferenceSegment>) {
             reference_chunk_offset++;
           }
         });

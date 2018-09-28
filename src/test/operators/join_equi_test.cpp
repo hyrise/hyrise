@@ -49,7 +49,7 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value || std::is_same<TypeParam, JoinMPSM>::value) {
+  if constexpr (std::is_same_v<TypeParam, JoinSortMerge> || std::is_same_v<TypeParam, JoinMPSM>) {
     return;
   }
 
@@ -65,7 +65,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
-  if (std::is_same<TypeParam, JoinHash>::value) {
+  if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     // float with int
     // radix bits = 1
     std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/float_int_inner.tbl", 1);
@@ -78,7 +78,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value || std::is_same<TypeParam, JoinMPSM>::value) {
+  if constexpr (std::is_same_v<TypeParam, JoinSortMerge> || std::is_same_v<TypeParam, JoinMPSM>) {
     return;
   }
 
@@ -94,7 +94,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
-  if (!std::is_same<TypeParam, JoinHash>::value) {
+  if constexpr (!std::is_same_v<TypeParam, JoinHash>) {
     return;
   }
 
@@ -116,7 +116,7 @@ TYPED_TEST(JoinEquiTest, RightJoin) {
 }
 
 TYPED_TEST(JoinEquiTest, OuterJoin) {
-  if (std::is_same<TypeParam, JoinHash>::value) {
+  if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     return;
   }
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,

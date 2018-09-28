@@ -21,6 +21,7 @@ add_executable(
 
 target_link_libraries(
     hyriseMicroBenchmarks
+ 
     hyrise
     hyriseBenchmarkLib
     benchmark
