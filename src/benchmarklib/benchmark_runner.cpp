@@ -1,5 +1,6 @@
 #include <json.hpp>
 
+#include <filesystem>
 #include <random>
 
 #include "benchmark_runner.hpp"
@@ -13,7 +14,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "version.hpp"
 
@@ -215,7 +215,7 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
   Assert(!tables.empty(), "No tables found in '" + table_path + "'");
 
   for (const auto& table_path_str : tables) {
-    const auto table_name = filesystem::path{table_path_str}.stem().string();
+    const auto table_name = std::filesystem::path{table_path_str}.stem().string();
 
     std::shared_ptr<Table> table;
     if (boost::algorithm::ends_with(table_path_str, ".tbl")) {
@@ -238,22 +238,22 @@ std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& 
     return (boost::algorithm::ends_with(filename, ".csv") || boost::algorithm::ends_with(filename, ".tbl"));
   };
 
-  filesystem::path path{table_path};
-  Assert(filesystem::exists(path), "No such file or directory '" + table_path + "'");
+  std::filesystem::path path{table_path};
+  Assert(std::filesystem::exists(path), "No such file or directory '" + table_path + "'");
 
   std::vector<std::string> tables;
 
   // If only one file was specified, add it and return
-  if (filesystem::is_regular_file(path)) {
+  if (std::filesystem::is_regular_file(path)) {
     Assert(is_table_file(table_path), "Specified file '" + table_path + "' is not a .csv or .tbl file");
     tables.push_back(table_path);
     return tables;
   }
 
   // Recursively walk through the specified directory and add all files on the way
-  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
+  for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
     const auto filename = entry.path().string();
-    if (filesystem::is_regular_file(entry) && is_table_file(filename)) {
+    if (std::filesystem::is_regular_file(entry) && is_table_file(filename)) {
       tables.push_back(filename);
     }
   }
@@ -264,19 +264,19 @@ std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& 
 NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
-  filesystem::path path{query_path};
-  Assert(filesystem::exists(path), "No such file or directory '" + query_path + "'");
+  std::filesystem::path path{query_path};
+  Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
-  if (filesystem::is_regular_file(path)) {
+  if (std::filesystem::is_regular_file(path)) {
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
     return _parse_query_file(query_path);
   }
 
   // Recursively walk through the specified directory and add all files on the way
   NamedQueries queries;
-  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
+  for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
     const auto filename = entry.path().string();
-    if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
+    if (std::filesystem::is_regular_file(entry) && is_sql_file(filename)) {
       const auto file_queries = _parse_query_file(filename);
       queries.insert(queries.end(), file_queries.begin(), file_queries.end());
     }
@@ -289,7 +289,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   auto query_id = 0u;
 
   std::ifstream file(query_path);
-  const auto filename = filesystem::path{query_path}.stem().string();
+  const auto filename = std::filesystem::path{query_path}.stem().string();
 
   NamedQueries queries;
   std::string query;
