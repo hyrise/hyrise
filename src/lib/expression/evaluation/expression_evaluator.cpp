@@ -40,7 +40,7 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-template<typename Functor>
+template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
   // clang-format off
   switch (predicate_condition) {
@@ -101,7 +101,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const AbstractExp
   }
 
   std::shared_ptr<AbstractExpression> predicate_disjunction =
-  equals_(in_expression->value(), type_compatible_elements.front());
+      equals_(in_expression->value(), type_compatible_elements.front());
   for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
     const auto equals_element = equals_(in_expression->value(), type_compatible_elements[element_idx]);
     predicate_disjunction = or_(predicate_disjunction, equals_element);
@@ -117,7 +117,10 @@ namespace opossum {
 ExpressionEvaluator::ExpressionEvaluator(
     const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
     const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
-    : _table(table), _chunk(_table->get_chunk(chunk_id)), _chunk_id(chunk_id), _uncorrelated_select_results(uncorrelated_select_results) {
+    : _table(table),
+      _chunk(_table->get_chunk(chunk_id)),
+      _chunk_id(chunk_id),
+      _uncorrelated_select_results(uncorrelated_select_results) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
 }
@@ -422,7 +425,8 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::Between:
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_between_expression(predicate_expression));
+      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
+          *rewrite_between_expression(predicate_expression));
 
     case PredicateCondition::In:
       return _evaluate_in_expression<ExpressionEvaluator::Bool>(static_cast<const InExpression&>(predicate_expression));
@@ -839,43 +843,40 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
         case PredicateCondition::GreaterThan:
         case PredicateCondition::NotEquals:
         case PredicateCondition::LessThan: {
-          _resolve_to_expression_results(*predicate_expression.arguments[0], *predicate_expression.arguments[1], [&](const auto& left_result, const auto& right_result) {
-            using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
-            using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
+          _resolve_to_expression_results(
+              *predicate_expression.arguments[0], *predicate_expression.arguments[1],
+              [&](const auto& left_result, const auto& right_result) {
+                using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
+                using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
 
-            resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
-              using ExpressionEvaluator = typename decltype(functor)::type;
+                resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
+                  using ExpressionEvaluator = typename decltype(functor)::type;
 
-              if constexpr (ExpressionEvaluator::template supports<Bool, LeftDataType, RightDataType>::value) {
-                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
-                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+                  if constexpr (ExpressionEvaluator::template supports<Bool, LeftDataType, RightDataType>::value) {
+                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+                      if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
-                  auto value = Bool{0};
-                  ExpressionEvaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));
-                  if (value != 0) {
-                    result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                      auto value = Bool{0};
+                      ExpressionEvaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));
+                      if (value != 0) {
+                        result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                      }
+                    }
+                  } else {
+                    Fail("Argument types not compatible");
                   }
-                }
-              } else {
-                Fail("Argument types not compatible");
-              }
-            });
-          });
+                });
+              });
         } break;
 
         case PredicateCondition::Between:
           return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
 
-        case PredicateCondition::In:
-        case PredicateCondition::Like:
-        case PredicateCondition::NotLike:
-          Fail("Not implemented");
-
         case PredicateCondition::IsNull:
         case PredicateCondition::IsNotNull: {
           const auto& is_null_expression = static_cast<const IsNullExpression&>(expression);
 
-          _resolve_to_expression_result_view(expression, [&](const auto& result) {
+          _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
                 if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
@@ -886,7 +887,20 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
               }
             }
           });
-        }
+        } break;
+
+        case PredicateCondition::In:
+        case PredicateCondition::Like:
+        case PredicateCondition::NotLike: {
+          const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
+          result->as_view([&](const auto& result_view) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_view.size(); ++chunk_offset) {
+              if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
+                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            }
+          });
+        } break;
       }
     } break;
 
@@ -896,13 +910,15 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       const auto left_pos_list = evaluate_expression_to_pos_list(*logical_expression.arguments[0]);
       const auto right_pos_list = evaluate_expression_to_pos_list(*logical_expression.arguments[1]);
 
-      switch(logical_expression.logical_operator) {
+      switch (logical_expression.logical_operator) {
         case LogicalOperator::And:
-          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(), std::back_inserter(result_pos_list));
+          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
+                                right_pos_list.end(), std::back_inserter(result_pos_list));
           break;
 
         case LogicalOperator::Or:
-          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(), std::back_inserter(result_pos_list));
+          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(),
+                         std::back_inserter(result_pos_list));
           break;
       }
 

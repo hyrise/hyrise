@@ -51,7 +51,7 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 
   // `5 BETWEEN a AND b` becomes `a <= 5 AND b >= 5`
-  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*between(5, a, b), *node);
+  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*between_(5, a, b), *node);
   ASSERT_TRUE(operator_predicates_b);
   ASSERT_EQ(operator_predicates_b->size(), 2u);
 

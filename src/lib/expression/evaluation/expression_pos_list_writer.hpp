@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-template<typename T>
+template <typename T>
 class ExpressionPosListWriter {
  public:
   explicit ExpressionPosListWriter(const ChunkID chunk_id);
@@ -18,7 +18,6 @@ class ExpressionPosListWriter {
 
 class ExpressionResultWriter {
  public:
-
 };
 
 }  // namespace opossum

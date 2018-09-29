@@ -27,12 +27,16 @@ namespace opossum {
 class ExpressionEvaluatorToPosListTest : public ::testing::Test {
  public:
   void SetUp() override {
-    // Load table_b
+    table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl", 4);
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl", 4);
+    c = PQPColumnExpression::from_table(*table_a, "c");
+    s1 = PQPColumnExpression::from_table(*table_a, "s1");
+    s3 = PQPColumnExpression::from_table(*table_a, "s3");
     x = PQPColumnExpression::from_table(*table_b, "x");
   }
 
-  bool test_expression(const std::shared_ptr<Table>& table, const ChunkID chunk_id, const AbstractExpression& expression, const std::vector<ChunkOffset>& matching_chunk_offsets) {
+  bool test_expression(const std::shared_ptr<Table>& table, const ChunkID chunk_id,
+                       const AbstractExpression& expression, const std::vector<ChunkOffset>& matching_chunk_offsets) {
     const auto actual_pos_list = ExpressionEvaluator{table, chunk_id}.evaluate_expression_to_pos_list(expression);
 
     auto expected_pos_list = PosList{};
@@ -44,16 +48,53 @@ class ExpressionEvaluatorToPosListTest : public ::testing::Test {
     return actual_pos_list == expected_pos_list;
   }
 
-  std::shared_ptr<Table> table_b;
+  std::shared_ptr<Table> table_a, table_b;
 
-  std::shared_ptr<PQPColumnExpression> x;
+  std::shared_ptr<PQPColumnExpression> c, s1, s3, x;
 };
 
-TEST_F(ExpressionEvaluatorToPosListTest, Predicate) {
+TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *less_than_(x, 9), {3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *less_than_(x, 8), {1}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *less_than_equals_(x, 9), {1, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *less_than_equals_(x, 7), {1}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *equals_(x, 10), {0, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *equals_(x, 8), {0, 2}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_equals_(x, 10), {1, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *not_equals_(x, 8), {1}));
+
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *greater_than_(x, 9), {0, 2}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *greater_than_(x, 9), {}));
+
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *greater_than_equals_(x, 9), {0, 1, 2}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *greater_than_equals_(x, 8), {0, 2}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_(x, 8, 9), {1, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_(x, 7, 8), {0, 1, 2}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *in_(x, list_(9, "hello", 10)), {0, 1, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *in_(x, list_(1, 2, 7)), {1}));
+
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *like_(s1, "%a%"), {0, 2, 3}));
+
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_like_(s1, "%a%"), {1}));
+}
+
+TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithNulls) {
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *equals_(c, 33), {0}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_equals_(c, 33), {2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *less_than_(c, 35), {0, 2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *less_than_equals_(c, 35), {0, 2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *greater_than_(c, 33), {2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *greater_than_equals_(c, 0), {0, 2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *between_(c, 0, 100), {0, 2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *is_null_(c), {1, 3}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *is_not_null_(c), {0, 2}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *in_(c, list_(0, null_(), 33)), {0}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *in_(c, list_(0, null_(), 33)), {0}));
 }
 
 }  // namespace opossum
