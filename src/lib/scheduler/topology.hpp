@@ -72,7 +72,7 @@ class Topology final : public Singleton<Topology> {
 
   /**
    * Use a fake-NUMA topology.
-   * The topology has a number of cores equal to either max_num_cores or the number of physically availyble cores,
+   * The topology has a number of cores equal to either max_num_cores or the number of physically available cores,
    * whichever one is lower. Virtual NUMA nodes are created based on the workers_per_node parameter.
    *
    * Calls _init_fake_numa_topology() internally.
