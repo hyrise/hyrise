@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # To prevent _tkinter.TclError: https://stackoverflow.com/a/37605654
 import matplotlib
 matplotlib.use('Agg')
