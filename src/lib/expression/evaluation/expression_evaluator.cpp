@@ -300,7 +300,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
-        if constexpr (EqualsEvaluator::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
+        if constexpr (EqualsEvaluator::supports_v<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>) {
           const auto result_size = _result_size(left_view.size(), select_results.size());
 
           result_values.resize(result_size, 0);
@@ -441,7 +441,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
         std::vector<bool> nulls(result_size);
 
         // clang-format off
-      if constexpr (CaseEvaluator::template supports<Result, ThenResultType, ElseResultType>::value) {
+      if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
         for (auto chunk_offset = ChunkOffset{0};
              chunk_offset < result_size; ++chunk_offset) {
           if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
@@ -772,7 +772,7 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
       pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-        values[chunk_offset] = view.value(chunk_offset);
+        values[chunk_offset] = std::move(view.value(chunk_offset));
       }
 
       if (view.is_nullable()) {

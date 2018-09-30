@@ -79,7 +79,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentIteratorValue<T>{T{}, true, _chunk_offset};
 
-      if constexpr (std::is_same<Dictionary, FixedStringVector>::value) {
+      if constexpr (std::is_same_v<Dictionary, FixedStringVector>) {
         return SegmentIteratorValue<T>{_dictionary.get_string_at(value_id), false, _chunk_offset};
       } else {
         return SegmentIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
@@ -115,7 +115,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      if constexpr (std::is_same<Dictionary, FixedStringVector>::value) {
+      if constexpr (std::is_same_v<Dictionary, FixedStringVector>) {
         return SegmentIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.into_referencing};
       } else {
         return SegmentIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};

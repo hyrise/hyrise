@@ -10,6 +10,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -20,14 +21,12 @@ class TransactionContext;
  * Can load TPCC tables via "generate TABLENAME" command, and can execute SQL statements based on
  * opossum::SqlQueryTranslator.
  */
-class Console {
+class Console : public Singleton<Console> {
  public:
   using CommandFunction = std::function<int(const std::string&)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
   enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
-
-  static Console& get();
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.
@@ -90,6 +89,8 @@ class Console {
    */
   Console();
 
+  friend class Singleton;
+
   /*
    * Evaluates given input string. Calls either _eval_command or _eval_sql.
    */
@@ -109,6 +110,7 @@ class Console {
   int _exit(const std::string& args);
   int _help(const std::string& args);
   int _generate_tpcc(const std::string& tablename);
+  int _generate_tpch(const std::string& args);
   int _load_table(const std::string& args);
   int _exec_script(const std::string& script_file);
   int _print_table(const std::string& args);
@@ -120,6 +122,9 @@ class Console {
   int _commit_transaction(const std::string& input);
   int _print_transaction_info(const std::string& input);
   int _print_current_working_directory(const std::string& args);
+
+  int _load_plugin(const std::string& args);
+  int _unload_plugin(const std::string& input);
 
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);
