@@ -86,7 +86,7 @@ def run_benchmarks(args, hyrise_args, core_counts, result_dir):
     benchmark_run = 0
     for core_count in core_counts:
         benchmark_run += 1
-        verbose_print(args.verbose, 'Starting benchmark run ' + str(benchmark_run) + ' of ' + str(len(core_counts)) + ' ...')
+        verbose_print(args.verbose, 'Starting benchmark ' + str(benchmark_run) + ' of ' + str(len(core_counts)) + ' ...')
 
         if core_count == 0:
             use_scheduler = 'false'
