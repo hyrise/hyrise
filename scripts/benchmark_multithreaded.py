@@ -166,7 +166,7 @@ def plot(args, result_dir):
         ax = fig.add_subplot(n_rows_and_cols, n_rows_and_cols, plot_pos)
         ax.set_title(name)
 
-        multithreaded_plot = ax.plot(data['cores'], data['items_per_second'], label='multithreaded')
+        multithreaded_plot = ax.plot(data['cores'], data['items_per_second'], label='multithreaded', marker='d')
         if 'singlethreaded' in data:
             plot_baseline = True
             singlethreaded_plot = ax.axhline(data['singlethreaded'], color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label='singlethreaded')
