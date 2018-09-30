@@ -936,7 +936,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
         if (select_result_tables[chunk_offset]->row_count() > 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
       }
-    }
+    } break;
 
     default:
       Fail("Expression type cannot be evaluated to PosList");

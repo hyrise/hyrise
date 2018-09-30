@@ -14,7 +14,10 @@
 #include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/table_scan.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
@@ -30,6 +33,7 @@ class ExpressionEvaluatorToPosListTest : public ::testing::Test {
     table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl", 4);
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl", 4);
     c = PQPColumnExpression::from_table(*table_a, "c");
+    d = PQPColumnExpression::from_table(*table_a, "d");
     s1 = PQPColumnExpression::from_table(*table_a, "s1");
     s3 = PQPColumnExpression::from_table(*table_a, "s3");
     x = PQPColumnExpression::from_table(*table_b, "x");
@@ -50,7 +54,7 @@ class ExpressionEvaluatorToPosListTest : public ::testing::Test {
 
   std::shared_ptr<Table> table_a, table_b;
 
-  std::shared_ptr<PQPColumnExpression> c, s1, s3, x;
+  std::shared_ptr<PQPColumnExpression> c, d, s1, s3, x;
 };
 
 TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
@@ -95,6 +99,28 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithNulls) {
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *is_not_null_(c), {0, 2}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *in_(c, list_(0, null_(), 33)), {0}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *in_(c, list_(0, null_(), 33)), {0}));
+}
+
+TEST_F(ExpressionEvaluatorToPosListTest, LogicalWithoutNulls) {
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *and_(greater_than_equals_(x, 8), less_than_(x, 10)), {1, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *and_(less_than_(x, 9), less_than_(x, 8)), {1}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *or_(equals_(x, 10), less_than_(x, 2)), {0, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *or_(equals_(x, 10), not_equals_(x, 8)), {0, 1, 2}));
+}
+
+TEST_F(ExpressionEvaluatorToPosListTest, LogicalWithNulls) {
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *and_(is_not_null_(c), equals_(c, 33)), {0}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *or_(is_null_(c), equals_(c, 33)), {0, 1, 3}));
+}
+
+TEST_F(ExpressionEvaluatorToPosListTest, Exists) {
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
+  const auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{3}, PredicateCondition::Equals, ParameterID{0});
+  const auto select = select_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *exists_(select), {1}));
 }
 
 }  // namespace opossum
