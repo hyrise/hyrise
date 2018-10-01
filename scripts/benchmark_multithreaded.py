@@ -138,6 +138,7 @@ def plot(args, result_dir):
     verbose_print(args.verbose, 'Plotting results from: ' + result_dir)
 
     utilized_cores_per_numa_node = []
+    max_cores = 0
 
     tpch_results = {}
     for _, _, files in os.walk(result_dir):
@@ -148,7 +149,8 @@ def plot(args, result_dir):
             with open(os.path.join(result_dir, file), 'r') as json_file:
                 data = json.load(json_file)
             cores = data['context']['cores']
-            if cores > 0:
+            if cores > max_cores:
+                max_cores = cores
                 utilized_cores_per_numa_node = data['context']['utilized_cores_per_numa_node']
             for benchmark in data['benchmarks']:
                 name = benchmark['name']
@@ -174,11 +176,12 @@ def plot(args, result_dir):
         ax = fig.add_subplot(n_rows_and_cols, n_rows_and_cols, plot_pos)
         ax.set_title(name)
 
-        multithreaded_plot = ax.plot(data['cores'], data['items_per_second'], label='multithreaded', marker='d')
+        multithreaded_plot = ax.plot(data['cores'], data['items_per_second'], label='multithreaded', marker='.')
         if 'singlethreaded' in data:
             plot_baseline = True
             singlethreaded_plot = ax.axhline(data['singlethreaded'], color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label='singlethreaded')
         ax.set_ylim(ymin=0)
+        ax.set_xlim(xmin=0, xmax=max_cores)
 
         for numa_border in numa_borders:
             ax.axvline(numa_border, color='gray', linestyle='dashed', linewidth=1.0)
