@@ -8,6 +8,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -87,16 +88,12 @@ bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, co
 }
 
 TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
-  auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a)";
+  auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_b.a = table_a.a)";
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
 
   const auto& unopt_lqp = sql_pipeline.get_unoptimized_logical_plan();
   EXPECT_TRUE(lqp_contains_exists(unopt_lqp, false));
   EXPECT_FALSE(lqp_contains_join_with_mode(unopt_lqp, JoinMode::Semi));
-
-  std::cout << "####### OPTIMIZED" << std::endl;
-  unopt_lqp->print();
-  std::cout << std::endl;
 
   auto modified_lqp = unopt_lqp->deep_copy();
   apply_rule(_rule, modified_lqp);
@@ -159,34 +156,23 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
-  // if (!IS_DEBUG) return;
+  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
 
-  // auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_b.a = table_a.a)";
-  // auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-  // const auto& unopt_lqp = sql_pipeline.get_unoptimized_logical_plan();
+  const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
+  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
-  const auto subselect_lqp = PredicateNode::make(equals_(node_table_a_col_a, node_table_b_col_a), node_table_b);
-  const auto subselect = select_(subselect_lqp);
+  const auto input_lqp =
+    ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+     PredicateNode::make(not_equals_(exists_(subselect), 0),
+       ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b), node_table_a))
+  );
 
-  const auto xxx = ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b));
-  const auto yyy = PredicateNode::make(equals_(exists_(subselect), 0), xxx);
-
-  const auto input_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), yyy, node_table_a);
-
-  std::cout << "####### OPTIMIZED" << std::endl;
-  input_lqp->print();
-  std::cout << std::endl;
-
+  // apply exists reformulation rule
   auto modified_lqp = input_lqp->deep_copy();
-  std::cout << "Applying rule" << std::endl;
   StrategyBaseTest::apply_rule(_rule, modified_lqp);
 
-  std::cout << "####### " << std::endl;
-  modified_lqp->print();
-  std::cout << std::endl;
-
   const auto compare_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_a_col_b),
+      JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
         ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
         node_table_b));
 
@@ -194,10 +180,18 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
-  auto query = "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a)";
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-  const auto& input_lqp = sql_pipeline.get_unoptimized_logical_plan();
+   const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
 
+  const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
+  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+
+  const auto input_lqp =
+    ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+     PredicateNode::make(equals_(exists_(subselect), 0),
+       ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b), node_table_a))
+  );
+
+  // apply exists reformulation rule
   auto modified_lqp = input_lqp->deep_copy();
   StrategyBaseTest::apply_rule(_rule, modified_lqp);
 
