@@ -101,7 +101,7 @@ def run_benchmarks(args, hyrise_args, core_counts, result_dir):
             args.executable,
             '--output', result_file,
             '--runs', str(number_of_runs),
-            '--scheduler', use_scheduler,
+            '--scheduler=' + use_scheduler,
             '--cores', str(core_count),
             '--clients', str(args.clients),
         ]
