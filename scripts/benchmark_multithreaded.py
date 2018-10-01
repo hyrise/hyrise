@@ -137,6 +137,8 @@ def benchmark(args, hyrise_args):
 def plot(args, result_dir):
     verbose_print(args.verbose, 'Plotting results from: ' + result_dir)
 
+    utilized_cores_per_numa_node = []
+
     tpch_results = {}
     for _, _, files in os.walk(result_dir):
         json_files = [f for f in files if f.split('.')[-1] == 'json']
@@ -146,6 +148,8 @@ def plot(args, result_dir):
             with open(os.path.join(result_dir, file), 'r') as json_file:
                 data = json.load(json_file)
             cores = data['context']['cores']
+            if cores > 0:
+                utilized_cores_per_numa_node = data['context']['utilized_cores_per_numa_node']
             for benchmark in data['benchmarks']:
                 name = benchmark['name']
                 items_per_second = benchmark['items_per_second']
@@ -156,6 +160,8 @@ def plot(args, result_dir):
                 else:
                     tpch_results[name]['cores'].append(cores)
                     tpch_results[name]['items_per_second'].append(items_per_second)
+
+    numa_borders = [sum(utilized_cores_per_numa_node[:x]) for x in range(len(utilized_cores_per_numa_node))][1:]
 
     num_plots = len(tpch_results)
     n_rows_and_cols = get_subplot_row_and_column_count(num_plots)
@@ -173,6 +179,9 @@ def plot(args, result_dir):
             plot_baseline = True
             singlethreaded_plot = ax.axhline(data['singlethreaded'], color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label='singlethreaded')
         ax.set_ylim(ymin=0)
+
+        for numa_border in numa_borders:
+            ax.axvline(numa_border, color='gray', linestyle='dashed', linewidth=1.0)
 
     if plot_baseline:
         plt.figlegend((multithreaded_plot[0], singlethreaded_plot), ('multithreaded', 'singlethreaded'), 'lower right')
