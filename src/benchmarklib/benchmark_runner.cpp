@@ -299,7 +299,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
     Assert(query_result.iteration_durations.size() == query_result.num_iterations,
-                "number of iterations and number of iteration durations does not match");
+           "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
