@@ -90,7 +90,7 @@ bool lqp_contains_exists_projection(const std::shared_ptr<AbstractLQPNode>& lqp,
   return found_node;
 }
 
-// Take an LQP and search for an join with the specified join mode
+// Take an LQP and search for a join with the specified join mode
 bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, const JoinMode join_mode) {
   bool found_join = false;
   visit_lqp(lqp, [&](const auto& deeper_node) {
@@ -107,7 +107,7 @@ bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, co
 }
 
 // Test for a very basic query and check if the query no longer contains
-// exists nodes after reformulation but instead the expected join node.
+// exists expressions after reformulation but instead the expected join node.
 TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
   auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_b.a = table_a.a)";
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
@@ -193,7 +193,7 @@ TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
 
 // Apply the rule to various queries which should NOT be modified by the reformulation rule.
 TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
-  std::vector<std::string> not_rewritable_tests;
+  std::vector<std::string> non_rewritable_tests;
 
   // As of now, we reformulate to hash joins. Hash joins only support equality join predicates.
   not_rewritable_tests.push_back(
@@ -217,17 +217,15 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
   not_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a < 17)");
 
-  for (const auto& query : not_rewritable_tests) {
-    {
-      auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-      auto input_lqp = sql_pipeline.get_unoptimized_logical_plan();
+  for (const auto& query : non_rewritable_tests) {
+    auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
+    auto input_lqp = sql_pipeline.get_unoptimized_logical_plan();
 
-      auto modified_lqp = input_lqp->deep_copy();
-      apply_rule(_rule, modified_lqp);
+    auto modified_lqp = input_lqp->deep_copy();
+    apply_rule(_rule, modified_lqp);
 
-      // for all the exemplary queries, we expect an unmodified LQP
-      EXPECT_LQP_EQ(input_lqp, modified_lqp);
-    }
+    // for all the exemplary queries, we expect an unmodified LQP
+    EXPECT_LQP_EQ(input_lqp, modified_lqp);
   }
 }
 
