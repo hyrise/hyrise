@@ -11,6 +11,7 @@
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
+#include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
@@ -91,6 +92,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
+  main_batch.add_rule(std::make_shared<ExistsReformulationRule>());
   optimizer->add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
