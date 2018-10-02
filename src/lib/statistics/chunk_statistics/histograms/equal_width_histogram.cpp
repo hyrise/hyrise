@@ -68,10 +68,8 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
   // Never have more bins than representable values.
   const auto bin_count = max_bin_count <= base_width ? max_bin_count : base_width;
 
-  std::vector<HistogramCountType> bin_counts;
-  std::vector<HistogramCountType> bin_distinct_counts;
-  bin_counts.reserve(bin_count);
-  bin_distinct_counts.reserve(bin_count);
+  std::vector<HistogramCountType> bin_counts(bin_count);
+  std::vector<HistogramCountType> bin_distinct_counts(bin_count);
 
   const auto bin_width = base_width / bin_count;
   const BinID bin_count_with_larger_range = base_width % bin_count;
@@ -91,10 +89,10 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
       next_bin_begin_it++;
     }
 
-    bin_counts.emplace_back(std::accumulate(
+    bin_counts[current_bin_id] = std::accumulate(
         current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
-        [](HistogramCountType a, std::pair<std::string, HistogramCountType> b) { return a + b.second; }));
-    bin_distinct_counts.emplace_back(std::distance(current_bin_begin_it, next_bin_begin_it));
+        [](HistogramCountType a, std::pair<std::string, HistogramCountType> b) { return a + b.second; });
+    bin_distinct_counts[current_bin_id] = std::distance(current_bin_begin_it, next_bin_begin_it);
 
     current_bin_begin_it = next_bin_begin_it;
     repr_current_bin_begin_value = repr_next_bin_begin_value;

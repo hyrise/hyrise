@@ -82,12 +82,9 @@ EqualElementCountBinData<T> EqualElementCountHistogram<T>::_build_bins(
   const auto distinct_count_per_bin = static_cast<HistogramCountType>(value_counts.size() / bin_count);
   const BinID bin_count_with_extra_value = value_counts.size() % bin_count;
 
-  std::vector<T> bin_minimums;
-  std::vector<T> bin_maximums;
-  std::vector<HistogramCountType> bin_heights;
-  bin_minimums.reserve(bin_count);
-  bin_maximums.reserve(bin_count);
-  bin_heights.reserve(bin_count);
+  std::vector<T> bin_minimums(bin_count);
+  std::vector<T> bin_maximums(bin_count);
+  std::vector<HistogramCountType> bin_heights(bin_count);
 
   auto current_bin_begin_index = BinID{0};
   for (BinID bin_index = 0; bin_index < bin_count; bin_index++) {
@@ -96,12 +93,12 @@ EqualElementCountBinData<T> EqualElementCountHistogram<T>::_build_bins(
       current_bin_end_index++;
     }
 
-    bin_minimums.emplace_back(value_counts[current_bin_begin_index].first);
-    bin_maximums.emplace_back(value_counts[current_bin_end_index].first);
-    bin_heights.emplace_back(
+    bin_minimums[bin_index] = value_counts[current_bin_begin_index].first;
+    bin_maximums[bin_index] = value_counts[current_bin_end_index].first;
+    bin_heights[bin_index] =
         std::accumulate(value_counts.cbegin() + current_bin_begin_index,
                         value_counts.cbegin() + current_bin_end_index + 1, HistogramCountType{0},
-                        [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; }));
+                        [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
 
     current_bin_begin_index = current_bin_end_index + 1;
   }

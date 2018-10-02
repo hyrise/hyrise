@@ -108,14 +108,12 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
       bin_count_with_larger_range = 0ul;
     }
 
-    std::vector<HistogramCountType> bin_counts;
-    std::vector<HistogramCountType> bin_distinct_counts;
-    bin_counts.reserve(bin_count);
-    bin_distinct_counts.reserve(bin_count);
+    std::vector<HistogramCountType> bin_counts(bin_count);
+    std::vector<HistogramCountType> bin_distinct_counts(bin_count);
 
     T current_bin_begin_value = min;
     auto current_bin_begin_it = value_counts.cbegin();
-    for (auto current_bin_id = 0ul; current_bin_id < bin_count; current_bin_id++) {
+    for (auto current_bin_id = BinID{0}; current_bin_id < bin_count; current_bin_id++) {
       T next_bin_begin_value = current_bin_begin_value + bin_width;
 
       if constexpr (std::is_integral_v<T>) {
@@ -138,10 +136,10 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
         next_bin_begin_it++;
       }
 
-      bin_counts.emplace_back(std::accumulate(
-          current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
-          [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; }));
-      bin_distinct_counts.emplace_back(std::distance(current_bin_begin_it, next_bin_begin_it));
+      bin_counts[current_bin_id] =
+          std::accumulate(current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
+                          [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
+      bin_distinct_counts[current_bin_id] = std::distance(current_bin_begin_it, next_bin_begin_it);
 
       current_bin_begin_value = next_bin_begin_value;
       current_bin_begin_it = next_bin_begin_it;
