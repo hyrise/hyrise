@@ -19,7 +19,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ExistsReformulationRule::name() const { return "Exists to Semijoin Rule"; }
+std::string ExistsReformulationRule::name() const { return "(Non)Exists to Join Reformulation Rule"; }
 
 bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Find a predicate
@@ -47,8 +47,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   const auto subselect = std::static_pointer_cast<LQPSelectExpression>(exists_expression->select());
 
   // We don't care about uncorrelated subselects
-  // TODO(anybody): Replace with "is_correlated" once that is in (#1095)
-  if (subselect->parameter_count() == 0) {
+  if (!subselect->is_correlated()) {
     return _apply_to_inputs(node);
   }
 
