@@ -259,6 +259,8 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/logical_expression_reducer_rule.cpp
+    optimizer/strategy/logical_expression_reducer_rule.hpp
     optimizer/strategy/predicate_pushdown_rule.cpp
     optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp

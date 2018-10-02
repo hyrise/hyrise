@@ -15,7 +15,9 @@ class LogicalExpression : public AbstractExpression {
   LogicalExpression(const LogicalOperator logical_operator, const std::shared_ptr<AbstractExpression>& left_operand,
                     const std::shared_ptr<AbstractExpression>& right_operand);
 
+  std::shared_ptr<AbstractExpression>& left_operand();
   const std::shared_ptr<AbstractExpression>& left_operand() const;
+  std::shared_ptr<AbstractExpression>& right_operand();
   const std::shared_ptr<AbstractExpression>& right_operand() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;

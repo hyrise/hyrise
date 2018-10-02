@@ -24,8 +24,10 @@ LogicalExpression::LogicalExpression(const LogicalOperator logical_operator,
                                      const std::shared_ptr<AbstractExpression>& right_operand)
     : AbstractExpression(ExpressionType::Logical, {left_operand, right_operand}), logical_operator(logical_operator) {}
 
+std::shared_ptr<AbstractExpression>& LogicalExpression::left_operand() { return arguments[0]; }
 const std::shared_ptr<AbstractExpression>& LogicalExpression::left_operand() const { return arguments[0]; }
 
+std::shared_ptr<AbstractExpression>& LogicalExpression::right_operand() { return arguments[1]; }
 const std::shared_ptr<AbstractExpression>& LogicalExpression::right_operand() const { return arguments[1]; }
 
 std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {

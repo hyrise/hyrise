@@ -14,6 +14,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
+#include "strategy/logical_expression_reducer_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "utils/performance_warning.hpp"
@@ -84,9 +85,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(100);
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  RuleBatch pruning_batch(RuleBatchExecutionPolicy::Once);
-  pruning_batch.add_rule(std::make_shared<ColumnPruningRule>());
-  optimizer->add_rule_batch(pruning_batch);
+  RuleBatch initial_batch(RuleBatchExecutionPolicy::Once);
+  initial_batch.add_rule(std::make_shared<ColumnPruningRule>());
+  initial_batch.add_rule(std::make_shared<LogicalExpressionReducerRule>());
+  optimizer->add_rule_batch(initial_batch);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
