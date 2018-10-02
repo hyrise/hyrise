@@ -35,9 +35,9 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
     parser.add_argument('-q', '--queries', action='store', type=str, metavar='Q', help='Specify the TPC-H queries that will be benchmarked (comma-separated list of query IDs, e.g. --queries 1,3,18')
+    parser.add_argument('-e', '--executable', action='store', type=str, metavar='E', help='hyriseBenchmarkTPCH executable', required=True)
     parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the result folder will be stored (default: \'results/\')')
     parser.add_argument('--result-name', action='store', type=str, metavar='NAME', help='Directory where the actual results will be stored (default: current datetime)')
-    parser.add_argument('executable', action='store', type=str, metavar='EXECUTABLE', help='hyriseBenchmarkTPCH executable')
     parser.add_argument('--clients', action='store', type=int, metavar='C', default=10, help='The number of clients that schedule queries in parallel')
 
     core_group = parser.add_mutually_exclusive_group()
