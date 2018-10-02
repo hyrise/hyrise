@@ -40,7 +40,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
               "Expected (NOT) EXISTS predicate to compare against 0");
 
   // If the predicate checks for == 0 (boolean false), we have an NOT EXISTS, otherwise an EXISTS
-  auto is_select_exists = (predicate_expression->predicate_condition != PredicateCondition::Equals);
+  const auto is_select_exists = (predicate_expression->predicate_condition != PredicateCondition::Equals);
 
   // Get the subselect that we work on
   const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_expression->arguments[0]);
@@ -145,16 +145,16 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
 
     // Transform the parameter back into a column expression on the outside
-    auto parameter_id_iter = std::find(subselect->parameter_ids.cbegin(), subselect->parameter_ids.cend(),
+    const auto parameter_id_iter = std::find(subselect->parameter_ids.cbegin(), subselect->parameter_ids.cend(),
                                        parameter_expression->parameter_id);
-    auto outer_column_expression =
+    const auto outer_column_expression =
         subselect->arguments[std::distance(subselect->parameter_ids.cbegin(), parameter_id_iter)];
 
     // Build the join predicate
     join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, outer_column_expression,
                                                                  inner_column_expression);
 
-    // We still need to visit the inputs to make sure that there is not more than one predicate
+    // Join predicate found, we can stop visiting
     return LQPVisitation::DoNotVisitInputs;
   });
 
