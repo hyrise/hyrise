@@ -16,8 +16,8 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
@@ -116,7 +116,8 @@ TEST_F(ExpressionEvaluatorToPosListTest, LogicalWithNulls) {
 
 TEST_F(ExpressionEvaluatorToPosListTest, Exists) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
-  const auto table_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{3}, PredicateCondition::Equals, ParameterID{0});
+  const auto table_scan =
+      std::make_shared<TableScan>(table_wrapper, ColumnID{3}, PredicateCondition::Equals, ParameterID{0});
   const auto select = select_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select), {}));

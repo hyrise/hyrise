@@ -7,20 +7,20 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "all_parameter_variant.hpp"
+#include "expression/abstract_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-class BaseTableScanImpl;
+class AbstractTableScanImpl;
 class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator>& in, ColumnID left_column_id,
-            const PredicateCondition predicate_condition, const AllParameterVariant& right_parameter);
+  TableScan(const std::shared_ptr<const AbstractOperator>& in, const std::shared_ptr<AbstractExpression>& predicate);
 
   ~TableScan();
 
@@ -40,9 +40,7 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
-  ColumnID left_column_id() const;
-  PredicateCondition predicate_condition() const;
-  const AllParameterVariant& right_parameter() const;
+  const std::shared_ptr<AbstractExpression>& predicate() const;
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
@@ -56,19 +54,14 @@ class TableScan : public AbstractReadOnlyOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  void _on_cleanup() override;
-
-  void _init_scan();
+  std::unique_ptr<AbstractTableScanImpl> _get_impl() const;
 
  private:
-  const ColumnID _left_column_id;
-  const PredicateCondition _predicate_condition;
-  AllParameterVariant _right_parameter;
+  const std::shared_ptr<AbstractExpression> _predicate;
 
   std::vector<ChunkID> _excluded_chunk_ids;
 
   std::shared_ptr<const Table> _in_table;
-  std::unique_ptr<BaseTableScanImpl> _impl;
   std::shared_ptr<Table> _output_table;
 };
 

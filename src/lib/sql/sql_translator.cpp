@@ -697,7 +697,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     /**
      * If the AggregateExpression has already been computed in a previous node (consider "x" in
      * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
-     * considered a "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
+     * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
      * but it's the best solution I can come up with right now.
      */
     if (_current_lqp->find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;

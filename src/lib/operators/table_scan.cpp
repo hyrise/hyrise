@@ -11,6 +11,10 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -20,6 +24,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
 #include "table_scan/single_column_table_scan_impl.hpp"
@@ -29,56 +34,36 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, ColumnID left_column_id,
-                     const PredicateCondition predicate_condition, const AllParameterVariant& right_parameter)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in},
-      _left_column_id{left_column_id},
-      _predicate_condition{predicate_condition},
-      _right_parameter{right_parameter} {}
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
+                     const std::shared_ptr<AbstractExpression>& predicate)
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
 
 TableScan::~TableScan() = default;
 
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
-ColumnID TableScan::left_column_id() const { return _left_column_id; }
-
-PredicateCondition TableScan::predicate_condition() const { return _predicate_condition; }
-
-const AllParameterVariant& TableScan::right_parameter() const { return _right_parameter; }
+const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
 const std::string TableScan::name() const { return "TableScan"; }
 
 const std::string TableScan::description(DescriptionMode description_mode) const {
-  std::string column_name = std::string("Column #") + std::to_string(_left_column_id);
-
-  if (input_table_left()) column_name = input_table_left()->column_name(_left_column_id);
-
-  std::string predicate_string = to_string(_right_parameter);
-
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  return name() + separator + "(" + column_name + " " + predicate_condition_to_string.left.at(_predicate_condition) +
-         " " + predicate_string + ")";
+  return name() + _predicate->as_column_name();
 }
 
-void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  if (!is_parameter_id(_right_parameter)) return;
-
-  const auto value_iter = parameters.find(boost::get<ParameterID>(_right_parameter));
-  if (value_iter == parameters.end()) return;
-
-  _right_parameter = value_iter->second;
+void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters){
+  expression_set_parameters(_predicate, parameters);
 }
 
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<TableScan>(copied_input_left, _left_column_id, _predicate_condition, _right_parameter);
+  return std::make_shared<TableScan>(copied_input_left, _predicate->deep_copy());
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
   _in_table = input_table_left();
 
-  _init_scan();
+  const auto impl = _get_impl();
 
   _output_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
@@ -92,10 +77,10 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
 
-    auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+    auto job_task = std::make_shared<JobTask>([=, &output_mutex, &impl]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
-      const auto matches_out = _impl->scan_chunk(chunk_id);
+      const auto matches_out = impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
 
       // The ChunkAccessCounter is reused to track accesses of the output chunk. Accesses of derived chunks are counted
@@ -163,41 +148,50 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return _output_table;
 }
 
-void TableScan::_on_cleanup() { _impl.reset(); }
+std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
+  /**
+   * Select the scanning implementation (`_impl`) to use based on the nature of the expression. Use the
+   * ExpressionEvaluator if no dedicated implementation exists
+   */
 
-void TableScan::_init_scan() {
-  if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
-    const auto left_column_type = _in_table->column_data_type(_left_column_id);
-    Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
+  const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate);
+  if (binary_predicate_expression) {
+    const auto predicate_condition = binary_predicate_expression->predicate_condition;
+    const auto left_column_expression =
+        std::dynamic_pointer_cast<PQPColumnExpression>(binary_predicate_expression->left_operand());
+    const auto right_column_expression =
+        std::dynamic_pointer_cast<PQPColumnExpression>(binary_predicate_expression->right_operand());
+    const auto right_value_expression =
+        std::dynamic_pointer_cast<ValueExpression>(binary_predicate_expression->right_operand());
 
-    DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
+    if (left_column_expression) {
+      if ((predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) &&
+          right_value_expression) {
+        Assert(left_column_expression->data_type() == DataType::String,
+               "LIKE operator only applicable on string columns.");
+        DebugAssert(!variant_is_null(right_value_expression->value), "Right value must not be NULL.");
 
-    const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
+        const auto right_wildcard = type_cast<std::string>(right_value_expression->value);
 
-    DebugAssert(!variant_is_null(right_value), "Right value must not be NULL.");
+        return std::make_unique<LikeTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition,
+                                                    right_wildcard);
 
-    const auto right_wildcard = type_cast<std::string>(right_value);
+      } else if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
+        return std::make_unique<IsNullTableScanImpl>(_in_table, left_column_expression->column_id,
+                                                      predicate_condition);
 
-    _impl = std::make_unique<LikeTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_wildcard);
+      } else if (right_value_expression) {
+        return std::make_unique<SingleColumnTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition, right_value_expression->value);
 
-    return;
+      } else if (right_column_expression) {
+        return std::make_unique<ColumnComparisonTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition,
+                                                                right_column_expression->column_id);
+
+      }
+    }
   }
 
-  if (_predicate_condition == PredicateCondition::IsNull || _predicate_condition == PredicateCondition::IsNotNull) {
-    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, _left_column_id, _predicate_condition);
-    return;
-  }
-
-  if (is_variant(_right_parameter)) {
-    const auto right_value = boost::get<AllTypeVariant>(_right_parameter);
-
-    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, _left_column_id, _predicate_condition, right_value);
-  } else /* is_column_name(_right_parameter) */ {
-    const auto right_column_id = boost::get<ColumnID>(_right_parameter);
-
-    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, _left_column_id, _predicate_condition,
-                                                            right_column_id);
-  }
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(_in_table, _predicate);
 }
 
 }  // namespace opossum
