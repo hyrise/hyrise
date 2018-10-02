@@ -111,8 +111,7 @@ TEST_P(TableScanBetweenTest, MismatchingTypes) {
 }
 
 TEST_P(TableScanBetweenTest, NullValueAsParameter) {
-  const auto& [data_type, encoding, nullable] = GetParam();
-  std::ignore = encoding;
+  const auto& data_type = std::get<0>(GetParam());
   resolve_data_type(data_type, [&](const auto type) {
     using DataType = typename decltype(type)::type;
     const auto predicate =
