@@ -19,13 +19,14 @@ namespace opossum {
 const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
     const std::vector<CalibrationTableSpecification>& table_definitions) {
   std::vector<std::string> queries;
+  queries.reserve(table_definitions.size());
 
   for (const auto& table_definition : table_definitions) {
     //        queries.push_back(CalibrationQueryGenerator::_generate_aggregate(table_definition));
     queries.push_back(CalibrationQueryGenerator::_generate_table_scan(table_definition));
   }
 
-  queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
+//  queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
 
   return queries;
 }
@@ -37,7 +38,7 @@ const std::string CalibrationQueryGenerator::_generate_join(
 
   std::random_device random_device;
   std::mt19937 engine{random_device()};
-  std::uniform_int_distribution<int64_t> table_dist(0, table_definitions.size() - 1);
+  std::uniform_int_distribution<u_int64_t> table_dist(0, table_definitions.size() - 1);
 
   auto left_table = std::next(table_definitions.begin(), table_dist(engine));
   auto right_table = std::next(table_definitions.begin(), table_dist(engine));

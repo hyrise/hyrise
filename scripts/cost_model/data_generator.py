@@ -33,9 +33,9 @@ def float_column(row_count, distinct_values):
     return np.random.choice(distinct_values, row_count)
     
 def generate_column(column_name, row_count, column_specification):
-    distinct_values = column_specification['distinct_values', 100]
-    value_distribution = column_specification['value_distribution', "uniform"]
-    column_type = column_specification['type', "int"]
+    distinct_values = column_specification.get('distinct_values', 100)
+    value_distribution = column_specification.get('value_distribution', "uniform")
+    column_type = column_specification.get('type', "int")
     is_sorted = column_specification.get('sorted', False)
     
     column_generator = type_to_function(column_type)
