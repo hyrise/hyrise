@@ -38,7 +38,7 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
                      const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
- * @return whether all paths to all leafs contain a Validate node - i.e. the LQP can be used in an MVCC aware context
+ * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 

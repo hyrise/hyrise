@@ -89,6 +89,10 @@ SELECT t1.id, t1.a, t2.b, t3.b, t4.c_name FROM mixed AS t1 INNER JOIN mixed_null
 -- Join three tables and perform a scan
 SELECT * FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a WHERE t1.c > 23.0 AND t2.a = 'c';
 
+-- (not) exists to semi(/anti) join reformulation
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
+SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
+
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
 SELECT SUM(b) + AVG(c) AS x FROM mixed GROUP BY id + 5;
@@ -239,6 +243,8 @@ SELECT EXISTS(SELECT 1) AS some_exists;
 SELECT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT * FROM mixed AS outer_mixed WHERE EXISTS(SELECT * FROM mixed AS inner_mixed WHERE inner_mixed.id = outer_mixed.id * 10);
+SELECT * FROM mixed WHERE EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
 
 -- Cannot test the following expressions, because sqlite doesn't support them:
 --  * EXTRACT
