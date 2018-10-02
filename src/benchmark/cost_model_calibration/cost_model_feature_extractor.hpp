@@ -9,19 +9,17 @@
 
 namespace opossum {
 
-    class CostModelFeatureExtractor {
+class CostModelFeatureExtractor {
+ public:
+  static const nlohmann::json extract_features(const std::shared_ptr<const AbstractOperator>& op);
 
-    public:
-        static const nlohmann::json extract_features(const std::shared_ptr<const AbstractOperator> &op);
+ private:
+  static const nlohmann::json _extract_constant_hardware_features();
+  static const nlohmann::json _extract_runtime_hardware_features();
 
-    private:
-        static const nlohmann::json _extract_constant_hardware_features();
-        static const nlohmann::json _extract_runtime_hardware_features();
-
-        static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const TableScan> &op);
-        static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const GetTable> &op);
-        static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const Projection> &op);
-        static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const JoinHash> &op);
-    };
+  static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const TableScan>& op);
+  static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const Projection>& op);
+  static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const JoinHash>& op);
+};
 
 }  // namespace opossum

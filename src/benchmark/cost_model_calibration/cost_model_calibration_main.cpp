@@ -2,8 +2,8 @@
 #include <fstream>
 
 #include "benchmark_utils.hpp"
-#include "cost_model_calibration.hpp"
 #include "configuration/calibration_configuration.hpp"
+#include "cost_model_calibration.hpp"
 
 /**
  * This class runs Calibration Queries for the Cost Model.

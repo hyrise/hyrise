@@ -1,9 +1,11 @@
-#include <algorithm>
-#include <iostream>
-#include <fstream>
+#include "cost_model_calibration.hpp"
+
 #include <json.hpp>
 
-#include "cost_model_calibration.hpp"
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+
 #include "cost_model_feature_extractor.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -15,10 +17,10 @@
 #include "utils/format_duration.hpp"
 #include "utils/load_table.hpp"
 
-
 namespace opossum {
 
-CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration): _configuration(configuration) {
+CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration)
+    : _configuration(configuration) {
   const auto table_specifications = configuration.table_specifications;
 
   for (const auto& table_specification : table_specifications) {
@@ -63,7 +65,7 @@ void CostModelCalibration::calibrate() {
       pipeline.get_result_table();
 
       auto query_plans = pipeline.get_query_plans();
-      for (const auto & query_plan : query_plans) {
+      for (const auto& query_plan : query_plans) {
         for (const auto& root : query_plan->tree_roots()) {
           _traverse(root);
         }
@@ -85,7 +87,7 @@ void CostModelCalibration::calibrate() {
   myfile.close();
 }
 
-void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperator> & op) {
+void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperator>& op) {
   auto description = op->name();
   auto operator_result = CostModelFeatureExtractor::extract_features(op);
   _operators[description].push_back(operator_result);

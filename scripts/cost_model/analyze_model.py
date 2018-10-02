@@ -46,6 +46,17 @@ def mean_absolute_percentage_error(y_true, y_pred):
 	y_true, y_pred = np.array(y_true), np.array(y_pred)
 	return np.mean(np.abs((y_true - y_pred) / y_true))
 
+def mean_percentage_error(y_true, y_pred):
+	y_true, y_pred = np.array(y_true), np.array(y_pred)
+	return np.mean((y_true - y_pred) / y_true)
+
+def normalized_root_mean_squared_error(y_true, y_pred):
+	y_true, y_pred = np.array(y_true), np.array(y_pred)
+
+	mse = mean_squared_error(y_true, y_pred)
+	rmse = sqrt(mse)
+	return rmse / np.mean(y_true)
+
 def print_predictions(df, model, columns, label):
 	import matplotlib.pyplot as plt
 	
