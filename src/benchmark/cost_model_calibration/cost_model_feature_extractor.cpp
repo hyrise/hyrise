@@ -70,29 +70,41 @@ const nlohmann::json CostModelFeatureExtractor::extract_features(const std::shar
     operator_result["output_chunk_size"] = output_chunk_size;
     operator_result["output_selectivity"] = output_selectivity;
 
+    auto hardware_features = _extract_constant_hardware_features();
+    operator_result.insert(hardware_features.begin(), hardware_features.end());
+
+    auto runtime_features = _extract_runtime_hardware_features();
+    operator_result.insert(runtime_features.begin(), runtime_features.end());
+
     auto description = op->name();
     if (description == "TableScan") {
       auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
       auto table_scan_result = _extract_features_for_operator(table_scan_op);
+
+      if (table_scan_result.empty()) {
+        return operator_result;
+      }
 
       operator_result.insert(table_scan_result.begin(), table_scan_result.end());
     } else if (description == "Projection") {
       auto projection_op = std::static_pointer_cast<const Projection>(op);
       auto projection_result = _extract_features_for_operator(projection_op);
 
+      if (projection_result.empty()) {
+        return operator_result;
+      }
+
       operator_result.insert(projection_result.begin(), projection_result.end());
     } else if (description == "JoinHash") {
       auto join_hash_op = std::static_pointer_cast<const JoinHash>(op);
       auto join_hash_result = _extract_features_for_operator(join_hash_op);
 
+      if (join_hash_result.empty()) {
+        return operator_result;
+      }
+
       operator_result.insert(join_hash_result.begin(), join_hash_result.end());
     }
-
-    auto hardware_features = _extract_constant_hardware_features();
-    operator_result.insert(hardware_features.begin(), hardware_features.end());
-
-    auto runtime_features = _extract_runtime_hardware_features();
-    operator_result.insert(runtime_features.begin(), runtime_features.end());
   }
   return operator_result;
 }

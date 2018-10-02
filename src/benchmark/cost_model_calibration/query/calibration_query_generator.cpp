@@ -26,7 +26,7 @@ const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
     queries.push_back(CalibrationQueryGenerator::_generate_table_scan(table_definition));
   }
 
-//  queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
+  //  queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
 
   return queries;
 }
@@ -197,7 +197,7 @@ const std::string CalibrationQueryGenerator::_generate_select_columns(
 
   std::vector<std::string> out;
   std::sample(column_names.begin(), column_names.end(), std::back_inserter(out), number_of_columns,
-              std::mt19937(std::random_device {}()));
+              std::mt19937(std::random_device{}()));
   return boost::algorithm::join(out, ", ");
 }
 }  // namespace opossum
