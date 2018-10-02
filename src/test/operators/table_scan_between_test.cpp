@@ -1,4 +1,4 @@
-#include <tuple>
+#include "typed_operator_base_test.hpp"
 
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/table_scan.hpp"
@@ -6,7 +6,6 @@
 #include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "typed_operator_base_test.hpp"
 
 namespace opossum {
 
@@ -71,7 +70,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       {0.25, 0.75, {}}                                    // Matching no value
   };
 
-  const auto& [data_type, std::ignore, nullable] = GetParam();
+  [[maybe_unused]] const auto& [data_type, encoding, nullable] = GetParam();
   resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
     for (const auto& [left, right, expected_with_null] : tests) {
       SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) + " AND " +
@@ -110,7 +109,7 @@ TEST_P(TableScanBetweenTest, MismatchingTypes) {
 }
 
 TEST_P(TableScanBetweenTest, NullValueAsParameter) {
-  const auto& [data_type, std::ignore, nullable] = GetParam();
+  [[maybe_unused]] const auto& [data_type, encoding, nullable] = GetParam();
   resolve_data_type(data_type, [&](const auto type) {
     using DataType = typename decltype(type)::type;
     const auto predicate =
