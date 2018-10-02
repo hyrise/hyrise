@@ -115,6 +115,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       << "Query failed: " << query;
 }
 
-INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()), );
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner,
+                        testing::ValuesIn(read_queries_from_file()), );  // NOLINT
 
 }  // namespace opossum

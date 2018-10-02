@@ -29,7 +29,7 @@ void BetweenTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  // TODO A lot of code is duplicated here, below, and in the other table scans.
+  // TODO(anyone): A lot of code is duplicated here, below, and in the other table scans.
   // This can be increased once we have #1145.
 
   const auto left_column_type = _in_table->column_data_type(_left_column_id);
@@ -83,7 +83,8 @@ void BetweenTableScanImpl::handle_segment(const BaseDictionarySegment& base_segm
 
   auto column_iterable = create_iterable_from_attribute_vector(base_segment);
 
-  if (left_value_id == ValueID{0} && right_value_id == static_cast<ValueID>(base_segment.unique_values_count())) {
+  if (left_value_id == ValueID{0} &&  // NOLINT
+      right_value_id == static_cast<ValueID>(base_segment.unique_values_count())) {
     // all values match
     column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };

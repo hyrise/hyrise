@@ -1,8 +1,7 @@
-#include "base_test.hpp"
-
 #include <boost/hana/for_each.hpp>
 
 #include "all_type_variant.hpp"
+#include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "storage/encoding_type.hpp"
 
@@ -20,7 +19,7 @@ class TypedOperatorBaseTest : public BaseTestWithParam<ParamType> {
 
     return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
            (nullable ? "" : "Not") + "Nullable";
-  };
+  }
 };
 
 static std::vector<ParamType> create_param_pairs() {
