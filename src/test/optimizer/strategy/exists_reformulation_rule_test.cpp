@@ -199,7 +199,7 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
   non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a < table_b.a)");
 
-  // Subquery is not correlated with out query
+  // Subquery is not correlated with out query.
   non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_b.a < table_b.b)");
 
@@ -224,7 +224,7 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
     auto modified_lqp = input_lqp->deep_copy();
     apply_rule(_rule, modified_lqp);
 
-    // for all the exemplary queries, we expect an unmodified LQP
+    // For all the exemplary queries, we expect an unmodified LQP.
     EXPECT_LQP_EQ(input_lqp, modified_lqp);
   }
 }
