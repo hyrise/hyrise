@@ -667,6 +667,14 @@ TEST_P(OperatorsTableScanTest, SetParameters) {
   scan_c->set_parameters(parameters);
   EXPECT_EQ(scan_c->predicate().column_id, ColumnID{0});
   EXPECT_EQ(scan_c->predicate().value, AllParameterVariant{ParameterID{4}});
+
+  const auto scan_d = std::make_shared<TableScan>(
+      _int_int_compressed,
+      OperatorScanPredicate{ColumnID{1}, PredicateCondition::Between, ParameterID{2}, ParameterID{3}});
+  scan_d->set_parameters(parameters);
+  EXPECT_EQ(scan_d->predicate().column_id, ColumnID{1});
+  EXPECT_EQ(scan_d->predicate().value, AllParameterVariant{6});
+  EXPECT_EQ(*scan_d->predicate().value2, AllParameterVariant{5});
 }
 
 }  // namespace opossum

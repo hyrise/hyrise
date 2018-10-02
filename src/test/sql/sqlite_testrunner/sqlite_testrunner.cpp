@@ -115,12 +115,6 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       << "Query failed: " << query;
 }
 
-auto formatter = [](const testing::TestParamInfo<std::string>) {
-  // stupid, but otherwise Wextra complains about the unused macro parameter
-  static int test = 1;
-  return std::to_string(test++);
-};
-INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()), );
 
 }  // namespace opossum

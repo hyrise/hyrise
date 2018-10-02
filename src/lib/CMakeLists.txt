@@ -215,6 +215,8 @@ set(
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
+    operators/table_scan/between_table_scan_impl.cpp
+    operators/table_scan/between_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
@@ -372,6 +374,7 @@ set(
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment/dictionary_encoder.hpp
     storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp
     storage/fixed_string_dictionary_segment.hpp

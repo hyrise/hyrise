@@ -14,7 +14,9 @@ SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
+SELECT * FROM mixed WHERE b BETWEEN 0 AND 99999;
 SELECT * FROM mixed WHERE b BETWEEN 20 AND 45;
+SELECT * FROM mixed WHERE b BETWEEN 20 AND 45.5;
 SELECT * FROM mixed WHERE b = 10 OR b BETWEEN 45 AND 20; -- valid SQL with expected empty result
 SELECT * FROM mixed WHERE b BETWEEN c AND 45;
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;

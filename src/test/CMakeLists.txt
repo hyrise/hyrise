@@ -79,8 +79,10 @@ set(
     operators/product_test.cpp
     operators/projection_test.cpp
     operators/sort_test.cpp
+    operators/table_scan_between_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
+    operators/typed_operator_base_test.hpp
     operators/union_all_test.cpp
     operators/union_positions_test.cpp
     operators/update_test.cpp
@@ -93,8 +95,8 @@ set(
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
-    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
+    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
@@ -116,8 +118,8 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
-    statistics/chunk_statistics/range_filter_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
+    statistics/chunk_statistics/range_filter_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
