@@ -51,6 +51,8 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b;
 };
 
+
+// Take an LQP and search for an exists predicate
 bool lqp_contains_exists_predicate(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
   bool found_node = false;
   visit_lqp(lqp, [&](const auto& deeper_node) {
@@ -71,38 +73,25 @@ bool lqp_contains_exists_predicate(const std::shared_ptr<AbstractLQPNode>& lqp, 
   return found_node;
 }
 
+// Take an LQP and search for an exists projection
 bool lqp_contains_exists_projection(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
   bool found_node = false;
   visit_lqp(lqp, [&](const auto& deeper_node) {
     if (deeper_node->type == LQPNodeType::Projection) {
       const auto projection_node = std::static_pointer_cast<ProjectionNode>(deeper_node);
-      // std::cout << "bounce" << std::endl;
-      // for (auto el : projection_node->column_expressions()) {
-      //   std::cout << (el->type == ExpressionType::Exists) << std::endl;
-      // }
-      // std::cout << "done :(" << std::endl;
       for (const auto expression : projection_node->column_expressions()) {
         if (expression->type == ExpressionType::Exists) {
           found_node = true;
           return LQPVisitation::DoNotVisitInputs;
         }
       }
-      // for (const auto expression : projection_node->node_expressions()) {
-      //   if (expression->type == ExpressionType::Exists) {
-      //     found_node = true;
-      //     return LQPVisitation::DoNotVisitInputs;
-      //   }
-      // }
-      // if (projection_expression->arguments[0]->type == ExpressionType::Exists) {
-      //   found_node = true;
-      //   return LQPVisitation::DoNotVisitInputs;
-      // }
     }
     return LQPVisitation::VisitInputs;
   });
   return found_node;
 }
 
+// Take an LQP and search for an join with the specified join mode
 bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, const JoinMode join_mode) {
   bool found_join = false;
   visit_lqp(lqp, [&](const auto& deeper_node) {
@@ -118,6 +107,8 @@ bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, co
   return found_join;
 }
 
+// Test for a very basic query and check if the query no longer contains
+// exists nodes after reformulation but instead the expected join node.
 TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
   auto query = "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_b.a = table_a.a)";
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
@@ -126,19 +117,8 @@ TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
   EXPECT_TRUE(lqp_contains_exists_predicate(unopt_lqp, false));
   EXPECT_FALSE(lqp_contains_join_with_mode(unopt_lqp, JoinMode::Semi));
 
-  // std::cout << "####### INPUT" << std::endl;
-  // unopt_lqp->print();
-  // std::cout << std::endl;
-
   auto modified_lqp = unopt_lqp->deep_copy();
   apply_rule(_rule, modified_lqp);
-
-
-  // std::cout << "####### " << std::endl;
-  // modified_lqp->print();
-  // std::cout << std::endl;
-
-
   EXPECT_TRUE(lqp_contains_join_with_mode(modified_lqp, JoinMode::Semi));
   EXPECT_FALSE(lqp_contains_exists_predicate(modified_lqp, false));
   EXPECT_FALSE(lqp_contains_exists_projection(modified_lqp, false));
@@ -158,46 +138,8 @@ TEST_F(ExistsReformulationRuleTest, QueryWithNotExists) {
   EXPECT_FALSE(lqp_contains_exists_predicate(modified_lqp, true));
 }
 
-TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
-  std::vector<std::string> not_rewritable_tests;
-
-  // As of now, we reformulate to hash joins. Hash joins only support equality join predicates.
-  not_rewritable_tests.push_back(
-      "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a < table_b.a)");
-
-  // Subquery is not correlated with out query
-  not_rewritable_tests.push_back(
-      "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_b.a < table_b.b)");
-
-  // Multiple predicates in correlated subquery not supported.
-  not_rewritable_tests.push_back(
-      "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a = "
-      "table_b.b)");
-
-  // Multiple external predicates.
-  not_rewritable_tests.push_back(
-      "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.b = "
-      "table_b.b)");
-
-  // Same external predicate more than once.
-  not_rewritable_tests.push_back(
-      "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a < 17)");
-
-  for (const auto& query : not_rewritable_tests) {
-    {
-      auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
-
-      auto input_lqp = sql_pipeline.get_unoptimized_logical_plan();
-
-      auto modified_lqp = input_lqp->deep_copy();
-      apply_rule(_rule, modified_lqp);
-
-      // for all the exemplary queries, we expect an unmodified LQP
-      EXPECT_LQP_EQ(input_lqp, modified_lqp);
-    }
-  }
-}
-
+// Manually construct an exists query and apply the reformulation rule.
+// Compare with the manually created "optimal" plan and check for equality.
 TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
   const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
 
@@ -244,6 +186,46 @@ TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
         node_table_b));
 
   EXPECT_LQP_EQ(modified_lqp, compare_lqp);
+}
+
+// Apply the rule to various queries which should NOT be modified by the reformulation rule.
+TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
+  std::vector<std::string> not_rewritable_tests;
+
+  // As of now, we reformulate to hash joins. Hash joins only support equality join predicates.
+  not_rewritable_tests.push_back(
+      "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a < table_b.a)");
+
+  // Subquery is not correlated with out query
+  not_rewritable_tests.push_back(
+      "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_b.a < table_b.b)");
+
+  // Multiple predicates in correlated subquery not supported.
+  not_rewritable_tests.push_back(
+      "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a = "
+      "table_b.b)");
+
+  // Multiple external predicates.
+  not_rewritable_tests.push_back(
+      "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.b = "
+      "table_b.b)");
+
+  // Same external predicate more than once.
+  not_rewritable_tests.push_back(
+      "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a < 17)");
+
+  for (const auto& query : not_rewritable_tests) {
+    {
+      auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
+      auto input_lqp = sql_pipeline.get_unoptimized_logical_plan();
+
+      auto modified_lqp = input_lqp->deep_copy();
+      apply_rule(_rule, modified_lqp);
+
+      // for all the exemplary queries, we expect an unmodified LQP
+      EXPECT_LQP_EQ(input_lqp, modified_lqp);
+    }
+  }
 }
 
 }  // namespace opossum
