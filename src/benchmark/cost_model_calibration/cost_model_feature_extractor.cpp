@@ -138,7 +138,7 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
   auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
   auto chunk_count = left_input_table->chunk_count();
 
-  if (chunk_count < ChunkID{0}) {
+  if (chunk_count <= ChunkID{0}) {
     return operator_result;
   }
 
