@@ -162,6 +162,12 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     return _apply_to_inputs(node);
   }
 
+  // Remove the now obsolete subselect expression from the projection
+  projection_node->expressions.erase(
+      std::remove_if(projection_node->expressions.begin(), projection_node->expressions.end(), [&](auto& expr){
+        return *expr == *exists_expression; }),
+      projection_node->expressions.end());
+
   // Remove the predicate from the subselect (because it is now handled by the join) - if it is the top level node,
   // we need to remove it by pointing the LQP to its input
   if (subselect->lqp == subselect_predicate_node) {
@@ -175,17 +181,6 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   const auto join_node = std::make_shared<JoinNode>(join_mode, join_predicate);
   lqp_replace_node(predicate_node, join_node);
   join_node->set_right_input(subselect->lqp);
-
-  // Finally, remove the now obsolete subselect expression from the projection
-  projection_node->expressions.erase(
-      std::remove_if(projection_node->expressions.begin(), projection_node->expressions.end(), [&](auto& expr){
-        return expr->hash() == exists_expression->hash(); }),
-      projection_node->expressions.end());
-
-  // Finally, remove the now obsolete subselect expression from the projection
-  // projection_node->expressions.erase(
-  //     std::remove(projection_node->expressions.begin(), projection_node->expressions.end(), exists_expression),
-  //     projection_node->expressions.end());
 
   return true;
 }
