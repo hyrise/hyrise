@@ -51,8 +51,8 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b;
 };
 
-bool lqp_contains_exists(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
-  bool found_exists = false;
+bool lqp_contains_exists_predicate(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
+  bool found_node = false;
   visit_lqp(lqp, [&](const auto& deeper_node) {
     if (deeper_node->type == LQPNodeType::Predicate) {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(deeper_node);
@@ -61,15 +61,46 @@ bool lqp_contains_exists(const std::shared_ptr<AbstractLQPNode>& lqp, const bool
       if (predicate_expression->arguments[0]->type == ExpressionType::Exists) {
         if ((predicate_expression->predicate_condition != PredicateCondition::Equals && !is_non_exists) ||
             (predicate_expression->predicate_condition == PredicateCondition::Equals && is_non_exists)) {
-          // If the predicate checks for == 0 (boolean false), we have an NOT EXISTS, otherwise an EXISTS
-          found_exists = true;
+          found_node = true;
           return LQPVisitation::DoNotVisitInputs;
         }
       }
     }
     return LQPVisitation::VisitInputs;
   });
-  return found_exists;
+  return found_node;
+}
+
+bool lqp_contains_exists_projection(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
+  bool found_node = false;
+  visit_lqp(lqp, [&](const auto& deeper_node) {
+    if (deeper_node->type == LQPNodeType::Projection) {
+      const auto projection_node = std::static_pointer_cast<ProjectionNode>(deeper_node);
+      // std::cout << "bounce" << std::endl;
+      // for (auto el : projection_node->column_expressions()) {
+      //   std::cout << (el->type == ExpressionType::Exists) << std::endl;
+      // }
+      // std::cout << "done :(" << std::endl;
+      for (const auto expression : projection_node->column_expressions()) {
+        if (expression->type == ExpressionType::Exists) {
+          found_node = true;
+          return LQPVisitation::DoNotVisitInputs;
+        }
+      }
+      // for (const auto expression : projection_node->node_expressions()) {
+      //   if (expression->type == ExpressionType::Exists) {
+      //     found_node = true;
+      //     return LQPVisitation::DoNotVisitInputs;
+      //   }
+      // }
+      // if (projection_expression->arguments[0]->type == ExpressionType::Exists) {
+      //   found_node = true;
+      //   return LQPVisitation::DoNotVisitInputs;
+      // }
+    }
+    return LQPVisitation::VisitInputs;
+  });
+  return found_node;
 }
 
 bool lqp_contains_join_with_mode(const std::shared_ptr<AbstractLQPNode>& lqp, const JoinMode join_mode) {
@@ -92,13 +123,25 @@ TEST_F(ExistsReformulationRuleTest, QueryWithExists) {
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
 
   const auto& unopt_lqp = sql_pipeline.get_unoptimized_logical_plan();
-  EXPECT_TRUE(lqp_contains_exists(unopt_lqp, false));
+  EXPECT_TRUE(lqp_contains_exists_predicate(unopt_lqp, false));
   EXPECT_FALSE(lqp_contains_join_with_mode(unopt_lqp, JoinMode::Semi));
+
+  // std::cout << "####### INPUT" << std::endl;
+  // unopt_lqp->print();
+  // std::cout << std::endl;
 
   auto modified_lqp = unopt_lqp->deep_copy();
   apply_rule(_rule, modified_lqp);
+
+
+  // std::cout << "####### " << std::endl;
+  // modified_lqp->print();
+  // std::cout << std::endl;
+
+
   EXPECT_TRUE(lqp_contains_join_with_mode(modified_lqp, JoinMode::Semi));
-  EXPECT_FALSE(lqp_contains_exists(modified_lqp, false));
+  EXPECT_FALSE(lqp_contains_exists_predicate(modified_lqp, false));
+  EXPECT_FALSE(lqp_contains_exists_projection(modified_lqp, false));
 }
 
 TEST_F(ExistsReformulationRuleTest, QueryWithNotExists) {
@@ -106,13 +149,13 @@ TEST_F(ExistsReformulationRuleTest, QueryWithNotExists) {
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
 
   const auto& unopt_lqp = sql_pipeline.get_unoptimized_logical_plan();
-  EXPECT_TRUE(lqp_contains_exists(unopt_lqp, true));
+  EXPECT_TRUE(lqp_contains_exists_predicate(unopt_lqp, true));
   EXPECT_FALSE(lqp_contains_join_with_mode(unopt_lqp, JoinMode::Anti));
 
   auto modified_lqp = unopt_lqp->deep_copy();
   apply_rule(_rule, modified_lqp);
   EXPECT_TRUE(lqp_contains_join_with_mode(modified_lqp, JoinMode::Anti));
-  EXPECT_FALSE(lqp_contains_exists(modified_lqp, true));
+  EXPECT_FALSE(lqp_contains_exists_predicate(modified_lqp, true));
 }
 
 TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
@@ -163,9 +206,9 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
 
   const auto input_lqp =
     ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-     PredicateNode::make(not_equals_(exists_(subselect), 0),
-       ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b), node_table_a))
-  );
+      PredicateNode::make(not_equals_(exists_(subselect), 0),
+        ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+        node_table_a)));
 
   // apply exists reformulation rule
   auto modified_lqp = input_lqp->deep_copy();
@@ -180,16 +223,16 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
-   const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
 
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
   const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
     ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-     PredicateNode::make(equals_(exists_(subselect), 0),
-       ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b), node_table_a))
-  );
+      PredicateNode::make(equals_(exists_(subselect), 0),
+        ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+        node_table_a)));
 
   // apply exists reformulation rule
   auto modified_lqp = input_lqp->deep_copy();

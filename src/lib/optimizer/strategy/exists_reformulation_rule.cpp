@@ -153,7 +153,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, outer_column_expression,
                                                                  inner_column_expression);
 
-    // Join predicate found, we can stop visiting
+    // Join predicate found, we can stop
     return LQPVisitation::DoNotVisitInputs;
   });
 
@@ -178,8 +178,14 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   // Finally, remove the now obsolete subselect expression from the projection
   projection_node->expressions.erase(
-      std::remove(projection_node->expressions.begin(), projection_node->expressions.end(), exists_expression),
+      std::remove_if(projection_node->expressions.begin(), projection_node->expressions.end(), [&](auto& expr){
+        return expr->hash() == exists_expression->hash(); }),
       projection_node->expressions.end());
+
+  // Finally, remove the now obsolete subselect expression from the projection
+  // projection_node->expressions.erase(
+  //     std::remove(projection_node->expressions.begin(), projection_node->expressions.end(), exists_expression),
+  //     projection_node->expressions.end());
 
   return true;
 }
