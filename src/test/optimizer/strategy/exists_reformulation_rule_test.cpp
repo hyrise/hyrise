@@ -196,25 +196,25 @@ TEST_F(ExistsReformulationRuleTest, QueryNotRewritten) {
   std::vector<std::string> non_rewritable_tests;
 
   // As of now, we reformulate to hash joins. Hash joins only support equality join predicates.
-  not_rewritable_tests.push_back(
+  non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a < table_b.a)");
 
   // Subquery is not correlated with out query
-  not_rewritable_tests.push_back(
+  non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_b.a < table_b.b)");
 
   // Multiple predicates in correlated subquery not supported.
-  not_rewritable_tests.push_back(
+  non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a = "
       "table_b.b)");
 
   // Multiple external predicates.
-  not_rewritable_tests.push_back(
+  non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.b = "
       "table_b.b)");
 
   // Same external predicate more than once.
-  not_rewritable_tests.push_back(
+  non_rewritable_tests.push_back(
       "SELECT * FROM table_a WHERE EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a < 17)");
 
   for (const auto& query : non_rewritable_tests) {
