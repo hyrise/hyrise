@@ -83,7 +83,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   if (!argument_b) return std::nullopt;
 
   // We can handle x BETWEEN a AND b if a and b are scalar values of the same data type. Otherwise, the condition gets
-  // translated into two columns. Theoretically, we could also implement all variations where x, a and b are
+  // translated into two scans. Theoretically, we could also implement all variations where x, a and b are
   // non-scalar and of varying types, but as these are used less frequently, would require more code, and increase
   // compile time, we don't do that for now.
   if (predicate_condition == PredicateCondition::Between) {
