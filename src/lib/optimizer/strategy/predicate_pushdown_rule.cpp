@@ -41,7 +41,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 
   while (input->type == LQPNodeType::Predicate) {
     // We gave the predicate nodes below us the chance to be pushed down, but they didn't want to. Now we ignore them.
-    // We only move past it if we can get past a non-predicate node.
+    // We only move past them if this gets us past a non-predicate node.
     input = input->left_input();
   }
 
