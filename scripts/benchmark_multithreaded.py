@@ -25,16 +25,16 @@ from datetime import datetime
 # python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v
 #
 # Example usage 2:
-# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1 3 6 12 --clients 20
+# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1,3,6,12 --clients 20
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
-DEFAULT_TPCH_QUERIES = [query for query in range(1, 23) if query != 15] # Exclude query 15 which is not supported in our multithreaded benchmarks
+DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23) if query != 15]) # Exclude query 15 which is not supported in our multithreaded benchmarks
 
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
-    parser.add_argument('-q', '--queries', action='store', type=int, metavar='Q', nargs='+', help='Specify the TPC-H queries that will be benchmarked')
+    parser.add_argument('-q', '--queries', action='store', type=str, metavar='Q', help='Specify the TPC-H queries that will be benchmarked (comma-separated list of query IDs, e.g. --queries 1,3,18')
     parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the result folder will be stored (default: \'results/\')')
     parser.add_argument('--result-name', action='store', type=str, metavar='NAME', help='Directory where the actual results will be stored (default: current datetime)')
     parser.add_argument('executable', action='store', type=str, metavar='EXECUTABLE', help='hyriseBenchmarkTPCH executable')
@@ -71,8 +71,7 @@ def get_core_counts(args):
 
 def get_formatted_queries(args):
     queries = args.queries if args.queries else DEFAULT_TPCH_QUERIES
-    query_ids = ','.join([str(query) for query in queries])
-    return ['--queries', query_ids]
+    return ['--queries', queries]
 
 def is_square(n):
     return n ** 0.5 == int(n ** 0.5)
