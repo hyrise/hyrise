@@ -8,8 +8,8 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/parameter_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -50,7 +50,6 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
   std::shared_ptr<StoredTableNode> node_table_a, node_table_b;
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b;
 };
-
 
 // Take an LQP and search for an exists predicate
 bool lqp_contains_exists_predicate(const std::shared_ptr<AbstractLQPNode>& lqp, const bool is_non_exists) {
@@ -146,20 +145,22 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
   const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
-  const auto input_lqp =
-    ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-      PredicateNode::make(not_equals_(exists_(subselect), 0),
-        ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
-        node_table_a)));
+  const auto input_lqp = ProjectionNode::make(
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
+      PredicateNode::make(
+          not_equals_(exists_(subselect), 0),
+          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+                               node_table_a)));
 
   // apply exists reformulation rule
   auto modified_lqp = input_lqp->deep_copy();
   StrategyBaseTest::apply_rule(_rule, modified_lqp);
 
-  const auto compare_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+  const auto compare_lqp = ProjectionNode::make(
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
       JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
-        ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
-        node_table_b));
+                     ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
+                     node_table_b));
 
   EXPECT_LQP_EQ(modified_lqp, compare_lqp);
 }
@@ -170,20 +171,22 @@ TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
   const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
-  const auto input_lqp =
-    ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-      PredicateNode::make(equals_(exists_(subselect), 0),
-        ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
-        node_table_a)));
+  const auto input_lqp = ProjectionNode::make(
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
+      PredicateNode::make(
+          equals_(exists_(subselect), 0),
+          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+                               node_table_a)));
 
   // apply exists reformulation rule
   auto modified_lqp = input_lqp->deep_copy();
   StrategyBaseTest::apply_rule(_rule, modified_lqp);
 
-  const auto compare_lqp = ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+  const auto compare_lqp = ProjectionNode::make(
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
       JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
-        ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
-        node_table_b));
+                     ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
+                     node_table_b));
 
   EXPECT_LQP_EQ(modified_lqp, compare_lqp);
 }

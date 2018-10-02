@@ -145,7 +145,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
     // Transform the parameter back into a column expression on the outside
     const auto parameter_id_iter = std::find(subselect->parameter_ids.cbegin(), subselect->parameter_ids.cend(),
-                                       parameter_expression->parameter_id);
+                                             parameter_expression->parameter_id);
     const auto outer_column_expression =
         subselect->arguments[std::distance(subselect->parameter_ids.cbegin(), parameter_id_iter)];
 
@@ -164,8 +164,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   // Remove the now obsolete subselect expression from the projection
   projection_node->expressions.erase(
-      std::remove_if(projection_node->expressions.begin(), projection_node->expressions.end(), [&](auto& expr){
-        return *expr == *exists_expression; }),
+      std::remove_if(projection_node->expressions.begin(), projection_node->expressions.end(),
+                     [&](auto& expr) { return *expr == *exists_expression; }),
       projection_node->expressions.end());
 
   // Remove the predicate from the subselect (because it is now handled by the join) - if it is the top level node,
