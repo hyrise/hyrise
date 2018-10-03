@@ -85,13 +85,13 @@ set(
     #operators/union_all_test.cpp
     #operators/union_positions_test.cpp
     #operators/update_test.cpp
-    #operators/validate_test.cpp
-    #operators/validate_visibility_test.cpp
+    operators/validate_test.cpp
+    operators/validate_visibility_test.cpp
     optimizer/dp_ccp_test.cpp
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    #optimizer/lqp_translator_test.cpp
+    optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
@@ -103,7 +103,7 @@ set(
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
-    #scheduler/scheduler_test.cpp
+    scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
     server/postgres_wire_handler_test.cpp
@@ -118,12 +118,12 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/pruning_filters_test.cpp
-    #statistics/column_statistics_test.cpp
+    statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
-    #statistics/statistics_test_utils.hpp
-    #statistics/table_statistics_join_test.cpp
-    #statistics/table_statistics_test.cpp
+    statistics/statistics_test_utils.hpp
+    statistics/table_statistics_join_test.cpp
+    statistics/table_statistics_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/any_segment_iterable_test.cpp
     storage/btree_index_test.cpp
@@ -138,7 +138,7 @@ set(
     storage/fixed_string_vector_test.cpp
     storage/group_key_index_test.cpp
     storage/iterables_test.cpp
-    #storage/materialize_test.cpp
+    storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_segment_test.cpp
@@ -151,7 +151,7 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
-    #tasks/chunk_compression_task_test.cpp
+    tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp

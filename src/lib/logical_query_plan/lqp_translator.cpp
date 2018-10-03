@@ -139,7 +139,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 
   switch (predicate_node->scan_type) {
     case ScanType::TableScan:
-      return std::make_shared<TableScan>(input_operator, _translate_expression(predicate_node->predicate, input_node));
+      return _translate_predicate_node_to_table_scan(predicate_node, input_operator);
     case ScanType::IndexScan:
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
@@ -206,6 +206,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   table_scan->set_excluded_chunk_ids(indexed_chunks);
 
   return std::make_shared<UnionPositions>(index_scan, table_scan);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(
+const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate, node->left_input()));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
