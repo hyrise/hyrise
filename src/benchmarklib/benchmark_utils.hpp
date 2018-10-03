@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <tbb/concurrent_vector.h>
 #include <unordered_map>
 
 #include "storage/chunk.hpp"
@@ -37,9 +38,10 @@ using TableSegmentEncodingMapping =
 std::ostream& get_out_stream(const bool verbose);
 
 struct QueryBenchmarkResult {
-  size_t num_iterations = 0;
+  QueryBenchmarkResult() {iteration_durations.reserve(1'000'000);}
+  std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
-  std::vector<Duration> iteration_durations;
+  tbb::concurrent_vector<Duration> iteration_durations;
 };
 
 using QueryID = size_t;

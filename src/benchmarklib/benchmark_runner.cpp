@@ -102,7 +102,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
   // Init results
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
-    _query_results_by_query_name.emplace(name, QueryBenchmarkResult{});
+    _query_results_by_query_name[name];  // Initializes if it does not exist
   }
 
   auto mutable_named_queries = _queries;
@@ -118,8 +118,6 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
   auto currently_running_clients = std::atomic_uint{0};
   auto finished_query_set_runs = std::atomic_uint{0};
   auto finished_queries_total = std::atomic_uint{0};
-  // For the iteration durations vector, we need a mutex
-  auto result_mutex = std::mutex{};
 
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   auto state = BenchmarkState{_config.max_duration};
@@ -135,20 +133,18 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
         auto on_query_done = [query_run_begin, named_query, number_of_queries, &currently_running_clients,
-                              &finished_query_set_runs, &finished_queries_total, &result_mutex, this]() {
+                              &finished_query_set_runs, &finished_queries_total, this]() {
           const auto duration = std::chrono::steady_clock::now() - query_run_begin;
 
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
             finished_query_set_runs++;
           }
-          {
-            auto lock = std::lock_guard<std::mutex>(result_mutex);
-            auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
-            query_benchmark_result.duration += duration;
-            query_benchmark_result.iteration_durations.push_back(duration);
-            query_benchmark_result.num_iterations++;
-          }
+
+          auto& result = _query_results_by_query_name[named_query.first];
+          result.duration += duration;
+          result.iteration_durations.push_back(duration);
+          result.num_iterations++;
         };
 
         auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
@@ -174,15 +170,12 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
     // let a simulated client schedule the next query, as well as the total number of finished queries so far
     auto currently_running_clients = std::atomic_uint{0};
-    auto finished_query_runs = std::atomic_uint{0};
-    // For the iteration durations vector, we need a mutex
-    auto iteration_durations = std::vector<Duration>{};
-    auto durations_mutex = std::mutex{};
+    auto& result = _query_results_by_query_name[name];  // Initializes if it does not exist
 
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     auto state = BenchmarkState{_config.max_duration};
 
-    while (state.keep_running() && finished_query_runs.load(std::memory_order_relaxed) < _config.max_num_query_runs) {
+    while (state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_num_query_runs) {
       // We want to only schedule as many queries simultaneously as we have simulated clients
       if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         currently_running_clients++;
@@ -190,15 +183,11 @@ void BenchmarkRunner::_benchmark_individual_queries() {
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, &currently_running_clients, &finished_query_runs, &iteration_durations,
-                              &durations_mutex]() {
+        auto on_query_done = [query_run_begin, &currently_running_clients, &result]() {
           const auto query_run_end = std::chrono::steady_clock::now();
           currently_running_clients--;
-          finished_query_runs++;
-          {
-            auto lock = std::lock_guard<std::mutex>(durations_mutex);
-            iteration_durations.push_back(query_run_end - query_run_begin);
-          }
+          result.num_iterations++;
+          result.iteration_durations.push_back(query_run_end - query_run_begin);
         };
 
         auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
@@ -207,11 +196,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
     }
-    auto result = QueryBenchmarkResult{};
-    result.num_iterations = finished_query_runs;
     result.duration = state.benchmark_duration;
-    result.iteration_durations = iteration_durations;
-    _query_results_by_query_name.emplace(name, result);
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
@@ -316,7 +301,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     nlohmann::json benchmark{
         {"name", name},
-        {"iterations", query_result.num_iterations},
+        {"iterations", query_result.num_iterations.load()},
         {"iteration_durations", iteration_durations},
         {"avg_real_time_per_iteration", time_per_query},
         {"items_per_second", items_per_second},
