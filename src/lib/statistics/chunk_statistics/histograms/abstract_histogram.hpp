@@ -49,11 +49,17 @@ using HistogramCountType = ChunkOffset;
  * string_prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1)
  */
 template <typename T>
-class AbstractHistogram : public AbstractFilter, private Noncopyable {
+class AbstractHistogram : public AbstractFilter {
  public:
   AbstractHistogram();
   AbstractHistogram(const std::string& supported_characters, const uint32_t string_prefix_length);
   virtual ~AbstractHistogram() = default;
+
+  // Non-copyable
+  AbstractHistogram(AbstractHistogram&&) = default;
+  AbstractHistogram& operator=(AbstractHistogram&&) = default;
+  AbstractHistogram(const AbstractHistogram&) = delete;
+  const AbstractHistogram& operator=(const AbstractHistogram&) = delete;
 
   /**
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
