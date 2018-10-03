@@ -151,6 +151,13 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
   auto chunk_count = left_input_table->chunk_count();
 
   if (chunk_count <= ChunkID{0}) {
+        // Need to return some defaults in order to have full information in the end
+      operator_result["scan_column_encoding"] = EncodingType::Unencoded
+      operator_result["is_scan_column_reference_column"] = false;
+
+      operator_result["scan_column_data_type"] = DataType::Int; // Just any default
+      operator_result["scan_column_memory_usage_bytes"] = 0;
+      operator_result["scan_column_distinct_value_count"] = 0;
     return operator_result;
   }
 
