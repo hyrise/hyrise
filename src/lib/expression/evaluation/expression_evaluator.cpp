@@ -254,6 +254,14 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   if (right_expression.type == ExpressionType::List) {
     const auto& array_expression = static_cast<const ListExpression&>(right_expression);
 
+    DebugAssert(!array_expression.elements().empty(), "IN clauses with an empty list are invalid");
+
+    if (left_expression.data_type() == DataType::Null) {
+      // `NULL IN ...` is NULL
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
+                                                                           std::vector<bool>{1});
+    }
+
     /**
      * Out of array_expression.elements(), pick those expressions whose type can be compared with
      * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
@@ -261,42 +269,65 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
     std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-    bool all_elements_are_values = true;
-    for (const auto& element : array_expression.elements()) {
-      if ((element->data_type() == DataType::String) == left_is_string) {
-        type_compatible_elements.emplace_back(element);
-      }
+    bool all_elements_are_values_of_left_type = true;
+    resolve_data_type(left_expression.data_type(), [&](const auto left_data_type_t) {
+      using LeftDataType = typename decltype(left_data_type_t)::type;
 
-      if (element->type != ExpressionType::Value) all_elements_are_values = false;
-    }
+      for (const auto& element : array_expression.elements()) {
+        if ((element->data_type() == DataType::String) == left_is_string) {
+          type_compatible_elements.emplace_back(element);
+        }
+
+        if (element->type != ExpressionType::Value) {
+          all_elements_are_values_of_left_type = false;
+        } else {
+          const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
+          if (value_expression->value.type() != typeid(LeftDataType)) all_elements_are_values_of_left_type = false;
+        }
+      }
+    });
 
     if (type_compatible_elements.empty()) {
-      // `5 IN ()` is FALSE as is `NULL IN ()`
+      // `5 IN ()` is FALSE
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and compare the
     // values. Otherwise, translate the IN clause to a series of ORs:
     // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
-    if (all_elements_are_values) {
+    if (all_elements_are_values_of_left_type) {
       _resolve_to_expression_result_view(left_expression, [&](const auto& view) {
         using LeftDataType = typename std::decay_t<decltype(view)>::Type;
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
           std::vector<LeftDataType> right_values;
-          right_values.resize(type_compatible_elements.size());
+          right_values.reserve(type_compatible_elements.size());
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
-            right_values.emplace_back(type_cast<LeftDataType>(value_expression->value));
+            right_values.emplace_back(boost::get<LeftDataType>(value_expression->value));
           }
           std::sort(right_values.begin(), right_values.end());
 
           result_values.resize(view.size());
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
-            if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), view.value(chunk_offset));
-                it != right_values.cend() && *it == view.value(chunk_offset)) {
-              result_values[chunk_offset] = true;
+          if (left_expression.is_nullable()) {
+            result_nulls.resize(view.size());
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+              if (view.is_null(chunk_offset)) {
+                result_nulls[chunk_offset] = true;
+                continue;
+              }
+              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), view.value(chunk_offset));
+                  it != right_values.cend() && *it == view.value(chunk_offset)) {
+                result_values[chunk_offset] = true;
+              }
+            }
+          } else {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), view.value(chunk_offset));
+                  it != right_values.cend() && *it == view.value(chunk_offset)) {
+                result_values[chunk_offset] = true;
+              }
             }
           }
         } else {
@@ -304,7 +335,12 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
         }
       });
 
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
+      if (left_expression.is_nullable()) {
+        return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
+                                                                             std::move(result_nulls));
+      } else {
+        return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
+      }
     }
     PerformanceWarning("Using slow path for IN expression");
 
@@ -338,7 +374,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
         if constexpr (EqualsEvaluator::supports_v<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>) {
           const auto result_size = _result_size(left_view.size(), select_results.size());
 
-          result_values.resize(result_size, 0);
+          result_values.resize(result_size);
           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
           result_nulls.resize(result_size);
 
@@ -367,7 +403,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
         } else {
           // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of failing, because that's
           // what we do for `5 IN ('Hello', 'World')
-          result_values.resize(1, 0);
+          result_values.resize(1);
         }
       });
     });
