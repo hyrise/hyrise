@@ -32,6 +32,7 @@
 #include "storage/materialize.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
@@ -293,7 +294,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
           result_values.resize(view.size());
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
-            if (std::find(right_values.cbegin(), right_values.cend(), view.value(chunk_offset)) != right_values.cend()) {
+            if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), view.value(chunk_offset));
+                it != right_values.cend() && *it == view.value(chunk_offset)) {
               result_values[chunk_offset] = true;
             }
           }
@@ -304,6 +306,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
     }
+    PerformanceWarning("Using slow path for IN expression");
 
     // Nope, it is a more complicated list - falling back to series of ORs:
     std::shared_ptr<AbstractExpression> predicate_disjunction =
