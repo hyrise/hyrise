@@ -48,7 +48,7 @@ class Topology final : public Singleton<Topology> {
    * Calls _init_default_topology() internally.
    * Calls _init_numa_topology() or _init_non_numa_topology() if on a NUMA or non-NUMA system respectively.
    */
-  static void use_default_topology();
+  static void use_default_topology(uint32_t max_num_cores = 0);
 
   /**
    * Use a NUMA topology.
@@ -92,7 +92,7 @@ class Topology final : public Singleton<Topology> {
 
   friend class Singleton;
 
-  void _init_default_topology();
+  void _init_default_topology(uint32_t max_num_cores = 0);
   void _init_numa_topology(uint32_t max_num_cores = 0);
   void _init_non_numa_topology(uint32_t max_num_cores = 0);
   void _init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
