@@ -254,19 +254,19 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     const auto& array_expression = static_cast<const ListExpression&>(right_expression);
 
     /**
-     * To keep the code simple for now, transform the InExpression like this:
-     * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
-     *
-     * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
+     * Out of array_expression.elements(), pick those expressions whose type can be compared with
      * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
      * "5 IN (6, 5, "Hello")
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
     std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+    bool all_elements_are_values = true;
     for (const auto& element : array_expression.elements()) {
       if ((element->data_type() == DataType::String) == left_is_string) {
         type_compatible_elements.emplace_back(element);
       }
+
+      if (element->type != ExpressionType::Value) all_elements_are_values = false;
     }
 
     if (type_compatible_elements.empty()) {
@@ -274,6 +274,38 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
     }
 
+    // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and compare the
+    // values. Otherwise, translate the IN clause to a series of ORs:
+    // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+    if (all_elements_are_values) {
+      _resolve_to_expression_result_view(left_expression, [&](const auto& view) {
+        using LeftDataType = typename std::decay_t<decltype(view)>::Type;
+
+        // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
+        if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
+          std::vector<LeftDataType> right_values;
+          right_values.resize(type_compatible_elements.size());
+          for (const auto& expression : type_compatible_elements) {
+            const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
+            right_values.emplace_back(type_cast<LeftDataType>(value_expression->value));
+          }
+          std::sort(right_values.begin(), right_values.end());
+
+          result_values.resize(view.size());
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+            if (std::find(right_values.cbegin(), right_values.cend(), view.value(chunk_offset)) != right_values.cend()) {
+              result_values[chunk_offset] = true;
+            }
+          }
+        } else {
+          Fail("Should have ruled out NullValues on the left side of IN by now");
+        }
+      });
+
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
+    }
+
+    // Nope, it is a more complicated list - falling back to series of ORs:
     std::shared_ptr<AbstractExpression> predicate_disjunction =
         equals_(in_expression.value(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
