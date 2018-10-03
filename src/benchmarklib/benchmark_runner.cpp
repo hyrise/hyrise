@@ -134,13 +134,12 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
         const auto query_run_begin = std::chrono::steady_clock::now();
         auto on_query_done = [query_run_begin, named_query, number_of_queries, &currently_running_clients,
                               &finished_query_set_runs, &finished_queries_total, &state, this]() {
-
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
             finished_query_set_runs++;
           }
 
-          if (!state.is_done()) { // To prevent queries to add their results after the time is up
+          if (!state.is_done()) {  // To prevent queries to add their results after the time is up
             const auto duration = std::chrono::steady_clock::now() - query_run_begin;
             auto& result = _query_results_by_query_name[named_query.first];
             result.duration += duration;
@@ -188,7 +187,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
         const auto query_run_begin = std::chrono::steady_clock::now();
         auto on_query_done = [query_run_begin, &currently_running_clients, &result, &state]() {
           currently_running_clients--;
-          if (!state.is_done()) { // To prevent queries to add their results after the time is up
+          if (!state.is_done()) {  // To prevent queries to add their results after the time is up
             const auto query_run_end = std::chrono::steady_clock::now();
             result.num_iterations++;
             result.iteration_durations.push_back(query_run_end - query_run_begin);
