@@ -22,7 +22,7 @@ EqualElementCountHistogram<T>::EqualElementCountHistogram(const std::vector<T>& 
       _bin_heights(bin_heights),
       _distinct_count_per_bin(distinct_count_per_bin),
       _bin_count_with_extra_value(bin_count_with_extra_value) {
-  DebugAssert(bin_minimums.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(!bin_minimums.empty(), "Cannot have histogram without any bins.");
   DebugAssert(bin_minimums.size() == bin_maximums.size(), "Must have the same number of lower as upper bin edges.");
   DebugAssert(bin_minimums.size() == bin_heights.size(), "Must have the same number of edges and heights.");
   DebugAssert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
@@ -52,7 +52,7 @@ EqualElementCountHistogram<std::string>::EqualElementCountHistogram(const std::v
       _bin_heights(bin_heights),
       _distinct_count_per_bin(distinct_count_per_bin),
       _bin_count_with_extra_value(bin_count_with_extra_value) {
-  DebugAssert(bin_minimums.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(!bin_minimums.empty(), "Cannot have histogram without any bins.");
   DebugAssert(bin_minimums.size() == bin_maximums.size(), "Must have the same number of lower as upper bin edges.");
   DebugAssert(bin_minimums.size() == bin_heights.size(), "Must have the same number of edges and heights.");
   DebugAssert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");

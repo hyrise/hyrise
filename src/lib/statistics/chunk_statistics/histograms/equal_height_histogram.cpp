@@ -20,7 +20,7 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& bin_maximums
       _minimum(minimum),
       _total_count(total_count) {
   DebugAssert(total_count > 0, "Cannot have histogram without any values.");
-  DebugAssert(bin_maximums.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(!bin_maximums.empty(), "Cannot have histogram without any bins.");
   DebugAssert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
   DebugAssert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
 
@@ -46,7 +46,7 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::s
       _minimum(minimum),
       _total_count(total_count) {
   DebugAssert(total_count > 0, "Cannot have histogram without any values.");
-  DebugAssert(bin_maximums.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(!bin_maximums.empty(), "Cannot have histogram without any bins.");
   DebugAssert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
   DebugAssert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
 

@@ -32,7 +32,7 @@ template <>
 AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
                                                   const uint32_t string_prefix_length)
     : _supported_characters(supported_characters), _string_prefix_length(string_prefix_length) {
-  DebugAssert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
+  Assert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
 }
 
 template <typename T>

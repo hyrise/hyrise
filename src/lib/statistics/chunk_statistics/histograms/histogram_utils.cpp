@@ -57,11 +57,11 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   uint64_t result = 1;
 
   for (;;) {
-    if (exp & 1) {
+    if (exp & 1u) {
       result *= base;
     }
 
-    exp >>= 1;
+    exp >>= 1u;
 
     if (!exp) {
       break;

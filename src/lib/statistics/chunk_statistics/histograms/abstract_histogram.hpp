@@ -49,7 +49,7 @@ using HistogramCountType = ChunkOffset;
  * string_prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1)
  */
 template <typename T>
-class AbstractHistogram : public AbstractFilter {
+class AbstractHistogram : public AbstractFilter, private Noncopyable {
  public:
   AbstractHistogram();
   AbstractHistogram(const std::string& supported_characters, const uint32_t string_prefix_length);

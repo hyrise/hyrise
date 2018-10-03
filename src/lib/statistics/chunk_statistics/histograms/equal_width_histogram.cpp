@@ -22,7 +22,7 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
       _bin_heights(bin_heights),
       _bin_distinct_counts(bin_distinct_counts),
       _bin_count_with_larger_range(bin_count_with_larger_range) {
-  DebugAssert(bin_heights.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(!bin_heights.empty(), "Cannot have histogram without any bins.");
   DebugAssert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
   DebugAssert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   if constexpr (std::is_floating_point_v<T>) {
@@ -45,7 +45,7 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
       _bin_heights(bin_heights),
       _bin_distinct_counts(bin_distinct_counts),
       _bin_count_with_larger_range(bin_count_with_larger_range) {
-  DebugAssert(bin_heights.size() > 0, "Cannot have histogram without any bins.");
+  DebugAssert(!bin_heights.empty(), "Cannot have histogram without any bins.");
   DebugAssert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
   DebugAssert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   DebugAssert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
@@ -170,7 +170,7 @@ typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_w
 
   const auto base_width = this->_get_next_value(_maximum - _minimum) / this->bin_count();
 
-  if constexpr (std::is_integral_v<T>) {
+  if constexpr (std::is_integral_v<T>) {  // NOLINT
     return base_width + (index < _bin_count_with_larger_range ? 1 : 0);
   }
 
