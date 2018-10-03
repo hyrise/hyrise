@@ -26,6 +26,10 @@ class BaseColumnStatistics {
  public:
   BaseColumnStatistics(const DataType data_type, const float null_value_ratio, const float distinct_count);
   virtual ~BaseColumnStatistics() = default;
+  BaseColumnStatistics(const BaseColumnStatistics&) = default;
+  BaseColumnStatistics(BaseColumnStatistics&&) = default;
+  BaseColumnStatistics& operator=(const BaseColumnStatistics&) = default;
+  BaseColumnStatistics& operator=(BaseColumnStatistics&&) = default;
 
   /**
    * @defgroup Member access

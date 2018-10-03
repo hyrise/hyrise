@@ -22,8 +22,6 @@ class TableScan : public AbstractReadOnlyOperator {
  public:
   TableScan(const std::shared_ptr<const AbstractOperator>& in, const OperatorScanPredicate& predicate);
 
-  ~TableScan();
-
   /**
    * @brief If set, the specified chunks will not be scanned.
    *

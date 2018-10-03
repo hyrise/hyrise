@@ -25,7 +25,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   if (IS_DEBUG) {
     auto first_size = segments_to_index.front()->size();
-    [[gnu::unused]] auto all_segments_have_same_size =
+    [[maybe_unused]] auto all_segments_have_same_size =
         std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
                     [first_size](const auto& segment) { return segment->size() == first_size; });
 

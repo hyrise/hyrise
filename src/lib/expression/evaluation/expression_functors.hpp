@@ -21,7 +21,7 @@ bool to_bool(const NullValue& value) { return false; }
 // Cast a value/NULL into another type
 template <typename T, typename V>
 T to_value(const V& v) {
-  return v;
+  return static_cast<T>(v);
 }
 template <typename T>
 T to_value(const NullValue& v) {
@@ -125,7 +125,7 @@ struct STLArithmeticFunctorWrapper {
                   std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
-      result = Functor<std::common_type_t<ArgA, ArgB>>{}(a, b);
+      result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(a, b));
     }
   }
 };
@@ -157,9 +157,9 @@ struct ModuloEvaluator {
         result_null = true;
       } else {
         if constexpr (std::is_integral_v<ArgA> && std::is_integral_v<ArgB>) {
-          result_value = a_value % b_value;
+          result_value = static_cast<Result>(a_value % b_value);
         } else {
-          result_value = fmod(a_value, b_value);
+          result_value = static_cast<Result>(fmod(a_value, b_value));
         }
       }
     }
@@ -186,7 +186,7 @@ struct DivisionEvaluator {
       if (b_value == 0) {
         result_null = true;
       } else {
-        result_value = a_value / b_value;
+        result_value = static_cast<Result>(a_value / b_value);
       }
     }
   }

@@ -21,6 +21,8 @@ namespace opossum {
 // shouldn't be multiple instances of them as they would compete against each other.
 class AbstractPlugin {
  public:
+  virtual ~AbstractPlugin();
+
   virtual const std::string description() const = 0;
 
   virtual void start() = 0;

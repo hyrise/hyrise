@@ -32,8 +32,6 @@ namespace opossum {
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const OperatorScanPredicate& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate{predicate} {}
 
-TableScan::~TableScan() = default;
-
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
 const std::string TableScan::name() const { return "TableScan"; }

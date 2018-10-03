@@ -20,8 +20,6 @@ Update::Update(const std::string& table_to_update_name, const std::shared_ptr<Ab
     : AbstractReadWriteOperator(OperatorType::Update, fields_to_update_op, update_values_op),
       _table_to_update_name{table_to_update_name} {}
 
-Update::~Update() = default;
-
 const std::string Update::name() const { return "Update"; }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {

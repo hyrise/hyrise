@@ -604,7 +604,7 @@ add_custom_command (
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
-set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
+set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
