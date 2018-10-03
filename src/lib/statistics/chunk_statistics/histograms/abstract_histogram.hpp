@@ -53,6 +53,7 @@ class AbstractHistogram : public AbstractFilter, private Noncopyable {
  public:
   AbstractHistogram();
   AbstractHistogram(const std::string& supported_characters, const uint32_t string_prefix_length);
+  virtual ~AbstractHistogram() = default;
 
   /**
    * Strings are internally transformed to a number, such that a bin can have a numerical width.
