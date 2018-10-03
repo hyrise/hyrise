@@ -28,7 +28,7 @@ from datetime import datetime
 # python3 ./scripts/benchmark_multithreaded.py -e ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1,3,6,12 --clients 20
 
 
-MAX_CORE_COUNT = max(1, multiprocessing.cpu_count() - 1)  # Keep one core empty, same as in topology.cpp
+MAX_CORE_COUNT = multiprocessing.cpu_count()
 DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23) if query != 15]) # Exclude query 15 which is not supported in our multithreaded benchmarks
 
 def get_parser():

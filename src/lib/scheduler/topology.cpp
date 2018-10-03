@@ -103,12 +103,7 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
   _clear();
   _fake_numa_topology = false;
 
-  auto max_num_threads = std::thread::hardware_concurrency();
-
-  /**
-   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
-   */
-  _num_cpus = std::max<uint32_t>(1, max_num_threads - 1);
+  _num_cpus = std::thread::hardware_concurrency();
   if (max_num_cores != 0) {
     _num_cpus = std::min<uint32_t>(_num_cpus, max_num_cores);
   }
@@ -129,12 +124,7 @@ void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t worke
   _clear();
   _fake_numa_topology = true;
 
-  auto max_num_threads = std::thread::hardware_concurrency();
-
-  /**
-   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
-   */
-  auto num_workers = std::max<uint32_t>(1, max_num_threads - 1);
+  auto num_workers = std::thread::hardware_concurrency();
   if (max_num_workers != 0) {
     num_workers = std::min<uint32_t>(num_workers, max_num_workers);
   }
