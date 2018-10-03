@@ -47,11 +47,19 @@ bool BenchmarkState::keep_running() {
 
   // Stop execution if we reached the time limit
   if (benchmark_duration >= max_duration) {
-    state = State::Over;
+    set_done();
     return false;
   }
 
   return true;
+}
+
+void BenchmarkState::set_done() {
+  state = State::Over;
+}
+
+bool BenchmarkState::is_done() {
+  return state == State::Over;
 }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,

@@ -57,6 +57,8 @@ struct BenchmarkState {
   explicit BenchmarkState(const Duration max_duration);
 
   bool keep_running();
+  void set_done();
+  bool is_done();
 
   State state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};

@@ -133,18 +133,20 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
         auto on_query_done = [query_run_begin, named_query, number_of_queries, &currently_running_clients,
-                              &finished_query_set_runs, &finished_queries_total, this]() {
-          const auto duration = std::chrono::steady_clock::now() - query_run_begin;
+                              &finished_query_set_runs, &finished_queries_total, &state, this]() {
 
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
             finished_query_set_runs++;
           }
 
-          auto& result = _query_results_by_query_name[named_query.first];
-          result.duration += duration;
-          result.iteration_durations.push_back(duration);
-          result.num_iterations++;
+          if (!state.is_done()) { // To prevent queries to add their results after the time is up
+            const auto duration = std::chrono::steady_clock::now() - query_run_begin;
+            auto& result = _query_results_by_query_name[named_query.first];
+            result.duration += duration;
+            result.iteration_durations.push_back(duration);
+            result.num_iterations++;
+          }
         };
 
         auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
@@ -154,6 +156,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
+  state.set_done();
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
   // TODO(leander/anyone): To be replaced with something like CurrentScheduler::abort(),
@@ -183,11 +186,13 @@ void BenchmarkRunner::_benchmark_individual_queries() {
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, &currently_running_clients, &result]() {
-          const auto query_run_end = std::chrono::steady_clock::now();
+        auto on_query_done = [query_run_begin, &currently_running_clients, &result, &state]() {
           currently_running_clients--;
-          result.num_iterations++;
-          result.iteration_durations.push_back(query_run_end - query_run_begin);
+          if (!state.is_done()) { // To prevent queries to add their results after the time is up
+            const auto query_run_end = std::chrono::steady_clock::now();
+            result.num_iterations++;
+            result.iteration_durations.push_back(query_run_end - query_run_begin);
+          }
         };
 
         auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
@@ -196,6 +201,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
     }
+    state.set_done();
     result.duration = state.benchmark_duration;
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count();
