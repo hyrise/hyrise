@@ -23,5 +23,7 @@ class BaseValueSegment : public BaseSegment {
    */
   virtual const pmr_concurrent_vector<bool>& null_values() const = 0;
   virtual pmr_concurrent_vector<bool>& null_values() = 0;
+
+  virtual void reserve(const size_t capacity) = 0;
 };
 }  // namespace opossum

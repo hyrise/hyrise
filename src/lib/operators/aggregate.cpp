@@ -547,7 +547,7 @@ void Aggregate::_aggregate() {
 
     auto groupby_segment =
         make_shared_by_data_type<BaseSegment, ValueSegment>(input_table->column_data_type(column_id), true);
-    _groupby_segments.push_back(groupby_segment);
+    _groupby_segments.push_back(std::static_pointer_cast<BaseValueSegment>(groupby_segment));
     _output_segments.push_back(groupby_segment);
   }
   /**
@@ -726,6 +726,7 @@ void Aggregate::_write_groupby_output(PosList& pos_list) {
     for (const auto& chunk : input_table->chunks()) {
       base_segments.push_back(chunk->get_segment(_groupby_column_ids[group_column_index]));
     }
+    _groupby_segments[group_column_index]->reserve(pos_list.size());
     for (const auto row_id : pos_list) {
       _groupby_segments[group_column_index]->append((*base_segments[row_id.chunk_id])[row_id.chunk_offset]);
     }
