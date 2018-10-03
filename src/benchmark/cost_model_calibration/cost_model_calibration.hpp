@@ -14,12 +14,12 @@ class CostModelCalibration {
  public:
   explicit CostModelCalibration(CalibrationConfiguration configuration);
 
-  void calibrate();
+  void calibrate() const;
+  void run_tpch() const;
 
  private:
-  void _traverse(const std::shared_ptr<const AbstractOperator>& op);
+  void _traverse(const std::shared_ptr<const AbstractOperator>& op, std::map<std::string, nlohmann::json>& operators) const;
 
-  std::map<std::string, nlohmann::json> _operators;
   CalibrationConfiguration _configuration;
 };
 
