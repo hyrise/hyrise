@@ -31,7 +31,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueri
   if (config.enable_scheduler) {
     Topology::use_default_topology(config.cores);
     config.out << "- Multi-threaded Topology:" << std::endl;
-    Topology::get().print(config.out);
+    Topology::get().print(config.out, 2);
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();

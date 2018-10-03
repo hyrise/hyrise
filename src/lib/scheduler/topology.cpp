@@ -24,9 +24,11 @@ const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 
 Topology::Topology() { _init_default_topology(); }
 
-void TopologyNode::print(std::ostream& stream) const {
+void TopologyNode::print(std::ostream& stream, size_t indent) const {
+  for (size_t i = 0; i < indent; ++i) stream << " ";
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
   for (size_t cpu_idx = 0; cpu_idx < cpus.size(); ++cpu_idx) {
+    for (size_t i = 0; i < indent; ++i) stream << " ";
     stream << cpus[cpu_idx].cpu_id;
     if (cpu_idx + 1 < cpus.size()) {
       stream << ", ";
@@ -170,9 +172,11 @@ boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_i
   return &_memory_resources[static_cast<size_t>(node_id)];
 }
 
-void Topology::print(std::ostream& stream) const {
+void Topology::print(std::ostream& stream, size_t indent) const {
+  for (size_t i = 0; i < indent; ++i) stream << " ";
   stream << "Number of CPUs: " << _num_cpus << std::endl;
   for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
+    for (size_t i = 0; i < indent; ++i) stream << " ";
     stream << "Node #" << node_idx << " - ";
     _nodes[node_idx].print(stream);
     stream << std::endl;
