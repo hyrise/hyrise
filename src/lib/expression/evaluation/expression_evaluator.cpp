@@ -254,12 +254,15 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   if (right_expression.type == ExpressionType::List) {
     const auto& array_expression = static_cast<const ListExpression&>(right_expression);
 
-    DebugAssert(!array_expression.elements().empty(), "IN clauses with an empty list are invalid");
-
     if (left_expression.data_type() == DataType::Null) {
       // `NULL IN ...` is NULL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
                                                                            std::vector<bool>{1});
+    }
+
+    if (left_expression.data_type() == DataType::Null || array_expression.elements().empty()) {
+      // `x IN ()` is false, even if this is not supported by SQL
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
     }
 
     /**
@@ -292,12 +295,17 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
     }
 
-    // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and compare the
-    // values. Otherwise, translate the IN clause to a series of ORs:
+    // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
+    // compare the left value with the values in the list. A binary search is used because of its algorithmic beauty
+    // (and for reeeeally long lists, as they might come from ORMs).
+    //
+    // If we can't store the values in a vector (because they are too complex), we translate the IN clause to a series
+    // of ORs:
     // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+    // The first path is faster, while the second one is more flexible.
     if (all_elements_are_values_of_left_type) {
-      _resolve_to_expression_result_view(left_expression, [&](const auto& view) {
-        using LeftDataType = typename std::decay_t<decltype(view)>::Type;
+      _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
+        using LeftDataType = typename std::decay_t<decltype(left_view)>::Type;
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
@@ -309,23 +317,23 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           }
           std::sort(right_values.begin(), right_values.end());
 
-          result_values.resize(view.size());
+          result_values.resize(left_view.size());
           if (left_expression.is_nullable()) {
-            result_nulls.resize(view.size());
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
-              if (view.is_null(chunk_offset)) {
+            result_nulls.resize(left_view.size());
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
+              if (left_view.is_null(chunk_offset)) {
                 result_nulls[chunk_offset] = true;
                 continue;
               }
-              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), view.value(chunk_offset));
-                  it != right_values.cend() && *it == view.value(chunk_offset)) {
+              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
+                  it != right_values.cend() && *it == left_view.value(chunk_offset)) {
                 result_values[chunk_offset] = true;
               }
             }
           } else {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
-              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), view.value(chunk_offset));
-                  it != right_values.cend() && *it == view.value(chunk_offset)) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
+              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
+                  it != right_values.cend() && *it == left_view.value(chunk_offset)) {
                 result_values[chunk_offset] = true;
               }
             }
@@ -335,12 +343,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
         }
       });
 
-      if (left_expression.is_nullable()) {
-        return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
-                                                                             std::move(result_nulls));
-      } else {
-        return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
-      }
+      // The ExpressionResult can handle an empty result_nulls vector
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
+                                                                           std::move(result_nulls));
     }
     PerformanceWarning("Using slow path for IN expression");
 
