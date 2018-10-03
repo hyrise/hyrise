@@ -19,16 +19,16 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& bin_maximums
       _bin_distinct_counts(bin_distinct_counts),
       _minimum(minimum),
       _total_count(total_count) {
-  DebugAssert(total_count > 0, "Cannot have histogram without any values.");
-  DebugAssert(!bin_maximums.empty(), "Cannot have histogram without any bins.");
-  DebugAssert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
-  DebugAssert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
+  Assert(total_count > 0, "Cannot have histogram without any values.");
+  Assert(!bin_maximums.empty(), "Cannot have histogram without any bins.");
+  Assert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
+  Assert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
 
   for (BinID bin_id = 0; bin_id < bin_maximums.size(); bin_id++) {
-    DebugAssert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
+    Assert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
 
     if (bin_id < bin_maximums.size() - 1) {
-      DebugAssert(bin_maximums[bin_id] < bin_maximums[bin_id + 1], "Bins must be sorted and cannot overlap.");
+      Assert(bin_maximums[bin_id] < bin_maximums[bin_id + 1], "Bins must be sorted and cannot overlap.");
     }
   }
 }
@@ -45,18 +45,18 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::s
       _bin_distinct_counts(bin_distinct_counts),
       _minimum(minimum),
       _total_count(total_count) {
-  DebugAssert(total_count > 0, "Cannot have histogram without any values.");
-  DebugAssert(!bin_maximums.empty(), "Cannot have histogram without any bins.");
-  DebugAssert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
-  DebugAssert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
+  Assert(total_count > 0, "Cannot have histogram without any values.");
+  Assert(!bin_maximums.empty(), "Cannot have histogram without any bins.");
+  Assert(bin_maximums.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
+  Assert(minimum <= bin_maximums[0], "Must have maxs and distinct counts for each bin.");
 
   for (BinID bin_id = 0; bin_id < bin_maximums.size(); bin_id++) {
-    DebugAssert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-    DebugAssert(bin_maximums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-                "Unsupported characters.");
+    Assert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
+    Assert(bin_maximums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+           "Unsupported characters.");
 
     if (bin_id < bin_maximums.size() - 1) {
-      DebugAssert(bin_maximums[bin_id] < bin_maximums[bin_id + 1], "Bins must be sorted and cannot overlap.");
+      Assert(bin_maximums[bin_id] < bin_maximums[bin_id + 1], "Bins must be sorted and cannot overlap.");
     }
   }
 }

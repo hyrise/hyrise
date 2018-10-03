@@ -22,13 +22,13 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
       _bin_heights(bin_heights),
       _bin_distinct_counts(bin_distinct_counts),
       _bin_count_with_larger_range(bin_count_with_larger_range) {
-  DebugAssert(!bin_heights.empty(), "Cannot have histogram without any bins.");
-  DebugAssert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
-  DebugAssert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
+  Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
+  Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
+  Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   if constexpr (std::is_floating_point_v<T>) {
-    DebugAssert(bin_count_with_larger_range == 0, "Cannot have bins with extra value in floating point histograms.")
+    Assert(bin_count_with_larger_range == 0, "Cannot have bins with extra value in floating point histograms.")
   } else {
-    DebugAssert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
+    Assert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
   }
 }
 
@@ -45,12 +45,12 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
       _bin_heights(bin_heights),
       _bin_distinct_counts(bin_distinct_counts),
       _bin_count_with_larger_range(bin_count_with_larger_range) {
-  DebugAssert(!bin_heights.empty(), "Cannot have histogram without any bins.");
-  DebugAssert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
-  DebugAssert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
-  DebugAssert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
-  DebugAssert(minimum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
-  DebugAssert(maximum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
+  Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
+  Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
+  Assert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
+  Assert(minimum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  Assert(maximum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
 }
 
 template <>
@@ -230,46 +230,42 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T value) const {
     return INVALID_BIN_ID;
   }
 
-  if (_bin_count_with_larger_range == 0u || value <= _bin_maximum(_bin_count_with_larger_range - 1u)) {
-    // All bins up to that point have the exact same width, so we can use index 0.
-    return (value - _minimum) / _bin_width(0u);
-  }
+  if constexpr (std::is_same_v<T, std::string>) {
+    const auto num_value = this->_convert_string_to_number_representation(value);
 
-  // All bins after that point have the exact same width as well, so we use that as the new base and add it up.
-  return _bin_count_with_larger_range +
-         (value - _bin_minimum(_bin_count_with_larger_range)) / _bin_width(_bin_count_with_larger_range);
-}
+    BinID bin_id;
+    if (_bin_count_with_larger_range == 0u || value <= _bin_maximum(_bin_count_with_larger_range - 1u)) {
+      const auto num_min = this->_convert_string_to_number_representation(_minimum);
+      bin_id = (num_value - num_min) / this->_bin_width(0u);
+    } else {
+      const auto num_base_min =
+          this->_convert_string_to_number_representation(_bin_minimum(_bin_count_with_larger_range));
+      bin_id =
+          _bin_count_with_larger_range + (num_value - num_base_min) / this->_bin_width(_bin_count_with_larger_range);
+    }
 
-template <>
-BinID EqualWidthHistogram<std::string>::_bin_for_value(const std::string value) const {
-  if (value < _minimum || value > _maximum) {
-    return INVALID_BIN_ID;
-  }
+    // We calculate numerical values for strings with substrings, and the bin edge calculation works with that.
+    // Therefore, if the search string is longer than the supported prefix length and starts with the upper bin edge,
+    // we have to return the next bin.
+    // The exception is if this is the last bin, then it is actually part of the last bin,
+    // because that edge is stored separately and therefore not trimmed to the prefix length.
+    // We checked earlier that it is not larger than maximum().
+    if (value.length() > this->_string_prefix_length && value.find(_bin_maximum(bin_id)) == 0 &&
+        bin_id < this->bin_count() - 1) {
+      return bin_id + 1;
+    }
 
-  const auto num_value = this->_convert_string_to_number_representation(value);
-
-  BinID bin_id;
-  if (_bin_count_with_larger_range == 0u || value <= _bin_maximum(_bin_count_with_larger_range - 1u)) {
-    const auto num_min = this->_convert_string_to_number_representation(_minimum);
-    bin_id = (num_value - num_min) / this->_bin_width(0u);
+    return bin_id;
   } else {
-    const auto num_base_min =
-        this->_convert_string_to_number_representation(_bin_minimum(_bin_count_with_larger_range));
-    bin_id = _bin_count_with_larger_range + (num_value - num_base_min) / this->_bin_width(_bin_count_with_larger_range);
-  }
+    if (_bin_count_with_larger_range == 0u || value <= _bin_maximum(_bin_count_with_larger_range - 1u)) {
+      // All bins up to that point have the exact same width, so we can use index 0.
+      return (value - _minimum) / _bin_width(0u);
+    }
 
-  // We calculate numerical values for strings with substrings, and the bin edge calculation works with that.
-  // Therefore, if the search string is longer than the supported prefix length and starts with the upper bin edge,
-  // we have to return the next bin.
-  // The exception is if this is the last bin, then it is actually part of the last bin,
-  // because that edge is stored separately and therefore not trimmed to the prefix length.
-  // We checked earlier that it is not larger than maximum().
-  if (value.length() > _string_prefix_length && value.find(_bin_maximum(bin_id)) == 0 &&
-      bin_id < this->bin_count() - 1) {
-    return bin_id + 1;
+    // All bins after that point have the exact same width as well, so we use that as the new base and add it up.
+    return _bin_count_with_larger_range +
+           (value - _bin_minimum(_bin_count_with_larger_range)) / _bin_width(_bin_count_with_larger_range);
   }
-
-  return bin_id;
 }
 
 template <typename T>

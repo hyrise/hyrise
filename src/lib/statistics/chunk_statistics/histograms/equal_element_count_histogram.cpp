@@ -22,18 +22,18 @@ EqualElementCountHistogram<T>::EqualElementCountHistogram(const std::vector<T>& 
       _bin_heights(bin_heights),
       _distinct_count_per_bin(distinct_count_per_bin),
       _bin_count_with_extra_value(bin_count_with_extra_value) {
-  DebugAssert(!bin_minimums.empty(), "Cannot have histogram without any bins.");
-  DebugAssert(bin_minimums.size() == bin_maximums.size(), "Must have the same number of lower as upper bin edges.");
-  DebugAssert(bin_minimums.size() == bin_heights.size(), "Must have the same number of edges and heights.");
-  DebugAssert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
-  DebugAssert(bin_count_with_extra_value < bin_minimums.size(), "Cannot have more bins with extra value than bins.");
+  Assert(!bin_minimums.empty(), "Cannot have histogram without any bins.");
+  Assert(bin_minimums.size() == bin_maximums.size(), "Must have the same number of lower as upper bin edges.");
+  Assert(bin_minimums.size() == bin_heights.size(), "Must have the same number of edges and heights.");
+  Assert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
+  Assert(bin_count_with_extra_value < bin_minimums.size(), "Cannot have more bins with extra value than bins.");
 
   for (BinID bin_id = 0; bin_id < bin_minimums.size(); bin_id++) {
-    DebugAssert(bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    DebugAssert(bin_minimums[bin_id] <= bin_maximums[bin_id], "Cannot have overlapping bins.");
+    Assert(bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    Assert(bin_minimums[bin_id] <= bin_maximums[bin_id], "Cannot have overlapping bins.");
 
     if (bin_id < bin_maximums.size() - 1) {
-      DebugAssert(bin_maximums[bin_id] < bin_minimums[bin_id + 1], "Bins must be sorted and cannot overlap.");
+      Assert(bin_maximums[bin_id] < bin_minimums[bin_id + 1], "Bins must be sorted and cannot overlap.");
     }
   }
 }
@@ -52,22 +52,22 @@ EqualElementCountHistogram<std::string>::EqualElementCountHistogram(const std::v
       _bin_heights(bin_heights),
       _distinct_count_per_bin(distinct_count_per_bin),
       _bin_count_with_extra_value(bin_count_with_extra_value) {
-  DebugAssert(!bin_minimums.empty(), "Cannot have histogram without any bins.");
-  DebugAssert(bin_minimums.size() == bin_maximums.size(), "Must have the same number of lower as upper bin edges.");
-  DebugAssert(bin_minimums.size() == bin_heights.size(), "Must have the same number of edges and heights.");
-  DebugAssert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
-  DebugAssert(bin_count_with_extra_value < bin_minimums.size(), "Cannot have more bins with extra value than bins.");
+  Assert(!bin_minimums.empty(), "Cannot have histogram without any bins.");
+  Assert(bin_minimums.size() == bin_maximums.size(), "Must have the same number of lower as upper bin edges.");
+  Assert(bin_minimums.size() == bin_heights.size(), "Must have the same number of edges and heights.");
+  Assert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
+  Assert(bin_count_with_extra_value < bin_minimums.size(), "Cannot have more bins with extra value than bins.");
 
   for (BinID bin_id = 0u; bin_id < bin_minimums.size(); bin_id++) {
-    DebugAssert(bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    DebugAssert(bin_minimums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-                "Unsupported characters.");
-    DebugAssert(bin_maximums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-                "Unsupported characters.");
-    DebugAssert(bin_minimums[bin_id] <= bin_maximums[bin_id], "Cannot have upper bin edge higher than lower bin edge.");
+    Assert(bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    Assert(bin_minimums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+           "Unsupported characters.");
+    Assert(bin_maximums[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+           "Unsupported characters.");
+    Assert(bin_minimums[bin_id] <= bin_maximums[bin_id], "Cannot have upper bin edge higher than lower bin edge.");
 
     if (bin_id < bin_maximums.size() - 1) {
-      DebugAssert(bin_maximums[bin_id] < bin_minimums[bin_id + 1], "Bins must be sorted and cannot overlap.");
+      Assert(bin_maximums[bin_id] < bin_minimums[bin_id + 1], "Bins must be sorted and cannot overlap.");
     }
   }
 }

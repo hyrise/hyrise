@@ -110,21 +110,15 @@ AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string
 
 template <typename T>
 T AbstractHistogram<T>::_get_next_value(const T value) const {
-  return next_value(value);
-}
-
-template <>
-std::string AbstractHistogram<std::string>::_get_next_value(const std::string value) const {
-  return next_value(value, _supported_characters);
+  if constexpr (std::is_same_v<T, std::string>) {
+    return next_value(value, _supported_characters);
+  } else {
+    return next_value(value);
+  }
 }
 
 template <typename T>
 float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
-  return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
-}
-
-template <>
-float AbstractHistogram<std::string>::_share_of_bin_less_than_value(const BinID bin_id, const std::string value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -155,17 +149,21 @@ float AbstractHistogram<std::string>::_share_of_bin_less_than_value(const BinID 
    *  of the substring after the common prefix.
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
-  const auto bin_min = _bin_minimum(bin_id);
-  const auto bin_max = _bin_maximum(bin_id);
-  const auto common_prefix_len = common_prefix_length(bin_min, bin_max);
+  if constexpr (!std::is_same_v<T, std::string>) {
+    return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
+  } else {
+    const auto bin_min = _bin_minimum(bin_id);
+    const auto bin_max = _bin_maximum(bin_id);
+    const auto common_prefix_len = common_prefix_length(bin_min, bin_max);
 
-  DebugAssert(value.substr(0, common_prefix_len) == bin_min.substr(0, common_prefix_len),
-              "Value does not belong to bin");
+    DebugAssert(value.substr(0, common_prefix_len) == bin_min.substr(0, common_prefix_len),
+                "Value does not belong to bin");
 
-  const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
-  const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
-  const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-  return static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
+    const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
+    const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
+    return static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+  }
 }
 
 template <typename T>
