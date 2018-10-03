@@ -9,7 +9,7 @@ target_link_libraries(
     hyrise
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
-    boost_program_options
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 target_include_directories(
     hyriseServer
