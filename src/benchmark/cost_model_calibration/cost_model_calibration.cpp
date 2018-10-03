@@ -63,11 +63,12 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
 }
 
 void CostModelCalibration::run_tpch() const {
-    std::map<std::string, nlohmann::json> operators;
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
 
     for (const auto& query : opossum::tpch_queries) {
+        std::map<std::string, nlohmann::json> operators;
+
         SQLQueryCache<SQLQueryPlan>::get().clear();
 
         auto pipeline_builder = SQLPipelineBuilder{query.second};
@@ -85,19 +86,22 @@ void CostModelCalibration::run_tpch() const {
             }
         }
         std::cout << "Finished TPCH " << query.first << std::endl;
+
+        auto outputPath = _configuration.tpch_output_path + "_" + std::to_string(query.first);
+        std::cout << outputPath << std::endl;
+
+        nlohmann::json output_json{};
+        output_json["config"] = _configuration;
+        output_json["operators"] = operators;
+
+        // output file per operator type
+        std::ofstream myfile;
+        myfile.open(outputPath);
+        myfile << std::setw(2) << output_json << std::endl;
+        myfile.close();
     }
 
-    auto outputPath = _configuration.tpch_output_path;
 
-    nlohmann::json output_json{};
-    output_json["config"] = _configuration;
-    output_json["operators"] = operators;
-
-    // output file per operator type
-    std::ofstream myfile;
-    myfile.open(outputPath);
-    myfile << std::setw(2) << output_json << std::endl;
-    myfile.close();
 
 }
 
