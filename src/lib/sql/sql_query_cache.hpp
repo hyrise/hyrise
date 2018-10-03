@@ -10,6 +10,7 @@
 #include "gdfs_cache.hpp"
 
 #include "SQLParserResult.h"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -18,17 +19,12 @@ inline constexpr size_t DefaultCacheCapacity = 1024;
 // Cache that stores instances of SQLParserResult.
 // Per-default, uses the GDFS cache as underlying storage.
 template <typename Value, typename Key = std::string>
-class SQLQueryCache {
+class SQLQueryCache : public Singleton<SQLQueryCache<Value, Key>> {
  public:
   explicit SQLQueryCache(size_t capacity = DefaultCacheCapacity)
       : _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
   virtual ~SQLQueryCache() {}
-
-  static SQLQueryCache& get() {
-    static SQLQueryCache<Value> cache;
-    return cache;
-  }
 
   // Adds or refreshes the cache entry [query, value].
   void set(const Key& query, const Value& value) {
@@ -55,7 +51,7 @@ class SQLQueryCache {
 
   // Returns and refreshes the cache entry for the given query.
   // Causes undefined behavior if the query is not in the cache.
-  Value get(const Key& query) {
+  Value get_entry(const Key& query) {
     std::lock_guard<std::mutex> lock(_mutex);
     return _cache->get(query);
   }

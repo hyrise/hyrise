@@ -48,7 +48,8 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
   if (input->type == LQPNodeType::Join) {
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(input);
 
-    if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross) {
+    if (join_node->join_mode == JoinMode::Left || join_node->join_mode == JoinMode::Right ||
+        join_node->join_mode == JoinMode::Outer) {
       return _apply_to_inputs(node);
     }
 

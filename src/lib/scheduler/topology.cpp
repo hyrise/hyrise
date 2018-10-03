@@ -22,11 +22,6 @@ const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();  //
 const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 #endif
 
-Topology& Topology::get() {
-  static Topology instance;
-  return instance;
-}
-
 Topology::Topology() { _init_default_topology(); }
 
 void TopologyNode::print(std::ostream& stream) const {

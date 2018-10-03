@@ -238,6 +238,27 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   switch (mode) {
+    case JoinMode::Semi:
+      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+      // remove column statistics from right table
+      join_table_stats._column_statistics.resize(_column_statistics.size());
+
+      // Simple heuristic: we assume that three quarters of the elements in the smaller relation
+      // (we are upper-bound by number of non-null values in both relations) will match.
+      join_table_stats._row_count =
+          0.75 * std::min(row_count() * stats_container.left_column_statistics->non_null_value_ratio(),
+                          right_table_statistics.row_count() *
+                              stats_container.right_column_statistics->non_null_value_ratio());
+      break;
+    case JoinMode::Anti:
+      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+
+      // For anti join, we assume that all values qualify when we have a small "other" relations.
+      // In case we have a large right table, we take the maximum of the left table and a tenth of the right.
+      join_table_stats._row_count =
+          std::max(row_count(), right_table_statistics.row_count() *
+                                    stats_container.right_column_statistics->non_null_value_ratio() / 10);
+      break;
     case JoinMode::Inner: {
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
       join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;
