@@ -65,7 +65,7 @@ class RangeFilterTest : public ::testing::Test {
         EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {value_in_gap}));
       } else if constexpr (std::is_integral_v<T>) {  // NOLINT
         if (length > 1) {
-          EXPECT_TRUE(filter->can_prune({++begin}, PredicateCondition::Equals));
+          EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {++begin}));
         }
       }
     }
