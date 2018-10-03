@@ -14,18 +14,18 @@ import json
 from datetime import datetime
 
 
-# This script executes the Hyrise TPCH benchmarks multiple times over a specified range of cores,
-# and produces a plot of the results. You'll have to provide the path to the hyriseBenchmarkTPCH executable
+# This script executes a Hyrise benchmark multiple times over a specified range of cores, and produces a plot
+# of the results. You'll have to provide the path to the benchmark executable (e.g., hyriseBenchmarkTPCH)
 # as argument, as well as all parameters you want to be passed to the executable, like --scale, --chunk_size, etc.
 # You'll also have to specify the number of query runs as either a fixed number for all cores (--fixed-runs),
 # or a number of runs per core (--runs-per-core).
 # You can also specify the cores to be benchmarked, otherwise a default range will be used.
 #
 # Example usage 1:
-# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v
+# python3 ./scripts/benchmark_multithreaded.py -e ./build-release/hyriseBenchmarkTPCH --runs 1000 -v
 #
 # Example usage 2:
-# python3 ./scripts/benchmark_multithreaded.py ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1,3,6,12 --clients 20
+# python3 ./scripts/benchmark_multithreaded.py -e ./build-release/hyriseBenchmarkTPCH --runs 1000 -v --scale 1 --cores 10 20 30 --queries 1,3,6,12 --clients 20
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
@@ -34,8 +34,8 @@ DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23) if query !
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true', help='Print log messages')
-    parser.add_argument('-q', '--queries', action='store', type=str, metavar='Q', help='Specify the TPC-H queries that will be benchmarked (comma-separated list of query IDs, e.g. --queries 1,3,18')
-    parser.add_argument('-e', '--executable', action='store', type=str, metavar='E', help='hyriseBenchmarkTPCH executable', required=True)
+    parser.add_argument('-q', '--queries', action='store', type=str, metavar='Q', help='Specify the queries that will be benchmarked (comma-separated list of query IDs, e.g. --queries 1,3,18')
+    parser.add_argument('-e', '--executable', action='store', type=str, metavar='E', help='benchmark executable (e.g., hyriseBenchmarkTPCH)', required=True)
     parser.add_argument('--result-dir', action='store', type=str, metavar='DIR', default='results', help='Directory where the result folder will be stored (default: \'results/\')')
     parser.add_argument('--result-name', action='store', type=str, metavar='NAME', help='Directory where the actual results will be stored (default: current datetime)')
     parser.add_argument('--clients', action='store', type=int, metavar='C', default=10, help='The number of clients that schedule queries in parallel')
@@ -139,7 +139,7 @@ def plot(args, result_dir):
     utilized_cores_per_numa_node = []
     max_cores = 0
 
-    tpch_results = {}
+    results = {}
     for _, _, files in os.walk(result_dir):
         json_files = [f for f in files if f.split('.')[-1] == 'json']
         num_cores_from_filename = lambda filename: int(filename.split('-')[0])
@@ -154,23 +154,23 @@ def plot(args, result_dir):
             for benchmark in data['benchmarks']:
                 name = benchmark['name']
                 items_per_second = benchmark['items_per_second']
-                if not name in tpch_results:
-                    tpch_results[name] = {'cores': [], 'items_per_second': []}
+                if not name in results:
+                    results[name] = {'cores': [], 'items_per_second': []}
                 if cores == 0:
-                    tpch_results[name]['singlethreaded'] = items_per_second
+                    results[name]['singlethreaded'] = items_per_second
                 else:
-                    tpch_results[name]['cores'].append(cores)
-                    tpch_results[name]['items_per_second'].append(items_per_second)
+                    results[name]['cores'].append(cores)
+                    results[name]['items_per_second'].append(items_per_second)
 
     numa_borders = [sum(utilized_cores_per_numa_node[:x]) for x in range(len(utilized_cores_per_numa_node))][1:]
 
-    num_plots = len(tpch_results)
+    num_plots = len(results)
     n_rows_and_cols = get_subplot_row_and_column_count(num_plots)
     plot_pos = 0
 
     plot_baseline = False
     fig = plt.figure(figsize=(n_rows_and_cols*3, n_rows_and_cols*2))
-    for name, data in tpch_results.items():
+    for name, data in results.items():
         plot_pos += 1
         ax = fig.add_subplot(n_rows_and_cols, n_rows_and_cols, plot_pos)
         ax.set_title(name)
