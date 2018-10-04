@@ -923,7 +923,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
       if (predicate_expression->predicate_condition == PredicateCondition::In) {
         return PredicateNode::make(expression, current_node);
       } else {
-        current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
         return PredicateNode::make(expression, current_node);
       }
     }
