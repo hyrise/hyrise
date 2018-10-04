@@ -254,15 +254,15 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   if (right_expression.type == ExpressionType::List) {
     const auto& array_expression = static_cast<const ListExpression&>(right_expression);
 
+    if (array_expression.elements().empty()) {
+      // `x IN ()` is false, even if this is not supported by SQL
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
+    }
+
     if (left_expression.data_type() == DataType::Null) {
       // `NULL IN ...` is NULL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
                                                                            std::vector<bool>{1});
-    }
-
-    if (left_expression.data_type() == DataType::Null || array_expression.elements().empty()) {
-      // `x IN ()` is false, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
     }
 
     /**
@@ -337,7 +337,6 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
         }
       });
 
-      // The ExpressionResult can handle an empty result_nulls vector
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
                                                                            std::move(result_nulls));
     }

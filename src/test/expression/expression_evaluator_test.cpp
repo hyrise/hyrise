@@ -441,7 +441,7 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
 TEST_F(ExpressionEvaluatorTest, InListLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_(null_())), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_(null_(), 3)), {std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_()), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_(1, 2, 3, 4)), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_(null_(), 2, 3, 4)), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(null_(), 5, null_())), {1}));
