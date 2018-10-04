@@ -320,22 +320,16 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           result_values.resize(left_view.size());
           if (left_expression.is_nullable()) {
             result_nulls.resize(left_view.size());
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
-              if (left_view.is_null(chunk_offset)) {
-                result_nulls[chunk_offset] = true;
-                continue;
-              }
-              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
-                  it != right_values.cend() && *it == left_view.value(chunk_offset)) {
-                result_values[chunk_offset] = true;
-              }
+          }
+
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
+            if (left_expression.is_nullable() && left_view.is_null(chunk_offset)) {
+              result_nulls[chunk_offset] = true;
+              continue;
             }
-          } else {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
-              if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
-                  it != right_values.cend() && *it == left_view.value(chunk_offset)) {
-                result_values[chunk_offset] = true;
-              }
+            if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
+                it != right_values.cend() && *it == left_view.value(chunk_offset)) {
+              result_values[chunk_offset] = true;
             }
           }
         } else {
