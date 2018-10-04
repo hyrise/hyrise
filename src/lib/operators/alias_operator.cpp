@@ -41,14 +41,14 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   output_column_definitions.reserve(input_table_left()->column_count());
 
   for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto& input_column_definition = input_table_left()->column_definitions()[column_id];
+    const auto& input_column_definition = input_table_left()->column_definitions()[_column_ids[column_id]];
 
     output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type,
                                            input_column_definition.nullable);
   }
 
   /**
-   * Generate the output table, forwarding columns from the input chunks and ordering them according to _column_ids
+   * Generate the output table, forwarding segments from the input chunks and ordering them according to _column_ids
    */
   const auto output_table =
       std::make_shared<Table>(output_column_definitions, input_table_left()->type(),
@@ -57,14 +57,14 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    auto output_columns = ChunkColumns{};
-    output_columns.reserve(input_table_left()->column_count());
+    auto output_segments = Segments{};
+    output_segments.reserve(input_table_left()->column_count());
 
     for (const auto& column_id : _column_ids) {
-      output_columns.emplace_back(input_chunk->get_column(column_id));
+      output_segments.emplace_back(input_chunk->get_segment(column_id));
     }
 
-    output_table->append_chunk(output_columns, input_chunk->get_allocator(), input_chunk->access_counter());
+    output_table->append_chunk(output_segments, input_chunk->get_allocator(), input_chunk->access_counter());
   }
 
   return output_table;

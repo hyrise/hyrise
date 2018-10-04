@@ -8,7 +8,7 @@
 namespace opossum {
 
 /**
- *  Filter that stores a columns minimum and maximum value
+ *  Filter that stores a segment's minimum and maximum value
 */
 template <typename T>
 class MinMaxFilter : public AbstractFilter {

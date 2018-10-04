@@ -5,8 +5,8 @@
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -229,8 +229,8 @@ TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughMultipleNodesTest) {
   root->set_left_input(predicate_node_2);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_1 under sort
-  reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_2 under sort
-  reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_2 under the projection
+  reordered = StrategyBaseTest::apply_rule(_rule, root);       // pushes predicate_node_2 under sort
+  reordered = StrategyBaseTest::apply_rule(_rule, root);       // pushes predicate_node_2 under the projection
 
   EXPECT_EQ(reordered->left_input(), sort_node);
   EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_1);

@@ -1,7 +1,7 @@
 #include "join_hash.hpp"
 
+#include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/variant.hpp>
 
 #include <cmath>
 #include <memory>
@@ -17,13 +17,14 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_column_visitor.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/abstract_segment_visitor.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
+#include "utils/uninitialized_vector.hpp"
 
 namespace opossum {
 
@@ -105,11 +106,19 @@ struct PartitionedElement {
   T value;
 };
 
+// Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
+// The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
 template <typename T>
-using Partition = std::vector<PartitionedElement<T>>;
+using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
+                                     std::vector<PartitionedElement<T>>>;
+
+// The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
+// as n because in many cases, we join on primary key attributes where by definition we have only one match on the
+// smaller side.
+using SmallPosList = boost::container::small_vector<RowID, 1>;
 
 template <typename T>
-using HashTable = std::unordered_map<T, boost::variant<RowID, PosList>>;
+using HashTable = std::unordered_map<T, SmallPosList>;
 
 /*
 This struct contains radix-partitioned data in a contiguous buffer, as well as a list of
@@ -158,26 +167,13 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
       auto hashtable = HashTable<HashedType>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
-        const auto& element = partition_left[partition_offset];
+        auto& element = partition_left[partition_offset];
 
-        if (element.partition_hash == 0) {
-          // initialized, but empty elements
-          continue;
-        }
-
-        const auto hash_key = type_cast<HashedType>(element.value);
-        const auto it = hashtable.find(hash_key);
-        if (it == hashtable.end()) {
-          // key is not present: add value and row ID
-          hashtable[hash_key] = element.row_id;
-        } else {
-          auto& map_entry = it->second;
-          if (map_entry.type() == typeid(RowID)) {
-            // Previously, there was only one row id stored for this value. Convert the entry to a multi-row-id one.
-            hashtable[hash_key] = PosList{boost::get<RowID>(map_entry), element.row_id};
-          } else {
-            boost::get<PosList>(map_entry).push_back(element.row_id);
-          }
+        auto [it, inserted] =  // NOLINT
+            hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
+        if (!inserted) {
+          // We already have the value in the map
+          it->second.emplace_back(element.row_id);
         }
       }
 
@@ -197,24 +193,16 @@ Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
 constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
-  // clang-format off
-  // doesn't deal with constexpr nicely
-  if constexpr(!std::is_same_v<OriginalType, HashedType>) {
-    return murmur2<HashedType>(type_cast<HashedType>(value), seed);
-  } else {
-    return murmur2<HashedType>(value, seed);
-  }
-  // clang-format on
+  return murmur2<HashedType>(type_cast<HashedType>(value), seed);
 }
 
 template <typename T, typename HashedType>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                    std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                    std::vector<std::vector<size_t>>& histograms,
                                     const size_t radix_bits, const unsigned int partitioning_seed,
                                     bool keep_nulls = false) {
   // list of all elements that will be partitioned
-  auto elements = std::make_shared<Partition<T>>();
-  elements->resize(in_table->row_count());
+  auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
@@ -228,10 +216,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // fill work queue
   size_t output_offset = 0;
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-    auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
+    auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
     chunk_offsets[chunk_id] = output_offset;
-    output_offset += column->size();
+    output_offset += segment->size();
   }
 
   // create histograms per chunk
@@ -245,28 +233,27 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       // Get information from work queue
       auto output_offset = chunk_offsets[chunk_id];
       auto output_iterator = elements->begin() + output_offset;
-      auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
+      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
       // prepare histogram
-      histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
-      auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
+      auto histogram = std::vector<size_t>(num_partitions);
 
-      resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
-        auto reference_column_offset = ChunkID{0};
-        auto iterable = create_iterable_from_column<T>(typed_column);
+      resolve_segment_type<T>(*segment, [&, chunk_id, keep_nulls](auto& typed_segment) {
+        auto reference_chunk_offset = ChunkOffset{0};
+        auto iterable = create_iterable_from_segment<T>(typed_segment);
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
             const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
 
             /*
-            For ReferenceColumns we do not use the RowIDs from the referenced tables.
-            Instead, we use the index in the ReferenceColumn itself. This way we can later correctly dereference
+            For ReferenceSegments we do not use the RowIDs from the referenced tables.
+            Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
             values from different inputs (important for Multi Joins).
             */
-            if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceColumn>::value) {
+            if constexpr (std::is_same_v<std::decay<decltype(typed_segment)>, ReferenceSegment>) {
               *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, reference_column_offset}, hashed_value, value.value()};
+                  PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, hashed_value, value.value()};
             } else {
               *(output_iterator++) =
                   PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
@@ -275,12 +262,22 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             const Hash radix = hashed_value & mask;
             ++histogram[radix];
           }
-          // reference_column_offset is only used for ReferenceColumns
-          if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceColumn>::value) {
-            reference_column_offset++;
+          // reference_chunk_offset is only used for ReferenceSegments
+          if constexpr (std::is_same_v<std::decay<decltype(typed_segment)>, ReferenceSegment>) {
+            reference_chunk_offset++;
           }
         });
       });
+
+      if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
+        // Because the vector is uninitialized, we need to manually fill up all slots that we did not use
+        auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
+        while (output_iterator != elements->begin() + output_offset_end) {
+          *(output_iterator++) = PartitionedElement<T>{};
+        }
+      }
+
+      histograms[chunk_id] = std::move(histogram);
     }));
     jobs.back()->schedule();
   }
@@ -291,7 +288,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   if (in_table->row_count() >= table_size_considered_large) {
     size_t elements_written = 0;
     for (const auto& histogram : histograms) {
-      elements_written += std::accumulate(histogram->begin(), histogram->end(), 0);
+      elements_written += std::accumulate(histogram.begin(), histogram.end(), 0);
     }
     if (elements_written < 0.25 * in_table->row_count()) {
       // Less than one quarter of the values materialized do store non-NULL values and table is rather large
@@ -306,11 +303,11 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 template <typename T>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
-                                           const std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
-                                           const size_t radix_bits, bool keep_nulls = false) {
+                                           std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                           bool keep_nulls = false) {
   // materialized items
+  // TODO: left here from merge ...
   const std::shared_ptr<Partition<T>>& materialized = radix_container.elements;
-
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
 
@@ -334,7 +331,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       output_offsets_by_chunk[chunk_id][partition_id] = offset;
-      offset += (*histograms[chunk_id])[partition_id];
+      offset += histograms[chunk_id][partition_id];
     }
     radix_output.partition_offsets[partition_id] = offset;
   }
@@ -355,8 +352,8 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
       }
 
       auto& out = static_cast<Partition<T>&>(*output);
-      for (size_t column_offset = input_offset; column_offset < input_offset + input_size; ++column_offset) {
-        auto& element = (*materialized)[column_offset];
+      for (size_t chunk_offset = input_offset; chunk_offset < input_offset + input_size; ++chunk_offset) {
+        auto& element = (*materialized)[chunk_offset];
 
         if (!keep_nulls && element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
           continue;
@@ -432,18 +429,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           if (rows_iter != hashtable.end()) {
             // Key exists, thus we have at least one hit
-            const auto& matching_rows_variant = rows_iter->second;
-            if (matching_rows_variant.type() == typeid(PosList)) {
-              // Multiple matches, stored in one PosList
-              for (const auto row_id : boost::get<PosList>(matching_rows_variant)) {
-                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                  pos_list_left_local.emplace_back(row_id);
-                  pos_list_right_local.emplace_back(row.row_id);
-                }
-              }
-            } else {
-              // A single RowID
-              const auto row_id = boost::get<RowID>(matching_rows_variant);
+            const auto& matching_rows = rows_iter->second;
+            for (const auto& row_id : matching_rows) {
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
@@ -550,54 +537,53 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 }
 
 using PosLists = std::vector<std::shared_ptr<const PosList>>;
-using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
+using PosListsBySegment = std::vector<std::shared_ptr<PosLists>>;
 
 // See usage in _on_execute() for doc.
-PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& input_table) {
+PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const Table>& input_table) {
   DebugAssert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
 
-  PosListsByColumn pos_lists_by_column(input_table->column_count());
-  auto pos_lists_by_column_it = pos_lists_by_column.begin();
+  PosListsBySegment pos_lists_by_segment(input_table->column_count());
+  auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
 
   const auto& input_chunks = input_table->chunks();
 
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    // Get all the input pos lists so that we only have to pointer cast the columns once
+    // Get all the input pos lists so that we only have to pointer cast the segments once
     auto pos_list_ptrs = std::make_shared<PosLists>(input_table->chunk_count());
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
-      const auto& ref_column_uncasted = input_chunks[chunk_id]->columns()[column_id];
-      const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(ref_column_uncasted);
-      *pos_lists_iter = ref_column->pos_list();
+      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[column_id];
+      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
+      *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;
     }
 
     auto iter = shared_pos_lists_by_pos_lists.emplace(*pos_list_ptrs, pos_list_ptrs).first;
 
-    *pos_lists_by_column_it = iter->second;
-    ++pos_lists_by_column_it;
+    *pos_lists_by_segment_it = iter->second;
+    ++pos_lists_by_segment_it;
   }
 
-  return pos_lists_by_column;
+  return pos_lists_by_segment;
 }
 
-void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
-                          const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
-                          const std::shared_ptr<PosList> pos_list) {
+void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
+                           const PosListsBySegment& input_pos_list_ptrs_sptrs_by_segments,
+                           std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop
   std::shared_ptr<Table> dummy_table;
 
-  // Add columns from input table to output chunk
+  // Add segments from input table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
-        std::shared_ptr<BaseColumn> column;
-        const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_column[column_id];
+        const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[column_id];
 
         auto iter = output_pos_list_cache.find(input_table_pos_lists);
         if (iter == output_pos_list_cache.end()) {
@@ -617,20 +603,20 @@ void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<co
           iter = output_pos_list_cache.emplace(input_table_pos_lists, new_pos_list).first;
         }
 
-        auto ref_col =
-            std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
-        output_columns.push_back(std::make_shared<ReferenceColumn>(ref_col->referenced_table(),
-                                                                   ref_col->referenced_column_id(), iter->second));
+        auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
+            input_table->get_chunk(ChunkID{0})->get_segment(column_id));
+        output_segments.push_back(std::make_shared<ReferenceSegment>(
+            reference_segment->referenced_table(), reference_segment->referenced_column_id(), iter->second));
       } else {
-        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
-        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
-        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
+        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
+        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
+        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
         if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
-        output_columns.push_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
+        output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {
-      output_columns.push_back(std::make_shared<ReferenceColumn>(input_table, column_id, pos_list));
+      output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
     }
   }
 }
@@ -683,7 +669,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // We assume an std::unordered_map with a linked list within the buckets.
     // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-    // that each value maps to two RowIDs (thus, no single value optimizatio via boost::variant).
+    // that each value maps to two RowIDs.
     const auto complete_hash_map_size =
         // hash map
         build_relation_size * (sizeof(LeftType) + sizeof(void*)) +
@@ -768,9 +754,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     Timer performance_timer;
 
     // Containers used to store histograms for (potentially subsequent) radix
-    // partitioning phase (in cases _radix_bits > 0). Create during materialization phase.
-    std::vector<std::shared_ptr<std::vector<size_t>>> histograms_left;
-    std::vector<std::shared_ptr<std::vector<size_t>>> histograms_right;
+    // partitioning phase (in cases _radix_bits > 0). Created during materialization phase.
+    std::vector<std::vector<size_t>> histograms_left;
+    std::vector<std::vector<size_t>> histograms_right;
     // Output containers of materialization phase. Type similar to the output
     // of radix partitioning phase to allow short cut for _radix_bits == 0
     // (in this case, we can skip the partitioning alltogether).
@@ -871,27 +857,27 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *  write_output_chunks a lot.
      *
      * They do two things:
-     *      - Make it possible to re-use output pos lists if two columns in the input table have exactly the same
+     *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
      *          PosLists Chunk by Chunk
      *      - Avoid creating the std::vector<const PosList*> for each Partition over and over again.
      *
-     * They hold one entry per column in the table, not per BaseColumn in a single chunk
+     * They hold one entry per column in the table, not per BaseSegment in a single chunk
      */
-    PosListsByColumn left_pos_lists_by_column;
-    PosListsByColumn right_pos_lists_by_column;
+    PosListsBySegment left_pos_lists_by_segment;
+    PosListsBySegment right_pos_lists_by_segment;
 
-    // left_pos_lists_by_column will only be needed if left is a reference table and being output
+    // left_pos_lists_by_segment will only be needed if left is a reference table and being output
     if (left_in_table->type() == TableType::References && !only_output_right_input) {
-      left_pos_lists_by_column = setup_pos_lists_by_column(left_in_table);
+      left_pos_lists_by_segment = setup_pos_lists_by_segment(left_in_table);
     }
 
-    // right_pos_lists_by_column will only be needed if right is a reference table
+    // right_pos_lists_by_segment will only be needed if right is a reference table
     if (right_in_table->type() == TableType::References) {
-      right_pos_lists_by_column = setup_pos_lists_by_column(right_in_table);
+      right_pos_lists_by_segment = setup_pos_lists_by_segment(right_in_table);
     }
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
-      // moving the values into a shared pos list saves us some work in write_output_columns. We know that
+      // moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // left_pos_lists and right_pos_lists will not be used again.
       auto left = std::make_shared<PosList>(std::move(left_pos_lists[partition_id]));
       auto right = std::make_shared<PosList>(std::move(right_pos_lists[partition_id]));
@@ -900,22 +886,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      ChunkColumns output_columns;
+      Segments output_segments;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
-        write_output_columns(output_columns, right_in_table, right_pos_lists_by_column, right);
+        write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
         if (!only_output_right_input) {
-          write_output_columns(output_columns, left_in_table, left_pos_lists_by_column, left);
+          write_output_segments(output_segments, left_in_table, left_pos_lists_by_segment, left);
         }
       } else {
-        write_output_columns(output_columns, left_in_table, left_pos_lists_by_column, left);
-        write_output_columns(output_columns, right_in_table, right_pos_lists_by_column, right);
+        write_output_segments(output_segments, left_in_table, left_pos_lists_by_segment, left);
+        write_output_segments(output_segments, right_in_table, right_pos_lists_by_segment, right);
       }
 
-      _output_table->append_chunk(output_columns);
+      _output_table->append_chunk(output_segments);
     }
 
     return _output_table;

@@ -12,7 +12,7 @@
 namespace opossum {
 
 // Base Class for tests that should be run with various encodings
-class EncodingTest : public ::testing::TestWithParam<ColumnEncodingSpec> {
+class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path, ChunkOffset max_chunk_size) {
     const auto table = load_table(path, max_chunk_size);
@@ -21,7 +21,7 @@ class EncodingTest : public ::testing::TestWithParam<ColumnEncodingSpec> {
   }
 };
 
-const ColumnEncodingSpec all_column_encoding_specs[]{
+const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},
     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
     {EncodingType::Dictionary, VectorCompressionType::SimdBp128},

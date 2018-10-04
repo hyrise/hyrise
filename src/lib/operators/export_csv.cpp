@@ -10,7 +10,7 @@
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "storage/materialize.hpp"
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -61,7 +61,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   /**
    * A naively exported csv file is a materialized file in row format.
    * This offers some advantages, but also disadvantages.
-   * The advantages are that it is very straight forward to implement for any column type
+   * The advantages are that it is very straight forward to implement for any segment type
    * as it does not care about representation of values. Also, probably, the main reason for this,
    * it makes is very easy to load this data into a different database.
    * The disadvantage is that it can be quite slow if the data has been compressed before.
@@ -74,7 +74,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
   /**
    * Multiple rows containing the values of each respective row are written.
    * Therefore we first iterate through the chunks, then through the rows
-   * in the chunks and afterwards through the columns of the chunks.
+   * in the chunks and afterwards through the segments of the chunks.
    *
    * This is a lot of iterating, but to convert a column-based table to
    * a row-based representation takes some effort.
@@ -84,11 +84,11 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
       for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-        const auto column = chunk->get_column(column_id);
+        const auto segment = chunk->get_segment(column_id);
 
         // The previous implementation did a double dispatch (at least two virtual method calls)
         // So the subscript operator cannot be much slower.
-        const auto value = (*column)[chunk_offset];
+        const auto value = (*segment)[chunk_offset];
         writer.write(value);
       }
 

@@ -39,7 +39,7 @@ struct AggregateTraits<
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>> {
+    typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic_v<ColumnType>, void>> {
   typedef double AggregateType;
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
 };
@@ -48,7 +48,7 @@ struct AggregateTraits<
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>> {
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral_v<ColumnType>, void>> {
   typedef int64_t AggregateType;
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
 };
@@ -57,7 +57,7 @@ struct AggregateTraits<
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value, void>> {
+    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point_v<ColumnType>, void>> {
   typedef double AggregateType;
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
 };
@@ -66,7 +66,7 @@ struct AggregateTraits<
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
+    typename std::enable_if_t<!std::is_arithmetic_v<ColumnType> &&
                                   (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
                               void>> {
   typedef ColumnType AggregateType;

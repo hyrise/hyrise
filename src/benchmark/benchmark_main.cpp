@@ -8,7 +8,7 @@
  * the fixture instances.
  * 2. Only afterwards will somebody create the default_memory_resource by calling get_default_resource().
  * 3. <BenchmarkFixture>::SetUp() will be called and save data that was allocated via the default_memory_resource in the
- * BenchmarkFixture object. (This could e.g. be a PosList held in a ReferenceColumn held in a Chunk held in a Table.)
+ * BenchmarkFixture object. (This could e.g. be a PosList held in a ReferenceSegment held in a Chunk held in a Table.)
  * 4. main() finishes.
  * 5. The default_memory_resource will be torn down before the BenchmarkFamilies instance, because it was created after
  * it.

@@ -15,18 +15,12 @@
 
 namespace opossum {
 
-// singleton
-StorageManager& StorageManager::get() {
-  static StorageManager instance;
-  return instance;
-}
-
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    Assert(table->get_chunk(chunk_id)->has_mvcc_columns(), "Table must have MVCC columns.");
+    Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
   table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
@@ -99,7 +93,7 @@ void StorageManager::print(std::ostream& out) const {
     out << "==== table >> " << table.first << " <<";
     out << " (" << table.second->column_count() << " columns, " << table.second->row_count() << " rows in "
         << table.second->chunk_count() << " chunks)";
-    out << std::endl << std::endl;
+    out << std::endl;
   }
 
   out << "==================" << std::endl;

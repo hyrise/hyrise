@@ -5,7 +5,7 @@
 #include "abstract_read_only_operator.hpp"
 
 #include "all_type_variant.hpp"
-#include "storage/index/column_index_type.hpp"
+#include "storage/index/segment_index_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -22,7 +22,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnIndexType index_type,
+  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 
@@ -48,7 +48,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   PosList _scan_chunk(const ChunkID chunk_id);
 
  private:
-  const ColumnIndexType _index_type;
+  const SegmentIndexType _index_type;
   const std::vector<ColumnID> _left_column_ids;
   const PredicateCondition _predicate_condition;
   const std::vector<AllTypeVariant> _right_values;

@@ -15,7 +15,7 @@ static constexpr uint32_t MAX_RANGES_COUNT = 10;
  * Filter that stores a certain number of value ranges. Each range represents a spread
  * of values that is contained within the bounds.
  * Example: [1, 2, 4, 7] might be represented as [1, 7]
- * These ranges can be used to check whether a certain value exists in the column.
+ * These ranges can be used to check whether a certain value exists in the segment.
  * Once the between operator uses two parameters, the ranges can be used for that as well.
 */
 template <typename T>
@@ -53,7 +53,7 @@ class RangeFilter : public AbstractFilter {
       }
       case PredicateCondition::Equals: {
         for (const auto& bounds : _ranges) {
-          const auto & [ min, max ] = bounds;
+          const auto& [min, max] = bounds;
 
           if (t_value >= min && t_value <= max) {
             return false;

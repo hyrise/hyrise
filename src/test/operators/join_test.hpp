@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/abstract_join_operator.hpp"
@@ -26,7 +26,7 @@ The actual test cases are split into EquiOnly and FullJoin tests.
 class JoinTest : public BaseTest {
  protected:
   void SetUp() override {
-    // load and create regular ValueColumn tables
+    // load and create regular ValueSegment tables
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
     _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 4));
@@ -47,7 +47,7 @@ class JoinTest : public BaseTest {
     _table_wrapper_p = std::make_shared<TableWrapper>(load_table("src/test/tables/double_zero_precision.tbl", 1));
     _table_wrapper_q = std::make_shared<TableWrapper>(load_table("src/test/tables/string_numbers.tbl", 1));
 
-    // load and create DictionaryColumn tables
+    // load and create DictionarySegment tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));

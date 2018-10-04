@@ -1,9 +1,9 @@
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
@@ -18,8 +18,8 @@ class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("col_1", DataType::Int);
-    column_definitions.emplace_back("col_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int);
+    column_definitions.emplace_back("column_2", DataType::String);
     t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
     StorageManager::get().add_table(table_name, t);
 
@@ -44,8 +44,7 @@ class PrintWrapper : public Print {
 
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in,
-                        std::ostream& out, uint32_t flags)
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out, uint32_t flags)
       : Print(in, out, flags), tab(in->get_output()) {}
 
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
@@ -56,17 +55,11 @@ class PrintWrapper : public Print {
     return _truncate_cell(cell, max_width);
   }
 
-  uint16_t get_max_cell_width() {
-    return _max_cell_width;
-  }
+  uint16_t get_max_cell_width() { return _max_cell_width; }
 
-  bool is_printing_empty_chunks() {
-    return _flags & PrintIgnoreEmptyChunks;
-  }
+  bool is_printing_empty_chunks() { return _flags & PrintIgnoreEmptyChunks; }
 
-  bool is_printing_mvcc_information() {
-    return _flags & PrintMvcc;
-  }
+  bool is_printing_mvcc_information() { return _flags & PrintMvcc; }
 };
 
 TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
@@ -79,8 +72,8 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
   auto output_string = output.str();
 
   // rather hard-coded tests
-  EXPECT_TRUE(output_string.find("col_1") != std::string::npos);
-  EXPECT_TRUE(output_string.find("col_2") != std::string::npos);
+  EXPECT_TRUE(output_string.find("column_1") != std::string::npos);
+  EXPECT_TRUE(output_string.find("column_2") != std::string::npos);
   EXPECT_TRUE(output_string.find("int") != std::string::npos);
   EXPECT_TRUE(output_string.find("string") != std::string::npos);
 }
@@ -123,7 +116,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 
   // we have two columns, thus two 'lengths'
   ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
-  // with empty columns and short col names, we should see the minimal lengths
+  // with empty columns and short column names, we should see the minimal lengths
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
 
@@ -214,7 +207,7 @@ TEST_F(OperatorsPrintTest, AllFlags) {
 }
 
 TEST_F(OperatorsPrintTest, MVCCTableLoad) {
-  // per default, MVCC columns are created when loading tables
+  // per default, MVCC data is created when loading tables
   std::shared_ptr<TableWrapper> table = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
   table->execute();
 
@@ -233,11 +226,11 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
 TEST_F(OperatorsPrintTest, DirectInstantiations) {
   Print::print(gt, 0, output);
   auto output_op_inst = output.str();
-  EXPECT_TRUE(output_op_inst.find("col_1") != std::string::npos);
+  EXPECT_TRUE(output_op_inst.find("column_1") != std::string::npos);
 
   Print::print(t, 0, output);
   auto output_tab_inst = output.str();
-  EXPECT_TRUE(output_tab_inst.find("col_1") != std::string::npos);
+  EXPECT_TRUE(output_tab_inst.find("column_1") != std::string::npos);
 }
 
 }  // namespace opossum

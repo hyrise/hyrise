@@ -16,6 +16,7 @@ add_library(
     benchmark/src/json_reporter.cc
     benchmark/src/reporter.cc
     benchmark/src/sleep.cc
+    benchmark/src/statistics.cc
     benchmark/src/string_util.cc
     benchmark/src/sysinfo.cc
     benchmark/src/timers.cc
@@ -113,6 +114,7 @@ target_compile_options(
     pqxx
     PRIVATE
     -O3 -std=c++1z
+    -DPQXX_HIDE_EXP_OPTIONAL
 )
 
 target_include_directories(

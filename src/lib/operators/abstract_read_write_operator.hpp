@@ -67,7 +67,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override = 0;
 
   /**
-   * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The
+   * Commits the operator by applying the cid to the mvcc data for all modified rows and unlocking them. The
    * modifications will be visible as soon as the TransactionManager has completed the commit for this cid.
    * Unlike _on_execute, where failures are expected, the commit operation cannot fail.
    */

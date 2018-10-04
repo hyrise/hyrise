@@ -133,8 +133,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void _on_predecessor_done();
 
-  TaskID _id = INVALID_TASK_ID;
-  NodeID _node_id = INVALID_NODE_ID;
+  std::atomic<TaskID> _id{INVALID_TASK_ID};
+  std::atomic<NodeID> _node_id = INVALID_NODE_ID;
   SchedulePriority _priority;
   bool _stealable;
   std::atomic_bool _done{false};

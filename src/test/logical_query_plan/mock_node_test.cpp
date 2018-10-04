@@ -21,7 +21,8 @@ class MockNodeTest : public ::testing::Test {
     auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     _statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
 
-    _mock_node_a = MockNode::make(_statistics);
+    _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
+        {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }
@@ -49,15 +50,6 @@ TEST_F(MockNodeTest, OutputColumnExpression) {
 }
 
 TEST_F(MockNodeTest, Equals) {
-  // Consume the result of an equality check to avoid "equality comparison result unused [-Werror,-Wunused-comparison]"
-  // errors
-  const auto dummy = [](const auto v) {};
-
-  // Can't compare MockNodes with statistics
-  EXPECT_ANY_THROW(dummy(*_mock_node_a == *_mock_node_a));
-  const auto other_mock_node_a = MockNode::make(_statistics);
-  EXPECT_ANY_THROW(dummy(*_mock_node_a == *other_mock_node_a));
-
   //
   const auto same_mock_node_b =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
