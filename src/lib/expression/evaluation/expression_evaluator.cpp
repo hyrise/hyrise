@@ -262,7 +262,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (left_expression.data_type() == DataType::Null) {
       // `NULL IN ...` is NULL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
-                                                                           std::vector<bool>{1});
+                                                                           std::vector<bool>{true});
     }
 
     /**
