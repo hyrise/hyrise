@@ -318,12 +318,12 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           std::sort(right_values.begin(), right_values.end());
 
           result_values.resize(left_view.size());
-          if (left_expression.is_nullable()) {
+          if (left_view.is_nullable()) {
             result_nulls.resize(left_view.size());
           }
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
-            if (left_expression.is_nullable() && left_view.is_null(chunk_offset)) {
+            if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
               result_nulls[chunk_offset] = true;
               continue;
             }
