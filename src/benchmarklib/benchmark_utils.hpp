@@ -3,6 +3,7 @@
 #include <cxxopts.hpp>
 #include <json.hpp>
 
+#include <tbb/concurrent_vector.h>
 #include <chrono>
 #include <iostream>
 #include <unordered_map>
@@ -15,9 +16,9 @@ namespace opossum {
 
 /**
  * IndividualQueries runs each query a number of times and then the next one
- * PermutedQuerySets runs the queries as sets permuting their order after each run (this exercises caches)
+ * PermutedQuerySet runs the queries as set permuting their order after each run (this exercises caches)
  */
-enum class BenchmarkMode { IndividualQueries, PermutedQuerySets };
+enum class BenchmarkMode { IndividualQueries, PermutedQuerySet };
 
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
@@ -37,9 +38,10 @@ using TableSegmentEncodingMapping =
 std::ostream& get_out_stream(const bool verbose);
 
 struct QueryBenchmarkResult {
-  size_t num_iterations = 0;
+  QueryBenchmarkResult() { iteration_durations.reserve(1'000'000); }
+  std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
-  std::vector<Duration> iteration_durations;
+  tbb::concurrent_vector<Duration> iteration_durations;
 };
 
 using QueryID = size_t;
@@ -52,19 +54,17 @@ using BenchmarkResults = std::unordered_map<std::string, QueryBenchmarkResult>;
 struct BenchmarkState {
   enum class State { NotStarted, Running, Over };
 
-  BenchmarkState(const size_t max_num_iterations, const Duration max_duration);
+  explicit BenchmarkState(const Duration max_duration);
 
   bool keep_running();
+  void set_done();
+  bool is_done();
 
   State state{State::NotStarted};
   TimePoint benchmark_begin = TimePoint{};
-  TimePoint iteration_begin = TimePoint{};
-  TimePoint benchmark_end = TimePoint{};
+  Duration benchmark_duration = Duration{};
 
-  size_t num_iterations = 0;
-  size_t max_num_iterations;
   Duration max_duration;
-  std::vector<Duration> iteration_durations;
 };
 
 // View EncodingConfig::description to see format of encoding JSON
@@ -100,7 +100,8 @@ struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
-                  const bool enable_scheduler, const bool enable_visualization, std::ostream& out);
+                  const bool enable_scheduler, const uint cores, const uint clients, const bool enable_visualization,
+                  std::ostream& out);
 
   static BenchmarkConfig get_default_config();
 
@@ -113,6 +114,8 @@ struct BenchmarkConfig {
   const UseMvcc use_mvcc = UseMvcc::No;
   const std::optional<std::string> output_file_path = std::nullopt;
   const bool enable_scheduler = false;
+  const uint cores = 0;
+  const uint clients = 1;
   const bool enable_visualization = false;
   std::ostream& out;
 
