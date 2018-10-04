@@ -638,10 +638,8 @@ TEST_F(SQLTranslatorTest, InArray) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(a_plus_7_in, 0),
-      ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
-         stored_table_node_int_float)));
+    PredicateNode::make(a_plus_7_in,
+         stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

@@ -51,11 +51,6 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     return _apply_to_inputs(node);
   }
 
-  // Find the projection that executes the subselect
-  // We assume that the projection node is right below the predicate. This might change in the future.
-  Assert(predicate_node->left_input()->type == LQPNodeType::Projection, "ProjectionNode not found");
-  const auto projection_node = std::static_pointer_cast<ProjectionNode>(predicate_node->left_input());
-
   // First, make sure that there is only one external parameter used in the subselect's LQP
   bool found_external_parameter = false;
   for (const auto& argument : subselect->arguments) {
@@ -161,12 +156,6 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     // We failed to identify the join predicate or there is more than one predicate
     return _apply_to_inputs(node);
   }
-
-  // Remove the now obsolete subselect expression from the projection
-  projection_node->expressions.erase(
-      std::remove_if(projection_node->expressions.begin(), projection_node->expressions.end(),
-                     [&](auto& expr) { return *expr == *exists_expression; }),
-      projection_node->expressions.end());
 
   // Remove the predicate from the subselect (because it is now handled by the join) - if it is the top level node,
   // we need to remove it by pointing the LQP to its input
