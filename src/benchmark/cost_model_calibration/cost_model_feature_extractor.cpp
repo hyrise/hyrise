@@ -152,7 +152,7 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
 
   if (chunk_count <= ChunkID{0}) {
         // Need to return some defaults in order to have full information in the end
-      operator_result["scan_column_encoding"] = EncodingType::Unencoded
+      operator_result["scan_column_encoding"] = EncodingType::Unencoded;
       operator_result["is_scan_column_reference_column"] = false;
 
       operator_result["scan_column_data_type"] = DataType::Int; // Just any default
