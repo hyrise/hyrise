@@ -18,6 +18,7 @@
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace opossum {
 
@@ -27,8 +28,8 @@ class Table;
 extern std::string test_data_path;
 
 template <typename ParamType>
-class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
-                                                  ::testing::TestWithParam<ParamType>>::type {
+class BaseTestWithParam
+    : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
@@ -70,6 +71,7 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     NUMAPlacementManager::get().pause();
 #endif
 
+    PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
   }

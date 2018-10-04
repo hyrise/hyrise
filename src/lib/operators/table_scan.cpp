@@ -50,6 +50,10 @@ const std::string TableScan::description(DescriptionMode description_mode) const
   return name() + _predicate->as_column_name();
 }
 
+void TableScan::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  expressions_set_transaction_context({_predicate}, transaction_context);
+}
+
 void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters){
   expression_set_parameters(_predicate, parameters);
 }

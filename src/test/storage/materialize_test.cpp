@@ -23,6 +23,7 @@ class MaterializeTest : public EncodingTest {
 
     const auto a = PQPColumnExpression::from_table(*_data_table, "a");
     const auto table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_(a, 0));
+
     table_scan->execute();
     _references_table = table_scan->get_output();
   }

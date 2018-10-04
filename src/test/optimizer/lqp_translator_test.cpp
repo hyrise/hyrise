@@ -169,7 +169,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   const auto b = PQPColumnExpression::from_table(*table_int_float, ColumnID{1});
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(*table_scan_op->predicate(), *less_than_(b, 5));
+  EXPECT_EQ(*table_scan_op->predicate(), *greater_than_(5, b));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
@@ -238,15 +238,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
   const auto a = PQPColumnExpression::from_table(*table_int_float, "a");
   const auto b = PQPColumnExpression::from_table(*table_int_float, "b");
 
-  const auto upper_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp);
-  ASSERT_TRUE(upper_bound_scan_op);
-  EXPECT_EQ(*upper_bound_scan_op->predicate(), *greater_than_equals_(b, 5));
+  const auto between_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp);
+  ASSERT_TRUE(between_scan_op);
+  EXPECT_EQ(*between_scan_op->predicate(), *between_(5, a, b));
 
-  const auto lower_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp->input_left());
-  ASSERT_TRUE(lower_bound_scan_op);
-  EXPECT_EQ(*lower_bound_scan_op->predicate(), *less_than_equals_(a, 5));
-
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left()->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -430,15 +426,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   /**
    * Check PQP
    */
-  const auto table_scan_op2 = std::dynamic_pointer_cast<TableScan>(op);
+  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
   const auto a = PQPColumnExpression::from_table(*table_int_float, "a");
 
-  ASSERT_TRUE(table_scan_op2);
-  EXPECT_EQ(*table_scan_op2->predicate(), *less_than_equals_(a, 1337));
-
-  const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(*table_scan_op2->predicate(), *greater_than_equals_(a, 42));
+  EXPECT_EQ(*table_scan_op->predicate(), *between_(a, 42, 1337));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
@@ -507,16 +499,12 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
-  EXPECT_EQ(*table_scan_op->predicate(), *less_than_equals_(b, 1337));
-
-  const auto table_scan_op2 = std::dynamic_pointer_cast<const TableScan>(table_scan_op->input_left());
-  ASSERT_TRUE(table_scan_op2);
-  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op2), index_chunk_ids);
-  EXPECT_EQ(*table_scan_op->predicate(), *greater_than_equals_(b, 42));
+  EXPECT_EQ(*table_scan_op->predicate(), *between_(b, 42, 1337));
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   if (!IS_DEBUG) return;
+
   /**
    * Build LQP and translate to PQP
    */

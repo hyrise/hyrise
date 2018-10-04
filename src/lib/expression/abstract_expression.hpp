@@ -41,7 +41,7 @@ enum class ExpressionType {
  *
  * Expressions are evaluated (typically for all rows of a Chunk) using the ExpressionEvaluator.
  */
-class AbstractExpression :  {
+class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
   explicit AbstractExpression(const ExpressionType type,
                               const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
@@ -110,6 +110,10 @@ class AbstractExpression :  {
    */
   std::string _enclose_argument_as_column_name(const AbstractExpression& argument) const;
 };
+
+inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& expression) {
+  return stream << expression.as_column_name();
+}
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {

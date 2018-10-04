@@ -99,6 +99,7 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
+    optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
@@ -117,7 +118,8 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
-    statistics/chunk_statistics/pruning_filters_test.cpp
+    statistics/chunk_statistics/range_filter_test.cpp
+    statistics/chunk_statistics/min_max_filter_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
@@ -158,6 +160,11 @@ set(
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
+    utils/plugin_manager_test.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
+    utils/singleton_test.cpp
+    utils/string_functions_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -247,7 +254,11 @@ set(
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
+
+# We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
+add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
 
 # Build special sanitizer version of googletest
 include_directories(../../third_party/googletest/googletest/)
@@ -256,8 +267,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
+add_dependencies(hyriseTest TestPlugin TestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)
+target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

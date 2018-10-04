@@ -200,7 +200,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
-  const auto table_scan = std::make_shared<TableScan>(input_operator, predicate);
+  const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
   index_scan->set_included_chunk_ids(indexed_chunks);
   table_scan->set_excluded_chunk_ids(indexed_chunks);
@@ -208,7 +208,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   return std::make_shared<UnionPositions>(index_scan, table_scan);
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(
+std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
 const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate, node->left_input()));
 }

@@ -52,6 +52,7 @@ class TableScan : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
+  void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   std::unique_ptr<AbstractTableScanImpl> _get_impl() const;

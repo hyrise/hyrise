@@ -921,8 +921,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
       const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
 
       if (predicate_expression->predicate_condition == PredicateCondition::In) {
-        current_node = _add_expressions_if_unavailable(current_node, {expression});
-        return PredicateNode::make(not_equals_(expression, 0), current_node);
+        return PredicateNode::make(expression, current_node);
       } else {
         current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
         return PredicateNode::make(expression, current_node);
@@ -937,17 +936,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
           current_node = _translate_predicate_expression(logical_expression->right_operand(), current_node);
           return _translate_predicate_expression(logical_expression->left_operand(), current_node);
         }
-        case LogicalOperator::Or: {
-          current_node = _add_expressions_if_unavailable(current_node, {expression});
-          return PredicateNode::make(not_equals_(expression, 0), current_node);
-        }
+        case LogicalOperator::Or:
+          return PredicateNode::make(expression, current_node);
+
       }
     } break;
 
-    case ExpressionType::Exists: {
-      current_node = _add_expressions_if_unavailable(current_node, {expression});
-      return PredicateNode::make(not_equals_(expression, 0), current_node);
-    }
+    case ExpressionType::Exists:
+      return PredicateNode::make(expression, current_node);
 
     default:
       FailInput("Cannot use this ExpressionType as predicate");

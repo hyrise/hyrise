@@ -9,7 +9,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "optimizer/join_graph_builder.hpp"
+#include "optimizer/join_ordering/join_graph_builder.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

@@ -89,18 +89,24 @@ TEST_F(JitOperationsTest, ArithmeticComputations) {
 
 TEST_F(JitOperationsTest, Predicates) {
   JitRuntimeContext context;
-  context.tuple.resize(5);
+  context.tuple.resize(8);
 
   const JitTupleValue int_1{DataType::Int, false, 0};
   const JitTupleValue int_2{DataType::Int, false, 1};
   const JitTupleValue float_1{DataType::Float, false, 2};
   const JitTupleValue float_2{DataType::Float, false, 3};
-  const JitTupleValue result_value{DataType::Bool, false, 4};
+  const JitTupleValue string_1{DataType::String, false, 4};
+  const JitTupleValue string_2{DataType::String, false, 5};
+  const JitTupleValue string_3{DataType::String, false, 6};
+  const JitTupleValue result_value{DataType::Bool, false, 7};
 
   int_1.set<int32_t>(1, context);
   int_2.set<int32_t>(2, context);
   float_1.set<float>(1.0f, context);
   float_2.set<float>(2.0f, context);
+  string_1.set<std::string>("hello", context);
+  string_2.set<std::string>("h%", context);
+  string_3.set<std::string>("H%", context);
 
   // GreaterThan
   jit_compute(jit_greater_than, int_1, int_2, result_value, context);
@@ -155,6 +161,20 @@ TEST_F(JitOperationsTest, Predicates) {
 
   jit_compute(jit_not_equals, int_1, float_1, result_value, context);
   ASSERT_FALSE(result_value.get<bool>(context));
+
+  // LIKE
+  jit_compute(jit_like, string_1, string_2, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  jit_compute(jit_like, string_1, string_3, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  // NOT LIKE
+  jit_compute(jit_not_like, string_1, string_2, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  jit_compute(jit_not_like, string_1, string_3, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
 }
 
 TEST_F(JitOperationsTest, JitAnd) {

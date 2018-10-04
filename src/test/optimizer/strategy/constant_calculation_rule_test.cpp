@@ -55,7 +55,7 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
    * NOTE
    * The ProjectionNode will still contain a Column calculating 1233+1
    *    * Because it is not the job of the ConstantCalculationRule to remove redundant columns
-   *    * It isn't pruned because the Optimizer (TODO(anybody)!) can't rewrite root expressions, because
+   *    * It isn't rewritten because the Optimizer (TODO(anybody)!) can't rewrite root expressions, because
    *        AbstractLQPNode::node_expressions() returns them by value.
    */
 
@@ -70,21 +70,5 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ConstantCalculationRuleTest, DoesntPruneList) {
-  const auto query = "SELECT * FROM table_a WHERE a IN (1, 2, 3+5, 4)";
-  const auto result_node = compile_query(query);
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(rule, result_node);
-
-  // clang-format off
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(a, b),
-    PredicateNode::make(not_equals_(in_(a, list_(1, 2, 8, 4)), 0),
-      ProjectionNode::make(expression_vector(in_(a, list_(1, 2, 8, 4)), a, b),
-        stored_table_node)));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
 
 }  // namespace opossum
