@@ -87,7 +87,7 @@ class EqualHeightHistogram : public AbstractHistogram<T> {
   HistogramCountType _bin_distinct_count(const BinID index) const override;
 
  private:
-  EqualHeightBinData<T> _bin_data;
+  const EqualHeightBinData<T> _bin_data;
 };
 
 }  // namespace opossum

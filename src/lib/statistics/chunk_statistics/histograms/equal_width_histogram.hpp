@@ -176,7 +176,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
   typename AbstractHistogram<T>::HistogramWidthType _bin_width(const BinID index) const override;
 
  private:
-  EqualWidthBinData<T> _bin_data;
+  const EqualWidthBinData<T> _bin_data;
 };
 
 }  // namespace opossum

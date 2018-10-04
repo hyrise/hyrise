@@ -91,7 +91,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   HistogramCountType _bin_distinct_count(const BinID index) const override;
 
  private:
-  EqualDistinctCountBinData<T> _bin_data;
+  const EqualDistinctCountBinData<T> _bin_data;
 };
 
 }  // namespace opossum
