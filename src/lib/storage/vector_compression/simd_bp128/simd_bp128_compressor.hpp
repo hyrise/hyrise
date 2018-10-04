@@ -41,7 +41,7 @@ class SimdBp128Compressor : public BaseVectorCompressor {
   std::unique_ptr<pmr_vector<uint128_t>> _data;
   size_t _data_index;
 
-  std::array<uint32_t, Packing::meta_block_size> _pending_meta_block;
+  alignas(16) std::array<uint32_t, Packing::meta_block_size> _pending_meta_block;
   size_t _meta_block_index;
 
   size_t _size;
