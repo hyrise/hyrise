@@ -177,7 +177,7 @@ T EqualHeightHistogram<T>::_bin_maximum(const BinID index) const {
 }
 
 template <typename T>
-HistogramCountType EqualHeightHistogram<T>::_bin_height(const BinID index) const {
+HistogramCountType EqualHeightHistogram<T>::_bin_height([[maybe_unused]] const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
   return total_count() / bin_count() + (total_count() % bin_count() > 0 ? 1 : 0);
 }

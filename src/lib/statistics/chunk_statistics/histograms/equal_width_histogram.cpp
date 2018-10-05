@@ -158,7 +158,8 @@ HistogramCountType EqualWidthHistogram<T>::_bin_distinct_count(const BinID index
 }
 
 template <typename T>
-typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_width(const BinID index) const {
+typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_width([
+    [maybe_unused]] const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   const auto base_width = this->_get_next_value(_bin_data.maximum - _bin_data.minimum) / bin_count();

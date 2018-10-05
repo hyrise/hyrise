@@ -156,44 +156,4 @@ TEST_F(HistogramUtilsTest, CommonPrefixLength) {
   EXPECT_EQ(common_prefix_length("abcd", "abce"), 3ul);
 }
 
-/**
- * The following tests take quite some time (multiple seconds) and are intended for exhaustive testing.
- * TODO(tim): discuss whether to include/deactivate/remove them.
- */
-// TEST_F(HistogramUtilsTest, NumberToStringBruteForce) {
-//   constexpr auto max = 475'254ul;
-//
-//   EXPECT_EQ(_convert_string_to_number_representation(""), 0ul);
-//   EXPECT_EQ(_convert_string_to_number_representation("zzzz"), max);
-//
-//   for (auto number = 0u; number < max; number++) {
-//     EXPECT_LT(_convert_number_representation_to_string(number),
-//               _convert_number_representation_to_string(number + 1));
-//   }
-// }
-//
-// TEST_F(HistogramUtilsTest, StringToNumberBruteForce) {
-//   constexpr auto max = 475'254ul;
-//
-//   EXPECT_EQ(_convert_string_to_number_representation(""), 0ul);
-//   EXPECT_EQ(_convert_string_to_number_representation("zzzz"), max);
-//
-//   for (auto number = 0u; number < max; number++) {
-//     EXPECT_EQ(_convert_string_to_number_representation(_convert_number_representation_to_string(number)), number);
-//   }
-// }
-//
-// TEST_F(HistogramUtilsTest, NextValueBruteForce) {
-//   constexpr auto max = 475'254ul;
-//
-//   EXPECT_EQ(_convert_string_to_number_representation(""), 0ul);
-//   EXPECT_EQ(_convert_string_to_number_representation("zzzz"), max);
-//
-//   for (auto number = 1u; number <= max; number++) {
-//     const auto number_string = _convert_number_representation_to_string(number);
-//     const auto next_value_of_previous_number = _next_value(_convert_number_representation_to_string(number - 1));
-//     EXPECT_EQ(number_string, next_value_of_previous_number);
-//   }
-// }
-
 }  // namespace opossum
