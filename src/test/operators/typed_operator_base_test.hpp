@@ -7,12 +7,10 @@
 
 namespace opossum {
 
-using ParamType = std::tuple<DataType, EncodingType, bool /* nullable */>;
-
 // This is the base class for all tests that should run on every possible combination of data type and encoding.
 // A sample table is generate in TableScanBetweenTest. Depending on how other tests will use this, it might make sense
 // to have a single instantiation here.
-class TypedOperatorBaseTest : public BaseTestWithParam<ParamType> {
+class TypedOperatorBaseTest : public BaseTestWithParam<std::tuple<DataType, EncodingType, bool /* nullable */>> {
  public:
   static std::string format(testing::TestParamInfo<ParamType> info) {
     const auto& [data_type, encoding, nullable] = info.param;
@@ -22,8 +20,8 @@ class TypedOperatorBaseTest : public BaseTestWithParam<ParamType> {
   }
 };
 
-static std::vector<ParamType> create_param_pairs() {
-  std::vector<ParamType> pairs;
+static std::vector<TypedOperatorBaseTest::ParamType> create_param_pairs() {
+  std::vector<TypedOperatorBaseTest::ParamType> pairs;
 
   hana::for_each(data_type_pairs, [&](auto pair) {
     const auto& data_type = hana::first(pair);

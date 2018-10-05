@@ -174,14 +174,10 @@ void TableScan::_init_scan() {
     _impl = std::make_unique<LikeTableScanImpl>(_in_table, column_id, condition, right_wildcard);
 
     return;
-  }
-
-  if (condition == PredicateCondition::IsNull || condition == PredicateCondition::IsNotNull) {
+  } else if (condition == PredicateCondition::IsNull || condition == PredicateCondition::IsNotNull) {
     _impl = std::make_unique<IsNullTableScanImpl>(_in_table, column_id, condition);
     return;
-  }
-
-  if (condition == PredicateCondition::Between) {
+  } else if (condition == PredicateCondition::Between) {
     const auto left_value = boost::get<AllTypeVariant>(parameter);
 
     DebugAssert(_predicate.value2, "Expected right value for BETWEEN");

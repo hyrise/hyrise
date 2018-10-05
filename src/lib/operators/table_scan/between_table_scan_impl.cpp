@@ -30,7 +30,7 @@ void BetweenTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   const auto chunk_id = context->_chunk_id;
 
   // TODO(anyone): A lot of code is duplicated here, below, and in the other table scans.
-  // This can be increased once we have #1145.
+  // This can be improved once we have #1145.
 
   const auto left_column_type = _in_table->column_data_type(_left_column_id);
 

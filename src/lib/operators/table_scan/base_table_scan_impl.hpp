@@ -77,14 +77,15 @@ class BaseTableScanImpl {
     }
   }
 
-  // If we search for an actual value, BETWEEN has the semantics of including both sides. If we search for value ids,
-  // the right side is an upper bound and needs to be excluded.
+  // If we search for an actual value, BETWEEN has the semantics of including both sides: a BETWEEN 4 and 6 is true for
+  // any a IN (4,5,6). In that case, we set `IncludeRightBoundary = true`.
+  // If we search for value ids, the right side is an upper bound and needs to be excluded.
   template <bool IncludeRightBoundary, typename ColumnIterator, typename Value>
   void __attribute__((noinline))
   _between_scan_with_value(ColumnIterator column_it, ColumnIterator column_end, Value left_value, Value right_value,
                            const ChunkID chunk_id, PosList& matches_out) {
     for (; column_it != column_end; ++column_it) {
-      const auto column_value = *column_it;
+      const auto& column_value = *column_it;
 
       if (column_value.is_null()) continue;
 
