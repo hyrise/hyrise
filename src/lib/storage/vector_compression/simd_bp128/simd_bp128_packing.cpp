@@ -4,6 +4,7 @@
 
 #include "utils/assert.hpp"
 
+// When casting into this data type, make sure that the underlying data is properly aligned to 16 byte boundaries.
 using simd_type = uint32_t __attribute__((vector_size(16)));
 
 namespace opossum {
