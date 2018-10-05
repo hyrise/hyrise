@@ -105,6 +105,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
 }
 
 TEST_P(TableScanBetweenTest, MismatchingTypes) {
+  if (!IS_DEBUG) return;
   const auto predicate = OperatorScanPredicate{ColumnID{0}, PredicateCondition::Between, 1, 2.0f};
   auto scan = std::make_shared<TableScan>(_data_table_wrapper, predicate);
   EXPECT_THROW(scan->execute(), std::logic_error);
