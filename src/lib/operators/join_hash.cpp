@@ -25,6 +25,7 @@
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
 #include "utils/uninitialized_vector.hpp"
+#include "bytell_hash_map.hpp"
 
 namespace opossum {
 
@@ -118,7 +119,7 @@ using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninit
 using SmallPosList = boost::container::small_vector<RowID, 1>;
 
 template <typename T>
-using HashTable = std::unordered_map<T, SmallPosList>;
+using HashTable = ska::bytell_hash_map<T, SmallPosList>;
 
 /*
 This struct contains radix-partitioned data in a contiguous buffer,
@@ -167,12 +168,20 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         auto& element = partition_left[partition_offset];
 
-        auto [it, inserted] =  // NOLINT
-            hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
-        if (!inserted) {
-          // We already have the value in the map
+        auto casted_value = type_cast<HashedType>(std::move(element.value));
+        auto it = hashtable.find(casted_value);
+        if (it != hashtable.end()) {
           it->second.emplace_back(element.row_id);
+        } else {
+          hashtable.emplace(casted_value, SmallPosList{element.row_id});
         }
+
+        // auto [it, inserted] =  // NOLINT
+        //     hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
+        // if (!inserted) {
+        //   // We already have the value in the map
+        //   it->second.emplace_back(element.row_id);
+        // }
       }
 
       hashtables[current_partition_id] = std::move(hashtable);
