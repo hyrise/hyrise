@@ -43,7 +43,7 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
     std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;
   }
 
-    const auto tables = opossum::TpchDbGenerator(1.0f, 100000).generate();
+    const auto tables = opossum::TpchDbGenerator(0.01f, 100000).generate();
 
     for (auto& tpch_table : tables) {
         const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
@@ -67,7 +67,7 @@ void CostModelCalibration::run_tpch() const {
     CurrentScheduler::set(scheduler);
 
     for (const auto& query : opossum::tpch_queries) {
-        std::map<std::string, nlohmann::json> operators;
+        std::map<std::string, nlohmann::json> operators {};
 
         SQLQueryCache<SQLQueryPlan>::get().clear();
 
@@ -87,26 +87,13 @@ void CostModelCalibration::run_tpch() const {
         }
         std::cout << "Finished TPCH " << query.first << std::endl;
 
-        auto outputPath = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-        std::cout << outputPath << std::endl;
-
-        nlohmann::json output_json{};
-        output_json["config"] = _configuration;
-        output_json["operators"] = operators;
-
-        // output file per operator type
-        std::ofstream myfile;
-        myfile.open(outputPath);
-        myfile << std::setw(2) << output_json << std::endl;
-        myfile.close();
+        auto output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
+        _write_result_json(output_path, _configuration, operators);
     }
-
-
-
 }
 
 void CostModelCalibration::calibrate() const {
-  std::map<std::string, nlohmann::json> operators;
+  std::map<std::string, nlohmann::json> operators {};
   auto number_of_iterations = _configuration.calibration_runs;
 
   const auto scheduler = std::make_shared<NodeQueueScheduler>();
@@ -138,17 +125,21 @@ void CostModelCalibration::calibrate() const {
     std::cout << "Finished iteration " << i << std::endl;
   }
 
-  auto outputPath = _configuration.output_path;
+  _write_result_json(_configuration.output_path, _configuration, operators);
+}
 
-  nlohmann::json output_json{};
-  output_json["config"] = _configuration;
-  output_json["operators"] = operators;
+void CostModelCalibration::_write_result_json(const std::string output_path,
+        const nlohmann::json& configuration,
+        const std::map<std::string, nlohmann::json>& operators) const {
+    nlohmann::json output_json{};
+    output_json["config"] = configuration;
+    output_json["operators"] = operators;
 
-  // output file per operator type
-  std::ofstream myfile;
-  myfile.open(outputPath);
-  myfile << std::setw(2) << output_json << std::endl;
-  myfile.close();
+    // output file per operator type
+    std::ofstream myfile;
+    myfile.open(output_path);
+    myfile << std::setw(2) << output_json << std::endl;
+    myfile.close();
 }
 
 void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperator>& op,
