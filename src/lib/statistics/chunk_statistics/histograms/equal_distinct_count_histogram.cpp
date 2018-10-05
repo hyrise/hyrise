@@ -19,8 +19,8 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(const std::vector<T>
                                                             const HistogramCountType distinct_count_per_bin,
                                                             const BinID bin_count_with_extra_value)
     : AbstractHistogram<T>(),
-      _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
-                 bin_count_with_extra_value}) {
+      _bin_data(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
+                bin_count_with_extra_value) {
   Assert(!bin_minima.empty(), "Cannot have histogram without any bins.");
   Assert(bin_minima.size() == bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
   Assert(bin_minima.size() == bin_heights.size(), "Must have the same number of edges and heights.");
@@ -43,8 +43,8 @@ EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
     const std::vector<HistogramCountType>&& bin_heights, const HistogramCountType distinct_count_per_bin,
     const BinID bin_count_with_extra_value, const std::string& supported_characters, const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
-                 bin_count_with_extra_value}) {
+      _bin_data(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
+                bin_count_with_extra_value) {
   Assert(!bin_minima.empty(), "Cannot have histogram without any bins.");
   Assert(bin_minima.size() == bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
   Assert(bin_minima.size() == bin_heights.size(), "Must have the same number of edges and heights.");

@@ -16,7 +16,7 @@ template <typename T>
 EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>&& bin_maxima,
                                               const std::vector<HistogramCountType>&& bin_distinct_counts, T minimum,
                                               const HistogramCountType total_count)
-    : AbstractHistogram<T>(), _bin_data({std::move(bin_maxima), std::move(bin_distinct_counts), minimum, total_count}) {
+    : AbstractHistogram<T>(), _bin_data(std::move(bin_maxima), std::move(bin_distinct_counts), minimum, total_count) {
   Assert(total_count > 0, "Cannot have histogram without any values.");
   Assert(!bin_maxima.empty(), "Cannot have histogram without any bins.");
   Assert(bin_maxima.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
@@ -39,7 +39,7 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::s
                                                         const std::string& supported_characters,
                                                         const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _bin_data({std::move(bin_maxima), std::move(bin_distinct_counts), minimum, total_count}) {
+      _bin_data(std::move(bin_maxima), std::move(bin_distinct_counts), minimum, total_count) {
   Assert(total_count > 0, "Cannot have histogram without any values.");
   Assert(!bin_maxima.empty(), "Cannot have histogram without any bins.");
   Assert(bin_maxima.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
