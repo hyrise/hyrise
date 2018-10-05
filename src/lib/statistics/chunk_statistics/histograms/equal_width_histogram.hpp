@@ -31,6 +31,15 @@ struct EqualWidthBinData {
 
   // Number of bins that are one element wider (only used for integral and string histograms).
   BinID bin_count_with_larger_range;
+
+  EqualWidthBinData(const T minimum, const T maximum, const std::vector<HistogramCountType>&& bin_heights,
+                    const std::vector<HistogramCountType>&& bin_distinct_counts,
+                    const BinID bin_count_with_larger_range)
+      : minimum(minimum),
+        maximum(maximum),
+        bin_heights(bin_heights),
+        bin_distinct_counts(bin_distinct_counts),
+        bin_count_with_larger_range(bin_count_with_larger_range) {}
 };
 
 /**
@@ -161,7 +170,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
       current_bin_begin_it = next_bin_begin_it;
     }
 
-    return {min, max, bin_heights, bin_distinct_counts, bin_count_with_larger_range};
+    return {min, max, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range};
   }
 
   /**

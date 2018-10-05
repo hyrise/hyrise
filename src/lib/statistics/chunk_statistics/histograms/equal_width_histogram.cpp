@@ -19,7 +19,7 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
                                             const std::vector<HistogramCountType>&& bin_distinct_counts,
                                             const BinID bin_count_with_larger_range)
     : AbstractHistogram<T>(),
-      _bin_data({minimum, maximum, bin_heights, bin_distinct_counts, bin_count_with_larger_range}) {
+      _bin_data(minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range) {
   Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
   Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
   Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
@@ -39,7 +39,7 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
                                                       const std::string& supported_characters,
                                                       const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _bin_data({minimum, maximum, bin_heights, bin_distinct_counts, bin_count_with_larger_range}) {
+      _bin_data(minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range) {
   Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
   Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
   Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
@@ -98,7 +98,7 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     repr_current_bin_begin_value = repr_next_bin_begin_value;
   }
 
-  return {min, max, bin_heights, bin_distinct_counts, bin_count_with_larger_range};
+  return {min, max, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range};
 }
 
 template <typename T>
