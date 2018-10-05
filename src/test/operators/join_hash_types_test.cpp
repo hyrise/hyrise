@@ -1,9 +1,52 @@
-#include "join_hash_test.hpp"
+#include "../base_test.hpp"
+#include "gtest/gtest.h"
+
+#include "operators/join_hash.hpp"
+#include "operators/join_hash/hash_functions.hpp"
 
 namespace opossum {
 
+/**
+ * The purpose of these tests it to check the construction of hash maps which are not mapping value
+ * to value but value to vector of RowIDs (i.e., PosList). We have two tests with sparse data
+ * (no value occurs twice) and dense data (all rows share the same value).
+ * All these tests are executed for the main numeric types.
+ */
 template <typename T>
-class JoinHashTypesTest : public JoinHashTest {};
+class JoinHashTypesTest : public BaseTest {};
+
+template <typename T, typename HashType>
+void test_hash_map(const std::vector<T>& values) {
+  Partition<T> elements;
+  for (size_t i = 0; i < values.size(); ++i) {
+    RowID row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(i)}};
+    elements.emplace_back(PartitionedElement<T>{row_id, 17, static_cast<T>(values.at(i))});
+  }
+
+  auto hash_map = build<T, HashType>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
+                                                       std::vector<size_t>{elements.size()}});
+
+  // With only one offset value passed, one hash map will be created
+  EXPECT_EQ(hash_map.size(), 1);
+
+  size_t row_count = 0;
+  for (const auto& pos_list_pair : hash_map.at(0).value()) {
+    row_count += pos_list_pair.second.size();
+  }
+  EXPECT_EQ(row_count, elements.size());
+
+  ASSERT_FALSE(hash_map.at(0).value().empty());  // hash map for first (and only) chunk exists
+
+  unsigned int counter = 0;
+  for (const auto& element : elements) {
+    auto probe_value = element.value;
+
+    auto result_list = hash_map.at(0).value().at(probe_value);
+    RowID probe_row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(counter)}};
+    EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
+    ++counter;
+  }
+}
 
 using DataTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_CASE(JoinHashTypesTest, DataTypes);
@@ -15,7 +58,7 @@ TYPED_TEST(JoinHashTypesTest, BuildSingleValueLargePosList) {
     values.push_back(static_cast<TypeParam>(17));
   }
 
-  this->template test_hash_map<TypeParam, TypeParam>(values);
+  test_hash_map<TypeParam, TypeParam>(values);
 }
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleRowIds) {
@@ -25,7 +68,7 @@ TYPED_TEST(JoinHashTypesTest, BuildSingleRowIds) {
     values.push_back(static_cast<TypeParam>(pow(i, 3)));
   }
 
-  this->template test_hash_map<TypeParam, TypeParam>(values);
+  test_hash_map<TypeParam, TypeParam>(values);
 }
 
 }  // namespace opossum

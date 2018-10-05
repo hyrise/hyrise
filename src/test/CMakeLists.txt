@@ -62,7 +62,7 @@ set(
     operators/insert_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
-    operators/join_hash_test.hpp
+    operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
