@@ -11,6 +11,8 @@
 
 namespace opossum {
 
+using namespace opossum::histogram;  // NOLINT
+
 template <typename T>
 EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
                                             const std::vector<HistogramCountType>&& bin_heights,
@@ -22,9 +24,10 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
   Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
   Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   if constexpr (std::is_floating_point_v<T>) {
-    Assert(bin_count_with_larger_range == 0, "Cannot have bins with extra value in floating point histograms.")
+    Assert(bin_count_with_larger_range == 0, "Cannot have varying bin sizes in float histograms.")
   } else {
-    Assert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
+    Assert(bin_count_with_larger_range < bin_heights.size(),
+           "Cannot have more or the same number of bins with a wider range than the number of bins itself.");
   }
 }
 
@@ -34,13 +37,14 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
                                                       const std::vector<HistogramCountType>&& bin_distinct_counts,
                                                       const BinID bin_count_with_larger_range,
                                                       const std::string& supported_characters,
-                                                      const uint32_t string_prefix_length)
+                                                      const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
       _bin_data({minimum, maximum, bin_heights, bin_distinct_counts, bin_count_with_larger_range}) {
   Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
   Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
   Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
-  Assert(bin_count_with_larger_range < bin_heights.size(), "Cannot have more bins with extra value than bins.");
+  Assert(bin_count_with_larger_range < bin_heights.size(),
+         "Cannot have more or the same number of bins with a wider range than the number of bins itself.");
   Assert(minimum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
   Assert(maximum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
 }
@@ -48,7 +52,7 @@ EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum
 template <>
 EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     const std::vector<std::pair<std::string, HistogramCountType>>& value_counts, const BinID max_bin_count,
-    const std::string& supported_characters, const uint32_t string_prefix_length) {
+    const std::string& supported_characters, const size_t string_prefix_length) {
   // Bins shall have the same range.
   const auto min = value_counts.front().first;
   const auto max = value_counts.back().first;
@@ -60,7 +64,7 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
   // Never have more bins than representable values.
   const auto bin_count = max_bin_count <= base_width ? max_bin_count : base_width;
 
-  std::vector<HistogramCountType> bin_counts(bin_count);
+  std::vector<HistogramCountType> bin_heights(bin_count);
   std::vector<HistogramCountType> bin_distinct_counts(bin_count);
 
   const auto bin_width = base_width / bin_count;
@@ -76,12 +80,16 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     const auto current_bin_end_value = convert_number_representation_to_string(
         repr_next_bin_begin_value - 1, supported_characters, string_prefix_length);
 
+    // This could be a binary search,
+    // but we decided that for the relatively small number of values and bins it is not worth it,
+    // as linear search tends to be just as fast or faster due to hardware optimizations for small vectors.
+    // Feel free to change if this comes up in a profiler.
     auto next_bin_begin_it = current_bin_begin_it;
     while (next_bin_begin_it != value_counts.cend() && (*next_bin_begin_it).first <= current_bin_end_value) {
       next_bin_begin_it++;
     }
 
-    bin_counts[current_bin_id] = std::accumulate(
+    bin_heights[current_bin_id] = std::accumulate(
         current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
         [](HistogramCountType a, std::pair<std::string, HistogramCountType> b) { return a + b.second; });
     bin_distinct_counts[current_bin_id] = std::distance(current_bin_begin_it, next_bin_begin_it);
@@ -90,7 +98,7 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     repr_current_bin_begin_value = repr_next_bin_begin_value;
   }
 
-  return {min, max, bin_counts, bin_distinct_counts, bin_count_with_larger_range};
+  return {min, max, bin_heights, bin_distinct_counts, bin_count_with_larger_range};
 }
 
 template <typename T>
@@ -206,9 +214,9 @@ T EqualWidthHistogram<T>::_bin_maximum(const BinID index) const {
   // Otherwise, add the index to compensate one element for every bin preceding this bin.
   // Add at most bin_count_with_larger_range - 1 because we already start adding from the next bin's lower edge.
   if constexpr (std::is_same_v<T, std::string>) {
-    const auto num_min = this->_convert_string_to_number_representation(_bin_data.minimum);
-    const auto num_max = this->_convert_string_to_number_representation(_bin_data.maximum);
-    const auto base = num_min + (index + 1u) * ((num_max - num_min + 1) / bin_count());
+    const auto repr_min = this->_convert_string_to_number_representation(_bin_data.minimum);
+    const auto repr_max = this->_convert_string_to_number_representation(_bin_data.maximum);
+    const auto base = repr_min + (index + 1u) * ((repr_max - repr_min + 1) / bin_count());
     const auto bin_max = _bin_data.bin_count_with_larger_range == 0u
                              ? previous_value(base)
                              : base + std::min(index, _bin_data.bin_count_with_larger_range - 1u);
@@ -233,8 +241,8 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     BinID bin_id;
     if (_bin_data.bin_count_with_larger_range == 0u ||
         value <= _bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
-      const auto num_min = this->_convert_string_to_number_representation(_bin_data.minimum);
-      bin_id = (num_value - num_min) / this->_bin_width(0u);
+      const auto repr_min = this->_convert_string_to_number_representation(_bin_data.minimum);
+      bin_id = (num_value - repr_min) / this->_bin_width(0u);
     } else {
       const auto num_base_min =
           this->_convert_string_to_number_representation(_bin_minimum(_bin_data.bin_count_with_larger_range));

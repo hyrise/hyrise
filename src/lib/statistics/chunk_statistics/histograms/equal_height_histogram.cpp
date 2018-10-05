@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+using namespace opossum::histogram;  // NOLINT
+
 template <typename T>
 EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>&& bin_maxima,
                                               const std::vector<HistogramCountType>&& bin_distinct_counts, T minimum,
@@ -35,7 +37,7 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::s
                                                         const std::string& minimum,
                                                         const HistogramCountType total_count,
                                                         const std::string& supported_characters,
-                                                        const uint32_t string_prefix_length)
+                                                        const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
       _bin_data({bin_maxima, bin_distinct_counts, minimum, total_count}) {
   Assert(total_count > 0, "Cannot have histogram without any values.");

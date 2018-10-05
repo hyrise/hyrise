@@ -18,6 +18,8 @@
 
 namespace opossum {
 
+using namespace opossum::histogram;  // NOLINT
+
 template <typename T>
 AbstractHistogram<T>::AbstractHistogram() : _supported_characters(""), _string_prefix_length(0ul) {}
 
@@ -30,7 +32,7 @@ AbstractHistogram<std::string>::AbstractHistogram() {
 
 template <>
 AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
-                                                  const uint32_t string_prefix_length)
+                                                  const size_t string_prefix_length)
     : _supported_characters(supported_characters), _string_prefix_length(string_prefix_length) {
   Assert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
 }
@@ -103,9 +105,9 @@ template <>
 AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto num_min = _convert_string_to_number_representation(_bin_minimum(index));
-  const auto num_max = _convert_string_to_number_representation(_bin_maximum(index));
-  return num_max - num_min + 1u;
+  const auto repr_min = _convert_string_to_number_representation(_bin_minimum(index));
+  const auto repr_max = _convert_string_to_number_representation(_bin_maximum(index));
+  return repr_max - repr_min + 1u;
 }
 
 template <typename T>

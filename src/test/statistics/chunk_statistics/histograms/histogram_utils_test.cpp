@@ -5,6 +5,8 @@
 
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 
+using namespace opossum::histogram;  // NOLINT
+
 namespace opossum {
 
 class HistogramUtilsTest : public BaseTest {
@@ -21,7 +23,7 @@ class HistogramUtilsTest : public BaseTest {
 
  protected:
   const std::string _supported_characters{"abcdefghijklmnopqrstuvwxyz"};
-  const uint64_t _prefix_length{4u};
+  const size_t _prefix_length{4u};
 };
 
 TEST_F(HistogramUtilsTest, NextValueString) {

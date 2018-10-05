@@ -42,7 +42,7 @@ class EqualHeightHistogram : public AbstractHistogram<T> {
   EqualHeightHistogram(const std::vector<std::string>&& bin_maxima,
                        const std::vector<HistogramCountType>&& bin_distinct_counts, const std::string& minimum,
                        const HistogramCountType total_count, const std::string& supported_characters,
-                       const uint32_t string_prefix_length);
+                       const size_t string_prefix_length);
 
   /**
    * Create a histogram based on the data in a given segment.

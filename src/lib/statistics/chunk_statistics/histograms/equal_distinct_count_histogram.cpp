@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+using namespace opossum::histogram;  // NOLINT
+
 template <typename T>
 EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(const std::vector<T>&& bin_minima,
                                                             const std::vector<T>&& bin_maxima,
@@ -38,8 +40,7 @@ template <>
 EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
     const std::vector<std::string>&& bin_minima, const std::vector<std::string>&& bin_maxima,
     const std::vector<HistogramCountType>&& bin_heights, const HistogramCountType distinct_count_per_bin,
-    const BinID bin_count_with_extra_value, const std::string& supported_characters,
-    const uint32_t string_prefix_length)
+    const BinID bin_count_with_extra_value, const std::string& supported_characters, const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
       _bin_data({bin_minima, bin_maxima, bin_heights, distinct_count_per_bin, bin_count_with_extra_value}) {
   Assert(!bin_minima.empty(), "Cannot have histogram without any bins.");

@@ -9,10 +9,12 @@
 
 #include "utils/assert.hpp"
 
+using namespace opossum::histogram;  // NOLINT
+
 namespace opossum {
 
 std::string next_value(const std::string& value, const std::string& supported_characters,
-                       const uint32_t string_prefix_length) {
+                       const size_t string_prefix_length) {
   DebugAssert(value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
   DebugAssert(check_string_sorted_and_without_gaps(supported_characters),
               "Supported characters must be sorted and without gaps.");
@@ -73,18 +75,20 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   return result;
 }
 
-uint64_t base_value_for_prefix_length(const uint32_t string_prefix_length, const std::string& supported_characters) {
+namespace histogram {
+
+uint64_t base_value_for_prefix_length(const size_t string_prefix_length, const std::string& supported_characters) {
   DebugAssert(string_prefix_length > 0, "Prefix length must be greater than 0.");
 
   auto result = uint64_t{1};
-  for (auto exp = uint32_t{1}; exp < string_prefix_length; exp++) {
+  for (auto exp = uint64_t{1}; exp < string_prefix_length; exp++) {
     result += ipow(supported_characters.length(), exp);
   }
   return result;
 }
 
 uint64_t convert_string_to_number_representation(const std::string& value, const std::string& supported_characters,
-                                                 const uint32_t string_prefix_length) {
+                                                 const size_t string_prefix_length) {
   DebugAssert(value.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
 
   if (value.empty()) {
@@ -106,7 +110,7 @@ uint64_t convert_string_to_number_representation(const std::string& value, const
 }
 
 std::string convert_number_representation_to_string(const uint64_t value, const std::string& supported_characters,
-                                                    const uint32_t string_prefix_length) {
+                                                    const size_t string_prefix_length) {
   DebugAssert(convert_string_to_number_representation(std::string(string_prefix_length, supported_characters.back()),
                                                       supported_characters, string_prefix_length) >= value,
               "Value is not in valid range for supported_characters and string_prefix_length.");
@@ -141,7 +145,7 @@ bool check_prefix_settings(const std::string& supported_characters) {
   return check_string_sorted_and_without_gaps(supported_characters);
 }
 
-bool check_prefix_settings(const std::string& supported_characters, const uint32_t string_prefix_length) {
+bool check_prefix_settings(const std::string& supported_characters, const size_t string_prefix_length) {
   if (!check_prefix_settings(supported_characters) || string_prefix_length == 0) {
     return false;
   }
@@ -151,10 +155,10 @@ bool check_prefix_settings(const std::string& supported_characters, const uint32
          std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1);
 }
 
-std::pair<std::string, uint32_t> get_default_or_check_string_histogram_prefix_settings(
-    const std::optional<std::string>& supported_characters, const std::optional<uint32_t>& string_prefix_length) {
+std::pair<std::string, size_t> get_default_or_check_string_histogram_prefix_settings(
+    const std::optional<std::string>& supported_characters, const std::optional<size_t>& string_prefix_length) {
   std::string characters;
-  uint32_t prefix_length;
+  size_t prefix_length;
 
   if (supported_characters) {
     characters = *supported_characters;
@@ -162,7 +166,7 @@ std::pair<std::string, uint32_t> get_default_or_check_string_histogram_prefix_se
     if (string_prefix_length) {
       prefix_length = *string_prefix_length;
     } else {
-      prefix_length = static_cast<uint32_t>(63 / std::log(characters.length() + 1));
+      prefix_length = static_cast<size_t>(63 / std::log(characters.length() + 1));
     }
   } else {
     DebugAssert(!string_prefix_length, "Cannot set prefix length without also setting supported characters.");
@@ -188,5 +192,7 @@ uint64_t common_prefix_length(const std::string& string1, const std::string& str
 
   return common_prefix_length;
 }
+
+}  // namespace histogram
 
 }  // namespace opossum

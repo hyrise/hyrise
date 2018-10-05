@@ -5,8 +5,13 @@
 
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 
+using namespace opossum::histogram;  // NOLINT
+
 namespace opossum {
 
+/**
+ * These tests might take a few seconds and are therefore not included in the regular test suite.
+ */
 class HistogramUtilsExtendedTest : public BaseTest {
  protected:
   uint64_t _convert_string_to_number_representation(const std::string& value) {
@@ -21,7 +26,7 @@ class HistogramUtilsExtendedTest : public BaseTest {
 
  protected:
   const std::string _supported_characters{"abcdefghijklmnopqrstuvwxyz"};
-  const uint64_t _prefix_length{4u};
+  const size_t _prefix_length{4u};
 };
 
 TEST_F(HistogramUtilsExtendedTest, NumberToStringBruteForce) {

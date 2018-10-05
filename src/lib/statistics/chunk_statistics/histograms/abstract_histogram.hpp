@@ -52,7 +52,7 @@ template <typename T>
 class AbstractHistogram : public AbstractFilter {
  public:
   AbstractHistogram();
-  AbstractHistogram(const std::string& supported_characters, const uint32_t string_prefix_length);
+  AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
   virtual ~AbstractHistogram() = default;
 
   // Non-copyable
@@ -216,7 +216,7 @@ class AbstractHistogram : public AbstractFilter {
   // String histogram-specific members.
   // See general explanation for details.
   std::string _supported_characters;
-  uint32_t _string_prefix_length;
+  size_t _string_prefix_length;
 };
 
 }  // namespace opossum
