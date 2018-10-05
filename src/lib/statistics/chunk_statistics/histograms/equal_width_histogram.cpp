@@ -15,38 +15,42 @@ using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
 EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
-                                            const std::vector<HistogramCountType>&& bin_heights,
-                                            const std::vector<HistogramCountType>&& bin_distinct_counts,
+                                            std::vector<HistogramCountType>&& bin_heights,
+                                            std::vector<HistogramCountType>&& bin_distinct_counts,
                                             const BinID bin_count_with_larger_range)
     : AbstractHistogram<T>(),
-      _bin_data(minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range) {
-  Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
-  Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
-  Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
+      _bin_data(
+          {minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range}) {
+  Assert(!_bin_data.bin_heights.empty(), "Cannot have histogram without any bins.");
+  Assert(_bin_data.bin_heights.size() == _bin_data.bin_distinct_counts.size(),
+         "Must have heights and distinct counts for each bin.");
+  Assert(_bin_data.minimum <= _bin_data.maximum, "Cannot have upper bound of histogram smaller than lower bound.");
   if constexpr (std::is_floating_point_v<T>) {
-    Assert(bin_count_with_larger_range == 0, "Cannot have varying bin sizes in float histograms.")
+    Assert(_bin_data.bin_count_with_larger_range == 0, "Cannot have varying bin sizes in float histograms.")
   } else {
-    Assert(bin_count_with_larger_range < bin_heights.size(),
+    Assert(_bin_data.bin_count_with_larger_range < _bin_data.bin_heights.size(),
            "Cannot have more or the same number of bins with a wider range than the number of bins itself.");
   }
 }
 
 template <>
 EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum, const std::string& maximum,
-                                                      const std::vector<HistogramCountType>&& bin_heights,
-                                                      const std::vector<HistogramCountType>&& bin_distinct_counts,
+                                                      std::vector<HistogramCountType>&& bin_heights,
+                                                      std::vector<HistogramCountType>&& bin_distinct_counts,
                                                       const BinID bin_count_with_larger_range,
                                                       const std::string& supported_characters,
                                                       const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _bin_data(minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range) {
-  Assert(!bin_heights.empty(), "Cannot have histogram without any bins.");
-  Assert(bin_heights.size() == bin_distinct_counts.size(), "Must have heights and distinct counts for each bin.");
-  Assert(minimum <= maximum, "Cannot have upper bound of histogram smaller than lower bound.");
-  Assert(bin_count_with_larger_range < bin_heights.size(),
+      _bin_data(
+          {minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range}) {
+  Assert(!_bin_data.bin_heights.empty(), "Cannot have histogram without any bins.");
+  Assert(_bin_data.bin_heights.size() == _bin_data.bin_distinct_counts.size(),
+         "Must have heights and distinct counts for each bin.");
+  Assert(_bin_data.minimum <= _bin_data.maximum, "Cannot have upper bound of histogram smaller than lower bound.");
+  Assert(_bin_data.bin_count_with_larger_range < _bin_data.bin_heights.size(),
          "Cannot have more or the same number of bins with a wider range than the number of bins itself.");
-  Assert(minimum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
-  Assert(maximum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  Assert(_bin_data.minimum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  Assert(_bin_data.maximum.find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
 }
 
 template <>
@@ -114,14 +118,14 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    const auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, characters, prefix_length);
+    auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, characters, prefix_length);
     return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),
                                                     std::move(bins.bin_distinct_counts),
                                                     bins.bin_count_with_larger_range, characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    const auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count);
+    auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count);
     return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),
                                                     std::move(bins.bin_distinct_counts),
                                                     bins.bin_count_with_larger_range);

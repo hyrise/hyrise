@@ -40,11 +40,11 @@ template <typename T>
 class EqualDistinctCountHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
-  EqualDistinctCountHistogram(const std::vector<T>&& bin_minima, const std::vector<T>&& bin_maxima,
-                              const std::vector<HistogramCountType>&& bin_heights,
+  EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
+                              std::vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value);
-  EqualDistinctCountHistogram(const std::vector<std::string>&& bin_minima, const std::vector<std::string>&& bin_maxima,
-                              const std::vector<HistogramCountType>&& bin_heights,
+  EqualDistinctCountHistogram(std::vector<std::string>&& bin_minima, std::vector<std::string>&& bin_maxima,
+                              std::vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
                               const std::string& supported_characters, const size_t string_prefix_length);
 

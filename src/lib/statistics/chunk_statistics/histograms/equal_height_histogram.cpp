@@ -13,44 +13,49 @@ namespace opossum {
 using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
-EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>&& bin_maxima,
-                                              const std::vector<HistogramCountType>&& bin_distinct_counts, T minimum,
-                                              const HistogramCountType total_count)
-    : AbstractHistogram<T>(), _bin_data(std::move(bin_maxima), std::move(bin_distinct_counts), minimum, total_count) {
-  Assert(total_count > 0, "Cannot have histogram without any values.");
-  Assert(!bin_maxima.empty(), "Cannot have histogram without any bins.");
-  Assert(bin_maxima.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
-  Assert(minimum <= bin_maxima[0], "Must have maxs and distinct counts for each bin.");
+EqualHeightHistogram<T>::EqualHeightHistogram(const T minimum, std::vector<T>&& bin_maxima,
+                                              const HistogramCountType total_count,
+                                              std::vector<HistogramCountType>&& bin_distinct_counts)
+    : AbstractHistogram<T>(), _bin_data({minimum, std::move(bin_maxima), total_count, std::move(bin_distinct_counts)}) {
+  Assert(_bin_data.total_count > 0, "Cannot have histogram without any values.");
+  Assert(!_bin_data.bin_maxima.empty(), "Cannot have histogram without any bins.");
+  Assert(_bin_data.bin_maxima.size() == _bin_data.bin_distinct_counts.size(),
+         "Must have maxs and distinct counts for each bin.");
+  Assert(_bin_data.minimum <= _bin_data.bin_maxima[0], "Must have maxs and distinct counts for each bin.");
 
-  for (BinID bin_id = 0; bin_id < bin_maxima.size(); bin_id++) {
-    Assert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
+  for (BinID bin_id = 0; bin_id < _bin_data.bin_maxima.size(); bin_id++) {
+    Assert(_bin_data.bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
 
-    if (bin_id < bin_maxima.size() - 1) {
-      Assert(bin_maxima[bin_id] < bin_maxima[bin_id + 1], "Bins must be sorted and cannot overlap.");
+    if (bin_id < _bin_data.bin_maxima.size() - 1) {
+      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_maxima[bin_id + 1],
+             "Bins must be sorted and cannot overlap.");
     }
   }
 }
 
 template <>
-EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::string>&& bin_maxima,
-                                                        const std::vector<HistogramCountType>&& bin_distinct_counts,
-                                                        const std::string& minimum,
+EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::string& minimum,
+                                                        std::vector<std::string>&& bin_maxima,
                                                         const HistogramCountType total_count,
+                                                        std::vector<HistogramCountType>&& bin_distinct_counts,
                                                         const std::string& supported_characters,
                                                         const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _bin_data(std::move(bin_maxima), std::move(bin_distinct_counts), minimum, total_count) {
-  Assert(total_count > 0, "Cannot have histogram without any values.");
-  Assert(!bin_maxima.empty(), "Cannot have histogram without any bins.");
-  Assert(bin_maxima.size() == bin_distinct_counts.size(), "Must have maxs and distinct counts for each bin.");
-  Assert(minimum <= bin_maxima[0], "Must have maxs and distinct counts for each bin.");
+      _bin_data({minimum, std::move(bin_maxima), total_count, std::move(bin_distinct_counts)}) {
+  Assert(_bin_data.total_count > 0, "Cannot have histogram without any values.");
+  Assert(!_bin_data.bin_maxima.empty(), "Cannot have histogram without any bins.");
+  Assert(_bin_data.bin_maxima.size() == _bin_data.bin_distinct_counts.size(),
+         "Must have maxs and distinct counts for each bin.");
+  Assert(_bin_data.minimum <= _bin_data.bin_maxima[0], "Must have maxs and distinct counts for each bin.");
 
-  for (BinID bin_id = 0; bin_id < bin_maxima.size(); bin_id++) {
-    Assert(bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-    Assert(bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
+  for (BinID bin_id = 0; bin_id < _bin_data.bin_maxima.size(); bin_id++) {
+    Assert(_bin_data.bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
+    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+           "Unsupported characters.");
 
-    if (bin_id < bin_maxima.size() - 1) {
-      Assert(bin_maxima[bin_id] < bin_maxima[bin_id + 1], "Bins must be sorted and cannot overlap.");
+    if (bin_id < _bin_data.bin_maxima.size() - 1) {
+      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_maxima[bin_id + 1],
+             "Bins must be sorted and cannot overlap.");
     }
   }
 }
@@ -90,7 +95,7 @@ EqualHeightBinData<T> EqualHeightHistogram<T>::_build_bins(
     }
   }
 
-  return {std::move(bin_maxima), std::move(bin_distinct_counts), min, total_count};
+  return {min, std::move(bin_maxima), total_count, std::move(bin_distinct_counts)};
 }
 
 template <typename T>
@@ -103,18 +108,18 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
     return nullptr;
   }
 
-  const auto bins = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
+  auto bins = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<EqualHeightHistogram<T>>(std::move(bins.bin_maxima), std::move(bins.bin_distinct_counts),
-                                                     bins.minimum, bins.total_count, characters, prefix_length);
+    return std::make_shared<EqualHeightHistogram<T>>(bins.minimum, std::move(bins.bin_maxima), bins.total_count,
+                                                     std::move(bins.bin_distinct_counts), characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<EqualHeightHistogram<T>>(std::move(bins.bin_maxima), std::move(bins.bin_distinct_counts),
-                                                     bins.minimum, bins.total_count);
+    return std::make_shared<EqualHeightHistogram<T>>(bins.minimum, std::move(bins.bin_maxima), bins.total_count,
+                                                     std::move(bins.bin_distinct_counts));
   }
 }
 

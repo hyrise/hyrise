@@ -15,17 +15,17 @@ namespace opossum {
  */
 template <typename T>
 struct EqualHeightBinData {
-  // Max values on a per-bin basis.
-  std::vector<T> bin_maxima;
-
-  // Number of distinct values on a per-bin basis.
-  std::vector<HistogramCountType> bin_distinct_counts;
-
   // Minimum value of the histogram.
   T minimum;
 
+  // Max values on a per-bin basis.
+  std::vector<T> bin_maxima;
+
   // Total number of values in the histogram.
   HistogramCountType total_count;
+
+  // Number of distinct values on a per-bin basis.
+  std::vector<HistogramCountType> bin_distinct_counts;
 };
 
 /**
@@ -37,12 +37,11 @@ template <typename T>
 class EqualHeightHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
-  EqualHeightHistogram(const std::vector<T>&& bin_maxima, const std::vector<HistogramCountType>&& bin_distinct_counts,
-                       const T minimum, const HistogramCountType total_count);
-  EqualHeightHistogram(const std::vector<std::string>&& bin_maxima,
-                       const std::vector<HistogramCountType>&& bin_distinct_counts, const std::string& minimum,
-                       const HistogramCountType total_count, const std::string& supported_characters,
-                       const size_t string_prefix_length);
+  EqualHeightHistogram(const T minimum, std::vector<T>&& bin_maxima, const HistogramCountType total_count,
+                       std::vector<HistogramCountType>&& bin_distinct_counts);
+  EqualHeightHistogram(const std::string& minimum, std::vector<std::string>&& bin_maxima,
+                       const HistogramCountType total_count, std::vector<HistogramCountType>&& bin_distinct_counts,
+                       const std::string& supported_characters, const size_t string_prefix_length);
 
   /**
    * Create a histogram based on the data in a given segment.

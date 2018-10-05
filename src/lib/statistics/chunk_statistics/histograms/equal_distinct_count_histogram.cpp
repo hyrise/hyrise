@@ -13,52 +13,62 @@ namespace opossum {
 using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
-EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(const std::vector<T>&& bin_minima,
-                                                            const std::vector<T>&& bin_maxima,
-                                                            const std::vector<HistogramCountType>&& bin_heights,
+EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
+                                                            std::vector<HistogramCountType>&& bin_heights,
                                                             const HistogramCountType distinct_count_per_bin,
                                                             const BinID bin_count_with_extra_value)
     : AbstractHistogram<T>(),
-      _bin_data(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
-                bin_count_with_extra_value) {
-  Assert(!bin_minima.empty(), "Cannot have histogram without any bins.");
-  Assert(bin_minima.size() == bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
-  Assert(bin_minima.size() == bin_heights.size(), "Must have the same number of edges and heights.");
-  Assert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
-  Assert(bin_count_with_extra_value < bin_minima.size(), "Cannot have more bins with extra value than bins.");
+      _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
+                 bin_count_with_extra_value}) {
+  Assert(!_bin_data.bin_minima.empty(), "Cannot have histogram without any bins.");
+  Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
+         "Must have the same number of lower as upper bin edges.");
+  Assert(_bin_data.bin_minima.size() == _bin_data.bin_heights.size(),
+         "Must have the same number of edges and heights.");
+  Assert(_bin_data.distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
+  Assert(_bin_data.bin_count_with_extra_value < _bin_data.bin_minima.size(),
+         "Cannot have more bins with extra value than bins.");
 
-  for (BinID bin_id = 0; bin_id < bin_minima.size(); bin_id++) {
-    Assert(bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    Assert(bin_minima[bin_id] <= bin_maxima[bin_id], "Cannot have overlapping bins.");
+  for (BinID bin_id = 0; bin_id < _bin_data.bin_minima.size(); bin_id++) {
+    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id], "Cannot have overlapping bins.");
 
-    if (bin_id < bin_maxima.size() - 1) {
-      Assert(bin_maxima[bin_id] < bin_minima[bin_id + 1], "Bins must be sorted and cannot overlap.");
+    if (bin_id < _bin_data.bin_maxima.size() - 1) {
+      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_minima[bin_id + 1],
+             "Bins must be sorted and cannot overlap.");
     }
   }
 }
 
 template <>
 EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
-    const std::vector<std::string>&& bin_minima, const std::vector<std::string>&& bin_maxima,
-    const std::vector<HistogramCountType>&& bin_heights, const HistogramCountType distinct_count_per_bin,
+    std::vector<std::string>&& bin_minima, std::vector<std::string>&& bin_maxima,
+    std::vector<HistogramCountType>&& bin_heights, const HistogramCountType distinct_count_per_bin,
     const BinID bin_count_with_extra_value, const std::string& supported_characters, const size_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
-      _bin_data(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
-                bin_count_with_extra_value) {
-  Assert(!bin_minima.empty(), "Cannot have histogram without any bins.");
-  Assert(bin_minima.size() == bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
-  Assert(bin_minima.size() == bin_heights.size(), "Must have the same number of edges and heights.");
-  Assert(distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
-  Assert(bin_count_with_extra_value < bin_minima.size(), "Cannot have more bins with extra value than bins.");
+      _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
+                 bin_count_with_extra_value}) {
+  Assert(!_bin_data.bin_minima.empty(), "Cannot have histogram without any bins.");
+  Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
+         "Must have the same number of lower as upper bin edges.");
+  Assert(_bin_data.bin_minima.size() == _bin_data.bin_heights.size(),
+         "Must have the same number of edges and heights.");
+  Assert(_bin_data.distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
+  Assert(_bin_data.bin_count_with_extra_value < _bin_data.bin_minima.size(),
+         "Cannot have more bins with extra value than bins.");
 
-  for (BinID bin_id = 0u; bin_id < bin_minima.size(); bin_id++) {
-    Assert(bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    Assert(bin_minima[bin_id].find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
-    Assert(bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos, "Unsupported characters.");
-    Assert(bin_minima[bin_id] <= bin_maxima[bin_id], "Cannot have upper bin edge higher than lower bin edge.");
+  for (BinID bin_id = 0u; bin_id < _bin_data.bin_minima.size(); bin_id++) {
+    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    Assert(_bin_data.bin_minima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+           "Unsupported characters.");
+    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+           "Unsupported characters.");
+    Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id],
+           "Cannot have upper bin edge higher than lower bin edge.");
 
-    if (bin_id < bin_maxima.size() - 1) {
-      Assert(bin_maxima[bin_id] < bin_minima[bin_id + 1], "Bins must be sorted and cannot overlap.");
+    if (bin_id < _bin_data.bin_maxima.size() - 1) {
+      Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_minima[bin_id + 1],
+             "Bins must be sorted and cannot overlap.");
     }
   }
 }
@@ -108,7 +118,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     return nullptr;
   }
 
-  const auto bins = EqualDistinctCountHistogram<T>::_build_bins(value_counts, max_bin_count);
+  auto bins = EqualDistinctCountHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
