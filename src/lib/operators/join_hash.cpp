@@ -645,16 +645,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto l2_cache_size = 256'000;  // bytes
 
     // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-    // that each value maps to a PosLis with a single RowID. For the used small_vector's, we assume a
+    // that each value maps to a PosList with a single RowID. For the used small_vector's, we assume a
     // size of 2*RowID per PosList. For sizing, see comments:
     // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
     const auto complete_hash_map_size =
-      // number of items in map
-      (build_relation_size *
-      // key + value (and one byte overhead, see link above)
-      (sizeof(LeftType) + 2 * sizeof(RowID) + 1))
-      // fill factor
-      / 0.8;
+        // number of items in map
+        (build_relation_size *
+         // key + value (and one byte overhead, see link above)
+         (sizeof(LeftType) + 2 * sizeof(RowID) + 1))
+        // fill factor
+        / 0.8;
 
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
