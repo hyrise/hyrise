@@ -175,13 +175,6 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
         } else {
           hashtable.emplace(casted_value, SmallPosList{element.row_id});
         }
-
-        // auto [it, inserted] =  // NOLINT
-        //     hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
-        // if (!inserted) {
-        //   // We already have the value in the map
-        //   it->second.emplace_back(element.row_id);
-        // }
       }
 
       hashtables[current_partition_id] = std::move(hashtable);
