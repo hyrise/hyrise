@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "bytell_hash_map.hpp"
 #include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -25,7 +26,6 @@
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
 #include "utils/uninitialized_vector.hpp"
-#include "bytell_hash_map.hpp"
 
 namespace opossum {
 
