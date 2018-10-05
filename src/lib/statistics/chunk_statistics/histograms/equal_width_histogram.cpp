@@ -13,8 +13,8 @@ namespace opossum {
 
 template <typename T>
 EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
-                                            const std::vector<HistogramCountType>& bin_heights,
-                                            const std::vector<HistogramCountType>& bin_distinct_counts,
+                                            const std::vector<HistogramCountType>&& bin_heights,
+                                            const std::vector<HistogramCountType>&& bin_distinct_counts,
                                             const BinID bin_count_with_larger_range)
     : AbstractHistogram<T>(),
       _bin_data({minimum, maximum, bin_heights, bin_distinct_counts, bin_count_with_larger_range}) {
@@ -30,8 +30,8 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
 
 template <>
 EqualWidthHistogram<std::string>::EqualWidthHistogram(const std::string& minimum, const std::string& maximum,
-                                                      const std::vector<HistogramCountType>& bin_heights,
-                                                      const std::vector<HistogramCountType>& bin_distinct_counts,
+                                                      const std::vector<HistogramCountType>&& bin_heights,
+                                                      const std::vector<HistogramCountType>&& bin_distinct_counts,
                                                       const BinID bin_count_with_larger_range,
                                                       const std::string& supported_characters,
                                                       const uint32_t string_prefix_length)
@@ -107,15 +107,16 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
     const auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, characters, prefix_length);
-    return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, bins.bin_heights,
-                                                    bins.bin_distinct_counts, bins.bin_count_with_larger_range,
-                                                    characters, prefix_length);
+    return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),
+                                                    std::move(bins.bin_distinct_counts),
+                                                    bins.bin_count_with_larger_range, characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
     const auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count);
-    return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, bins.bin_heights,
-                                                    bins.bin_distinct_counts, bins.bin_count_with_larger_range);
+    return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),
+                                                    std::move(bins.bin_distinct_counts),
+                                                    bins.bin_count_with_larger_range);
   }
 }
 

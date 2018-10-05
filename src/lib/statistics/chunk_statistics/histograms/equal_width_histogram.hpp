@@ -43,12 +43,12 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
 
-  EqualWidthHistogram(const T minimum, const T maximum, const std::vector<HistogramCountType>& bin_heights,
-                      const std::vector<HistogramCountType>& bin_distinct_counts,
+  EqualWidthHistogram(const T minimum, const T maximum, const std::vector<HistogramCountType>&& bin_heights,
+                      const std::vector<HistogramCountType>&& bin_distinct_counts,
                       const BinID bin_count_with_larger_range);
   EqualWidthHistogram(const std::string& minimum, const std::string& maximum,
-                      const std::vector<HistogramCountType>& bin_heights,
-                      const std::vector<HistogramCountType>& bin_distinct_counts,
+                      const std::vector<HistogramCountType>&& bin_heights,
+                      const std::vector<HistogramCountType>&& bin_distinct_counts,
                       const BinID bin_count_with_larger_range, const std::string& supported_characters,
                       const uint32_t string_prefix_length);
 

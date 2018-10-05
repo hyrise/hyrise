@@ -11,8 +11,8 @@
 namespace opossum {
 
 template <typename T>
-EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& bin_maxima,
-                                              const std::vector<HistogramCountType>& bin_distinct_counts, T minimum,
+EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>&& bin_maxima,
+                                              const std::vector<HistogramCountType>&& bin_distinct_counts, T minimum,
                                               const HistogramCountType total_count)
     : AbstractHistogram<T>(), _bin_data({bin_maxima, bin_distinct_counts, minimum, total_count}) {
   Assert(total_count > 0, "Cannot have histogram without any values.");
@@ -30,8 +30,8 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const std::vector<T>& bin_maxima,
 }
 
 template <>
-EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::string>& bin_maxima,
-                                                        const std::vector<HistogramCountType>& bin_distinct_counts,
+EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::vector<std::string>&& bin_maxima,
+                                                        const std::vector<HistogramCountType>&& bin_distinct_counts,
                                                         const std::string& minimum,
                                                         const HistogramCountType total_count,
                                                         const std::string& supported_characters,
@@ -106,13 +106,13 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<EqualHeightHistogram<T>>(bins.bin_maxima, bins.bin_distinct_counts, bins.minimum,
-                                                     bins.total_count, characters, prefix_length);
+    return std::make_shared<EqualHeightHistogram<T>>(std::move(bins.bin_maxima), std::move(bins.bin_distinct_counts),
+                                                     bins.minimum, bins.total_count, characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<EqualHeightHistogram<T>>(bins.bin_maxima, bins.bin_distinct_counts, bins.minimum,
-                                                     bins.total_count);
+    return std::make_shared<EqualHeightHistogram<T>>(std::move(bins.bin_maxima), std::move(bins.bin_distinct_counts),
+                                                     bins.minimum, bins.total_count);
   }
 }
 

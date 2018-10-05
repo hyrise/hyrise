@@ -37,10 +37,10 @@ template <typename T>
 class EqualHeightHistogram : public AbstractHistogram<T> {
  public:
   using AbstractHistogram<T>::AbstractHistogram;
-  EqualHeightHistogram(const std::vector<T>& bin_maxima, const std::vector<HistogramCountType>& bin_distinct_counts,
+  EqualHeightHistogram(const std::vector<T>&& bin_maxima, const std::vector<HistogramCountType>&& bin_distinct_counts,
                        const T minimum, const HistogramCountType total_count);
-  EqualHeightHistogram(const std::vector<std::string>& bin_maxima,
-                       const std::vector<HistogramCountType>& bin_distinct_counts, const std::string& minimum,
+  EqualHeightHistogram(const std::vector<std::string>&& bin_maxima,
+                       const std::vector<HistogramCountType>&& bin_distinct_counts, const std::string& minimum,
                        const HistogramCountType total_count, const std::string& supported_characters,
                        const uint32_t string_prefix_length);
 

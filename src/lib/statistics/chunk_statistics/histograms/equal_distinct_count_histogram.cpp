@@ -11,9 +11,9 @@
 namespace opossum {
 
 template <typename T>
-EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(const std::vector<T>& bin_minima,
-                                                            const std::vector<T>& bin_maxima,
-                                                            const std::vector<HistogramCountType>& bin_heights,
+EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(const std::vector<T>&& bin_minima,
+                                                            const std::vector<T>&& bin_maxima,
+                                                            const std::vector<HistogramCountType>&& bin_heights,
                                                             const HistogramCountType distinct_count_per_bin,
                                                             const BinID bin_count_with_extra_value)
     : AbstractHistogram<T>(),
@@ -36,8 +36,8 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(const std::vector<T>
 
 template <>
 EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
-    const std::vector<std::string>& bin_minima, const std::vector<std::string>& bin_maxima,
-    const std::vector<HistogramCountType>& bin_heights, const HistogramCountType distinct_count_per_bin,
+    const std::vector<std::string>&& bin_minima, const std::vector<std::string>&& bin_maxima,
+    const std::vector<HistogramCountType>&& bin_heights, const HistogramCountType distinct_count_per_bin,
     const BinID bin_count_with_extra_value, const std::string& supported_characters,
     const uint32_t string_prefix_length)
     : AbstractHistogram<std::string>(supported_characters, string_prefix_length),
@@ -109,14 +109,14 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   if constexpr (std::is_same_v<T, std::string>) {
     const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
-    return std::make_shared<EqualDistinctCountHistogram<T>>(bins.bin_minima, bins.bin_maxima, bins.bin_heights,
-                                                            bins.distinct_count_per_bin,
+    return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bins.bin_minima), std::move(bins.bin_maxima),
+                                                            std::move(bins.bin_heights), bins.distinct_count_per_bin,
                                                             bins.bin_count_with_extra_value, characters, prefix_length);
   } else {
     DebugAssert(!supported_characters && !string_prefix_length,
                 "Do not provide string prefix prefix arguments for non-string histograms.");
-    return std::make_shared<EqualDistinctCountHistogram<T>>(bins.bin_minima, bins.bin_maxima, bins.bin_heights,
-                                                            bins.distinct_count_per_bin,
+    return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bins.bin_minima), std::move(bins.bin_maxima),
+                                                            std::move(bins.bin_heights), bins.distinct_count_per_bin,
                                                             bins.bin_count_with_extra_value);
   }
 }
