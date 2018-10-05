@@ -29,15 +29,6 @@ struct EqualDistinctCountBinData {
 
   // The first bin_count_with_extra_value bins have an additional distinct value.
   BinID bin_count_with_extra_value;
-
-  EqualDistinctCountBinData(const std::vector<T>&& bin_minima, const std::vector<T>&& bin_maxima,
-                            const std::vector<HistogramCountType>&& bin_heights,
-                            const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value)
-      : bin_minima(bin_minima),
-        bin_maxima(bin_maxima),
-        bin_heights(bin_heights),
-        distinct_count_per_bin(distinct_count_per_bin),
-        bin_count_with_extra_value(bin_count_with_extra_value) {}
 };
 
 /**

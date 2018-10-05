@@ -26,10 +26,6 @@ struct EqualHeightBinData {
 
   // Total number of values in the histogram.
   HistogramCountType total_count;
-
-  EqualHeightBinData(const std::vector<T>&& bin_maxima, const std::vector<HistogramCountType>&& bin_distinct_counts,
-                     const T minimum, const HistogramCountType total_count)
-      : bin_maxima(bin_maxima), bin_distinct_counts(bin_distinct_counts), minimum(minimum), total_count(total_count) {}
 };
 
 /**
