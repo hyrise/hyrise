@@ -11,6 +11,8 @@ class AbstractTableScanImpl {
  public:
   virtual ~AbstractTableScanImpl() = default;
 
+  virtual std::string description() const = 0;
+
   virtual std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) = 0;
 };
 

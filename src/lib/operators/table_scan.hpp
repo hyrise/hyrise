@@ -60,10 +60,9 @@ class TableScan : public AbstractReadOnlyOperator {
  private:
   const std::shared_ptr<AbstractExpression> _predicate;
 
-  std::vector<ChunkID> _excluded_chunk_ids;
+  std::unique_ptr<AbstractTableScanImpl> _impl;
 
-  std::shared_ptr<const Table> _in_table;
-  std::shared_ptr<Table> _output_table;
+  std::vector<ChunkID> _excluded_chunk_ids;
 };
 
 }  // namespace opossum
