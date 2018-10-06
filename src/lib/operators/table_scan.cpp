@@ -15,6 +15,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -154,12 +155,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
 std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
   /**
-   * Select the scanning implementation (`_impl`) to use based on the nature of the expression. Use the
-   * ExpressionEvaluator if no dedicated implementation exists
+   * Select the scanning implementation (`_impl`) to use based on the kind of the expression. Use the
+   * ExpressionEvaluator as a fallback, if no dedicated implementation exists for an expression.
    */
 
   const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate);
   if (binary_predicate_expression) {
+    const auto operator_scan_predicates = OperatorScanPredicate::from_expression()
+
     const auto predicate_condition = binary_predicate_expression->predicate_condition;
     const auto left_column_expression =
         std::dynamic_pointer_cast<PQPColumnExpression>(binary_predicate_expression->left_operand());
