@@ -20,7 +20,7 @@ class TypedOperatorBaseTest : public BaseTestWithParam<std::tuple<DataType, Enco
   }
 };
 
-static std::vector<TypedOperatorBaseTest::ParamType> initialize_test_params() {
+static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
   std::vector<TypedOperatorBaseTest::ParamType> pairs;
 
   hana::for_each(data_type_pairs, [&](auto pair) {

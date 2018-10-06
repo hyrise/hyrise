@@ -1,4 +1,4 @@
-#include <tuple>
+    #include <tuple>
 
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/table_scan.hpp"
@@ -122,7 +122,7 @@ TEST_P(TableScanBetweenTest, NullValueAsParameter) {
   });
 }
 
-INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(initialize_test_params()),
+INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
                         TypedOperatorBaseTest::format);
 
 }  // namespace opossum
