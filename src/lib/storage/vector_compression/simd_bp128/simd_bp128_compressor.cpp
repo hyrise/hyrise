@@ -61,7 +61,7 @@ void SimdBp128Compressor::_finish() {
 bool SimdBp128Compressor::_meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
 
 void SimdBp128Compressor::_pack_meta_block() {
-  const auto bits_needed = _bits_needed_per_block();
+  alignas(16) const auto bits_needed = _bits_needed_per_block();
   _write_meta_info(bits_needed);
   _pack_blocks(Packing::blocks_in_meta_block, bits_needed);
 
@@ -72,7 +72,7 @@ void SimdBp128Compressor::_pack_incomplete_meta_block() {
   // Fill remaining elements with zero
   std::fill(_pending_meta_block.begin() + _meta_block_index, _pending_meta_block.end(), 0u);
 
-  const auto bits_needed = _bits_needed_per_block();
+  alignas(16) const auto bits_needed = _bits_needed_per_block();
   _write_meta_info(bits_needed);
 
   // Returns ceiling of integer division
