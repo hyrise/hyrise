@@ -161,8 +161,6 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
 
   const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate);
   if (binary_predicate_expression) {
-    const auto operator_scan_predicates = OperatorScanPredicate::from_expression()
-
     const auto predicate_condition = binary_predicate_expression->predicate_condition;
     const auto left_column_expression =
         std::dynamic_pointer_cast<PQPColumnExpression>(binary_predicate_expression->left_operand());
@@ -171,30 +169,33 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
     const auto right_value_expression =
         std::dynamic_pointer_cast<ValueExpression>(binary_predicate_expression->right_operand());
 
-    if (left_column_expression) {
-      if ((predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) &&
-          right_value_expression) {
-        Assert(left_column_expression->data_type() == DataType::String,
-               "LIKE operator only applicable on string columns.");
-        DebugAssert(!variant_is_null(right_value_expression->value), "Right value must not be NULL.");
+    const auto is_like_predicate = predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
+    const auto is_null_predicate = predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull;
 
-        const auto right_wildcard = type_cast<std::string>(right_value_expression->value);
+    // <column> LIKE <non-null value>
+    if (left_column_expression && is_like_predicate && right_value) {
+      return std::make_unique<LikeTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition,
+                                                 type_cast<std::string>(*right_value));
+    }
 
-        return std::make_unique<LikeTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition,
-                                                    right_wildcard);
+    // <column> IS NULL
+    if (left_column_expression && is_null_predicate) {
+      return std::make_unique<IsNullTableScanImpl>(_in_table, left_column_expression->column_id,
+                                                   predicate_condition);
+    }
 
-      } else if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
-        return std::make_unique<IsNullTableScanImpl>(_in_table, left_column_expression->column_id,
-                                                      predicate_condition);
+    // <column> <binary predicate_condition> <non-null value>
+    if (left_column_expression && right_value) {
+      return std::make_unique<SingleColumnTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition, *right_value);
+    }
+    if (right_column_expression && left_value) {
+      return std::make_unique<SingleColumnTableScanImpl>(_in_table, right_column_expression->column_id, flip_predicate_condition(predicate_condition), *left_value);
+    }
 
-      } else if (right_value_expression) {
-        return std::make_unique<SingleColumnTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition, right_value_expression->value);
-
-      } else if (right_column_expression) {
-        return std::make_unique<ColumnComparisonTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition,
-                                                                right_column_expression->column_id);
-
-      }
+    // <column> <binary predicate_condition> <column>
+    if (left_column_expression && right_column_expression) {
+      return std::make_unique<ColumnComparisonTableScanImpl>(_in_table, left_column_expression->column_id, predicate_condition,
+                                                             right_column_expression->column_id);
     }
   }
 
