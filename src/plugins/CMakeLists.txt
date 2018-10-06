@@ -10,11 +10,7 @@ function(add_plugin)
         message(FATAL_ERROR "You must provide a name for the plugin")
     endif(NOT PARSED_ARGS_NAME)
 
-    add_library(${PARSED_ARGS_NAME} SHARED)
-
-    foreach(src ${PARSED_ARGS_SRCS})
-        target_sources(${PARSED_ARGS_NAME} PRIVATE ${src})
-    endforeach(src)
+    add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})

@@ -251,10 +251,12 @@ set(
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/constant_calculation_rule.cpp
+    optimizer/strategy/constant_calculation_rule.hpp
+    optimizer/strategy/exists_reformulation_rule.cpp
+    optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
@@ -339,6 +341,16 @@ set(
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/histograms/abstract_histogram.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.hpp
+    statistics/chunk_statistics/histograms/histogram_utils.cpp
+    statistics/chunk_statistics/histograms/histogram_utils.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp

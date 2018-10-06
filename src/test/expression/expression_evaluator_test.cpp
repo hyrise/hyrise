@@ -444,10 +444,15 @@ TEST_F(ExpressionEvaluatorTest, InListLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_()), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_(1, 2, 3, 4)), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(null_(), list_(null_(), 2, 3, 4)), {std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_()), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(null_(), 5, null_())), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_()), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(null_(), add_(2, 3), null_())), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(null_(), 6, null_())), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(1, 3)), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(1.0, 3.0)), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(1.0, 5.0)), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(1.0, add_(1.0, 3.0))), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*in_(5, list_(1.0, add_(2.0, 3.0))), {1}));
 }
 
 TEST_F(ExpressionEvaluatorTest, InListSeries) {

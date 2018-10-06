@@ -28,7 +28,7 @@ struct TopologyCpu final {
 struct TopologyNode final {
   explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
 
-  void print(std::ostream& stream = std::cout) const;
+  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
 
   std::vector<TopologyCpu> cpus;
 };
@@ -48,7 +48,7 @@ class Topology final : public Singleton<Topology> {
    * Calls _init_default_topology() internally.
    * Calls _init_numa_topology() or _init_non_numa_topology() if on a NUMA or non-NUMA system respectively.
    */
-  static void use_default_topology();
+  static void use_default_topology(uint32_t max_num_cores = 0);
 
   /**
    * Use a NUMA topology.
@@ -72,7 +72,7 @@ class Topology final : public Singleton<Topology> {
 
   /**
    * Use a fake-NUMA topology.
-   * The topology has a number of cores equal to either max_num_cores or the number of physically availyble cores,
+   * The topology has a number of cores equal to either max_num_cores or the number of physically available cores,
    * whichever one is lower. Virtual NUMA nodes are created based on the workers_per_node parameter.
    *
    * Calls _init_fake_numa_topology() internally.
@@ -85,14 +85,14 @@ class Topology final : public Singleton<Topology> {
 
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
-  void print(std::ostream& stream = std::cout) const;
+  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
 
  private:
   Topology();
 
   friend class Singleton;
 
-  void _init_default_topology();
+  void _init_default_topology(uint32_t max_num_cores = 0);
   void _init_numa_topology(uint32_t max_num_cores = 0);
   void _init_non_numa_topology(uint32_t max_num_cores = 0);
   void _init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);

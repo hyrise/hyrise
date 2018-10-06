@@ -1139,11 +1139,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           } else {
             // `a IN (x, y, z)`
             std::vector<std::shared_ptr<AbstractExpression>> arguments;
-            if (expr.exprList) {
-              arguments.reserve(expr.exprList->size());
-              for (const auto* hsql_argument : *expr.exprList) {
-                arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_resolver));
-              }
+
+            AssertInput(expr.exprList && !expr.exprList->empty(), "IN clauses with an empty list are invalid");
+
+            arguments.reserve(expr.exprList->size());
+            for (const auto* hsql_argument : *expr.exprList) {
+              arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_resolver));
             }
 
             const auto array = std::make_shared<ListExpression>(arguments);
