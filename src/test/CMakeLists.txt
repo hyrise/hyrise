@@ -117,8 +117,13 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
-    statistics/chunk_statistics/range_filter_test.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
+    statistics/chunk_statistics/histograms/histogram_utils_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
+    statistics/chunk_statistics/range_filter_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp
@@ -238,6 +243,7 @@ set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
+    statistics/chunk_statistics/histograms/histogram_utils_extended_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
