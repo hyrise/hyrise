@@ -252,7 +252,6 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
   tests[PredicateCondition::LessThanEquals] = {100, 102, 104, 106, 100, 102, 104, 106};
   tests[PredicateCondition::GreaterThan] = {108, 110, 112, 108, 110, 112};
   tests[PredicateCondition::GreaterThanEquals] = {106, 108, 110, 112, 106, 108, 110, 112};
-  tests[PredicateCondition::Between] = {};  // Will throw
   tests[PredicateCondition::IsNull] = {};
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
 
@@ -260,12 +259,6 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
     auto scan_int = std::make_shared<TableScan>(_int_int_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 6});
     auto scan_int_partly =
         std::make_shared<TableScan>(_int_int_partly_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 6});
-
-    if (test.first == PredicateCondition::Between) {
-      EXPECT_THROW(scan_int->execute(), std::logic_error);
-      EXPECT_THROW(scan_int_partly->execute(), std::logic_error);
-      continue;
-    }
 
     scan_int->execute();
 
@@ -286,7 +279,6 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
   tests[PredicateCondition::LessThanEquals] = {100, 102, 104, 100, 102, 104};
   tests[PredicateCondition::GreaterThan] = {106, 106};
   tests[PredicateCondition::GreaterThanEquals] = {104, 106, 104, 106};
-  tests[PredicateCondition::Between] = {};  // Will throw
   tests[PredicateCondition::IsNull] = {};
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 100, 102, 104, 106};
 
@@ -301,12 +293,6 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
 
     auto scan2 = std::make_shared<TableScan>(scan1, OperatorScanPredicate{ColumnID{0}, test.first, 4});
     auto scan_partly2 = std::make_shared<TableScan>(scan_partly1, OperatorScanPredicate{ColumnID{0}, test.first, 4});
-
-    if (test.first == PredicateCondition::Between) {
-      EXPECT_THROW(scan2->execute(), std::logic_error);
-      EXPECT_THROW(scan_partly2->execute(), std::logic_error);
-      continue;
-    }
 
     scan2->execute();
     scan_partly2->execute();

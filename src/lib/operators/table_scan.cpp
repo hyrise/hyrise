@@ -163,11 +163,11 @@ void TableScan::_init_scan() {
     const auto left_column_type = _in_table->column_data_type(column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
-    DebugAssert(is_variant(parameter), "Right parameter must be variant.");
+    Assert(is_variant(parameter), "Right parameter must be variant.");
 
     const auto right_value = boost::get<AllTypeVariant>(parameter);
 
-    DebugAssert(!variant_is_null(right_value), "Right value must not be NULL.");
+    Assert(!variant_is_null(right_value), "Right value must not be NULL.");
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
@@ -180,12 +180,12 @@ void TableScan::_init_scan() {
   } else if (condition == PredicateCondition::Between) {
     const auto left_value = boost::get<AllTypeVariant>(parameter);
 
-    DebugAssert(_predicate.value2, "Expected right value for BETWEEN");
+    Assert(_predicate.value2, "Expected right value for BETWEEN");
     const auto right_value = boost::get<AllTypeVariant>(*_predicate.value2);
 
-    DebugAssert(left_value.which() == right_value.which(),
+    Assert(left_value.which() == right_value.which(),
                 "Expected left and right value to be of the same type (see operator_scan_predicate.cpp)");
-    DebugAssert(!variant_is_null(left_value) && !variant_is_null(right_value),
+    Assert(!variant_is_null(left_value) && !variant_is_null(right_value),
                 "Expected BETWEEN values to be non-null");
 
     _impl = std::make_unique<BetweenTableScanImpl>(_in_table, column_id, left_value, right_value);
