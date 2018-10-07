@@ -11,7 +11,6 @@ namespace opossum {
  *  It serves functionality that is used by all recoverers, namely 
  *   -  recovery from a file
  *   -  replay a transaction
- *   -  update transaction_id in the TransactionManager
  */
 
 class AbstractRecoverer {
