@@ -227,7 +227,7 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
     }
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      Fail("Predicate NOT LIKE is not supported for non-string columns.");
+      Fail("Predicate (NOT) LIKE is not supported for non-string columns.");
     default:
       // Do not prune predicates we cannot (yet) handle.
       return false;
