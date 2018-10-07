@@ -98,55 +98,55 @@ void JoinNestedLoop::_join_two_typed_segments(const BinaryFunctor& func, LeftIte
                                               RightIterator right_begin, RightIterator right_end,
                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                               JoinNestedLoop::JoinParams& params) {
-  for (; left_it != left_end; ++left_it) {
-    const auto left_value = *left_it;
-    if (left_value.is_null()) continue;
+  // for (; left_it != left_end; ++left_it) {
+  //   const auto left_value = *left_it;
+  //   if (left_value.is_null()) continue;
 
-    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-      const auto right_value = *right_it;
-      if (right_value.is_null()) continue;
+  //   for (auto right_it = right_begin; right_it != right_end; ++right_it) {
+  //     const auto right_value = *right_it;
+  //     if (right_value.is_null()) continue;
 
-      if (func(left_value.value(), right_value.value())) {
-        _process_match(RowID{chunk_id_left, left_value.chunk_offset()},
-                       RowID{chunk_id_right, right_value.chunk_offset()}, params);
-      }
-    }
-  }
+  //     if (func(left_value.value(), right_value.value())) {
+  //       _process_match(RowID{chunk_id_left, left_value.chunk_offset()},
+  //                      RowID{chunk_id_right, right_value.chunk_offset()}, params);
+  //     }
+  //   }
+  // }
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& segment_left,
                                                 const std::shared_ptr<const BaseSegment>& segment_right,
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
-  resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
-    resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
+  // resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
+  //   resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
+  //     using LeftType = typename decltype(left_type)::type;
+  //     using RightType = typename decltype(right_type)::type;
 
-      // make sure that we do not compile invalid versions of these lambdas
-      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
-      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
+  //     // make sure that we do not compile invalid versions of these lambdas
+  //     constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
+  //     constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
 
-      constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
-      constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
+  //     constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
+  //     constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      // clang-format off
-      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
-        auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
-        auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
+  //     // clang-format off
+  //     if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
+  //       auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
+  //       auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
 
-        iterable_left.with_iterators([&](auto left_it, auto left_end) {
-          iterable_right.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(params.predicate_condition, [&](auto comparator) {
-              _join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                      chunk_id_right, params);
-            });
-          });
-        });
-      }
-      // clang-format on
-    });
-  });
+  //       iterable_left.with_iterators([&](auto left_it, auto left_end) {
+  //         iterable_right.with_iterators([&](auto right_it, auto right_end) {
+  //           with_comparator(params.predicate_condition, [&](auto comparator) {
+  //             _join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
+  //                                     chunk_id_right, params);
+  //           });
+  //         });
+  //       });
+  //     }
+  //     // clang-format on
+  //   });
+  // });
 }
 
 void JoinNestedLoop::_perform_join() {

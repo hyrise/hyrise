@@ -50,44 +50,65 @@ ExpressionEvaluator::ExpressionEvaluator(
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expression_to_result(
     const AbstractExpression& expression) {
+  // First, look in the cache
+  auto& evaluated_expression = _evaluated_expressions[expression.shared_from_this()];
+  if (evaluated_expression != nullptr) {
+    return std::static_pointer_cast<ExpressionResult<Result>>(evaluated_expression);
+  }
+
+  // Ok, we have to actually work...
+  auto result = std::shared_ptr<ExpressionResult<Result>>{};
+
   switch (expression.type) {
     case ExpressionType::Arithmetic:
-      return _evaluate_arithmetic_expression<Result>(static_cast<const ArithmeticExpression&>(expression));
+      result = _evaluate_arithmetic_expression<Result>(static_cast<const ArithmeticExpression&>(expression));
+      break;
 
     case ExpressionType::Logical:
-      return _evaluate_logical_expression<Result>(static_cast<const LogicalExpression&>(expression));
+      result = _evaluate_logical_expression<Result>(static_cast<const LogicalExpression&>(expression));
+      break;
 
     case ExpressionType::Predicate:
-      return _evaluate_predicate_expression<Result>(static_cast<const AbstractPredicateExpression&>(expression));
+      result = _evaluate_predicate_expression<Result>(static_cast<const AbstractPredicateExpression&>(expression));
+      break;
 
     case ExpressionType::PQPSelect:
-      return _evaluate_select_expression<Result>(*static_cast<const PQPSelectExpression*>(&expression));
+      result = _evaluate_select_expression<Result>(*static_cast<const PQPSelectExpression*>(&expression));
+      break;
 
     case ExpressionType::PQPColumn:
-      return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
+      result = _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
+      break;
 
     // ValueExpression and ParameterExpression both need to unpack an AllTypeVariant, so one functions handles both
     case ExpressionType::Parameter:
     case ExpressionType::Value:
-      return _evaluate_value_or_parameter_expression<Result>(expression);
+      result = _evaluate_value_or_parameter_expression<Result>(expression);
+      break;
 
     case ExpressionType::Function:
-      return _evaluate_function_expression<Result>(static_cast<const FunctionExpression&>(expression));
+      result = _evaluate_function_expression<Result>(static_cast<const FunctionExpression&>(expression));
+      break;
 
     case ExpressionType::Case:
-      return _evaluate_case_expression<Result>(static_cast<const CaseExpression&>(expression));
+      result = _evaluate_case_expression<Result>(static_cast<const CaseExpression&>(expression));
+      break;
 
     case ExpressionType::Cast:
-      return _evaluate_cast_expression<Result>(static_cast<const CastExpression&>(expression));
+      result = _evaluate_cast_expression<Result>(static_cast<const CastExpression&>(expression));
+      break;
 
     case ExpressionType::Exists:
-      return _evaluate_exists_expression<Result>(static_cast<const ExistsExpression&>(expression));
+      result = _evaluate_exists_expression<Result>(static_cast<const ExistsExpression&>(expression));
+      break;
 
     case ExpressionType::Extract:
-      return _evaluate_extract_expression<Result>(static_cast<const ExtractExpression&>(expression));
+      result = _evaluate_extract_expression<Result>(static_cast<const ExtractExpression&>(expression));
+      break;
 
     case ExpressionType::UnaryMinus:
-      return _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
+      result = _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
+      break;
 
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
@@ -99,7 +120,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::LQPSelect:
       Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
   }
-  Fail("GCC thinks this is reachable");
+
+  // Store the result in the cache
+  evaluated_expression = result;
+
+  return std::static_pointer_cast<ExpressionResult<Result>>(result);
 }
 
 template <typename Result>

@@ -81,6 +81,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
   }
 
+  std::cout << std::endl << std::endl << std::endl << std::endl << "New Projection " << std::endl;
+
   /**
    * Perform the projection
    */
@@ -93,6 +95,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_select_results);
     for (const auto& expression : expressions) {
       // Forward input column if possible
+
+      std::cout << "Now processing " << expression->as_column_name() << std::endl;
+
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
         output_segments.emplace_back(input_chunk->get_segment(pqp_column_expression->column_id));
