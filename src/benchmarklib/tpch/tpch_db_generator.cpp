@@ -203,6 +203,7 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
+  // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes,
                                 customer_count};
   TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes, order_count};
