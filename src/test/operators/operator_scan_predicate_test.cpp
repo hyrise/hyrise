@@ -49,7 +49,21 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   EXPECT_EQ(operator_predicate_a.column_id, ColumnID{0});
   EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::LessThan);
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
+}
 
+TEST_F(OperatorScanPredicateTest, SimpleBetween) {
+  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*between(a, 5, 7), *node);
+  ASSERT_TRUE(operator_predicates_a);
+  ASSERT_EQ(operator_predicates_a->size(), 1u);
+  const auto& operator_predicate_a = operator_predicates_a->at(0);
+  EXPECT_EQ(operator_predicate_a.column_id, ColumnID{0});
+  EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::Between);
+  EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
+  EXPECT_TRUE(operator_predicate_a.value2);
+  EXPECT_EQ(*operator_predicate_a.value2, AllParameterVariant{7});
+}
+
+TEST_F(OperatorScanPredicateTest, ComplicatedBetween) {
   // `5 BETWEEN a AND b` becomes `a <= 5 AND b >= 5`
   const auto operator_predicates_b = OperatorScanPredicate::from_expression(*between(5, a, b), *node);
   ASSERT_TRUE(operator_predicates_b);

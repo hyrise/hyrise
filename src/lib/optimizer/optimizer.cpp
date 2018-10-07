@@ -99,7 +99,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
-  final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
   final_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
