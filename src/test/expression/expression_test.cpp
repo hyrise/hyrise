@@ -142,7 +142,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(greater_than_(5, 3)->as_column_name(), "5 > 3");
   EXPECT_EQ(equals_(5, 3)->as_column_name(), "5 = 3");
   EXPECT_EQ(not_equals_(5, 3)->as_column_name(), "5 != 3");
-  EXPECT_EQ(between_(5, 3, 4)->as_column_name(), "5 BETWEEN_ 3 AND 4");
+  EXPECT_EQ(between_(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
   EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
   EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM '1993-03-04')");
   EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello', 1, 2)");
@@ -181,12 +181,12 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(is_null_(sum_(add_(a, 2)))->as_column_name(), "SUM(a + 2) IS NULL");
   EXPECT_EQ(less_than_(a, b)->as_column_name(), "a < b");
   EXPECT_EQ(less_than_(add_(a, 5), b)->as_column_name(), "a + 5 < b");
-  EXPECT_EQ(between_(a, 2, 3)->as_column_name(), "a BETWEEN_ 2 AND 3");
-  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN_ 2 AND 3");
-  EXPECT_EQ(not_equals_(between_(a, 2, 3), 0)->as_column_name(), "(a BETWEEN_ 2 AND 3) != 0");
+  EXPECT_EQ(between_(a, 2, 3)->as_column_name(), "a BETWEEN 2 AND 3");
+  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN 2 AND 3");
+  EXPECT_EQ(not_equals_(between_(a, 2, 3), 0)->as_column_name(), "(a BETWEEN 2 AND 3) != 0");
 
   EXPECT_EQ(mul_(less_than_(add_(a, 5), b), 3)->as_column_name(), "(a + 5 < b) * 3");
-  EXPECT_EQ(add_(1, between_(a, 2, 3))->as_column_name(), "1 + (a BETWEEN_ 2 AND 3)");
+  EXPECT_EQ(add_(1, between_(a, 2, 3))->as_column_name(), "1 + (a BETWEEN 2 AND 3)");
 
   // TODO(anybody) Omit redundant parentheses
   EXPECT_EQ(add_(5, add_(1, 3))->as_column_name(), "5 + (1 + 3)");
