@@ -523,8 +523,6 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
-    utils/murmur_hash.cpp
-    utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp
