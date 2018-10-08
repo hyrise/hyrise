@@ -654,8 +654,19 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
 
   std::vector<ExpressionEvaluator::Bool> result_values(select_result_tables.size());
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-    result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
+
+  switch (exists_expression.exists_expression_type) {
+    case ExistsExpressionType::Exists:
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+        result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
+      }
+      break;
+
+    case ExistsExpressionType::NotExists:
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+        result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() == 0;
+      }
+      break;
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
@@ -1024,9 +1035,18 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
       const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
 
-      std::vector<ExpressionEvaluator::Bool> result_values(select_result_tables.size());
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-        if (select_result_tables[chunk_offset]->row_count() > 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+      switch (exists_expression.exists_expression_type) {
+        case ExistsExpressionType::Exists:
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+            if (select_result_tables[chunk_offset]->row_count() > 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+          }
+          break;
+
+        case ExistsExpressionType::NotExists:
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+            if (select_result_tables[chunk_offset]->row_count() == 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+          }
+          break;
       }
     } break;
 

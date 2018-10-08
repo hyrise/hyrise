@@ -923,7 +923,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
       if (predicate_expression->predicate_condition == PredicateCondition::In) {
         return PredicateNode::make(expression, current_node);
       } else {
-        current_node = _add_expressions_if_unavailable(current_node, predicate_expression->arguments);
         return PredicateNode::make(expression, current_node);
       }
     }
@@ -1151,30 +1150,12 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         case hsql::kOpIsNull:
           return is_null_(left);
 
-        case hsql::kOpNot: {
-          // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
-          if (left->type == ExpressionType::Predicate) {
-            if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(left);
-                binary_predicate_expression) {
-              return std::make_shared<BinaryPredicateExpression>(
-                  inverse_predicate_condition(binary_predicate_expression->predicate_condition),
-                  binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand());
-            } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(left);
-                       is_null_expression) {
-              return std::make_shared<IsNullExpression>(
-                  inverse_predicate_condition(is_null_expression->predicate_condition), is_null_expression->operand());
-            }
-          }
-
-          /**
-           * "NOT <some_expression>" becomes "<some_expression> == 0"
-           */
-          return equals_(left, 0);
-        }
+        case hsql::kOpNot:
+          return _inverse_predicate(*left);
 
         case hsql::kOpExists:
           AssertInput(expr.select, "Expected SELECT argument for EXISTS");
-          return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_resolver));
+          return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_resolver), ExistsExpressionType::Exists);
 
         default:
           FailInput("Not handling this OperatorType yet");
@@ -1258,6 +1239,61 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
   }
 
   return current_case_expression;
+}
+
+std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const AbstractExpression& expression) const {
+  /**
+   * Inverse a boolean expression
+   */
+
+  switch (expression.type) {
+    case ExpressionType::Predicate: {
+      if (const auto *binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression *>(&expression);
+      binary_predicate_expression) {
+        // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
+        return std::make_shared<BinaryPredicateExpression>(
+        inverse_predicate_condition(binary_predicate_expression->predicate_condition),
+        binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand());
+      } else if (const auto is_null_expression = dynamic_cast<const IsNullExpression *>(&expression);
+      is_null_expression) {
+        // NOT (IS NULL ...) -> IS NOT NULL ...
+        return std::make_shared<IsNullExpression>(
+        inverse_predicate_condition(is_null_expression->predicate_condition), is_null_expression->operand());
+      } else if (const auto *between_expression = dynamic_cast<const BetweenExpression *>(&expression); between_expression) {
+        // a BETWEEN b AND c -> a < b OR a > c
+        return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
+                   greater_than_(between_expression->value(), between_expression->upper_bound()));
+      } else {
+        const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
+        Assert(in_expression, "Expected BetweenExpression");
+        return equals_(in_expression->deep_copy(), 0);
+      }
+    } break;
+
+    case ExpressionType::Logical: {
+      const auto* logical_expression = static_cast<const LogicalExpression*>(&expression);
+
+      switch(logical_expression->logical_operator) {
+        case LogicalOperator::And:
+          return or_(_inverse_predicate(*logical_expression->left_operand()), _inverse_predicate(*logical_expression->right_operand()));
+        case LogicalOperator::Or:
+          return and_(_inverse_predicate(*logical_expression->left_operand()), _inverse_predicate(*logical_expression->right_operand()));
+      }
+
+    }
+
+    case ExpressionType::Exists: {
+      const auto* exists_expression = static_cast<const ExistsExpression*>(&expression);
+
+      switch(exists_expression->exists_expression_type) {
+        case ExistsExpressionType::Exists: return not_exists_(exists_expression->select());
+        case ExistsExpressionType::NotExists: return exists_(exists_expression->select());
+      }
+    } break;
+
+    default:
+      Fail("Can't inverse non-boolean expression");
+  }
 }
 
 SQLTranslator::TableSourceState::TableSourceState(

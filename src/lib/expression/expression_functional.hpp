@@ -197,6 +197,7 @@ std::shared_ptr<InExpression> in_(const V& v, const S& s) {
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression);
+std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& select_expression);
 
 template <typename F>
 std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_component, const F& from) {

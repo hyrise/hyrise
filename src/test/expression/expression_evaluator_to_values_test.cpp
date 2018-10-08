@@ -629,7 +629,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
   const auto pqp_select_expression =
       select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
+  const auto exists_expression = exists_(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));
 
   EXPECT_EQ(exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
