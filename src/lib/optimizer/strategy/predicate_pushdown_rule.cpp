@@ -1,6 +1,7 @@
 #include "predicate_pushdown_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -33,6 +34,19 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
   if (outputs.empty() || outputs.size() > 1) return _apply_to_inputs(node);
 
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+
+  // We do not push down expensive predicates with correlated subselects
+  auto predicate_contains_correlated_subselect = false;
+  visit_expression(predicate_node->predicate, [&](const auto& sub_expression) {
+    if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
+    select_expression && !select_expression->arguments.empty()) {
+      predicate_contains_correlated_subselect = true;
+      return ExpressionVisitation::DoNotVisitArguments;
+    } else {
+      return ExpressionVisitation::VisitArguments;
+    }
+  });
+  if (predicate_contains_correlated_subselect) return _apply_to_inputs(node);
 
   // First, try to push down the predicates that come below. That keeps the predicate order intact.
   if (_apply_to_inputs(node)) return true;

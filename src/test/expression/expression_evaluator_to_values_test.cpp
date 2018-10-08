@@ -632,8 +632,13 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
   const auto exists_expression = exists_(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));
 
+  const auto not_exists_expression = not_exists_(pqp_select_expression);
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_exists_expression, {1, 1, 0, 0}));
+
   EXPECT_EQ(exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
+  EXPECT_EQ(not_exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
   EXPECT_FALSE(exists_expression->is_nullable());
+  EXPECT_FALSE(not_exists_expression->is_nullable());
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractLiterals) {

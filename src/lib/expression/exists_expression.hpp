@@ -11,7 +11,7 @@ enum class ExistsExpressionType { Exists, NotExists };
  */
 class ExistsExpression : public AbstractExpression {
  public:
-  explicit ExistsExpression(const std::shared_ptr<AbstractExpression>& select, const ExistsExpressionType exists_expression_type);
+  ExistsExpression(const std::shared_ptr<AbstractExpression>& select, const ExistsExpressionType exists_expression_type);
 
   std::shared_ptr<AbstractExpression> select() const;
 

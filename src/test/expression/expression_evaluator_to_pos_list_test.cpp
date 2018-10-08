@@ -122,6 +122,9 @@ TEST_F(ExpressionEvaluatorToPosListTest, Exists) {
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select), {}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *exists_(select), {1}));
+
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(select), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *not_exists_(select), {0, 2}));
 }
 
 }  // namespace opossum
