@@ -92,7 +92,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
-  //main_batch.add_rule(std::make_shared<ExistsReformulationRule>());
+  main_batch.add_rule(std::make_shared<ExistsReformulationRule>());
   optimizer->add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
