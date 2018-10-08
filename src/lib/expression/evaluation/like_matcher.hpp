@@ -22,6 +22,9 @@ class LikeMatcher {
    */
   static std::string sql_like_to_regex(std::string sql_like);
 
+  static size_t get_index_of_next_wildcard(const std::string& pattern, const size_t offset = 0);
+  static bool contains_wildcard(const std::string& pattern);
+
   explicit LikeMatcher(const std::string& pattern);
 
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };

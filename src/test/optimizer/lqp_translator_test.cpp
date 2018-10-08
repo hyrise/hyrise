@@ -232,7 +232,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
    * LQP resembles:
    *   SELECT * FROM int_float WHERE 5 BETWEEN a AND b;
    */
-  const auto predicate_node = PredicateNode::make(between(5, int_float_a, int_float_b), int_float_node);
+  const auto predicate_node = PredicateNode::make(between_(5, int_float_a, int_float_b), int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -425,11 +425,31 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(42));
 }
 
-TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
+TEST_F(LQPTranslatorTest, PredicateNodeSupportedBetweenScan) {
   /**
    * Build LQP and translate to PQP
    */
-  auto predicate_node = PredicateNode::make(between(int_float_a, 42, 1337), int_float_node);
+  auto predicate_node = PredicateNode::make(between_(int_float_a, 42, 1337), int_float_node);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(table_scan_op->predicate().column_id, ColumnID{0} /* "a" */);
+  EXPECT_EQ(table_scan_op->predicate().predicate_condition, PredicateCondition::Between);
+  EXPECT_EQ(table_scan_op->predicate().value, AllParameterVariant(42));
+  EXPECT_EQ(*table_scan_op->predicate().value2, AllParameterVariant(1337));
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeNonSupportedBetweenScan) {
+  /**
+   * Build LQP and translate to PQP
+   */
+
+  // Because the BETWEEN TableScan does not handle varying types (yet), two scans should be created
+  auto predicate_node = PredicateNode::make(between_(int_float_a, 42, 1337.5), int_float_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -439,7 +459,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
   ASSERT_TRUE(table_scan_op2);
   EXPECT_EQ(table_scan_op2->predicate().column_id, ColumnID{0} /* "a" */);
   EXPECT_EQ(table_scan_op2->predicate().predicate_condition, PredicateCondition::LessThanEquals);
-  EXPECT_EQ(table_scan_op2->predicate().value, AllParameterVariant(1337));
+  EXPECT_EQ(table_scan_op2->predicate().value, AllParameterVariant(1337.5));
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(table_scan_op2->input_left());
   ASSERT_TRUE(table_scan_op);
@@ -495,7 +515,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node = PredicateNode::make(between(stored_table_node->get_column("b"), 42, 1337));
+  auto predicate_node = PredicateNode::make(between_(stored_table_node->get_column("b"), 42, 1337));
   predicate_node->set_left_input(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);

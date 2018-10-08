@@ -22,7 +22,6 @@
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
 #include "utils/uninitialized_vector.hpp"
 
@@ -89,8 +88,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
 void JoinHash::_on_cleanup() { _impl.reset(); }
 
-// currently using 32bit Murmur
-using Hash = uint32_t;
+using Hash = size_t;
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -185,19 +183,10 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   return std::move(hashtables);
 }
 
-/*
-Hashes the given value into the HashedType that is defined by the current Hash Traits.
-Performs a lexical cast first, if necessary.
-*/
-template <typename OriginalType, typename HashedType>
-constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
-  return murmur2<HashedType>(type_cast<HashedType>(value), seed);
-}
-
 template <typename T, typename HashedType>
 std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                                const unsigned int partitioning_seed, bool keep_nulls = false) {
+                                                bool keep_nulls = false) {
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
@@ -241,7 +230,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Hash hashed_value = std::hash<HashedType>{}(type_cast<HashedType>(value.value()));
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -666,7 +655,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const unsigned int _partitioning_seed = 17;
   size_t _radix_bits;
 
   // Determine correct type for hashing
@@ -739,10 +727,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
-                                                                     _radix_bits, _partitioning_seed);
+                                                                     _radix_bits);
     // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
     auto materialized_right = materialize_input<RightType, HashedType>(
-        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
+        right_in_table, _column_ids.second, histograms_right, _radix_bits, keep_nulls);
 
     // Radix Partitioning phase
     /*

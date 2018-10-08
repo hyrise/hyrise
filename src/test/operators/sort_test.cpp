@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-class OperatorsSortTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
+class OperatorsSortTest : public BaseTestWithParam<EncodingType> {
  protected:
   void SetUp() override {
     _encoding_type = GetParam();
