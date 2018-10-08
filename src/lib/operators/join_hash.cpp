@@ -118,9 +118,9 @@ using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninit
 // smaller side.
 using SmallPosList = boost::container::small_vector<RowID, 1>;
 
+// In case we consider runtime to be more relevant, the flat hash map is a better performing (measured to be mostly on par with
+// bytell hash map and in some cases up to 5%  faster), but significantly larger alternative to the bytell map.
 template <typename T>
-// In case we consider runtime to be more relevant, the flat hash map
-// is a better performing but significantly larger alternative to the bytell map.
 using HashTable = ska::bytell_hash_map<T, SmallPosList>;
 
 /*
