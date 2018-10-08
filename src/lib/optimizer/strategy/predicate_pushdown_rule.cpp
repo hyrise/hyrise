@@ -35,7 +35,8 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-  // We do not push down expensive predicates with correlated subselects
+  // We do not push down expensive predicates with correlated subselects, because we think the higher they are in the
+  // plan the less rows they have to operate on. TODO(anybody) Actually, we should probably push them up
   auto predicate_contains_correlated_subselect = false;
   visit_expression(predicate_node->predicate, [&](const auto& sub_expression) {
     if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
