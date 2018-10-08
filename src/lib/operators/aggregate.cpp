@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "aggregate/aggregate_traits.hpp"
+#include "bytell_hash_map.hpp"
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -23,6 +24,9 @@
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
+
+template <typename AggregateKey, typename AggregateType, typename ColumnType>
+using HashTable = std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>;
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
@@ -121,7 +125,7 @@ struct AggregateContext : SegmentVisitorContext {
   }
 
   std::shared_ptr<GroupByContext<AggregateKey>> groupby_context;
-  std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+  std::shared_ptr<HashTable<AggregateKey, AggregateType, ColumnType>>
       results;
 };
 
@@ -408,8 +412,7 @@ void Aggregate::_aggregate() {
     */
     auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>();
     context->results =
-        std::make_shared<std::unordered_map<AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>,
-                                            std::hash<AggregateKey>>>();
+        std::make_shared<HashTable<AggregateKey, DistinctAggregateType, DistinctColumnType>>();
 
     _contexts_per_column.push_back(context);
   }
@@ -425,8 +428,7 @@ void Aggregate::_aggregate() {
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
       context->results =
-          std::make_shared<std::unordered_map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>,
-                                              std::hash<AggregateKey>>>();
+          std::make_shared<HashTable<AggregateKey, CountAggregateType, CountColumnType>>();
       _contexts_per_column[column_id] = context;
       continue;
     }
@@ -623,8 +625,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func, t
 std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum,
                  void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                          std::hash<AggregateKey>>>
+                       std::shared_ptr<HashTable<AggregateKey, AggregateType, ColumnType>>
                            results) {
   DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
@@ -650,7 +651,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func, t
 std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
-        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        HashTable<AggregateKey, AggregateType, ColumnType>>
         results) {
   DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
@@ -669,7 +670,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func, t
 std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
-        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        HashTable<AggregateKey, AggregateType, ColumnType>>
         results) {
   DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
@@ -688,7 +689,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func, t
 std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
-        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        HashTable<AggregateKey, AggregateType, ColumnType>>
         results) {
   DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
@@ -714,7 +715,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func, t
 std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>>,
     std::shared_ptr<
-        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>) {
+        HashTable<AggregateKey, AggregateType, ColumnType>>) {
   Fail("Invalid aggregate");
 }
 
