@@ -167,6 +167,39 @@ std::string vec2str(const std::vector<T>& items) {
 }
 
 /**
+ * Create table from tbl file header.
+ * Used to have the column data types avaliable without loading the whole tbl file.
+ */
+std::shared_ptr<Table> create_table(const std::string& file_name) {
+  std::ifstream infile(file_name);
+  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
+
+  std::string line;
+  std::getline(infile, line);
+  std::vector<std::string> column_names = _split<std::string>(line, '|');
+  std::getline(infile, line);
+  std::vector<std::string> column_types = _split<std::string>(line, '|');
+
+  auto column_nullable = std::vector<bool>{};
+  for (auto& type : column_types) {
+    auto type_nullable = _split<std::string>(type, '_');
+    type = type_nullable[0];
+
+    auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
+    column_nullable.push_back(nullable);
+  }
+
+  TableColumnDefinitions column_definitions;
+  for (size_t i = 0; i < column_names.size(); i++) {
+    const auto data_type = data_type_to_string.right.find(column_types[i]);
+    Assert(data_type != data_type_to_string.right.end(),
+           std::string("Invalid data type ") + column_types[i] + " for column " + column_names[i]);
+    column_definitions.emplace_back(column_names[i], data_type->second, column_nullable[i]);
+  }
+  return std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE, UseMvcc::Yes);
+}
+
+/**
  * Returns the distinct values of a segment.
  */
 template <typename T>
@@ -696,7 +729,7 @@ create_histograms_for_column(const std::shared_ptr<Table> table, const ColumnID 
 
 void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t> num_bins_list,
                  const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                 const std::string& output_path) {
+                 std::ofstream& result_log, std::ofstream& bin_log) {
   log("Running pruning...");
 
   // std::cout.imbue(std::locale("en_US.UTF-8"));
@@ -704,14 +737,7 @@ void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t>
   // auto end = std::chrono::high_resolution_clock::now();
   // std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << std::endl;
 
-  auto results_log = std::ofstream(output_path + "/pruning_results.log", std::ios_base::out | std::ios_base::trunc);
-  results_log << "total_count,distinct_count,num_bins,column_name,predicate_condition,value,actually_prunable,equal_"
-                 "height_hist_prunable,equal_distinct_count_hist_prunable,equal_width_hist_prunable\n";
-
-  auto histogram_log = std::ofstream(output_path + "/pruning_bins.log", std::ios_base::out | std::ios_base::trunc);
-  histogram_log << "histogram_type,column_name,actual_num_bins,requested_num_bins,bin_id,bin_min,bin_max,"
-                   "bin_min_repr,bin_max_repr,bin_count,bin_count_distinct\n";
-
+  const auto chunk_size = table->max_chunk_size();
   const auto filters_by_column = get_filters_by_column(filters);
   const auto prunable_by_filter = get_prunable_for_filters(table, filters_by_column);
   const auto distinct_count_by_column = get_distinct_count_by_column(table, filters_by_column);
@@ -731,10 +757,10 @@ void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t>
 
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
 
-        // histogram_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
-        // histogram_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
-        // histogram_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
-        // histogram_log.flush();
+        // bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
+        // bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
+        // bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
+        // bin_log.flush();
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
@@ -773,13 +799,13 @@ void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t>
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
                       b) { return a + std::get<2>(b)->can_prune(predicate_condition, value); });
 
-          results_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
-                      << std::to_string(num_bins) << "," << column_name << ","
-                      << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
-                      << std::to_string(prunable_count) << "," << std::to_string(equal_height_hist_prunable) << ","
-                      << std::to_string(equal_distinct_count_hist_prunable) << ","
-                      << std::to_string(equal_width_hist_prunable) << "\n";
-          results_log.flush();
+          result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
+                     << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
+                     << std::to_string(prunable_count) << "," << std::to_string(equal_height_hist_prunable) << ","
+                     << std::to_string(equal_distinct_count_hist_prunable) << ","
+                     << std::to_string(equal_width_hist_prunable) << "\n";
+          result_log.flush();
         }
       });
     }
@@ -788,7 +814,7 @@ void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t>
 
 void run_estimation(const std::shared_ptr<Table> table, const std::vector<uint64_t> num_bins_list,
                     const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                    const std::string& output_path) {
+                    std::ofstream& result_log, std::ofstream& bin_log) {
   log("Running estimation...");
 
   // std::cout.imbue(std::locale("en_US.UTF-8"));
@@ -796,14 +822,7 @@ void run_estimation(const std::shared_ptr<Table> table, const std::vector<uint64
   // auto end = std::chrono::high_resolution_clock::now();
   // std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << std::endl;
 
-  auto results_log = std::ofstream(output_path + "/estimation_results.log", std::ios_base::out | std::ios_base::trunc);
-  results_log << "total_count,distinct_count,num_bins,column_name,predicate_condition,value,actual_count,equal_"
-                 "height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
-
-  auto histogram_log = std::ofstream(output_path + "/estimation_bins.log", std::ios_base::out | std::ios_base::trunc);
-  histogram_log << "histogram_type,column_name,actual_num_bins,requested_num_bins,bin_id,bin_min,bin_max,"
-                   "bin_min_repr,bin_max_repr,bin_count,bin_count_distinct\n";
-
+  const auto chunk_size = table->max_chunk_size();
   const auto filters_by_column = get_filters_by_column(filters);
   const auto row_count_by_filter = get_row_count_for_filters(table, filters_by_column);
   const auto distinct_count_by_column = get_distinct_count_by_column(table, filters_by_column);
@@ -823,10 +842,10 @@ void run_estimation(const std::shared_ptr<Table> table, const std::vector<uint64
 
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
 
-        // histogram_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
-        // histogram_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
-        // histogram_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
-        // histogram_log.flush();
+        // bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
+        // bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
+        // bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
+        // bin_log.flush();
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
@@ -854,13 +873,13 @@ void run_estimation(const std::shared_ptr<Table> table, const std::vector<uint64
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
                       b) { return a + std::get<2>(b)->estimate_cardinality(predicate_condition, value); });
 
-          results_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
-                      << std::to_string(num_bins) << "," << column_name << ","
-                      << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
-                      << std::to_string(actual_count) << "," << std::to_string(equal_height_hist_count) << ","
-                      << std::to_string(equal_distinct_count_hist_count) << ","
-                      << std::to_string(equal_width_hist_count) << "\n";
-          results_log.flush();
+          result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
+                     << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
+                     << std::to_string(actual_count) << "," << std::to_string(equal_height_hist_count) << ","
+                     << std::to_string(equal_distinct_count_hist_count) << "," << std::to_string(equal_width_hist_count)
+                     << "\n";
+          result_log.flush();
         }
       });
     }
@@ -872,11 +891,11 @@ int main(int argc, char** argv) {
   const auto table_path = get_cmd_option<std::string>(argv, argv_end, "--table-path");
   const auto filter_mode = get_cmd_option<std::string>(argv, argv_end, "--filter-mode");
   const auto num_bins_list = get_cmd_option_list<uint64_t>(argv, argv_end, "--num-bins");
-  const auto chunk_size = get_cmd_option<uint32_t>(argv, argv_end, "--chunk-size", Chunk::MAX_SIZE);
+  const auto chunk_sizes =
+      get_cmd_option_list<uint32_t>(argv, argv_end, "--chunk-sizes", std::vector<uint32_t>{Chunk::MAX_SIZE});
   const auto output_path = get_cmd_option<std::string>(argv, argv_end, "--output-path", "../results/");
 
-  log("Loading table...");
-  const auto table = load_table(table_path, chunk_size);
+  const auto empty_table = create_table(table_path);
 
   std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>> filters;
 
@@ -888,7 +907,7 @@ int main(int argc, char** argv) {
     const auto predicate_type =
         predicate_condition_to_string.right.at(get_cmd_option<std::string>(argv, argv_end, "--predicate-type"));
     const auto num_filters = get_cmd_option<uint32_t>(argv, argv_end, "--num-filters");
-    const auto data_type = table->column_data_type(column_id);
+    const auto data_type = empty_table->column_data_type(column_id);
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -913,7 +932,7 @@ int main(int argc, char** argv) {
     const auto column_id = ColumnID{get_cmd_option<uint16_t>(argv, argv_end, "--column-id")};
     const auto predicate_type =
         predicate_condition_to_string.right.at(get_cmd_option<std::string>(argv, argv_end, "--predicate-type"));
-    const auto data_type = table->column_data_type(column_id);
+    const auto data_type = empty_table->column_data_type(column_id);
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
@@ -937,20 +956,48 @@ int main(int argc, char** argv) {
       num_filters = get_cmd_option<uint32_t>(argv, argv_end, "--num-filters");
     }
 
+    log("Loading table for filter generation...");
+    const auto table = load_table(table_path, Chunk::MAX_SIZE);
     filters = generate_filters(table, column_id, predicate_type, num_filters);
   } else if (filter_mode == "from_file") {
     const auto filter_file = get_cmd_option<std::string>(argv, argv_end, "--filter-file");
-    filters = read_filters_from_file(filter_file, table);
+    filters = read_filters_from_file(filter_file, empty_table);
   } else {
     Fail("Mode '" + filter_mode + "' not supported.");
   }
 
+  std::ofstream result_log;
+  std::ofstream bin_log;
+
   if (cmd_option_exists(argv, argv_end, "--estimation")) {
-    run_estimation(table, num_bins_list, filters, output_path);
+    result_log = std::ofstream(output_path + "/estimation_results.log", std::ios_base::out | std::ios_base::trunc);
+    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
+                  "equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
+
+    bin_log = std::ofstream(output_path + "/estimation_bins.log", std::ios_base::out | std::ios_base::trunc);
+    bin_log << "histogram_type,column_name,actual_num_bins,requested_num_bins,bin_id,bin_min,bin_max,"
+               "bin_min_repr,bin_max_repr,bin_count,bin_count_distinct\n";
   } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
-    run_pruning(table, num_bins_list, filters, output_path);
+    result_log = std::ofstream(output_path + "/pruning_results.log", std::ios_base::out | std::ios_base::trunc);
+    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
+                  "equal_height_hist_prunable,equal_distinct_count_hist_prunable,equal_width_hist_prunable\n";
+
+    bin_log = std::ofstream(output_path + "/pruning_bins.log", std::ios_base::out | std::ios_base::trunc);
+    bin_log << "histogram_type,column_name,actual_num_bins,requested_num_bins,bin_id,bin_min,bin_max,"
+               "bin_min_repr,bin_max_repr,bin_count,bin_count_distinct\n";
   } else {
     Fail("Specify either '--estimation' or '--pruning' to decide what to measure.");
+  }
+
+  for (const auto chunk_size : chunk_sizes) {
+    log("Loading table with chunk_size " + std::to_string(chunk_size) + "...");
+    const auto table = load_table(table_path, chunk_size);
+
+    if (cmd_option_exists(argv, argv_end, "--estimation")) {
+      run_estimation(table, num_bins_list, filters, result_log, bin_log);
+    } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
+      run_pruning(table, num_bins_list, filters, result_log, bin_log);
+    }
   }
 
   return 0;
