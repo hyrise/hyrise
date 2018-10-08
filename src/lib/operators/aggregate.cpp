@@ -24,13 +24,6 @@
 
 namespace opossum {
 
-<<<<<<< HEAD
-// As the ska* hash maps provide an own very fast hashing algorithms, we do not use std::hash<AggregateKey> here.
-template <typename AggregateKey, typename AggregateType, typename ColumnType>
-using HashTable = ska::bytell_hash_map<AggregateKey, AggregateResult<AggregateType, ColumnType>>;
-
-=======
->>>>>>> parent of ef0d475b3... Simplify hash table usage in aggregate (still std)
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
                      const std::vector<ColumnID>& groupby_column_ids)
