@@ -25,8 +25,9 @@
 
 namespace opossum {
 
+// As the ska* hash maps provide an own very fast hashing algorithms, we do not use std::hash<AggregateKey> here.
 template <typename AggregateKey, typename AggregateType, typename ColumnType>
-using HashTable = std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>;
+using HashTable = ska::bytell_hash_map<AggregateKey, AggregateResult<AggregateType, ColumnType>>;
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
