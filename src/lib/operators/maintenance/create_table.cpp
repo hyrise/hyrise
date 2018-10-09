@@ -2,18 +2,18 @@
 
 #include <sstream>
 
+#include "constant_mappings.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "constant_mappings.hpp"
 
 namespace opossum {
 
-CreateTable::CreateTable(const std::string& table_name, const TableColumnDefinitions& column_definitions):
-  AbstractReadOnlyOperator(OperatorType::CreateTable), table_name(table_name), column_definitions(column_definitions) {}
+CreateTable::CreateTable(const std::string& table_name, const TableColumnDefinitions& column_definitions)
+    : AbstractReadOnlyOperator(OperatorType::CreateTable),
+      table_name(table_name),
+      column_definitions(column_definitions) {}
 
-const std::string CreateTable::name() const {
-  return "Create Table";
-}
+const std::string CreateTable::name() const { return "Create Table"; }
 
 const std::string CreateTable::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
@@ -49,10 +49,9 @@ std::shared_ptr<const Table> CreateTable::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
-const std::shared_ptr<AbstractOperator>& copied_input_left,
-const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<CreateTable>(table_name, column_definitions);
-
 }
 
 void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

@@ -32,11 +32,11 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -867,8 +867,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
-    case hsql::CreateType::kCreateView: return _translate_create_view(create_statement);
-    case hsql::CreateType::kCreateTable: return _translate_create_table(create_statement);
+    case hsql::CreateType::kCreateView:
+      return _translate_create_view(create_statement);
+    case hsql::CreateType::kCreateTable:
+      return _translate_create_table(create_statement);
     default:
       FailInput("hsql::CreateType is not supported.");
   }
@@ -889,8 +891,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     }
   } else {
     for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-      const auto identifier =
-      _sql_identifier_resolver->get_expression_identifier(lqp->column_expressions()[column_id]);
+      const auto identifier = _sql_identifier_resolver->get_expression_identifier(lqp->column_expressions()[column_id]);
       if (identifier) {
         column_names.emplace(column_id, identifier->column_name);
       }
@@ -912,15 +913,21 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
     // TODO(anybody) SQLParser is missing support for Hyrises other types
     switch (parser_column_definition->type) {
-      case hsql::ColumnDefinition::INT: column_definition.data_type = DataType::Long; break;
-      case hsql::ColumnDefinition::DOUBLE: column_definition.data_type = DataType::Double; break;
-      case hsql::ColumnDefinition::TEXT: column_definition.data_type = DataType::String; break;
+      case hsql::ColumnDefinition::INT:
+        column_definition.data_type = DataType::Long;
+        break;
+      case hsql::ColumnDefinition::DOUBLE:
+        column_definition.data_type = DataType::Double;
+        break;
+      case hsql::ColumnDefinition::TEXT:
+        column_definition.data_type = DataType::String;
+        break;
       default:
         Fail("CREATE TABLE: Data type not supported");
     }
 
     column_definition.name = parser_column_definition->name;
-    column_definition.nullable = true; // TODO(anybody) SQLParser doesn't support any syntax for this
+    column_definition.nullable = true;  // TODO(anybody) SQLParser doesn't support any syntax for this
   }
 
   return CreateTableNode::make(create_statement.tableName, column_definitions);
@@ -928,8 +935,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
-    case hsql::DropType::kDropView: return DropViewNode::make(drop_statement.name);
-    case hsql::DropType::kDropTable: return DropTableNode::make(drop_statement.name);
+    case hsql::DropType::kDropView:
+      return DropViewNode::make(drop_statement.name);
+    case hsql::DropType::kDropTable:
+      return DropTableNode::make(drop_statement.name);
 
     default:
       FailInput("hsql::DropType is not supported.");

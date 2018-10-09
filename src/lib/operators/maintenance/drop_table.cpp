@@ -4,12 +4,10 @@
 
 namespace opossum {
 
-DropTable::DropTable(const std::string& table_name):
-AbstractReadOnlyOperator(OperatorType::DropTable), table_name(table_name) {}
+DropTable::DropTable(const std::string& table_name)
+    : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(table_name) {}
 
-const std::string DropTable::name() const {
-  return "DropTable";
-}
+const std::string DropTable::name() const { return "DropTable"; }
 
 const std::string DropTable::description(DescriptionMode description_mode) const {
   return name() + " '" + table_name + "'";
@@ -22,8 +20,8 @@ std::shared_ptr<const Table> DropTable::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> DropTable::_on_deep_copy(
-const std::shared_ptr<AbstractOperator>& copied_input_left,
-const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<DropTable>(table_name);
 }
 

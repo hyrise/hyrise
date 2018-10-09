@@ -2,14 +2,10 @@
 
 namespace opossum {
 
-DropTableNode::DropTableNode(const std::string& table_name):
-  BaseNonQueryNode(LQPNodeType::DropTable), table_name(table_name) {
+DropTableNode::DropTableNode(const std::string& table_name)
+    : BaseNonQueryNode(LQPNodeType::DropTable), table_name(table_name) {}
 
-}
-
-std::string DropTableNode::description() const {
-  return std::string{"Drop Table '"} + table_name + "'";
-}
+std::string DropTableNode::description() const { return std::string{"Drop Table '"} + table_name + "'"; }
 
 std::shared_ptr<AbstractLQPNode> DropTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return DropTableNode::make(table_name);

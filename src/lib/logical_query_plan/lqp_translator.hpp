@@ -63,7 +63,6 @@ class LQPTranslator {
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-
   static std::shared_ptr<AbstractOperator> _translate_binary_predicate_to_table_scan(
       const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator,
       const AbstractExpression& left_operand, const PredicateCondition predicate_condition,
