@@ -71,7 +71,7 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
 
   // Utility to populate a cache of UncorrelatedSelectResults
-  std::shared_ptr<const Table> evaluate_uncorrelated_select_expression(const PQPSelectExpression& expression);
+  static std::shared_ptr<UncorrelatedSelectResults> populate_uncorrelated_select_results_cache(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
  private:
   template <typename Result>

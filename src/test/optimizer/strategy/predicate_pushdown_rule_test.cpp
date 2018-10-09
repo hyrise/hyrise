@@ -214,7 +214,6 @@ TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughOtherPredicateTest) {
 
 TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughMultipleNodesTest) {
   // Even if one predicate cannot be pushed down, others might be better off
-
   auto sort_node =
       std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
   sort_node->set_left_input(_projection_pushdown_node);
@@ -225,18 +224,26 @@ TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughMultipleNodesTest) {
   auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
   predicate_node_2->set_left_input(predicate_node_1);
 
-  auto root = std::make_shared<LogicalPlanRootNode>();
-  root->set_left_input(predicate_node_2);
+  auto actual_lqp = std::shared_ptr<AbstractLQPNode>();
+  actual_lqp = predicate_node_2;
+  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes predicate_node_1 under sort
+  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes predicate_node_2 under sort
+  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes predicate_node_2 under the projection
 
-  auto reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_1 under sort
-  reordered = StrategyBaseTest::apply_rule(_rule, root);       // pushes predicate_node_2 under sort
-  reordered = StrategyBaseTest::apply_rule(_rule, root);       // pushes predicate_node_2 under the projection
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(_select_c, _a_b),
+   SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+     ProjectionNode::make(expression_vector(_a_a, _a_b, _select_c),
+      PredicateNode::make(greater_than_(_a_a, _a_b),
+        _table_a))));
 
-  EXPECT_EQ(reordered->left_input(), sort_node);
-  EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_1);
-  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _projection_pushdown_node);
-  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input(), predicate_node_2);
-  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input()->left_input(), _table_a);
+  // clang-format on
+
+  actual_lqp->print();
+  expected_lqp->print();
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum
