@@ -27,7 +27,7 @@ constexpr bool is_valid_name(const char* name) {
   static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
   provider##_##probe(__VA_ARGS__);
 #else
-#define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
+#define BUILD_PROBE_NAME(provider, probe, ...)
 #endif
 
 #define DTRACE_PROBE(provider, probe) BUILD_PROBE_NAME(provider, probe);
