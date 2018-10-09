@@ -14,7 +14,7 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<Abs
   return estimate_statistics(lqp)->row_count();
 }
 
-std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+std::shared_ptr<const TableStatistics2> CardinalityEstimator::estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp)) {
     Assert(mock_node->table_statistics2(), "");
     return mock_node->table_statistics2();
@@ -31,7 +31,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(cons
 
   const auto input_statistics = estimate_statistics(lqp->left_input());
 
-
+  return input_statistics;
 }
 
 }  // namespace opossum
