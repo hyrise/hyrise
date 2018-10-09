@@ -20,13 +20,13 @@ namespace opossum {
 class CardinalityEstimatorTest : public ::testing::Test {
  public:
   void SetUp() override {
-    const auto segment_statistics_a_0_a = std::make_shared<SegmentStatistics2>();
+    const auto segment_statistics_a_0_a = std::make_shared<SegmentStatistics2<int32_t>>();
 
     // clang-format off
     const auto histogram_a_a = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
       std::vector<int32_t>{1,  26, 51, 76},
       std::vector<int32_t>{25, 50, 75, 100},
-      std::vector<int32_t>{40, 30, 20, 10},
+      std::vector<HistogramCountType>{40, 30, 20, 10},
       25, 0
     );
     // clang-format on
@@ -40,7 +40,7 @@ class CardinalityEstimatorTest : public ::testing::Test {
     table_statistics_a->chunk_statistics.emplace_back(chunk_statistics_a_0);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-    node_a->set_statistics2(table_statistics_a);
+    node_a->set_table_statistics2(table_statistics_a);
 
     a_a = node_a->get_column("a");
   }

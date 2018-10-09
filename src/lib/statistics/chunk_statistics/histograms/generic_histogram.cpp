@@ -8,8 +8,6 @@
 
 namespace opossum {
 
-using namespace opossum::histogram;  // NOLINT
-
 template <typename T>
 GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                                       std::vector<HistogramCountType>&& bin_heights,

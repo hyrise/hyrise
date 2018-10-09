@@ -98,6 +98,12 @@ class AbstractHistogram : public AbstractFilter {
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   /**
+   * @return a new histogram, approximating the data distribution after the application of @param predicate
+   */
+  std::shared_ptr<AbstractHistogram<T>> slice_with_predicate(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                                          const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  /**
    * Returns the lower bound (minimum value) of the histogram.
    * This is equal to the smallest value in the segment.
    */

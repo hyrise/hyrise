@@ -146,7 +146,7 @@ class Table : private Noncopyable {
   std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
   std::shared_ptr<const TableStatistics> table_statistics() const { return _table_statistics; }
 
-  std::shared_ptr<const TableStatistics2> table_statistics2() const { return _table_statistics2; }
+  std::shared_ptr<TableStatistics2> table_statistics2() const { return _table_statistics2; }
 
   std::vector<IndexInfo> get_indexes() const;
 

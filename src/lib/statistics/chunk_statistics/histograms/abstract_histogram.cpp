@@ -12,6 +12,7 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
+#include "generic_histogram.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
 #include "resolve_type.hpp"
@@ -607,6 +608,176 @@ float AbstractHistogram<T>::estimate_selectivity(const PredicateCondition predic
                                                  const AllTypeVariant& variant_value,
                                                  const std::optional<AllTypeVariant>& variant_value2) const {
   return estimate_cardinality(predicate_type, variant_value, variant_value2) / total_count();
+}
+
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::slice_with_predicate(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                                        const std::optional<AllTypeVariant>& variant_value2) const {
+  if (can_prune(predicate_type, variant_value, variant_value2)) {
+    Fail("TODO");
+  }
+
+  const auto& value = boost::get<T>(variant_value);
+
+  std::vector<T> bin_minima;
+  std::vector<T> bin_maxima;
+  std::vector<HistogramCountType> bin_heights;
+  std::vector<HistogramCountType> bin_distinct_counts;
+
+  switch (predicate_type) {
+    case PredicateCondition::Equals: {
+      bin_minima.emplace_back(value);
+      bin_maxima.emplace_back(value);
+      bin_heights.emplace_back(static_cast<HistogramCountType>(estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2)));
+      bin_distinct_counts.emplace_back(1);
+    } break;
+
+    case PredicateCondition::NotEquals: {
+      bin_minima.resize(bin_count());
+      bin_maxima.resize(bin_count());
+      bin_heights.resize(bin_count());
+      bin_distinct_counts.resize(bin_count());
+
+      const auto value_bin_id = _bin_for_value(value);
+
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        // TODO(anyone) we currently do not manipulate the bin bounds if `variant_value` equals such a bound. We would
+        //              expect the accuracy improvement to be minimal, if we did. Also, this would be hard to do for
+        //              strings.
+        bin_minima[bin_id] = _bin_minimum(bin_id);
+        bin_maxima[bin_id] = _bin_maximum(bin_id);
+
+        if (bin_id == value_bin_id) {
+          const auto value_count = static_cast<HistogramCountType>(estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2));
+
+          bin_heights[bin_id] = _bin_height(bin_id) - value_count;
+          bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id) - 1;
+        } else {
+          bin_heights[bin_id] = _bin_height(bin_id);
+          bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
+        }
+      }
+      
+    } break;
+
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals: {
+      const auto bin_for_value = _bin_for_value(value);
+
+      BinID sliced_bin_count;
+      if (bin_for_value == INVALID_BIN_ID) {
+        // If the value does not belong to a bin, we need to differentiate between values greater than the maximum
+        // of the histogram and all other values. If the value is greater than the maximum, we include all bins.
+        // Otherwise, we include all bins before to the bin of that value.
+        const auto next_bin_for_value = _next_bin_for_value(value);
+
+        if (next_bin_for_value == INVALID_BIN_ID) {
+          // TODO(anyone): return self optimization
+          sliced_bin_count = bin_count();
+        } else {
+          sliced_bin_count = next_bin_for_value;
+        }
+      } else if (predicate_type == PredicateCondition::LessThan && value == _bin_minimum(bin_for_value)) {
+        // If the predicate is LessThan and the value is the lower edge of a bin, we do not need to include that bin.
+        sliced_bin_count = bin_for_value;
+      } else {
+        sliced_bin_count = bin_for_value + 1;
+      }
+
+      DebugAssert(sliced_bin_count > 0, "This should have been caught by can_prune().");
+
+      bin_minima.resize(sliced_bin_count);
+      bin_maxima.resize(sliced_bin_count);
+      bin_heights.resize(sliced_bin_count);
+      bin_distinct_counts.resize(sliced_bin_count);
+
+      for (auto bin_id = BinID{0}; bin_id < sliced_bin_count - 1; ++bin_id) {
+        bin_minima[bin_id] = _bin_minimum(bin_id);
+        bin_maxima[bin_id] = _bin_maximum(bin_id);
+        bin_heights[bin_id] = _bin_height(bin_id);
+        bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
+      }
+
+      const auto last_sliced_bin_id = sliced_bin_count - 1;
+      bin_minima.back() = _bin_minimum(last_sliced_bin_id);
+      // TODO(anyone): this could be previous_value(value) for LessThan, but this is not available for strings
+      // and we do not expect it to make a big difference.
+      bin_maxima.back() = value;
+
+      const auto less_than_bound = predicate_type == PredicateCondition::LessThan ? value : _get_next_value(value);
+      const auto sliced_bin_share = _share_of_bin_less_than_value(last_sliced_bin_id, less_than_bound);
+      bin_heights.back() = static_cast<HistogramCountType>(_bin_height(last_sliced_bin_id) * sliced_bin_share);
+      bin_distinct_counts.back() = static_cast<HistogramCountType>(_bin_distinct_count(last_sliced_bin_id) * sliced_bin_share);
+    } break;
+
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals: {
+      const auto bin_for_value = _bin_for_value(value);
+
+      BinID sliced_bin_count;
+      if (bin_for_value == INVALID_BIN_ID) {
+        // If the value does not belong to a bin, we need to differentiate between values greater than the maximum
+        // of the histogram and all other values. If the value is greater than the maximum, we include all bins.
+        // Otherwise, we include all bins before to the bin of that value.
+        const auto next_bin_for_value = _next_bin_for_value(value);
+
+        if (next_bin_for_value == INVALID_BIN_ID) {
+          sliced_bin_count = 0;
+        } else {
+          sliced_bin_count = bin_count() - next_bin_for_value;
+        }
+      } else if (predicate_type == PredicateCondition::GreaterThan && value == _bin_maximum(bin_for_value)) {
+        // If the predicate is GreaterThan and the value is the upper edge of a bin, we do not need to include that bin.
+        sliced_bin_count = bin_count() - bin_for_value - 1;
+      } else {
+        sliced_bin_count = bin_count() - bin_for_value;
+      }
+
+      DebugAssert(sliced_bin_count > 0, "This should have been caught by can_prune().");
+
+      const auto first_sliced_bin_id = BinID{bin_count() - sliced_bin_count};
+
+      bin_minima.resize(sliced_bin_count);
+      bin_maxima.resize(sliced_bin_count);
+      bin_heights.resize(sliced_bin_count);
+      bin_distinct_counts.resize(sliced_bin_count);
+
+      bin_minima.front() = predicate_type == PredicateCondition::GreaterThan ? _get_next_value(value) : value;
+      bin_maxima.front() = _bin_maximum(first_sliced_bin_id);
+
+      // For GreaterThan, `_get_previous_value(value)` would be more correct, but we don't have that for strings
+      const auto sliced_bin_share = 1.0f - _share_of_bin_less_than_value(first_sliced_bin_id, value);
+
+      bin_heights.front() = static_cast<HistogramCountType>(_bin_height(first_sliced_bin_id) * sliced_bin_share);
+      bin_distinct_counts.front() = static_cast<HistogramCountType>(_bin_distinct_count(first_sliced_bin_id) * sliced_bin_share);
+
+      const auto first_complete_bin_id = BinID{bin_count() - sliced_bin_count + 1};
+      for (auto bin_id = first_complete_bin_id; bin_id < bin_count(); ++bin_id) {
+        const auto sliced_bin_id = bin_id - first_complete_bin_id + 1;
+        bin_minima[sliced_bin_id] = _bin_minimum(bin_id);
+        bin_maxima[sliced_bin_id] = _bin_maximum(bin_id);
+        bin_heights[sliced_bin_id] = _bin_height(bin_id);
+        bin_distinct_counts[sliced_bin_id] = _bin_distinct_count(bin_id);
+      }
+    } break;
+
+    case PredicateCondition::Between:
+      Assert(variant_value2, "BETWEEN needs a second value.");
+      return slice_with_predicate(PredicateCondition::GreaterThanEquals, variant_value)->slice_with_predicate(PredicateCondition::LessThanEquals, *variant_value2);
+
+    case PredicateCondition::Like:
+    case PredicateCondition::NotLike:
+      Fail("PredicateCondition not yet supported by Histograms");
+
+    case PredicateCondition::In:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
+      Fail("PredicateCondition not supported by Histograms");
+  }
+
+  return std::make_shared<GenericHistogram<T>>(
+    std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts)
+  );
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AbstractHistogram);

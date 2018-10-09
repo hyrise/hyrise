@@ -190,8 +190,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 
   _chunks.emplace_back(chunk);
 
-  const auto chunk_statistics = std::make_shared<ChunkStatistics2>();
-  chunk_statistics->row_count = chunk->size();
+  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(chunk->size());
   _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
 }
 

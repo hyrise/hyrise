@@ -7,12 +7,14 @@
 
 namespace opossum {
 
-class SegmentStatistics2;
+class BaseSegmentStatistics2;
 
 class ChunkStatistics2 {
  public:
+  explicit ChunkStatistics2(const Cardinality row_count);
+
   Cardinality row_count{0};
-  std::vector<std::shared_ptr<SegmentStatistics2>> segment_statistics;
+  std::vector<std::shared_ptr<BaseSegmentStatistics2>> segment_statistics;
 };
 
 }  // namespace opossum
