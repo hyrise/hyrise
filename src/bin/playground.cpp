@@ -19,6 +19,9 @@
 #include "types.hpp"
 
 #include "expression/evaluation/like_matcher.hpp"
+#include "import_export/csv_meta.hpp"
+#include "import_export/csv_parser.hpp"
+#include "operators/import_csv.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
@@ -167,39 +170,6 @@ std::string vec2str(const std::vector<T>& items) {
 }
 
 /**
- * Create table from tbl file header.
- * Used to have the column data types avaliable without loading the whole tbl file.
- */
-std::shared_ptr<Table> create_table(const std::string& file_name) {
-  std::ifstream infile(file_name);
-  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
-
-  std::string line;
-  std::getline(infile, line);
-  std::vector<std::string> column_names = _split<std::string>(line, '|');
-  std::getline(infile, line);
-  std::vector<std::string> column_types = _split<std::string>(line, '|');
-
-  auto column_nullable = std::vector<bool>{};
-  for (auto& type : column_types) {
-    auto type_nullable = _split<std::string>(type, '_');
-    type = type_nullable[0];
-
-    auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
-    column_nullable.push_back(nullable);
-  }
-
-  TableColumnDefinitions column_definitions;
-  for (size_t i = 0; i < column_names.size(); i++) {
-    const auto data_type = data_type_to_string.right.find(column_types[i]);
-    Assert(data_type != data_type_to_string.right.end(),
-           std::string("Invalid data type ") + column_types[i] + " for column " + column_names[i]);
-    column_definitions.emplace_back(column_names[i], data_type->second, column_nullable[i]);
-  }
-  return std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE, UseMvcc::Yes);
-}
-
-/**
  * Returns the distinct values of a segment.
  */
 template <typename T>
@@ -257,7 +227,7 @@ uint64_t get_distinct_count(const std::shared_ptr<const Table>& table, const Col
  * Returns a hash map from column id to distinct count for all column ids occurring in filters_by_column.
  */
 std::unordered_map<ColumnID, uint64_t> get_distinct_count_by_column(
-    const std::shared_ptr<Table>& table,
+    const std::shared_ptr<const Table>& table,
     const std::unordered_map<ColumnID, std::vector<std::pair<PredicateCondition, AllTypeVariant>>>& filters_by_column) {
   std::unordered_map<ColumnID, uint64_t> distinct_count_by_column;
 
@@ -276,7 +246,7 @@ std::unordered_map<ColumnID, uint64_t> get_distinct_count_by_column(
  * Reads a list of filters from the specified file.
  */
 std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>> read_filters_from_file(
-    const std::string& filter_file, const std::shared_ptr<Table>& table) {
+    const std::string& filter_file, const std::shared_ptr<const Table>& table) {
   std::ifstream infile(filter_file);
   Assert(infile.is_open(), "Could not find file: " + filter_file + ".");
 
@@ -384,7 +354,7 @@ std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>> generate_f
  * Generates a maximum of num_filters.
  */
 std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>> generate_filters(
-    const std::shared_ptr<Table>& table, const ColumnID column_id, const PredicateCondition predicate_type,
+    const std::shared_ptr<const Table>& table, const ColumnID column_id, const PredicateCondition predicate_type,
     const std::optional<uint32_t> num_filters = std::nullopt) {
   log("Generating " + (num_filters ? std::to_string(*num_filters) : "") + " filters with distinct values...");
 
@@ -460,7 +430,7 @@ std::vector<std::pair<T, uint64_t>> calculate_value_counts(const std::shared_ptr
  */
 std::unordered_map<ColumnID, std::unordered_map<PredicateCondition, std::unordered_map<AllTypeVariant, uint64_t>>>
 get_prunable_for_filters(
-    const std::shared_ptr<Table>& table,
+    const std::shared_ptr<const Table>& table,
     const std::unordered_map<ColumnID, std::vector<std::pair<PredicateCondition, AllTypeVariant>>>& filters_by_column) {
   log("Getting actual prune results...");
 
@@ -583,7 +553,7 @@ get_prunable_for_filters(
  */
 std::unordered_map<ColumnID, std::unordered_map<PredicateCondition, std::unordered_map<AllTypeVariant, uint64_t>>>
 get_row_count_for_filters(
-    const std::shared_ptr<Table>& table,
+    const std::shared_ptr<const Table>& table,
     const std::unordered_map<ColumnID, std::vector<std::pair<PredicateCondition, AllTypeVariant>>>& filters_by_column) {
   log("Getting actual row count results...");
 
@@ -710,7 +680,7 @@ get_row_count_for_filters(
 template <typename T>
 std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>, std::shared_ptr<EqualHeightHistogram<T>>,
                        std::shared_ptr<EqualWidthHistogram<T>>>>
-create_histograms_for_column(const std::shared_ptr<Table> table, const ColumnID column_id, BinID num_bins) {
+create_histograms_for_column(const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
   std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>, std::shared_ptr<EqualHeightHistogram<T>>,
                          std::shared_ptr<EqualWidthHistogram<T>>>>
       histograms;
@@ -727,7 +697,7 @@ create_histograms_for_column(const std::shared_ptr<Table> table, const ColumnID 
   return histograms;
 }
 
-void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t> num_bins_list,
+void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
                  const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
                  std::ofstream& result_log, std::ofstream& bin_log) {
   log("Running pruning...");
@@ -812,7 +782,7 @@ void run_pruning(const std::shared_ptr<Table> table, const std::vector<uint64_t>
   }
 }
 
-void run_estimation(const std::shared_ptr<Table> table, const std::vector<uint64_t> num_bins_list,
+void run_estimation(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
                     const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
                     std::ofstream& result_log, std::ofstream& bin_log) {
   log("Running estimation...");
@@ -895,7 +865,13 @@ int main(int argc, char** argv) {
       get_cmd_option_list<uint32_t>(argv, argv_end, "--chunk-sizes", std::vector<uint32_t>{Chunk::MAX_SIZE});
   const auto output_path = get_cmd_option<std::string>(argv, argv_end, "--output-path", "../results/");
 
-  const auto empty_table = create_table(table_path);
+  std::shared_ptr<Table> empty_table;
+  if (cmd_option_exists(argv, argv_end, "--meta-path")) {
+    CsvParser parser;
+    empty_table = parser.create_table_from_meta_file(get_cmd_option<std::string>(argv, argv_end, "--meta-path"));
+  } else {
+    empty_table = create_table_from_header(table_path);
+  }
 
   std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>> filters;
 
@@ -957,7 +933,16 @@ int main(int argc, char** argv) {
     }
 
     log("Loading table for filter generation...");
-    const auto table = load_table(table_path, Chunk::MAX_SIZE);
+    std::shared_ptr<const Table> table;
+    if (cmd_option_exists(argv, argv_end, "--meta-path")) {
+      const auto csv_meta = process_csv_meta_file(get_cmd_option<std::string>(argv, argv_end, "--meta-path"));
+      auto importer = std::make_shared<ImportCsv>(table_path, csv_meta);
+      importer->execute();
+      table = importer->get_output();
+    } else {
+      table = load_table(table_path, Chunk::MAX_SIZE);
+    }
+
     filters = generate_filters(table, column_id, predicate_type, num_filters);
   } else if (filter_mode == "from_file") {
     const auto filter_file = get_cmd_option<std::string>(argv, argv_end, "--filter-file");
@@ -989,9 +974,25 @@ int main(int argc, char** argv) {
     Fail("Specify either '--estimation' or '--pruning' to decide what to measure.");
   }
 
+  CsvMeta csv_meta;
+  if (cmd_option_exists(argv, argv_end, "--meta-path")) {
+    csv_meta = process_csv_meta_file(get_cmd_option<std::string>(argv, argv_end, "--meta-path"));
+  }
+
   for (const auto chunk_size : chunk_sizes) {
     log("Loading table with chunk_size " + std::to_string(chunk_size) + "...");
-    const auto table = load_table(table_path, chunk_size);
+
+    std::shared_ptr<const Table> table;
+
+    if (cmd_option_exists(argv, argv_end, "--meta-path")) {
+      csv_meta.chunk_size = chunk_size;
+
+      auto importer = std::make_shared<ImportCsv>(table_path, csv_meta);
+      importer->execute();
+      table = importer->get_output();
+    } else {
+      table = load_table(table_path, chunk_size);
+    }
 
     if (cmd_option_exists(argv, argv_end, "--estimation")) {
       run_estimation(table, num_bins_list, filters, result_log, bin_log);
