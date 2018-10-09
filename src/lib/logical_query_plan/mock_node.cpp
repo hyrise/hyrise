@@ -52,6 +52,14 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
 
 void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }
 
+const std::shared_ptr<TableStatistics2>& MockNode::table_statistics2() const {
+  return _table_statistics2;
+}
+
+void MockNode::set_table_statistics2(const std::shared_ptr<TableStatistics2>& table_statistics2) {
+  _table_statistics2 = table_statistics2;
+}
+
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions);
   mock_node->set_statistics(_table_statistics);

@@ -12,6 +12,8 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 
 namespace opossum {
 
@@ -165,7 +167,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
     mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.emplace_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
+  append_chunk(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
@@ -187,6 +189,10 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
               "Chunk does not have the same MVCC setting as the table.");
 
   _chunks.emplace_back(chunk);
+
+  const auto chunk_statistics = std::make_shared<ChunkStatistics2>();
+  chunk_statistics->row_count = chunk->size();
+  _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

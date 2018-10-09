@@ -12,6 +12,7 @@
 namespace opossum {
 
 class TableStatistics;
+class TableStatistics2;
 
 /**
  * Node that represents a table that has no data backing it, but may provide
@@ -40,6 +41,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
 
+  const std::shared_ptr<TableStatistics2>& table_statistics2() const;
+  void set_table_statistics2(const std::shared_ptr<TableStatistics2>& statistics);
+
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
@@ -51,5 +55,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::shared_ptr<TableStatistics2> _table_statistics2;
 };
 }  // namespace opossum

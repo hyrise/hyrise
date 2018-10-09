@@ -19,6 +19,7 @@
 namespace opossum {
 
 class TableStatistics;
+class TableStatistics2;
 
 /**
  * A Table is partitioned horizontally into a number of chunks.
@@ -170,6 +171,7 @@ class Table : private Noncopyable {
   const uint32_t _max_chunk_size;
   std::vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::shared_ptr<TableStatistics2> _table_statistics2;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
 };

@@ -336,8 +336,14 @@ set(
     sql/sql_query_plan.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
+    statistics/abstract_cardinality_estimator.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
+    statistics/cardinality.hpp
+    statistics/cardinality_estimator.cpp
+    statistics/cardinality_estimator.hpp
+    statistics/chunk_statistics2.cpp
+    statistics/chunk_statistics2.hpp
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
@@ -361,10 +367,14 @@ set(
     statistics/generate_column_statistics.hpp
     statistics/generate_table_statistics.cpp
     statistics/generate_table_statistics.hpp
+    statistics/segment_statistics2.cpp
+    statistics/segment_statistics2.hpp
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
+    statistics/table_statistics2.cpp
+    statistics/table_statistics2.hpp
     storage/abstract_segment_visitor.hpp
     storage/base_segment_accessor.hpp
     storage/base_dictionary_segment.hpp
