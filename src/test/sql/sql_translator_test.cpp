@@ -13,8 +13,10 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -1350,6 +1352,27 @@ TEST_F(SQLTranslatorTest, DropView) {
   const auto lqp = DropViewNode::make("my_third_view");
 
   EXPECT_LQP_EQ(lqp, result_node);
+}
+
+TEST_F(SQLTranslatorTest, CreateTable) {
+  const auto actual_lqp = compile_query("CREATE TABLE a_table (a_int INTEGER, a_double DOUBLE, a_string TEXT)");
+
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a_int", DataType::Long, true);
+  column_definitions.emplace_back("a_double", DataType::Double, true);
+  column_definitions.emplace_back("a_string", DataType::String, true);
+
+  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DropTable) {
+  const auto actual_lqp = compile_query("DROP TABLE a_table");
+
+  const auto expected_lqp = DropTableNode::make("a_table");
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, OperatorPrecedence) {
