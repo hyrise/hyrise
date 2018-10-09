@@ -12,24 +12,34 @@
 namespace opossum {
 
 class CreateTableTest : public BaseTest {
+ public:
   void SetUp() override {
-    auto column_definitions = TableColumnDefinitions{};
     column_definitions.emplace_back("a", DataType::Int, false);
     column_definitions.emplace_back("b", DataType::Float, true);
 
     create_table = std::make_shared<CreateTable>("t", column_definitions);
   }
 
-  std::shared_ptr
+  TableColumnDefinitions column_definitions;
+  std::shared_ptr<CreateTable> create_table;
 };
 
 TEST_F(CreateTableTest, NameAndDescription) {
-  auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a", DataType::Int, false);
-  column_definitions.emplace_back("b", DataType::Float, true);
+  EXPECT_EQ(create_table->name(), "Create Table");
+  EXPECT_EQ(create_table->description(DescriptionMode::SingleLine), "Create Table 't' ('a' )");
+}
 
-  CreateTable create_table{"t", column_definitions};
+TEST_F(CreateTableTest, Execute) {
+  EXPECT_FALSE(StorageManager::get().has_table("t"));
 
+  create_table->execute();
+
+  EXPECT_TRUE(StorageManager::get().has_table("t"));
+
+  const auto table = StorageManager::get().get_table("t");
+
+  EXPECT_EQ(table->row_count(), 0);
+  EXPECT_EQ(table->column_definitions(), column_definitions);
 }
 
 }  // namespace opossum
