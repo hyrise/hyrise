@@ -42,7 +42,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
 
   const std::shared_ptr<TableStatistics2>& table_statistics2() const;
-  void set_table_statistics2(const std::shared_ptr<TableStatistics2>& statistics);
+  void set_table_statistics2(const std::shared_ptr<TableStatistics2>& table_statistics2);
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
