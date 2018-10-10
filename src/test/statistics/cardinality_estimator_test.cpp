@@ -57,18 +57,18 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
     node_a);
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 50);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 30.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, TwoPredicates) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(greater_than_(a_a, 50),
-    PredicateNode::make(less_than_(a_a, 75),
+    PredicateNode::make(less_than_equals_(a_a, 75),
       node_a));
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 24);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
 }
 
 }  // namespace opossum

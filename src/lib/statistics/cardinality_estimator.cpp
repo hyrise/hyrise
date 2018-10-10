@@ -7,6 +7,8 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
+#include "chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "chunk_statistics/histograms/generic_histogram.hpp"
 #include "segment_statistics2.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -49,6 +51,8 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
         const auto predicate_output_chunk_statistics = std::make_shared<ChunkStatistics2>();
         predicate_output_chunk_statistics->segment_statistics.resize(predicate_input_chunk_statistics->segment_statistics.size());
 
+        auto predicate_chunk_selectivity = 1.0f;
+
         /**
          * Manipulate statistics of column that we scan on
          */
@@ -62,29 +66,52 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
           const auto segment_statistics =
               std::static_pointer_cast<SegmentStatistics2<SegmentDataType>>(base_segment_statistics);
-          Assert(segment_statistics->equal_distinct_count_histogram, "");
+
+          auto primary_scan_statistics_object = std::shared_ptr<AbstractHistogram<SegmentDataType>>{};
+          if (segment_statistics->equal_distinct_count_histogram) {
+            primary_scan_statistics_object = segment_statistics->equal_distinct_count_histogram;
+          } else if (segment_statistics->generic_histogram) {
+            primary_scan_statistics_object = segment_statistics->generic_histogram;
+          } else {
+            Fail("");
+          }
+
+          Assert(operator_scan_predicate.value.type() == typeid(AllTypeVariant), "Histogram can't handle column-to-column scans right now");
+
+          auto value2_all_type_variant = std::optional<AllTypeVariant>{};
+          if (operator_scan_predicate.value2) {
+            Assert(operator_scan_predicate.value2->type() == typeid(AllTypeVariant), "Histogram can't handle column-to-column scans right now");
+            value2_all_type_variant = boost::get<AllTypeVariant>(*operator_scan_predicate.value2);
+          }
 
           const auto sliced_statistics_object =
-              segment_statistics->equal_distinct_count_histogram->slice_with_predicate(
-                  operator_scan_predicate.predicate_condition, operator_scan_predicate.value,
-                  operator_scan_predicate.value2);
+            primary_scan_statistics_object->slice_with_predicate(
+                  operator_scan_predicate.predicate_condition, boost::get<AllTypeVariant>(operator_scan_predicate.value),
+                  value2_all_type_variant);
 
-          const auto output_segment_statistics = std::make_shared<SegmentStatistics2>();
-          output_segment_statistics->equal_distinct_count_histogram =
+          if (predicate_input_chunk_statistics->row_count == 0) {
+            predicate_chunk_selectivity = 0.0f;
+          } else {
+            predicate_chunk_selectivity = sliced_statistics_object->total_count() /
+                                          predicate_input_chunk_statistics->row_count;
+          }
 
-          predicate_output_chunk_statistics->segment_statistics[operator_scan_predicate.column_id] = ;
+          const auto output_segment_statistics = std::make_shared<SegmentStatistics2<SegmentDataType>>();
+          output_segment_statistics->set_statistics_object(sliced_statistics_object);
+
+          predicate_output_chunk_statistics->segment_statistics[operator_scan_predicate.column_id] = output_segment_statistics;
         });
 
         /**
          * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
          */
-        for (auto column_id = ColumnID{0};
-             column_id < predicate_input_chunk_statistics->segment_statistics.size();
-             ++column_id) {
-          if (column_id == operator_scan_predicate.column_id) continue;
-
-          predicate_output_chunk_statistics->segment_statistics[column_id] =  ...
-        }
+//        for (auto column_id = ColumnID{0};
+//             column_id < predicate_input_chunk_statistics->segment_statistics.size();
+//             ++column_id) {
+//          if (column_id == operator_scan_predicate.column_id) continue;
+//
+//          predicate_output_chunk_statistics->segment_statistics[column_id] =  ...
+//        }
 
         /**
          * Adjust ChunkStatistics row_count
