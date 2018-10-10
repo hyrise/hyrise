@@ -1,5 +1,7 @@
 #include "equal_width_histogram.hpp"
 
+#include <cmath>
+
 #include <algorithm>
 #include <memory>
 #include <numeric>
@@ -287,6 +289,24 @@ BinID EqualWidthHistogram<T>::_next_bin_for_value(const T& value) const {
 
   const auto index = _bin_for_value(value);
   return index < bin_count() - 1 ? index + 1 : INVALID_BIN_ID;
+}
+
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> EqualWidthHistogram<T>::scale_with_selectivity(const float selectivity) const {
+  auto bin_distinct_counts =
+      std::vector<HistogramCountType>(_bin_data.bin_distinct_counts.cbegin(), _bin_data.bin_distinct_counts.cend());
+
+  // Scale the number of values in the bin with the given selectivity.
+  // Round up the numbers such that we tend to over- rather than underestimate.
+  // Also, we avoid 0 as a height.
+  auto bin_heights = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
+  for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
+    bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
+  }
+
+  return std::make_shared<EqualWidthHistogram<T>>(_bin_data.minimum, _bin_data.maximum, std::move(bin_heights),
+                                                  std::move(bin_distinct_counts),
+                                                  _bin_data.bin_count_with_larger_range);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualWidthHistogram);

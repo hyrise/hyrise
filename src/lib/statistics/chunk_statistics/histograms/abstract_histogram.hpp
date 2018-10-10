@@ -100,8 +100,11 @@ class AbstractHistogram : public AbstractFilter {
   /**
    * @return a new histogram, approximating the data distribution after the application of @param predicate
    */
-  std::shared_ptr<AbstractHistogram<T>> slice_with_predicate(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                                          const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  std::shared_ptr<AbstractHistogram<T>> slice_with_predicate(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  virtual std::shared_ptr<AbstractHistogram<T>> scale_with_selectivity(const float selectivity) const = 0;
 
   /**
    * Returns the lower bound (minimum value) of the histogram.

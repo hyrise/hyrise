@@ -1,5 +1,7 @@
 #include "equal_distinct_count_histogram.hpp"
 
+#include <cmath>
+
 #include <memory>
 #include <numeric>
 #include <string>
@@ -205,6 +207,25 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_count() const {
 template <typename T>
 HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const {
   return _bin_data.distinct_count_per_bin * bin_count() + _bin_data.bin_count_with_extra_value;
+}
+
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> EqualDistinctCountHistogram<T>::scale_with_selectivity(
+    const float selectivity) const {
+  auto bin_minima = std::vector<T>(_bin_data.bin_minima.cbegin(), _bin_data.bin_minima.cend());
+  auto bin_maxima = std::vector<T>(_bin_data.bin_maxima.cbegin(), _bin_data.bin_maxima.cend());
+
+  // Scale the number of values in the bin with the given selectivity.
+  // Round up the numbers such that we tend to over- rather than underestimate.
+  // Also, we avoid 0 as a height.
+  auto bin_heights = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
+  for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
+    bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
+  }
+
+  return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bin_minima), std::move(bin_maxima),
+                                                          std::move(bin_heights), _bin_data.distinct_count_per_bin,
+                                                          _bin_data.bin_count_with_extra_value);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);

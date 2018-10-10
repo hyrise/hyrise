@@ -60,6 +60,8 @@ class GenericHistogram : public AbstractHistogram<T> {
   HistogramCountType _bin_height(const BinID index) const override;
   HistogramCountType _bin_distinct_count(const BinID index) const override;
 
+  std::shared_ptr<AbstractHistogram<T>> scale_with_selectivity(const float selectivity) const override;
+
  private:
   const GenericBinData<T> _bin_data;
 };

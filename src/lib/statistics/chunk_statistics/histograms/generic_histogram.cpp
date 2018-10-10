@@ -136,6 +136,25 @@ HistogramCountType GenericHistogram<T>::total_distinct_count() const {
                          HistogramCountType{0});
 }
 
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> GenericHistogram<T>::scale_with_selectivity(const float selectivity) const {
+  auto bin_minima = std::vector<T>(_bin_data.bin_minima.cbegin(), _bin_data.bin_minima.cend());
+  auto bin_maxima = std::vector<T>(_bin_data.bin_maxima.cbegin(), _bin_data.bin_maxima.cend());
+  auto bin_distinct_counts =
+      std::vector<HistogramCountType>(_bin_data.bin_distinct_counts.cbegin(), _bin_data.bin_distinct_counts.cend());
+
+  // Scale the number of values in the bin with the given selectivity.
+  // Round up the numbers such that we tend to over- rather than underestimate.
+  // Also, we avoid 0 as a height.
+  auto bin_heights = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
+  for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
+    bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
+  }
+
+  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                               std::move(bin_distinct_counts));
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogram);
 
 }  // namespace opossum

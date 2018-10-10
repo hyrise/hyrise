@@ -1,5 +1,7 @@
 #include "equal_height_histogram.hpp"
 
+#include <cmath>
+
 #include <memory>
 #include <numeric>
 #include <string>
@@ -204,6 +206,17 @@ template <typename T>
 HistogramCountType EqualHeightHistogram<T>::total_distinct_count() const {
   return std::accumulate(_bin_data.bin_distinct_counts.cbegin(), _bin_data.bin_distinct_counts.cend(),
                          HistogramCountType{0});
+}
+
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> EqualHeightHistogram<T>::scale_with_selectivity(const float selectivity) const {
+  auto bin_maxima = std::vector<T>(_bin_data.bin_maxima.cbegin(), _bin_data.bin_maxima.cend());
+  auto bin_distinct_counts =
+      std::vector<HistogramCountType>(_bin_data.bin_distinct_counts.cbegin(), _bin_data.bin_distinct_counts.cend());
+
+  return std::make_shared<EqualHeightHistogram<T>>(
+      _bin_data.minimum, std::move(bin_maxima),
+      static_cast<HistogramCountType>(std::ceil(_bin_data.total_count * selectivity)), std::move(bin_distinct_counts));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualHeightHistogram);
