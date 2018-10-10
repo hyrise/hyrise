@@ -29,7 +29,7 @@ TEST_F(CreateTableTest, NameAndDescription) {
   EXPECT_EQ(create_table->description(DescriptionMode::SingleLine),
             "Create Table 't' ('a' int NON-NULL, 'b' float NULLABLE)");
   EXPECT_EQ(create_table->description(DescriptionMode::MultiLine),
-            "Create Table 't' ('a' int NON-NULL\n 'b' float NULLABLE)");
+            "Create Table 't' ('a' int NON-NULL\n'b' float NULLABLE)");
 }
 
 TEST_F(CreateTableTest, Execute) {

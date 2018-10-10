@@ -7,7 +7,7 @@ namespace opossum {
 DropTable::DropTable(const std::string& table_name)
     : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(table_name) {}
 
-const std::string DropTable::name() const { return "DropTable"; }
+const std::string DropTable::name() const { return "Drop Table"; }
 
 const std::string DropTable::description(DescriptionMode description_mode) const {
   return name() + " '" + table_name + "'";

@@ -126,6 +126,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   {
     auto scoped_lock = _target_table->acquire_append_mutex();
 
+    if (_target_table->chunk_count() == 0) {
+      _target_table->append_mutable_chunk();
+      total_chunks_inserted++;
+    }
+
     start_chunk_id = _target_table->chunk_count() - 1;
     auto last_chunk = _target_table->get_chunk(start_chunk_id);
     start_index = last_chunk->size();
