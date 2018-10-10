@@ -21,7 +21,7 @@ namespace {
  * FROM
  *      lineitem
  * WHERE
- *      l_shipdate <= date '1998-12-01' - interval '[DELTA]' day (3)
+ *      l_shipdate <= date '1998-12-01' - interval '[DELTA]' day
  * GROUP BY
  *      l_returnflag, l_linestatus
  * ORDER BY
@@ -521,12 +521,11 @@ const char* const tpch_query_12 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Subselect column aliases are moved into subselect
  */
 const char* const tpch_query_13 =
-    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
+    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey)
       FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like '%special%request%'
-      GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
+      GROUP BY c_custkey) as c_orders (c_custkey, c_count) GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
 
 /**
  * TPC-H 14
@@ -586,8 +585,6 @@ const char* const tpch_query_14 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  3. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
