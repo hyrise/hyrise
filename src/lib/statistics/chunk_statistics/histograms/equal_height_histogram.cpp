@@ -209,7 +209,8 @@ HistogramCountType EqualHeightHistogram<T>::total_distinct_count() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> EqualHeightHistogram<T>::scale_with_selectivity(const float selectivity) const {
+std::shared_ptr<AbstractStatisticsObject<T>> EqualHeightHistogram<T>::scale_with_selectivity(
+    const float selectivity) const {
   auto bin_maxima = _bin_data.bin_maxima;
   auto bin_distinct_counts = _bin_data.bin_distinct_counts;
 

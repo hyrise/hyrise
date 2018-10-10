@@ -137,7 +137,8 @@ HistogramCountType GenericHistogram<T>::total_distinct_count() const {
 }
 
 template <typename T>
-std::shared_ptr<AbstractHistogram<T>> GenericHistogram<T>::scale_with_selectivity(const float selectivity) const {
+std::shared_ptr<AbstractStatisticsObject<T>> GenericHistogram<T>::scale_with_selectivity(
+    const float selectivity) const {
   auto bin_minima = _bin_data.bin_minima;
   auto bin_maxima = _bin_data.bin_maxima;
   auto bin_distinct_counts = _bin_data.bin_distinct_counts;

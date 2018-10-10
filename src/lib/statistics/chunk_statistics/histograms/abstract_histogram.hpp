@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "statistics/chunk_statistics/abstract_filter.hpp"
+#include "statistics/abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
 #include "types.hpp"
 
@@ -49,7 +49,7 @@ using HistogramCountType = ChunkOffset;
  * string_prefix_length < std::log(std::numeric_limits<uint64_t>::max()) / std::log(supported_characters.length() + 1)
  */
 template <typename T>
-class AbstractHistogram : public AbstractFilter {
+class AbstractHistogram : public AbstractStatisticsObject<T> {
  public:
   AbstractHistogram();
   AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
@@ -78,33 +78,28 @@ class AbstractHistogram : public AbstractFilter {
   /**
    * Returns the estimated selectivity, given a predicate type and its parameter(s).
    * It will always be between 0 and 1.
+   * It also returns whether the histogram can be absolutely certain about the selectivity.
    */
-  float estimate_selectivity(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                             const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  std::pair<float, bool> estimate_selectivity(const PredicateCondition predicate_type,
+                                              const AllTypeVariant& variant_value,
+                                              const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * Returns the estimated cardinality, given a predicate type and its parameter(s).
-   * It will always be between 0 and total_count().
+   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
+   * Specifically, if this method returns true, the predicate does not yield any results.
+   * If this method returns false, the predicate might yield results.
    * This method is specialized for strings to handle predicates uniquely applicable to string columns.
    */
-  float estimate_cardinality(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                             const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  /**
-   * Returns whether a given predicate type and its parameter(s) can be pruned.
-   * This method is specialized for strings to handle predicates uniquely applicable to string columns.
-   */
-  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
-
-  /**
-   * @return a new histogram, approximating the data distribution after the application of @param predicate
-   */
-  std::shared_ptr<AbstractHistogram<T>> slice_with_predicate(
+  std::pair<float, bool> estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  virtual std::shared_ptr<AbstractHistogram<T>> scale_with_selectivity(const float selectivity) const = 0;
+  std::shared_ptr<AbstractStatisticsObject<T>> slice_with_predicate(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   /**
    * Returns the lower bound (minimum value) of the histogram.
@@ -149,14 +144,16 @@ class AbstractHistogram : public AbstractFilter {
   /**
    * Calculates the estimated cardinality for predicate types supported by all data types.
    */
-  float _estimate_cardinality(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                              const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  std::pair<float, bool> _estimate_cardinality(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
-   * Makes pruning decisions for predicate types supported by all data types.
+   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not
+   * for predicate types supported by all data types.
    */
-  bool _can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  bool _does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Given a value, returns the next representable value.
