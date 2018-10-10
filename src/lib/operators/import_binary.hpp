@@ -47,6 +47,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Returns the name of the operator
   const std::string name() const final;
 
+  /**
+   * Creates an empty table based on the meta information in the header of the binary file without loading the data itself.
+   */
+  std::shared_ptr<Table> create_table_from_header();
+
  private:
   /*
    * Reads the header from the given file.

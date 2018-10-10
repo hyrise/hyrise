@@ -26,6 +26,17 @@ ImportBinary::ImportBinary(const std::string& filename, const std::optional<std:
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
+std::shared_ptr<Table> ImportBinary::create_table_from_header() {
+  std::ifstream file;
+  file.open(_filename, std::ios::binary);
+
+  Assert(file.is_open(), "ImportBinary: Could not find file " + _filename);
+
+  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+  return _read_header(file).first;
+}
+
 template <typename T>
 pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<T> values(count);

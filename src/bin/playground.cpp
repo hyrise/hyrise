@@ -21,6 +21,7 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_parser.hpp"
+#include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
@@ -869,6 +870,10 @@ int main(int argc, char** argv) {
   if (cmd_option_exists(argv, argv_end, "--meta-path")) {
     CsvParser parser;
     empty_table = parser.create_table_from_meta_file(get_cmd_option<std::string>(argv, argv_end, "--meta-path"));
+  } else if (cmd_option_exists(argv, argv_end, "--binary")) {
+    empty_table = ImportBinary{table_path}.create_table_from_header();
+    Assert(chunk_sizes.size() == 1u, "Cannot vary chunk size for binary files.");
+    Assert(empty_table->max_chunk_size() == chunk_sizes[0], "Chunk size of binary table does not match specified chunk size.");
   } else {
     empty_table = create_table_from_header(table_path);
   }
@@ -939,6 +944,10 @@ int main(int argc, char** argv) {
       auto importer = std::make_shared<ImportCsv>(table_path, csv_meta);
       importer->execute();
       table = importer->get_output();
+    } else if (cmd_option_exists(argv, argv_end, "--binary")) {
+      auto importer = std::make_shared<ImportBinary>(table_path);
+      importer->execute();
+      table = importer->get_output();
     } else {
       table = load_table(table_path, Chunk::MAX_SIZE);
     }
@@ -988,6 +997,10 @@ int main(int argc, char** argv) {
       csv_meta.chunk_size = chunk_size;
 
       auto importer = std::make_shared<ImportCsv>(table_path, csv_meta);
+      importer->execute();
+      table = importer->get_output();
+    } else if (cmd_option_exists(argv, argv_end, "--binary")) {
+      auto importer = std::make_shared<ImportBinary>(table_path);
       importer->execute();
       table = importer->get_output();
     } else {
