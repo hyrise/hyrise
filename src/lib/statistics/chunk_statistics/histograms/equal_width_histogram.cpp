@@ -293,8 +293,7 @@ BinID EqualWidthHistogram<T>::_next_bin_for_value(const T& value) const {
 
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> EqualWidthHistogram<T>::scale_with_selectivity(const float selectivity) const {
-  auto bin_distinct_counts =
-      std::vector<HistogramCountType>(_bin_data.bin_distinct_counts.cbegin(), _bin_data.bin_distinct_counts.cend());
+  auto bin_distinct_counts = _bin_data.bin_distinct_counts;
 
   // Scale the number of values in the bin with the given selectivity.
   // Round up the numbers such that we tend to over- rather than underestimate.

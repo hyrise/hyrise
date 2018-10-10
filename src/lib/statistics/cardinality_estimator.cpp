@@ -42,10 +42,18 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table_statistics->chunk_statistics.size(); ++chunk_id) {
       const auto input_chunk_statistics = input_table_statistics->chunk_statistics[chunk_id];
+      auto output_chunk_statistics = input_chunk_statistics;
 
       for (const auto& operator_scan_predicate : *operator_scan_predicates) {
+        const auto predicate_input_chunk_statistics = output_chunk_statistics;
+        const auto predicate_output_chunk_statistics = std::make_shared<ChunkStatistics2>();
+        predicate_output_chunk_statistics->segment_statistics.resize(predicate_input_chunk_statistics->segment_statistics.size());
+
+        /**
+         * Manipulate statistics of column that we scan on
+         */
         const auto base_segment_statistics =
-            input_chunk_statistics->segment_statistics.at(operator_scan_predicate.column_id);
+          output_chunk_statistics->segment_statistics.at(operator_scan_predicate.column_id);
 
         const auto data_type = predicate_node->column_expressions().at(operator_scan_predicate.column_id)->data_type();
 
@@ -60,8 +68,33 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
               segment_statistics->equal_distinct_count_histogram->slice_with_predicate(
                   operator_scan_predicate.predicate_condition, operator_scan_predicate.value,
                   operator_scan_predicate.value2);
+
+          const auto output_segment_statistics = std::make_shared<SegmentStatistics2>();
+          output_segment_statistics->equal_distinct_count_histogram =
+
+          predicate_output_chunk_statistics->segment_statistics[operator_scan_predicate.column_id] = ;
         });
+
+        /**
+         * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
+         */
+        for (auto column_id = ColumnID{0};
+             column_id < predicate_input_chunk_statistics->segment_statistics.size();
+             ++column_id) {
+          if (column_id == operator_scan_predicate.column_id) continue;
+
+          predicate_output_chunk_statistics->segment_statistics[column_id] =  ...
+        }
+
+        /**
+         * Adjust ChunkStatistics row_count
+         */
+        predicate_output_chunk_statistics->row_count = predicate_input_chunk_statistics->row_count * predicate_chunk_selectivity;
+
+        output_chunk_statistics = predicate_output_chunk_statistics;
       }
+
+      output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
     }
 
     return output_table_statistics;

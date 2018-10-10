@@ -11,6 +11,7 @@ class BaseSegmentStatistics2;
 
 class ChunkStatistics2 {
  public:
+  ChunkStatistics2() = default;
   explicit ChunkStatistics2(const Cardinality row_count);
 
   Cardinality row_count{0};
