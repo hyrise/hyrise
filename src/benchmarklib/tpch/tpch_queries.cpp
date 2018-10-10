@@ -869,7 +869,7 @@ const char* const tpch_query_21 =
  *     CNTRYCODE
  *
  * Changes:
- *  1. Renamed SUBSTRING to SUBSTR. because SQLite does not support the former
+ *  1. Renamed SUBSTRING to SUBSTR because SQLite does not support the former
  */
 const char* const tpch_query_22 =
     R"(SELECT
