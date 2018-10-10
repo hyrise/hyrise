@@ -11,10 +11,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> create_table_from_header(const std::string& file_name, size_t chunk_size) {
-  std::ifstream infile(file_name);
-  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
-
+std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t chunk_size) {
   std::string line;
   std::getline(infile, line);
   std::vector<std::string> column_names = _split<std::string>(line, '|');
@@ -41,11 +38,17 @@ std::shared_ptr<Table> create_table_from_header(const std::string& file_name, si
   return std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size) {
-  auto table = create_table_from_header(file_name, chunk_size);
-
+std::shared_ptr<Table> create_table_from_header(const std::string& file_name, size_t chunk_size) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
+  return create_table_from_header(infile, chunk_size);
+}
+
+std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size) {
+  std::ifstream infile(file_name);
+  Assert(infile.is_open(), "load_table: Could not find file " + file_name);
+
+  auto table = create_table_from_header(infile, chunk_size);
 
   std::string line;
   while (std::getline(infile, line)) {
