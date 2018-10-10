@@ -521,7 +521,7 @@ const char* const tpch_query_12 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Subselect column aliases are moved into subselect
+ *  2. Subselect column aliases are moved into subselect because SQLite does not support aliases at the original position
  */
 const char* const tpch_query_13 =
     R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
@@ -586,8 +586,6 @@ const char* const tpch_query_14 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  3. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
