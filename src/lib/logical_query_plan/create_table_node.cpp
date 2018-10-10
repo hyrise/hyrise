@@ -12,11 +12,11 @@ CreateTableNode::CreateTableNode(const std::string& table_name, const TableColum
 std::string CreateTableNode::description() const {
   std::ostringstream stream;
 
-  stream << "Create Table '" << table_name << "' (";
+  stream << "[CreateTable] '" << table_name << "' (";
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     const auto& column_definition = column_definitions[column_id];
 
-    stream << " '" << column_definition.name << "' " << data_type_to_string.left.at(column_definition.data_type) << " ";
+    stream << "'" << column_definition.name << "' " << data_type_to_string.left.at(column_definition.data_type) << " ";
     if (column_definition.nullable) {
       stream << "NULLABLE";
     } else {
