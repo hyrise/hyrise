@@ -87,9 +87,8 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
       const auto value2 = type_cast<T>(*variant_value2);
-      min = value;
-      max = value2;
-      break;
+      return slice_with_predicate(PredicateCondition::GreaterThanEquals, value)
+          ->slice_with_predicate(PredicateCondition::LessThanEquals, value2);
     }
     default:
       min = _min;
