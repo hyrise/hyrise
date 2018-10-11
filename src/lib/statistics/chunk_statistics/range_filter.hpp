@@ -1,10 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
-#include "abstract_filter.hpp"
+#include "statistics/abstract_statistics_object.hpp"
 
 namespace opossum {
 
@@ -19,7 +21,7 @@ static constexpr uint32_t MAX_RANGES_COUNT = 10;
  * Once the between operator uses two parameters, the ranges can be used for that as well.
 */
 template <typename T>
-class RangeFilter : public AbstractFilter {
+class RangeFilter : public AbstractStatisticsObject {
  public:
   static_assert(std::is_arithmetic_v<T>, "RangeFilter should not be instantiated for strings.");
 
@@ -29,9 +31,9 @@ class RangeFilter : public AbstractFilter {
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary,
                                                       uint32_t max_ranges_count = MAX_RANGES_COUNT);
 
-  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
-    const auto value = type_cast<T>(variant_value);
+  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const {
+    const auto value = boost::get<T>(variant_value);
     // Operators work as follows: value_from_table <operator> value
     // e.g. OpGreaterThan: value_from_table > value
     // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
@@ -67,12 +69,69 @@ class RangeFilter : public AbstractFilter {
       }
       case PredicateCondition::Between: {
         Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-        const auto value2 = type_cast<T>(*variant_value2);
+        const auto value2 = boost::get<T>(*variant_value2);
         return value > _ranges.back().second || value2 < _ranges.front().first;
       }
       default:
         return false;
     }
+  }
+
+  std::pair<float, bool> estimate_cardinality(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
+    if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+      return {0.f, true};
+    } else {
+      return {1.f, false};
+    }
+  }
+
+  std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
+    if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+      Fail("NYI - return empty statistics object");
+    }
+
+    std::vector<std::pair<T, T>> ranges;
+    // const auto value = boost::get<T>(variant_value);
+
+    // If value is either _min or _max, we do not take the opportunity to slightly improve the new object.
+    // We do not know the actual previous/next value, and for strings it's not that simple.
+    // The impact should be small.
+    switch (predicate_type) {
+      // TODO(tim): implement
+      // case PredicateCondition::Equals:
+      //   min = value;
+      //   max = value;
+      //   break;
+      // case PredicateCondition::LessThan:
+      // case PredicateCondition::LessThanEquals:
+      //   min = _min;
+      //   max = value;
+      //   break;
+      // case PredicateCondition::GreaterThan:
+      // case PredicateCondition::GreaterThanEquals:
+      //   min = value;
+      //   max = _max;
+      //   break;
+      // case PredicateCondition::Between: {
+      //   DebugAssert(variant_value2, "BETWEEN needs a second value.");
+      //   const auto value2 = boost::get<T>(*variant_value2);
+      //   min = value;
+      //   max = value2;
+      //   break;
+      // }
+      default:
+        ranges = _ranges;
+    }
+
+    return std::make_shared<RangeFilter<T>>(ranges);
+  }
+
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override {
+    return std::make_shared<RangeFilter<T>>(_ranges);
   }
 
  protected:

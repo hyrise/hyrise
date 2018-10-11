@@ -53,44 +53,44 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
 
   for (const auto& value : this->_values) {
-    EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
+    EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {value}));
   }
 
   // for the predicate condition of <, we expect only values smaller or equal to the minimum to be prunable
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThan, {this->_before_range}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThan, {this->_min_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThan, {this->_in_between}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThan, {this->_max_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThan, {this->_after_range}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_before_range}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_max_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThan, {this->_after_range}));
 
   // for the predicate condition of <=, we expect only values smaller than the minimum to be prunable
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_before_range}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_min_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_in_between}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_max_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_after_range}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_max_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, {this->_after_range}));
 
   // for the predicate condition of ==, we expect only values outside the max/max range to be prunable
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_before_range}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_min_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_max_value}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_after_range}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, {this->_after_range}));
 
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_before_range}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_min_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_in_between}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_max_value}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_after_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, {this->_after_range}));
 
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_before_range}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_min_value}));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_in_between}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_max_value}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_after_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_before_range}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_in_between}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_after_range}));
 
   // as null values are not comparable, we never prune them
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {this->_in_between}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {this->_in_between}));
 }
 
 }  // namespace opossum

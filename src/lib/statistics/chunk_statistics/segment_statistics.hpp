@@ -6,10 +6,9 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-#include "abstract_filter.hpp"
-
 namespace opossum {
 
+class AbstractStatisticsObject;
 class BaseSegment;
 
 /**
@@ -21,7 +20,7 @@ class SegmentStatistics final {
   static std::shared_ptr<SegmentStatistics> build_statistics(DataType data_type,
                                                              const std::shared_ptr<const BaseSegment>& segment);
 
-  void add_filter(std::shared_ptr<AbstractFilter> filter);
+  void add_filter(std::shared_ptr<AbstractStatisticsObject> filter);
 
   /**
    * calls can_prune on each filter in this object
@@ -30,6 +29,6 @@ class SegmentStatistics final {
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
-  std::vector<std::shared_ptr<AbstractFilter>> _filters;
+  std::vector<std::shared_ptr<AbstractStatisticsObject>> _filters;
 };
 }  // namespace opossum

@@ -75,7 +75,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    */
   BinID bin_count() const override;
 
-  std::shared_ptr<AbstractStatisticsObject<T>> scale_with_selectivity(const float selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
 
  protected:
   /**

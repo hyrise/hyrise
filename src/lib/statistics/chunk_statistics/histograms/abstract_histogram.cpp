@@ -628,7 +628,7 @@ std::pair<float, bool> AbstractHistogram<T>::estimate_selectivity(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject<T>> AbstractHistogram<T>::slice_with_predicate(
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_type, variant_value, variant_value2)) {

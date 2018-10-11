@@ -10,7 +10,6 @@
 
 namespace opossum {
 
-template <typename T>
 class AbstractStatisticsObject {
  public:
   virtual ~AbstractStatisticsObject() = default;
@@ -27,14 +26,14 @@ class AbstractStatisticsObject {
   /**
    * Return a statistics object that represents the data after the predicate has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject<T>> slice_with_predicate(
+  virtual std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
   /**
    * Return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject<T>> scale_with_selectivity(const float selectivity) const = 0;
+  virtual std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const = 0;
 };
 
 }  // namespace opossum
