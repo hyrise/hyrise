@@ -1075,6 +1075,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
 
+      // Some SQL functions have aliases, which we map to one unique identifier here.
+      static const std::unordered_map<std::string, std::string> function_aliases{{{"SUBSTRING"}, {"SUBSTR"}}};
+      const auto found_alias = function_aliases.find(name);
+      if (found_alias != function_aliases.end()) {
+        name = found_alias->second;
+      }
+
       if (name == "EXTRACT"s) {
         Assert(expr.datetimeField != hsql::kDatetimeNone, "No DatetimeField specified in EXTRACT. Bug in sqlparser?");
 
