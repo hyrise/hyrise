@@ -180,7 +180,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   AssertInput(select.selectList != nullptr, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
   AssertInput(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
-  AssertInput(!select.selectDistinct, "DISTINCT is not yet supported");
 
   // Translate FROM
   if (select.fromTable) {
@@ -199,6 +198,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
+  // Also, implement DISTINCT x as GROUP BY x
   _translate_select_list_groupby_having(select);
 
   // Translate ORDER BY and LIMIT
@@ -737,10 +737,17 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
   _sql_identifier_resolver = post_select_sql_identifier_resolver;
 
   // Identify all GROUP BY expressions
+  auto group_by_columns = (select.groupBy ? select.groupBy->columns : nullptr);
+  if (select.selectDistinct && (!group_by_columns || group_by_columns->empty())) {
+    // Translate DISTINCT x as GROUP BY x. We only do this if we have no GROUP BY clause - otherwise, the DISTINCT
+    // is redundant anyway.
+    group_by_columns = select.selectList;
+  }
+
   auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  if (select.groupBy && select.groupBy->columns) {
-    group_by_expressions.reserve(select.groupBy->columns->size());
-    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
+  if (group_by_columns) {
+    group_by_expressions.reserve(group_by_columns->size());
+    for (const auto* group_by_hsql_expr : *group_by_columns) {
       const auto group_by_expression = _translate_hsql_expr(*group_by_hsql_expr, _sql_identifier_resolver);
       group_by_expressions.emplace_back(group_by_expression);
       if (pre_aggregate_expression_set.emplace(group_by_expression).second) {
