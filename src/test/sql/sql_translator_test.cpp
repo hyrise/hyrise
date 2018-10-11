@@ -498,6 +498,34 @@ TEST_F(SQLTranslatorTest, Distinct) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, DistinctAndGroupBy) {
+  const auto actual_lqp = compile_query("SELECT DISTINCT b FROM int_float GROUP BY b");
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithDistinctAndGroupBy) {
+  const auto actual_lqp = compile_query("SELECT DISTINCT b, SUM(a * 3) * b FROM int_float GROUP BY b");
+
+  const auto a_times_3 = mul_(int_float_a, 3);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)),
+    AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_times_3),
+      stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_a = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b");
   // clang-format off
