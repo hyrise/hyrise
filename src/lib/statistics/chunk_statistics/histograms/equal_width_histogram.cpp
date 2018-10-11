@@ -145,6 +145,16 @@ std::string EqualWidthHistogram<T>::histogram_name() const {
 }
 
 template <typename T>
+std::shared_ptr<AbstractHistogram<T>> EqualWidthHistogram<T>::clone() const {
+  auto bin_distinct_counts = _bin_data.bin_distinct_counts;
+  auto bin_heights = _bin_data.bin_heights;
+
+  return std::make_shared<EqualWidthHistogram<T>>(_bin_data.minimum, _bin_data.maximum, std::move(bin_heights),
+                                                  std::move(bin_distinct_counts),
+                                                  _bin_data.bin_count_with_larger_range);
+}
+
+template <typename T>
 BinID EqualWidthHistogram<T>::bin_count() const {
   return _bin_data.bin_heights.size();
 }

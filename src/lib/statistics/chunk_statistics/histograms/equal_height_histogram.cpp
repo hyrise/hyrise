@@ -136,6 +136,15 @@ std::string EqualHeightHistogram<T>::histogram_name() const {
 }
 
 template <typename T>
+std::shared_ptr<AbstractHistogram<T>> EqualHeightHistogram<T>::clone() const {
+  auto bin_maxima = _bin_data.bin_maxima;
+  auto bin_distinct_counts = _bin_data.bin_distinct_counts;
+
+  return std::make_shared<EqualHeightHistogram<T>>(_bin_data.minimum, std::move(bin_maxima), _bin_data.total_count,
+                                                   std::move(bin_distinct_counts));
+}
+
+template <typename T>
 BinID EqualHeightHistogram<T>::bin_count() const {
   return _bin_data.bin_maxima.size();
 }

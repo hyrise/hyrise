@@ -4,14 +4,14 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/segment_statistics2.hpp"
+#include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -28,7 +28,7 @@ class CardinalityEstimatorTest : public ::testing::Test {
       std::vector<int32_t>{1,  26, 51, 76},
       std::vector<int32_t>{25, 50, 75, 100},
       std::vector<HistogramCountType>{40, 30, 20, 10},
-      25, 0);
+      10, 0);
     // clang-format on
 
     segment_statistics_a_0_a->equal_distinct_count_histogram = histogram_a_a;

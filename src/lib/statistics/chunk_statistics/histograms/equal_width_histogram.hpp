@@ -66,6 +66,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
 
   HistogramType histogram_type() const override;
   std::string histogram_name() const override;
+  std::shared_ptr<AbstractHistogram<T>> clone() const override;
   HistogramCountType total_distinct_count() const override;
   HistogramCountType total_count() const override;
 

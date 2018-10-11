@@ -647,19 +647,22 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_minima.emplace_back(value);
       bin_maxima.emplace_back(value);
       bin_heights.emplace_back(static_cast<HistogramCountType>(
-          estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first));
+          std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).first)));
       bin_distinct_counts.emplace_back(1);
     } break;
 
     case PredicateCondition::NotEquals: {
-      bin_minima.resize(bin_count());
-      bin_maxima.resize(bin_count());
-      bin_heights.resize(bin_count());
-      bin_distinct_counts.resize(bin_count());
-
       const auto value_bin_id = _bin_for_value(value);
 
-      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+      // Do not create empty bin.
+      const auto new_bin_count = _bin_distinct_count(value_bin_id) == 1u ? bin_count() - 1 : bin_count();
+
+      bin_minima.resize(new_bin_count);
+      bin_maxima.resize(new_bin_count);
+      bin_heights.resize(new_bin_count);
+      bin_distinct_counts.resize(new_bin_count);
+
+      for (auto bin_id = BinID{0}; bin_id < new_bin_count; ++bin_id) {
         // TODO(anyone) we currently do not manipulate the bin bounds if `variant_value` equals such a bound. We would
         //              expect the accuracy improvement to be minimal, if we did. Also, this would be hard to do for
         //              strings.
@@ -667,11 +670,18 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         bin_maxima[bin_id] = _bin_maximum(bin_id);
 
         if (bin_id == value_bin_id) {
+          const auto distinct_count = _bin_distinct_count(bin_id);
+
+          // Do not create empty bin.
+          if (distinct_count == 1) {
+            continue;
+          }
+
           const auto value_count = static_cast<HistogramCountType>(
-              estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first);
+              std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first));
 
           bin_heights[bin_id] = _bin_height(bin_id) - value_count;
-          bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id) - 1;
+          bin_distinct_counts[bin_id] = distinct_count - 1;
         } else {
           bin_heights[bin_id] = _bin_height(bin_id);
           bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
@@ -686,13 +696,12 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       BinID sliced_bin_count;
       if (bin_for_value == INVALID_BIN_ID) {
         // If the value does not belong to a bin, we need to differentiate between values greater than the maximum
-        // of the histogram and all other values. If the value is greater than the maximum, we include all bins.
+        // of the histogram and all other values. If the value is greater than the maximum, return a copy of itself.
         // Otherwise, we include all bins before to the bin of that value.
         const auto next_bin_for_value = _next_bin_for_value(value);
 
         if (next_bin_for_value == INVALID_BIN_ID) {
-          // TODO(anyone): return self optimization
-          sliced_bin_count = bin_count();
+          return clone();
         } else {
           sliced_bin_count = next_bin_for_value;
         }
@@ -710,24 +719,30 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_heights.resize(sliced_bin_count);
       bin_distinct_counts.resize(sliced_bin_count);
 
-      for (auto bin_id = BinID{0}; bin_id < sliced_bin_count - 1; ++bin_id) {
+      // If value is not in a gap, calculate the share of the bin to slice. Otherwise take the whole bin.
+      BinID last_sliced_bin_id = sliced_bin_count - 1;
+      if (value < _bin_maximum(last_sliced_bin_id)) {
+        bin_minima.back() = _bin_minimum(last_sliced_bin_id);
+        // TODO(anyone): this could be previous_value(value) for LessThan, but this is not available for strings
+        // and we do not expect it to make a big difference.
+        bin_maxima.back() = value;
+
+        const auto less_than_bound = predicate_type == PredicateCondition::LessThan ? value : _get_next_value(value);
+        const auto sliced_bin_share = _share_of_bin_less_than_value(last_sliced_bin_id, less_than_bound);
+        bin_heights.back() =
+            static_cast<HistogramCountType>(std::ceil(_bin_height(last_sliced_bin_id) * sliced_bin_share));
+        bin_distinct_counts.back() =
+            static_cast<HistogramCountType>(std::ceil(_bin_distinct_count(last_sliced_bin_id) * sliced_bin_share));
+      } else {
+        last_sliced_bin_id = sliced_bin_count;
+      }
+
+      for (auto bin_id = BinID{0}; bin_id < last_sliced_bin_id; ++bin_id) {
         bin_minima[bin_id] = _bin_minimum(bin_id);
         bin_maxima[bin_id] = _bin_maximum(bin_id);
         bin_heights[bin_id] = _bin_height(bin_id);
         bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
       }
-
-      const auto last_sliced_bin_id = sliced_bin_count - 1;
-      bin_minima.back() = _bin_minimum(last_sliced_bin_id);
-      // TODO(anyone): this could be previous_value(value) for LessThan, but this is not available for strings
-      // and we do not expect it to make a big difference.
-      bin_maxima.back() = value;
-
-      const auto less_than_bound = predicate_type == PredicateCondition::LessThan ? value : _get_next_value(value);
-      const auto sliced_bin_share = _share_of_bin_less_than_value(last_sliced_bin_id, less_than_bound);
-      bin_heights.back() = static_cast<HistogramCountType>(_bin_height(last_sliced_bin_id) * sliced_bin_share);
-      bin_distinct_counts.back() =
-          static_cast<HistogramCountType>(_bin_distinct_count(last_sliced_bin_id) * sliced_bin_share);
     } break;
 
     case PredicateCondition::GreaterThan:
@@ -737,12 +752,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       BinID sliced_bin_count;
       if (bin_for_value == INVALID_BIN_ID) {
         // If the value does not belong to a bin, we need to differentiate between values greater than the maximum
-        // of the histogram and all other values. If the value is greater than the maximum, we include all bins.
-        // Otherwise, we include all bins before to the bin of that value.
+        // of the histogram and all other values. If the value is greater than the maximum, we have no matches.
+        // Otherwise, we include all bins before the bin of that value.
         const auto next_bin_for_value = _next_bin_for_value(value);
 
         if (next_bin_for_value == INVALID_BIN_ID) {
           sliced_bin_count = 0;
+        } else if (next_bin_for_value == 0) {
+          return clone();
         } else {
           sliced_bin_count = bin_count() - next_bin_for_value;
         }
@@ -762,15 +779,24 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_heights.resize(sliced_bin_count);
       bin_distinct_counts.resize(sliced_bin_count);
 
-      bin_minima.front() = predicate_type == PredicateCondition::GreaterThan ? _get_next_value(value) : value;
       bin_maxima.front() = _bin_maximum(first_sliced_bin_id);
 
-      // For GreaterThan, `_get_previous_value(value)` would be more correct, but we don't have that for strings
-      const auto sliced_bin_share = 1.0f - _share_of_bin_less_than_value(first_sliced_bin_id, value);
+      // If value is not in a gap, calculate the share of the bin to slice. Otherwise take the whole bin.
+      if (value > _bin_minimum(first_sliced_bin_id)) {
+        bin_minima.front() = predicate_type == PredicateCondition::GreaterThan ? _get_next_value(value) : value;
 
-      bin_heights.front() = static_cast<HistogramCountType>(_bin_height(first_sliced_bin_id) * sliced_bin_share);
-      bin_distinct_counts.front() =
-          static_cast<HistogramCountType>(_bin_distinct_count(first_sliced_bin_id) * sliced_bin_share);
+        // For GreaterThan, `_get_previous_value(value)` would be more correct, but we don't have that for strings
+        const auto sliced_bin_share = 1.0f - _share_of_bin_less_than_value(first_sliced_bin_id, value);
+
+        bin_heights.front() =
+            static_cast<HistogramCountType>(std::ceil(_bin_height(first_sliced_bin_id) * sliced_bin_share));
+        bin_distinct_counts.front() =
+            static_cast<HistogramCountType>(std::ceil(_bin_distinct_count(first_sliced_bin_id) * sliced_bin_share));
+      } else {
+        bin_minima.front() = _bin_minimum(first_sliced_bin_id);
+        bin_heights.front() = _bin_height(first_sliced_bin_id);
+        bin_distinct_counts.front() = _bin_distinct_count(first_sliced_bin_id);
+      }
 
       const auto first_complete_bin_id = BinID{bin_count() - sliced_bin_count + 1};
       for (auto bin_id = first_complete_bin_id; bin_id < bin_count(); ++bin_id) {

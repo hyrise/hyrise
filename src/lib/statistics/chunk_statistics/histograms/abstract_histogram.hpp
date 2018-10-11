@@ -69,6 +69,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
   virtual HistogramType histogram_type() const = 0;
   virtual std::string histogram_name() const = 0;
+  virtual std::shared_ptr<AbstractHistogram<T>> clone() const = 0;
 
   /**
    * Returns a string with detailed information about the histogram, including the edges of the individual bins.

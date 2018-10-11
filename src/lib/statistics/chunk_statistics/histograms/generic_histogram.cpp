@@ -74,6 +74,17 @@ std::string GenericHistogram<T>::histogram_name() const {
 }
 
 template <typename T>
+std::shared_ptr<AbstractHistogram<T>> GenericHistogram<T>::clone() const {
+  auto bin_minima = _bin_data.bin_minima;
+  auto bin_maxima = _bin_data.bin_maxima;
+  auto bin_heights = _bin_data.bin_heights;
+  auto bin_distinct_counts = _bin_data.bin_distinct_counts;
+
+  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                               std::move(bin_distinct_counts));
+}
+
+template <typename T>
 BinID GenericHistogram<T>::bin_count() const {
   return _bin_data.bin_heights.size();
 }
