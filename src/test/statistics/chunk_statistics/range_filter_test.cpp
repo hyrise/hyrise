@@ -208,4 +208,26 @@ TYPED_TEST(RangeFilterTest, LargeValueDomain) {
     }
   }
 }
+
+TYPED_TEST(RangeFilterTest, Between) {
+  const auto ranges = std::vector<std::pair<TypeParam, TypeParam>>{{5, 10}, {20, 25}, {35, 100}};
+  const auto filter = std::make_shared<RangeFilter<TypeParam>>(ranges);
+
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 6, 8));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 6, 12));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 18, 21));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 18, 30));
+
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 100, 0));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 1, 3));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 12, 18));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 110, 200));
+
+  // Bounds
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 1, 4));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 1, 5));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 10, 12));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 11, 12));
+}
+
 }  // namespace opossum

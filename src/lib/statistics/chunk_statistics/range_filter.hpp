@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "statistics/abstract_statistics_object.hpp"
+#include "statistics/chunk_statistics/min_max_filter.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -70,9 +71,36 @@ class RangeFilter : public AbstractStatisticsObject {
         return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
       }
       case PredicateCondition::Between: {
-        Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+        Assert(variant_value2, "Between operator needs two values.");
         const auto value2 = type_cast<T>(*variant_value2);
-        return value > _ranges.back().second || value2 < _ranges.front().first;
+
+        if (value > value2) {
+          return true;
+        }
+
+        if (does_not_contain(PredicateCondition::GreaterThanEquals, variant_value) ||
+            does_not_contain(PredicateCondition::LessThanEquals, *variant_value2)) {
+          return true;
+        }
+
+        const auto lower_bound_value_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
+                                                           [](const auto& a, const auto& b) { return a.second < b; });
+
+        // If value belongs to a non-gap, we do not know whether the value is in the data or not.
+        if (value >= (*lower_bound_value_it).first) {
+          return false;
+        }
+
+        const auto lower_bound_value2_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2,
+                                                            [](const auto& a, const auto& b) { return a.second < b; });
+
+        // If value2 belongs to a non-gap, we do not know whether the value is in the data or not.
+        if (value2 >= (*lower_bound_value2_it).first) {
+          return false;
+        }
+
+        // If both values fall into the same gap, the data does not contain any of the values between value and value2.
+        return lower_bound_value_it == lower_bound_value2_it;
       }
       default:
         return false;
@@ -97,34 +125,41 @@ class RangeFilter : public AbstractStatisticsObject {
     }
 
     std::vector<std::pair<T, T>> ranges;
-    // const auto value = type_cast<T>(variant_value);
+    const auto value = type_cast<T>(variant_value);
 
-    // If value is either _min or _max, we do not take the opportunity to slightly improve the new object.
-    // We do not know the actual previous/next value, and for strings it's not that simple.
+    // If value is on range edge, we do not take the opportunity to slightly improve the new object.
     // The impact should be small.
     switch (predicate_type) {
-      // TODO(tim): implement
-      // case PredicateCondition::Equals:
-      //   min = value;
-      //   max = value;
-      //   break;
-      // case PredicateCondition::LessThan:
-      // case PredicateCondition::LessThanEquals:
-      //   min = _min;
-      //   max = value;
-      //   break;
-      // case PredicateCondition::GreaterThan:
-      // case PredicateCondition::GreaterThanEquals:
-      //   min = value;
-      //   max = _max;
-      //   break;
-      // case PredicateCondition::Between: {
-      //   DebugAssert(variant_value2, "BETWEEN needs a second value.");
-      //   const auto value2 = type_cast<T>(*variant_value2);
-      //   min = value;
-      //   max = value2;
-      //   break;
-      // }
+      case PredicateCondition::Equals:
+        return std::make_shared<MinMaxFilter<T>>(value, value);
+      case PredicateCondition::LessThan:
+      case PredicateCondition::LessThanEquals: {
+        for (const auto& p : _ranges) {
+          if (p.second < value) {
+            ranges.emplace_back(p);
+          } else {
+            ranges.emplace_back(std::pair<T, T>{p.first, value});
+            break;
+          }
+        }
+      } break;
+      case PredicateCondition::GreaterThan:
+      case PredicateCondition::GreaterThanEquals: {
+        auto it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
+                                   [](const auto& a, const auto& b) { return a.second < b; });
+        ranges.emplace_back(std::pair<T, T>{value, (*it).second});
+        it++;
+
+        for (; it != _ranges.cend(); it++) {
+          ranges.emplace_back(*it);
+        }
+      } break;
+      case PredicateCondition::Between: {
+        DebugAssert(variant_value2, "BETWEEN needs a second value.");
+        const auto value2 = type_cast<T>(*variant_value2);
+        return slice_with_predicate(PredicateCondition::GreaterThanEquals, value)
+            ->slice_with_predicate(PredicateCondition::LessThanEquals, value2);
+      } break;
       default:
         ranges = _ranges;
     }
