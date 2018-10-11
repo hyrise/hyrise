@@ -34,7 +34,7 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
  public:
   void resize_vector(std::shared_ptr<BaseSegment> segment, size_t new_size) override {
     auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
-    DebugAssert(static_cast<bool>(value_segment), "Type mismatch");
+    DebugAssert(value_segment, "Cannot insert into non-ValueColumns");
     auto& values = value_segment->values();
 
     values.resize(new_size);
@@ -48,7 +48,7 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
   void copy_data(std::shared_ptr<const BaseSegment> source, size_t source_start_index,
                  std::shared_ptr<BaseSegment> target, size_t target_start_index, size_t length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueSegment<T>>(target);
-    DebugAssert(static_cast<bool>(casted_target), "Type mismatch");
+    DebugAssert(casted_target, "Cannot insert into non-ValueColumns");
     auto& values = casted_target->values();
 
     auto target_is_nullable = casted_target->is_nullable();
@@ -57,15 +57,9 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
       std::copy_n(casted_source->values().begin() + source_start_index, length, values.begin() + target_start_index);
 
       if (casted_source->is_nullable()) {
-        // Values to insert contain null, copy them
-        if (target_is_nullable) {
-          std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                      casted_target->null_values().begin() + target_start_index);
-        } else {
-          for (const auto null_value : casted_source->null_values()) {
-            Assert(!null_value, "Trying to insert NULL into non-NULL segment");
-          }
-        }
+        Assert(target_is_nullable, "Trying to insert NULL into non-NULL segment")
+        std::copy_n(casted_source->null_values().begin() + source_start_index, length,
+                    casted_target->null_values().begin() + target_start_index);
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(source)) {
       // We use the segment type of the Dummy table used to insert a single null value.
