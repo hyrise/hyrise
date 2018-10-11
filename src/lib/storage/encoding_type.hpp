@@ -28,13 +28,11 @@ enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStrin
  * Use data_types if the encoding supports all data types.
  */
 constexpr auto supported_data_types_for_encoding_type = hana::make_map(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<std::string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
-
-//  Example for an encoding that doesn’t support all data types:
-//  hana::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)
 
 /**
  * @return an integral constant implicitly convertible to bool
@@ -46,5 +44,8 @@ template <typename SegmentEncodingType, typename ColumnDataType>
 constexpr auto encoding_supports_data_type(SegmentEncodingType encoding_type, ColumnDataType data_type) {
   return hana::contains(hana::at_key(supported_data_types_for_encoding_type, encoding_type), data_type);
 }
+
+// Version for when EncodingType and DataType are only known at runtime
+bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type);
 
 }  // namespace opossum

@@ -137,7 +137,7 @@ inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression
 inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
 inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
-inline detail::ternary<BetweenExpression> between;
+inline detail::ternary<BetweenExpression> between_;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>

@@ -19,6 +19,7 @@
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "table_scan/between_table_scan_impl.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
@@ -44,12 +45,15 @@ const std::string TableScan::description(DescriptionMode description_mode) const
 const OperatorScanPredicate& TableScan::predicate() const { return _predicate; }
 
 void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  if (!is_parameter_id(_predicate.value)) return;
+  if (is_parameter_id(_predicate.value)) {
+    const auto value_iter = parameters.find(boost::get<ParameterID>(_predicate.value));
+    if (value_iter != parameters.end()) _predicate.value = value_iter->second;
+  }
 
-  const auto value_iter = parameters.find(boost::get<ParameterID>(_predicate.value));
-  if (value_iter == parameters.end()) return;
-
-  _predicate.value = value_iter->second;
+  if (_predicate.value2 && is_parameter_id(*_predicate.value2)) {
+    const auto value_iter = parameters.find(boost::get<ParameterID>(*_predicate.value2));
+    if (value_iter != parameters.end()) _predicate.value2 = value_iter->second;
+  }
 }
 
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
@@ -157,32 +161,41 @@ void TableScan::_init_scan() {
     const auto left_column_type = _in_table->column_data_type(column_id);
     Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
 
-    DebugAssert(is_variant(parameter), "Right parameter must be variant.");
+    Assert(is_variant(parameter), "Right parameter must be variant.");
 
     const auto right_value = boost::get<AllTypeVariant>(parameter);
 
-    DebugAssert(!variant_is_null(right_value), "Right value must not be NULL.");
+    Assert(!variant_is_null(right_value), "Right value must not be NULL.");
 
     const auto right_wildcard = type_cast<std::string>(right_value);
 
     _impl = std::make_unique<LikeTableScanImpl>(_in_table, column_id, condition, right_wildcard);
 
     return;
-  }
-
-  if (condition == PredicateCondition::IsNull || condition == PredicateCondition::IsNotNull) {
+  } else if (condition == PredicateCondition::IsNull || condition == PredicateCondition::IsNotNull) {
     _impl = std::make_unique<IsNullTableScanImpl>(_in_table, column_id, condition);
     return;
-  }
+  } else if (condition == PredicateCondition::Between) {
+    const auto left_value = boost::get<AllTypeVariant>(parameter);
 
-  if (is_variant(parameter)) {
+    Assert(_predicate.value2, "Expected right value for BETWEEN");
+    const auto right_value = boost::get<AllTypeVariant>(*_predicate.value2);
+
+    Assert(left_value.which() == right_value.which(),
+           "Expected left and right value to be of the same type (see operator_scan_predicate.cpp)");
+    Assert(!variant_is_null(left_value) && !variant_is_null(right_value), "Expected BETWEEN values to be non-null");
+
+    _impl = std::make_unique<BetweenTableScanImpl>(_in_table, column_id, left_value, right_value);
+  } else if (is_variant(parameter)) {
     const auto right_value = boost::get<AllTypeVariant>(parameter);
 
     _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, column_id, condition, right_value);
-  } else /* is_column_name(parameter) */ {
+  } else if (is_column_id(parameter)) {
     const auto right_column_id = boost::get<ColumnID>(parameter);
 
     _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, column_id, condition, right_column_id);
+  } else {
+    Fail("Never expected to end up here...");
   }
 }
 

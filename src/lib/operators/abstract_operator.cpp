@@ -139,7 +139,7 @@ void AbstractOperator::print(std::ostream& stream) const {
     const auto output = op->get_output();
     if (output) {
       fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
-             << output->column_count() << " column(s)/";
+                << output->column_count() << " column(s)/";
 
       fn_stream << format_bytes(output->estimate_memory_usage());
       fn_stream << "/";

@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "bytell_hash_map.hpp"
 #include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -22,7 +23,6 @@
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
 #include "utils/uninitialized_vector.hpp"
 
@@ -89,8 +89,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
 void JoinHash::_on_cleanup() { _impl.reset(); }
 
-// currently using 32bit Murmur
-using Hash = uint32_t;
+using Hash = size_t;
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -117,8 +116,10 @@ using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninit
 // smaller side.
 using SmallPosList = boost::container::small_vector<RowID, 1>;
 
+// In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
+// with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
 template <typename T>
-using HashTable = std::unordered_map<T, SmallPosList>;
+using HashTable = ska::bytell_hash_map<T, SmallPosList>;
 
 /*
 This struct contains radix-partitioned data in a contiguous buffer,
@@ -159,19 +160,18 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
     jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id,
                                                  partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
-
-      // Potentially oversizing the hash table when values are often repeated.
-      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.
-      auto hashtable = HashTable<HashedType>(partition_size);
+      // slightly oversize the hash table to avoid unnecessary rebuilds
+      auto hashtable = HashTable<HashedType>(static_cast<size_t>(partition_size * 1.2));
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         auto& element = partition_left[partition_offset];
 
-        auto [it, inserted] =  // NOLINT
-            hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
-        if (!inserted) {
-          // We already have the value in the map
+        auto casted_value = type_cast<HashedType>(std::move(element.value));
+        auto it = hashtable.find(casted_value);
+        if (it != hashtable.end()) {
           it->second.emplace_back(element.row_id);
+        } else {
+          hashtable.emplace(casted_value, SmallPosList{element.row_id});
         }
       }
 
@@ -185,19 +185,10 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   return std::move(hashtables);
 }
 
-/*
-Hashes the given value into the HashedType that is defined by the current Hash Traits.
-Performs a lexical cast first, if necessary.
-*/
-template <typename OriginalType, typename HashedType>
-constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
-  return murmur2<HashedType>(type_cast<HashedType>(value), seed);
-}
-
 template <typename T, typename HashedType>
 std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
-                                                const unsigned int partitioning_seed, bool keep_nulls = false) {
+                                                bool keep_nulls = false) {
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
@@ -241,7 +232,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Hash hashed_value = std::hash<HashedType>{}(type_cast<HashedType>(value.value()));
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -642,17 +633,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     const auto l2_cache_size = 256'000;  // bytes
 
-    // We assume an std::unordered_map with a linked list within the buckets.
     // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-    // that each value maps to two RowIDs.
+    // that each value maps to a PosList with a single RowID. For the used small_vector's, we assume a
+    // size of 2*RowID per PosList. For sizing, see comments:
+    // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
     const auto complete_hash_map_size =
-        // hash map
-        build_relation_size * (sizeof(LeftType) + sizeof(void*)) +
-        // PosLists
-        (build_relation_size / 2) * (sizeof(PosList) + 2 * sizeof(RowID));
+        // number of items in map
+        (build_relation_size *
+         // key + value (and one byte overhead, see link above)
+         (sizeof(LeftType) + 2 * sizeof(RowID) + 1))
+        // fill factor
+        / 0.8;
 
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
-    const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
+    const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
     _radix_bits = std::ceil(std::log2(cluster_count));
   }
@@ -666,7 +660,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const unsigned int _partitioning_seed = 17;
   size_t _radix_bits;
 
   // Determine correct type for hashing
@@ -739,10 +732,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
-                                                                     _radix_bits, _partitioning_seed);
+                                                                     _radix_bits);
     // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
     auto materialized_right = materialize_input<RightType, HashedType>(
-        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
+        right_in_table, _column_ids.second, histograms_right, _radix_bits, keep_nulls);
 
     // Radix Partitioning phase
     /*
