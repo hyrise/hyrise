@@ -23,7 +23,7 @@ std::string CreateTableNode::description() const {
       stream << "NON-NULL";
     }
 
-    if (column_id + 1 < column_definitions.size()) {
+    if (column_id + 1u < column_definitions.size()) {
       stream << ", ";
     }
   }
