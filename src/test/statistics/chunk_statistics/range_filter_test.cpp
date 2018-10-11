@@ -13,6 +13,7 @@
 
 #include "utils/assert.hpp"
 
+#include "statistics/chunk_statistics/min_max_filter.hpp"
 #include "statistics/chunk_statistics/range_filter.hpp"
 #include "types.hpp"
 
@@ -228,6 +229,87 @@ TYPED_TEST(RangeFilterTest, Between) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 1, 5));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, 10, 12));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, 11, 12));
+}
+
+TYPED_TEST(RangeFilterTest, SliceWithPredicate) {
+  auto new_filter = std::shared_ptr<RangeFilter<TypeParam>>{};
+  const auto ranges = std::vector<std::pair<TypeParam, TypeParam>>{{5, 10}, {20, 25}, {35, 100}};
+
+  const auto filter = std::make_shared<RangeFilter<TypeParam>>(ranges);
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::LessThan, ranges.front().first));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::LessThanEquals, ranges.front().first));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 15));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 30));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.back().second));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, ranges.back().second));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::NotEquals, 7));
+  // Should be the same filter.
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, ranges.front().first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, ranges.front().first));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 15));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, 30));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.back().second));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, ranges.back().second));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::LessThanEquals, 7));
+  // New filter should start at same value as before and end at 7.
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, ranges.front().first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, ranges.front().first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, 7));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, 7));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::LessThanEquals, 17));
+  // New filter should start at same value as before and end before first gap (because 17 is in that first gap).
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, ranges.front().first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, ranges.front().first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.front().second));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, ranges.front().second));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, 7));
+  // New filter should start at 7 and end at same value as before.
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, 7));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, 7));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.back().second));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, ranges.back().second));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, 17));
+  // New filter should start after first gap (because 17 is in that first gap) and end at same value as before.
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, ranges[1].first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, ranges[1].first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.back().second));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, ranges.back().second));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::Between, 7, 17));
+  // New filter should start at 7 and end right before first gap (because 17 is in that gap).
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, 7));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, 7));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges.front().second));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, ranges.front().second));
+
+  new_filter = std::static_pointer_cast<RangeFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::Between, 17, 27));
+  // New filter should start right after first gap (because 17 is in that gap)
+  // and end right before second gap (because 27 is in that gap).
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::LessThan, ranges[1].first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, ranges[1].first));
+  EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, ranges[1].second));
+  EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, ranges[1].second));
+
+  // Slice with equality predicate will return MinMaxFilter.
+  const auto min_max_filter = std::static_pointer_cast<MinMaxFilter<TypeParam>>(
+          filter->slice_with_predicate(PredicateCondition::Equals, 7));
+  // New filter should have 7 as min and max.
+  EXPECT_TRUE(min_max_filter->does_not_contain(PredicateCondition::LessThan, 7));
+  EXPECT_FALSE(min_max_filter->does_not_contain(PredicateCondition::LessThanEquals, 7));
+  EXPECT_FALSE(min_max_filter->does_not_contain(PredicateCondition::GreaterThanEquals, 7));
+  EXPECT_TRUE(min_max_filter->does_not_contain(PredicateCondition::GreaterThan, 7));
 }
 
 }  // namespace opossum

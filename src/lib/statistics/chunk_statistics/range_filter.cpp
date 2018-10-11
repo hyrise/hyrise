@@ -120,22 +120,38 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
       return std::make_shared<MinMaxFilter<T>>(value, value);
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals: {
-      for (const auto& p : _ranges) {
-        if (p.second < value) {
-          ranges.emplace_back(p);
-        } else {
-          ranges.emplace_back(std::pair<T, T>{p.first, value});
-          break;
-        }
+      auto end_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
+                                     [](const auto& a, const auto& b) { return a.second < b; });
+
+      // Copy all the ranges before the value.
+      auto it = _ranges.cbegin();
+      for (; it != end_it; it++) {
+        ranges.emplace_back(*it);
+      }
+
+      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
+
+      // If value is not in a gap, limit the last range's upper bound to value.
+      if (value >= it->first) {
+          ranges.emplace_back(std::pair<T, T>{it->first, value});
       }
     } break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals: {
       auto it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
                                  [](const auto& a, const auto& b) { return a.second < b; });
-      ranges.emplace_back(std::pair<T, T>{value, (*it).second});
+
+      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
+
+      // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
+      if (value <= it->first) {
+        ranges.emplace_back(*it);
+      } else {
+        ranges.emplace_back(std::pair<T, T>{value, it->second});
+      }
       it++;
 
+      // Copy all following ranges.
       for (; it != _ranges.cend(); it++) {
         ranges.emplace_back(*it);
       }
@@ -145,7 +161,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
       const auto value2 = type_cast<T>(*variant_value2);
       return slice_with_predicate(PredicateCondition::GreaterThanEquals, value)
           ->slice_with_predicate(PredicateCondition::LessThanEquals, value2);
-    } break;
+    }
     default:
       ranges = _ranges;
   }
