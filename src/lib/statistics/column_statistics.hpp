@@ -16,11 +16,22 @@ namespace opossum {
 template <typename ColumnDataType>
 class ColumnStatistics : public BaseColumnStatistics {
  public:
-  // To be used for columns for which ColumnStatistics can't be computed
-  static ColumnStatistics dummy();
+  ColumnStatistics(const float null_value_ratio, const float distinct_count,
+                                                     const ColumnDataType min, const ColumnDataType max)
+      : BaseColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
+        _min(min),
+        _max(max) {
+    Assert(null_value_ratio >= 0.0f && null_value_ratio <= 1.0f, "NullValueRatio out of range");
+  }
 
-  ColumnStatistics(const float null_value_ratio, const float distinct_count, const ColumnDataType min,
-                   const ColumnDataType max);
+  // To be used for columns for which ColumnStatistics can't be computed
+  static ColumnStatistics dummy() {
+    if constexpr (std::is_same_v<ColumnDataType, std::string>) {
+      return ColumnStatistics{1.0f, 1.0f, {}, {}};
+    } else {
+      return ColumnStatistics{1.0f, 1.0f, {0}, {0}};
+    }
+  }
 
   /**
    * @defgroup Member access

@@ -21,7 +21,7 @@ void BindServerPreparedStatementTask::_on_execute() {
     query_plan->tree_roots().at(0)->set_parameters(pqp_parameters);
 
     _promise.set_value(std::move(query_plan));
-  } catch (const std::exception& exception) {
+  } catch (const std::exception&) {
     _promise.set_exception(boost::current_exception());
   }
 }

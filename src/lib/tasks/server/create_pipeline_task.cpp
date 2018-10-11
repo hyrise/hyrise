@@ -11,7 +11,7 @@ void CreatePipelineTask::_on_execute() {
 
   try {
     result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.create_pipeline());
-  } catch (const std::exception& exception) {
+  } catch (const std::exception&) {
     // Try LOAD file_name table_name
     if (_allow_load_table && _is_load_table()) {
       result->load_table = std::make_pair(_file_name, _table_name);
