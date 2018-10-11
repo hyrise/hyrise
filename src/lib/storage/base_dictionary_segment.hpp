@@ -21,7 +21,7 @@ class BaseDictionarySegment : public BaseEncodedSegment {
    * @brief Returns index (i.e. ValueID) of first dictionary entry >= search value
    *
    * @param value the search value
-   * @return INVALID_VALUE_ID if entries are smaller than value
+   * @return INVALID_VALUE_ID if all entries are smaller than value
    */
   virtual ValueID lower_bound(const AllTypeVariant& value) const = 0;
 
@@ -29,7 +29,7 @@ class BaseDictionarySegment : public BaseEncodedSegment {
    * @brief Returns index (i.e. ValueID) of first dictionary entry > search value
    *
    * @param value the search value
-   * @return INVALID_VALUE_ID if entries are smaller than or equal to value
+   * @return INVALID_VALUE_ID if all entries are smaller than or equal to value
    */
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;
 

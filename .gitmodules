@@ -19,3 +19,6 @@
 [submodule "third_party/cpp-btree"]
 	path = third_party/cpp-btree
 	url = https://github.com/algorithm-ninja/cpp-btree
+[submodule "flat_hash_map"]
+	path = third_party/flat_hash_map
+	url = https://github.com/skarupke/flat_hash_map.git

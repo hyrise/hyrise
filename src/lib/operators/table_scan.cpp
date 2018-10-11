@@ -13,6 +13,7 @@
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/between_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
@@ -25,6 +26,7 @@
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "table_scan/between_table_scan_impl.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
@@ -169,12 +171,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
 std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
   /**
-   * Select the scanning implementation (`_impl`) to use based on the kind of the expression. Use the
-   * ExpressionEvaluator as a fallback, if no dedicated implementation exists for an expression.
+   * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
+   * closely examine the predicate expression.
+   * Use the ExpressionEvaluator as a fallback if no dedicated scanning implementation exists for an expression.
    */
 
-  const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate);
-  if (binary_predicate_expression) {
+  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate)) {
     const auto predicate_condition = binary_predicate_expression->predicate_condition;
 
     const auto left_operand = binary_predicate_expression->left_operand();
@@ -186,53 +188,78 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
     auto left_value = std::optional<AllTypeVariant>{};
     auto right_value = std::optional<AllTypeVariant>{};
 
-    if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(left_operand); left_value_expression) {
+    if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(
+      left_operand); left_value_expression) {
       left_value = left_value_expression->value;
     }
-    if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(left_operand); left_parameter_expression) {
+    if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(
+      left_operand); left_parameter_expression) {
       left_value = left_parameter_expression->value();
     }
-    if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(right_operand); right_value_expression) {
+    if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(
+      right_operand); right_value_expression) {
       right_value = right_value_expression->value;
     }
-    if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(right_operand); right_parameter_expression) {
+    if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(
+      right_operand); right_parameter_expression) {
       right_value = right_parameter_expression->value();
     }
 
     if (left_value && left_value->type() == typeid(NullValue)) left_value.reset();
     if (right_value && right_value->type() == typeid(NullValue)) right_value.reset();
 
-    const auto is_like_predicate = predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
-    const auto is_null_predicate = predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull;
+    const auto is_like_predicate =
+    predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
+    const auto is_null_predicate =
+    predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull;
 
-    // <column> LIKE <non-null value>
+    // Predicate pattern: <column> LIKE <non-null value>
     if (left_column_expression && is_like_predicate && right_value) {
-      return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id, predicate_condition,
+      return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                 predicate_condition,
                                                  type_cast<std::string>(*right_value));
     }
 
-    // <column> IS NULL
+    // Predicate pattern: <column> IS NULL
     if (left_column_expression && is_null_predicate) {
       return std::make_unique<IsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                    predicate_condition);
     }
 
-    // <column> <binary predicate_condition> <non-null value>
+    // Predicate pattern: <column> <binary predicate_condition> <non-null value>
     if (left_column_expression && right_value) {
-      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), left_column_expression->column_id, predicate_condition, *right_value);
+      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                         predicate_condition, *right_value);
     }
     if (right_column_expression && left_value) {
-      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), right_column_expression->column_id, flip_predicate_condition(predicate_condition), *left_value);
+      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), right_column_expression->column_id,
+                                                         flip_predicate_condition(predicate_condition), *left_value);
     }
 
-    // <column> <binary predicate_condition> <column>
+    // Predicate pattern: <column> <binary predicate_condition> <column>
     if (left_column_expression && right_column_expression) {
-      return std::make_unique<ColumnComparisonTableScanImpl>(input_table_left(), left_column_expression->column_id, predicate_condition,
+      return std::make_unique<ColumnComparisonTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                             predicate_condition,
                                                              right_column_expression->column_id);
     }
   }
 
+  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(_predicate)) {
+    const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
+
+    const auto lower_bound_value = expression_get_value(*between_expression->lower_bound());
+    const auto upper_bound_value = expression_get_value(*between_expression->upper_bound());
+
+    // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
+    if (left_column && lower_bound_value && upper_bound_value && lower_bound_value->type() == upper_bound_value->type()) {
+      return std::make_unique<BetweenTableScanImpl>(input_table_left(), left_column->column_id, *lower_bound_value, *upper_bound_value);
+    }
+  }
+
+  // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
   return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), _predicate);
 }
+
+void TableScan::_on_cleanup() { _impl.reset(); }
 
 }  // namespace opossum

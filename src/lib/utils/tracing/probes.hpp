@@ -20,10 +20,15 @@ constexpr bool is_valid_name(const char* name) {
 
 #include "provider.hpp"
 
-// Construct the probe definition by provider and probe name
+// Construct the probe definition by provider and probe name. Because TSan has issues and throw false positives, we
+// don't use probes in TSan builds
+#ifndef __SANITIZE_THREAD__
 #define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
   static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
   provider##_##probe(__VA_ARGS__);
+#else
+#define BUILD_PROBE_NAME(provider, probe, ...)
+#endif
 
 #define DTRACE_PROBE(provider, probe) BUILD_PROBE_NAME(provider, probe);
 #define DTRACE_PROBE1(provider, probe, param1) BUILD_PROBE_NAME(provider, probe, param1);

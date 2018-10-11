@@ -148,8 +148,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   /**
-   * Not using OperatorScanPredicate, since the IndexScan still wants to do BETWEEN in one step and splitting it up
-   * in two doesn't work as you can only do a single IndexScan per Table.
+   * Not using OperatorScanPredicate, since it splits up BETWEEN into two scans for some cases that TableScan cannot handle
    */
 
   auto column_id = ColumnID{0};

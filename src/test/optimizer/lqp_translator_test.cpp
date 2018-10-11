@@ -416,7 +416,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
 }
 
-TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
+TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   /**
    * Build LQP and translate to PQP
    */
@@ -427,9 +427,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryScan) {
    * Check PQP
    */
   const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
-  const auto a = PQPColumnExpression::from_table(*table_int_float, "a");
-
   ASSERT_TRUE(table_scan_op);
+
+  const auto a = PQPColumnExpression::from_table(*table_int_float, "a");
   EXPECT_EQ(*table_scan_op->predicate(), *between_(a, 42, 1337));
 }
 

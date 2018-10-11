@@ -56,6 +56,7 @@ class TableScan : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   std::unique_ptr<AbstractTableScanImpl> _get_impl() const;
+  void _on_cleanup() override;
 
  private:
   const std::shared_ptr<AbstractExpression> _predicate;

@@ -29,37 +29,46 @@ class RangeFilter : public AbstractFilter {
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary,
                                                       uint32_t max_ranges_count = MAX_RANGES_COUNT);
 
-  bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
-    const auto t_value = type_cast<T>(value);
-    // Operators work as follows: value_from_table <operator> t_value
-    // e.g. OpGreaterThan: value_from_table > t_value
-    // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
+  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
+    const auto value = type_cast<T>(variant_value);
+    // Operators work as follows: value_from_table <operator> value
+    // e.g. OpGreaterThan: value_from_table > value
+    // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
     switch (predicate_type) {
       case PredicateCondition::GreaterThan: {
         auto& max = _ranges.back().second;
-        return t_value >= max;
+        return value >= max;
       }
       case PredicateCondition::GreaterThanEquals: {
         auto& max = _ranges.back().second;
-        return t_value > max;
+        return value > max;
       }
       case PredicateCondition::LessThan: {
         auto& min = _ranges.front().first;
-        return t_value <= min;
+        return value <= min;
       }
       case PredicateCondition::LessThanEquals: {
         auto& min = _ranges.front().first;
-        return t_value < min;
+        return value < min;
       }
       case PredicateCondition::Equals: {
         for (const auto& bounds : _ranges) {
           const auto& [min, max] = bounds;
 
-          if (t_value >= min && t_value <= max) {
+          if (value >= min && value <= max) {
             return false;
           }
         }
         return true;
+      }
+      case PredicateCondition::NotEquals: {
+        return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
+      }
+      case PredicateCondition::Between: {
+        Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+        const auto value2 = type_cast<T>(*variant_value2);
+        return value > _ranges.back().second || value2 < _ranges.front().first;
       }
       default:
         return false;

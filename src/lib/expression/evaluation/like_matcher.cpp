@@ -8,6 +8,14 @@ namespace opossum {
 
 LikeMatcher::LikeMatcher(const std::string& pattern) { _pattern_variant = pattern_string_to_pattern_variant(pattern); }
 
+size_t LikeMatcher::get_index_of_next_wildcard(const std::string& pattern, const size_t offset) {
+  return pattern.find_first_of("_%", offset);
+}
+
+bool LikeMatcher::contains_wildcard(const std::string& pattern) {
+  return get_index_of_next_wildcard(pattern) != std::string::npos;
+}
+
 LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const std::string& pattern) {
   PatternTokens tokens;
 
@@ -20,7 +28,7 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const std::stri
       tokens.emplace_back(Wildcard::AnyChars);
       ++current_position;
     } else {
-      const auto next_wildcard_position = pattern.find_first_of("_%", current_position);
+      const auto next_wildcard_position = get_index_of_next_wildcard(pattern, current_position);
       const auto token_length =
           next_wildcard_position == std::string::npos ? std::string::npos : next_wildcard_position - current_position;
       tokens.emplace_back(pattern.substr(current_position, token_length));

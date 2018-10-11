@@ -26,7 +26,8 @@ struct OperatorScanPredicate {
 
   OperatorScanPredicate() = default;
   OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                        const AllParameterVariant& value = NullValue{});
+                        const AllParameterVariant& value = NullValue{},
+                        const std::optional<AllParameterVariant>& value2 = std::nullopt);
 
   // Returns a string representation of the predicate, using an optionally given table that is used to resolve column
   // ids to names.
@@ -35,6 +36,7 @@ struct OperatorScanPredicate {
   ColumnID column_id{INVALID_COLUMN_ID};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
+  std::optional<AllParameterVariant> value2;
 };
 
 }  // namespace opossum

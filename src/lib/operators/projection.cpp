@@ -56,8 +56,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
   const auto forward_columns = input_table_left()->type() == output_table_type;
 
-  const auto output_table =
-      std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
+  const auto output_table = std::make_shared<Table>(
+      column_definitions, output_table_type, input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
 
   // Early out, since the ExpressionEvaluator created below expects there to be at least one Chunk.
   if (input_table_left()->chunk_count() == 0) {
