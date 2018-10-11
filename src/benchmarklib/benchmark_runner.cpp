@@ -294,7 +294,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
-    const auto time_per_query = duration_ns / query_result.num_iterations;
+    const auto time_per_query = query_result.num_iterations > 0 ? duration_ns / query_result.num_iterations : 0.f;
 
     // Transform iteration Durations into numerical representation
     auto iteration_durations = std::vector<double>();
