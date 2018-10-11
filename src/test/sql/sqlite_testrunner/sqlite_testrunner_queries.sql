@@ -188,6 +188,7 @@ SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
 
 -- Subqueries in WHERE statement
 SELECT a FROM id_int_int_int_100 AS r WHERE id + 1 = (SELECT MIN(b) + r.id FROM mixed)
+SELECT * FROM id_int_int_int_100 WHERE a = (SELECT MAX(b) FROM id_int_int_int_100)
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)

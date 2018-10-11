@@ -82,7 +82,7 @@ set(
     #operators/sort_test.cpp
     #operators/table_scan_between_test.cpp
     #operators/table_scan_string_test.cpp
-    #operators/table_scan_test.cpp
+    operators/table_scan_test.cpp
     #operators/union_all_test.cpp
     #operators/union_positions_test.cpp
     #operators/update_test.cpp
