@@ -58,8 +58,8 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
 
       if (casted_source->is_nullable()) {
         Assert(target_is_nullable, "Trying to insert NULL into non-NULL segment")
-        std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                    casted_target->null_values().begin() + target_start_index);
+            std::copy_n(casted_source->null_values().begin() + source_start_index, length,
+                        casted_target->null_values().begin() + target_start_index);
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(source)) {
       // We use the segment type of the Dummy table used to insert a single null value.
@@ -116,23 +116,23 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   // modifying the table's size simultaneously.
   auto start_index = 0u;
   auto start_chunk_id = ChunkID{0};
-  auto total_chunks_inserted = 0u;
+  auto end_chunk_id = 0u;
   {
     auto scoped_lock = _target_table->acquire_append_mutex();
 
     if (_target_table->chunk_count() == 0) {
       _target_table->append_mutable_chunk();
-      total_chunks_inserted++;
     }
 
     start_chunk_id = _target_table->chunk_count() - 1;
+    end_chunk_id = start_chunk_id + 1;
     auto last_chunk = _target_table->get_chunk(start_chunk_id);
     start_index = last_chunk->size();
 
     // If last chunk is compressed, add a new uncompressed chunk
     if (!last_chunk->is_mutable()) {
       _target_table->append_mutable_chunk();
-      total_chunks_inserted++;
+      end_chunk_id++;
     }
 
     auto remaining_rows = total_rows_to_insert;
@@ -155,7 +155,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Create new chunk if necessary.
       if (remaining_rows > 0) {
         _target_table->append_mutable_chunk();
-        total_chunks_inserted++;
+        end_chunk_id++;
       }
     }
   }
@@ -166,7 +166,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   auto source_chunk_id = ChunkID{0};
   auto source_chunk_start_index = 0u;
 
-  for (auto target_chunk_id = start_chunk_id; target_chunk_id <= start_chunk_id + total_chunks_inserted;
+  for (auto target_chunk_id = start_chunk_id; target_chunk_id < end_chunk_id;
        target_chunk_id++) {
     auto target_chunk = _target_table->get_chunk(target_chunk_id);
 

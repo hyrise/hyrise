@@ -13,10 +13,7 @@ namespace opossum {
 
 class DropTableTest : public BaseTest {
  public:
-  void SetUp() override {
-
-    drop_table = std::make_shared<DropTable>("t");
-  }
+  void SetUp() override { drop_table = std::make_shared<DropTable>("t"); }
 
   TableColumnDefinitions column_definitions;
   std::shared_ptr<DropTable> drop_table;

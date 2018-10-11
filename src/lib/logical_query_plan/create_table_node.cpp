@@ -27,7 +27,7 @@ std::string CreateTableNode::description() const {
       stream << ", ";
     }
   }
-  stream << ")";      
+  stream << ")";
 
   return stream.str();
 }

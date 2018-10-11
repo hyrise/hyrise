@@ -19,7 +19,8 @@ class CreateTableNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreateTableNodeTest, Description) {
-  EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table' ('a' int NON-NULL, 'b' float NULLABLE)");
+  EXPECT_EQ(create_table_node->description(),
+            "[CreateTable] Name: 'some_table' ('a' int NON-NULL, 'b' float NULLABLE)");
 }
 
 TEST_F(CreateTableNodeTest, Equals) {
@@ -36,8 +37,6 @@ TEST_F(CreateTableNodeTest, Equals) {
   EXPECT_NE(*different_create_table_node_b, *create_table_node);
 }
 
-TEST_F(CreateTableNodeTest, Copy) {
-  EXPECT_EQ(*create_table_node, *create_table_node->deep_copy());
-}
+TEST_F(CreateTableNodeTest, Copy) { EXPECT_EQ(*create_table_node, *create_table_node->deep_copy()); }
 
 }  // namespace opossum
