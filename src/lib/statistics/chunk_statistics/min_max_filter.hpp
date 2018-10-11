@@ -67,7 +67,7 @@ class MinMaxFilter : public AbstractStatisticsObject {
     }
 
     T min, max;
-    const auto value = boost::get<T>(variant_value);
+    const auto value = type_cast<T>(variant_value);
 
     // If value is either _min or _max, we do not take the opportunity to slightly improve the new object.
     // We do not know the actual previous/next value, and for strings it's not that simple.
@@ -89,7 +89,7 @@ class MinMaxFilter : public AbstractStatisticsObject {
         break;
       case PredicateCondition::Between: {
         DebugAssert(variant_value2, "BETWEEN needs a second value.");
-        const auto value2 = boost::get<T>(*variant_value2);
+        const auto value2 = type_cast<T>(*variant_value2);
         min = value;
         max = value2;
         break;

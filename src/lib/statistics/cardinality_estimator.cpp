@@ -1,5 +1,7 @@
 #include "cardinality_estimator.hpp"
 
+#include <memory>
+
 #include "chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "chunk_statistics/histograms/generic_histogram.hpp"
 #include "chunk_statistics2.hpp"

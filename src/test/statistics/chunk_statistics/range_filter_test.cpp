@@ -1,6 +1,9 @@
+#include <algorithm>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <random>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>

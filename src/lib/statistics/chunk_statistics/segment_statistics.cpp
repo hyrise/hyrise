@@ -76,6 +76,7 @@ bool SegmentStatistics::can_prune(const PredicateCondition predicate_type, const
                                   const std::optional<AllTypeVariant>& variant_value2) const {
   for (const auto& filter : _filters) {
     const auto estimate_pair = filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+    // TODO(tim): this could potentially cause issues with rounding. Discuss with Markus.
     if (estimate_pair.first == 0.f && estimate_pair.second) {
       return true;
     }

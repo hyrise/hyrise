@@ -1,6 +1,7 @@
-#include "gtest/gtest.h"
-
 #include <memory>
+#include <vector>
+
+#include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
@@ -27,8 +28,7 @@ class CardinalityEstimatorTest : public ::testing::Test {
       std::vector<int32_t>{1,  26, 51, 76},
       std::vector<int32_t>{25, 50, 75, 100},
       std::vector<HistogramCountType>{40, 30, 20, 10},
-      25, 0
-    );
+      25, 0);
     // clang-format on
 
     segment_statistics_a_0_a->equal_distinct_count_histogram = histogram_a_a;

@@ -1,6 +1,8 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "base_test.hpp"
 #include "gtest/gtest.h"
@@ -18,20 +20,18 @@ class GenericHistogramTest : public BaseTest {
             std::vector<int32_t>{2,  21, 37},
             std::vector<int32_t>{20, 25, 100},
             std::vector<HistogramCountType>{17, 30, 40},
-            std::vector<HistogramCountType>{5,  3,  27}
-    );
+            std::vector<HistogramCountType>{5,  3,  27});
     _double_histogram = std::make_shared<GenericHistogram<double>>(
             std::vector<double>{2.,  21., 37.},
             std::vector<double>{20., 25., 100.},
             std::vector<HistogramCountType>{17, 30, 40},
-            std::vector<HistogramCountType>{5,  3,  27}
-    );
+            std::vector<HistogramCountType>{5,  3,  27});
     _string_histogram = std::make_shared<GenericHistogram<std::string>>(
-            std::vector<std::string>{"b",  "at", "bi"},
+            std::vector<std::string>{"aa", "at", "bi"},
             std::vector<std::string>{"as", "ax", "dr"},
             std::vector<HistogramCountType>{17, 30, 40},
-            std::vector<HistogramCountType>{5,  3,  27}
-    );
+            std::vector<HistogramCountType>{5,  3,  27},
+            "abcdefghijklmnopqrstuvwxyz", 2u);
     // clang-format on
   }
 
@@ -42,26 +42,37 @@ class GenericHistogramTest : public BaseTest {
 };
 
 TEST_F(GenericHistogramTest, Basic) {
-  EXPECT_TRUE(_int_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{1}));
-  EXPECT_TRUE(_double_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{1.}));
-  EXPECT_TRUE(_string_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{"a"}));
-  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 1), 0.f);
-  EXPECT_FLOAT_EQ(_double_histogram->estimate_cardinality(PredicateCondition::Equals, 1.), 0.f);
-  EXPECT_FLOAT_EQ(_string_histogram->estimate_cardinality(PredicateCondition::Equals, "a"), 0.f);
+  std::pair<float, bool> estimate_pair;
 
-  EXPECT_FALSE(_int_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{3}));
-  EXPECT_FALSE(_double_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{3.}));
-  EXPECT_FALSE(_string_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{"ab"}));
-  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 3), 19.f / 5);
-  EXPECT_FLOAT_EQ(_double_histogram->estimate_cardinality(PredicateCondition::Equals, 3.), 19.f / 5);
-  EXPECT_FLOAT_EQ(_string_histogram->estimate_cardinality(PredicateCondition::Equals, "ab"), 19.f / 5);
+  estimate_pair = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 1);
+  EXPECT_FLOAT_EQ(estimate_pair.first, 0.f);
+  EXPECT_TRUE(estimate_pair.second);
+  estimate_pair = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 1.);
+  EXPECT_FLOAT_EQ(estimate_pair.first, 0.f);
+  EXPECT_TRUE(estimate_pair.second);
+  estimate_pair = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "a");
+  EXPECT_FLOAT_EQ(estimate_pair.first, 0.f);
+  EXPECT_TRUE(estimate_pair.second);
 
-  EXPECT_TRUE(_int_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{26}));
-  EXPECT_TRUE(_double_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{26.}));
-  EXPECT_TRUE(_string_histogram->can_prune(PredicateCondition::Equals, AllTypeVariant{"ay"}));
-  EXPECT_FLOAT_EQ(_int_histogram->estimate_cardinality(PredicateCondition::Equals, 26), 0.f);
-  EXPECT_FLOAT_EQ(_double_histogram->estimate_cardinality(PredicateCondition::Equals, 26.), 0.f);
-  EXPECT_FLOAT_EQ(_string_histogram->estimate_cardinality(PredicateCondition::Equals, "ay"), 0.f);
+  estimate_pair = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 3);
+  EXPECT_FLOAT_EQ(estimate_pair.first, 17.f / 5);
+  EXPECT_FALSE(estimate_pair.second);
+  estimate_pair = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 3.);
+  EXPECT_FLOAT_EQ(estimate_pair.first, 17.f / 5);
+  EXPECT_FALSE(estimate_pair.second);
+  estimate_pair = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ab");
+  EXPECT_FLOAT_EQ(estimate_pair.first, 17.f / 5);
+  EXPECT_FALSE(estimate_pair.second);
+
+  estimate_pair = _int_histogram->estimate_cardinality(PredicateCondition::Equals, 26);
+  EXPECT_FLOAT_EQ(estimate_pair.first, 0.f);
+  EXPECT_TRUE(estimate_pair.second);
+  estimate_pair = _double_histogram->estimate_cardinality(PredicateCondition::Equals, 26.);
+  EXPECT_FLOAT_EQ(estimate_pair.first, 0.f);
+  EXPECT_TRUE(estimate_pair.second);
+  estimate_pair = _string_histogram->estimate_cardinality(PredicateCondition::Equals, "ay");
+  EXPECT_FLOAT_EQ(estimate_pair.first, 0.f);
+  EXPECT_TRUE(estimate_pair.second);
 }
 
 }  // namespace opossum

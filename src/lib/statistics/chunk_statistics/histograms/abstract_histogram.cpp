@@ -635,7 +635,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
     Fail("TODO");
   }
 
-  const auto& value = boost::get<T>(variant_value);
+  const auto value = type_cast<T>(variant_value);
 
   std::vector<T> bin_minima;
   std::vector<T> bin_maxima;
@@ -677,7 +677,6 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
           bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
         }
       }
-
     } break;
 
     case PredicateCondition::LessThan:

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -7,6 +8,7 @@
 #include <vector>
 
 #include "statistics/abstract_statistics_object.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -33,7 +35,7 @@ class RangeFilter : public AbstractStatisticsObject {
 
   bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const {
-    const auto value = boost::get<T>(variant_value);
+    const auto value = type_cast<T>(variant_value);
     // Operators work as follows: value_from_table <operator> value
     // e.g. OpGreaterThan: value_from_table > value
     // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
@@ -69,7 +71,7 @@ class RangeFilter : public AbstractStatisticsObject {
       }
       case PredicateCondition::Between: {
         Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-        const auto value2 = boost::get<T>(*variant_value2);
+        const auto value2 = type_cast<T>(*variant_value2);
         return value > _ranges.back().second || value2 < _ranges.front().first;
       }
       default:
@@ -95,7 +97,7 @@ class RangeFilter : public AbstractStatisticsObject {
     }
 
     std::vector<std::pair<T, T>> ranges;
-    // const auto value = boost::get<T>(variant_value);
+    // const auto value = type_cast<T>(variant_value);
 
     // If value is either _min or _max, we do not take the opportunity to slightly improve the new object.
     // We do not know the actual previous/next value, and for strings it's not that simple.
@@ -118,7 +120,7 @@ class RangeFilter : public AbstractStatisticsObject {
       //   break;
       // case PredicateCondition::Between: {
       //   DebugAssert(variant_value2, "BETWEEN needs a second value.");
-      //   const auto value2 = boost::get<T>(*variant_value2);
+      //   const auto value2 = type_cast<T>(*variant_value2);
       //   min = value;
       //   max = value2;
       //   break;

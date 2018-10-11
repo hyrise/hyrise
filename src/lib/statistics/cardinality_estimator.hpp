@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "abstract_cardinality_estimator.hpp"
 
 namespace opossum {

@@ -1,5 +1,7 @@
 #include "segment_statistics2.hpp"
 
+#include <memory>
+
 #include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
