@@ -166,8 +166,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   auto source_chunk_id = ChunkID{0};
   auto source_chunk_start_index = 0u;
 
-  for (auto target_chunk_id = start_chunk_id; target_chunk_id < end_chunk_id;
-       target_chunk_id++) {
+  for (auto target_chunk_id = start_chunk_id; target_chunk_id < end_chunk_id; target_chunk_id++) {
     auto target_chunk = _target_table->get_chunk(target_chunk_id);
 
     const auto current_num_rows_to_insert =
