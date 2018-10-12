@@ -790,6 +790,7 @@ TEST_F(EqualDistinctCountHistogramTest, SliceWithPredicate) {
   EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
   EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 15));
   EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 15));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).first, 40.f / 10);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::NotEquals, 15));

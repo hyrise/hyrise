@@ -677,10 +677,10 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
             continue;
           }
 
-          const auto value_count = static_cast<HistogramCountType>(
-              std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first));
+          const auto value_count =
+              estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first;
 
-          bin_heights[bin_id] = _bin_height(bin_id) - value_count;
+          bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_height(bin_id) - value_count));
           bin_distinct_counts[bin_id] = distinct_count - 1;
         } else {
           bin_heights[bin_id] = _bin_height(bin_id);
@@ -719,9 +719,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_heights.resize(sliced_bin_count);
       bin_distinct_counts.resize(sliced_bin_count);
 
-      // If value is not in a gap, calculate the share of the bin to slice. Otherwise take the whole bin.
-      BinID last_sliced_bin_id = sliced_bin_count - 1;
-      if (value < _bin_maximum(last_sliced_bin_id)) {
+      // If value is not in a gap, calculate the share of the last bin to slice, and write it to back of the vectors.
+      // Otherwise take the whole bin later.
+      auto last_sliced_bin_id = sliced_bin_count;
+      if (value < _bin_maximum(last_sliced_bin_id - 1)) {
+        last_sliced_bin_id--;
         bin_minima.back() = _bin_minimum(last_sliced_bin_id);
         // TODO(anyone): this could be previous_value(value) for LessThan, but this is not available for strings
         // and we do not expect it to make a big difference.
@@ -733,8 +735,6 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
             static_cast<HistogramCountType>(std::ceil(_bin_height(last_sliced_bin_id) * sliced_bin_share));
         bin_distinct_counts.back() =
             static_cast<HistogramCountType>(std::ceil(_bin_distinct_count(last_sliced_bin_id) * sliced_bin_share));
-      } else {
-        last_sliced_bin_id = sliced_bin_count;
       }
 
       for (auto bin_id = BinID{0}; bin_id < last_sliced_bin_id; ++bin_id) {

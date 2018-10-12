@@ -75,4 +75,93 @@ TEST_F(GenericHistogramTest, Basic) {
   EXPECT_TRUE(estimate_pair.second);
 }
 
+TEST_F(GenericHistogramTest, SliceWithPredicate) {
+  // clang-format off
+  const auto hist = std::make_shared<GenericHistogram<int32_t>>(
+          std::vector<int32_t>{1,  30, 60, 80},
+          std::vector<int32_t>{25, 50, 75, 100},
+          std::vector<HistogramCountType>{40, 30, 20, 10},
+          std::vector<HistogramCountType>{10, 20, 15,  5});
+  // clang-format on
+  auto new_hist = std::shared_ptr<GenericHistogram<int32_t>>{};
+
+  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::LessThan, 1));
+  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
+  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
+  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::GreaterThan, 100));
+
+  new_hist =
+      std::static_pointer_cast<GenericHistogram<int32_t>>(hist->slice_with_predicate(PredicateCondition::Equals, 15));
+  // New histogram should have 15 as min and max.
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 15));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 15));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 15));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).first, 40.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::NotEquals, 15));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 100));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).first, 36.f / 9);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::LessThanEquals, 15));
+  // New bin should start at same value as before and end at 15.
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 15));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 15));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).first, 24.f / 6);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::LessThanEquals, 27));
+  // New bin should start at same value as before and end before first gap (because 27 is in that first gap).
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 25));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 25));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).first, 40.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::GreaterThanEquals, 15));
+  // New bin should start at 15 and end at same value as before.
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 15));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 100));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).first, 18.f / 5);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::GreaterThanEquals, 27));
+  // New bin should start after the first gap (because 27 is in that first gap) and end at same value as before.
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 30));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 30));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 100));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::Between, 51, 59));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).first, 30.f / 20);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::Between, 0, 17));
+  // New bin should start at same value as before (because 0 is smaller than the min of the histogram) and end at 17.
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 17));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 17));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).first, 40.f / 10);
+
+  new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
+      hist->slice_with_predicate(PredicateCondition::Between, 15, 77));
+  // New bin should start at 15 and end right before the second gap (because 77 is in that gap).
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 15));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::Between, 51, 59));
+  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 75));
+  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 75));
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).first, 18.f / 5);
+}
+
 }  // namespace opossum
