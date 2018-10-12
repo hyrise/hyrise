@@ -21,8 +21,9 @@ class ExpressionEvaluatorTableScanImpl : public AbstractTableScanImpl {
   std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) override;
 
  private:
+   std::shared_ptr<const Table> _in_table;
    std::shared_ptr<AbstractExpression> _expression;
-   ExpressionEvaluator _expression_evaluator;
+   std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults> _uncorrelated_select_results;
 };
 
 }  // namespace opossum

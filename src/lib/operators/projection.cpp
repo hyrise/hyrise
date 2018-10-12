@@ -59,32 +59,25 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table = std::make_shared<Table>(
       column_definitions, output_table_type, input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
 
-  // Early out, since the ExpressionEvaluator created below expects there to be at least one Chunk.
-  if (input_table_left()->chunk_count() == 0) {
-    return output_table;
-  }
+  const auto uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache(expressions);
 
   /**
    * Perform the projection
    */
-  ExpressionEvaluator expression_evaluator{input_table_left()};
-  expression_evaluator.populate_uncorrelated_select_cache(expressions);
-
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    expression_evaluator.set_chunk_id(chunk_id);
-
     Segments output_segments;
     output_segments.reserve(expressions.size());
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_select_results);
     for (const auto& expression : expressions) {
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
         output_segments.emplace_back(input_chunk->get_segment(pqp_column_expression->column_id));
       } else {
-        output_segments.emplace_back(expression_evaluator.evaluate_expression_to_segment(*expression));
+        output_segments.emplace_back(evaluator.evaluate_expression_to_segment(*expression));
       }
     }
 

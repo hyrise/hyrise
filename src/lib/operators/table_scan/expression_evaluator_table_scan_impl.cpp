@@ -6,8 +6,9 @@
 namespace opossum {
 
 ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(const std::shared_ptr<const Table>& in_table, const std::shared_ptr<AbstractExpression>& expression):
-  _expression(expression), _expression_evaluator(in_table) {
-  _expression_evaluator.populate_uncorrelated_select_cache({expression});
+  _in_table(in_table), _expression(expression) {
+
+  _uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache({expression});
 }
 
 std::string ExpressionEvaluatorTableScanImpl::description() const {
@@ -15,8 +16,7 @@ std::string ExpressionEvaluatorTableScanImpl::description() const {
 }
 
 std::shared_ptr<PosList> ExpressionEvaluatorTableScanImpl::scan_chunk(ChunkID chunk_id) {
-  _expression_evaluator.set_chunk_id(chunk_id);
-  return std::make_shared<PosList>(_expression_evaluator.evaluate_expression_to_pos_list(*_expression));
+  return std::make_shared<PosList>(ExpressionEvaluator{_in_table, chunk_id, _uncorrelated_select_results}.evaluate_expression_to_pos_list(*_expression));
 }
 
 }  // namespace opossum

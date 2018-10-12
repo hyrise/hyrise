@@ -117,42 +117,14 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const AbstractExp
 namespace opossum {
 
 ExpressionEvaluator::ExpressionEvaluator(
-    const std::shared_ptr<const Table>& table, const ChunkID chunk_id)
+    const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+    const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
     : _table(table),
       _chunk(_table->get_chunk(chunk_id)),
-      _chunk_id(chunk_id) {
+      _chunk_id(chunk_id),
+      _uncorrelated_select_results(uncorrelated_select_results) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
-}
-
-void ExpressionEvaluator::set_chunk_id(const ChunkID chunk_id) {
-  if (_chunk_id == chunk_id) return;
-  
-  Assert(chunk_id < _table->chunk_count(), "ChunkID out of bounds");
-    
-  _chunk_id = chunk_id;
-  for (auto& segment_materialization : _segment_materializations) {
-    segment_materialization.reset();
-  }
-}
-
-void ExpressionEvaluator::populate_uncorrelated_select_cache(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  Assert(!_uncorrelated_select_results, "Populating the uncorrelated select cache multiple times should not be necessary");
-
-  _uncorrelated_select_results.emplace();
-  
-  for (const auto& expression : expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-      if (pqp_select_expression && !pqp_select_expression->is_correlated()) {
-        const auto result = _evaluate_select_expression_for_row(*pqp_select_expression, ChunkOffset{0});        
-        _uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      return ExpressionVisitation::VisitArguments;
-    });
-  }
 }
 
 template <typename Result>
@@ -866,8 +838,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
                   "All uncorrelated PQPSelectExpression should be cached, if cache is present");
       return {table_iter->second};
     } else {
-      PerformanceWarning("ExpressionEvaluator: Cache for uncorrelated subselects not present");
-      
+      // If a select is uncorrelated, it has the same result for all rows and executing it for row 0
       return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
     }
   }
@@ -884,6 +855,25 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   }
 
   return results;
+}
+
+std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults> ExpressionEvaluator::populate_uncorrelated_select_results_cache(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  auto evaluator = ExpressionEvaluator{};
+  for (const auto& expression : expressions) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+      if (pqp_select_expression && !pqp_select_expression->is_correlated()) {
+        // Uncorrelated select expressions have the same result for every row, so executing them for row 0 is fine.
+        auto result = evaluator._evaluate_select_expression_for_row(*pqp_select_expression, ChunkOffset{0});
+        uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
+  return uncorrelated_select_results;
 }
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_for_row(

@@ -48,36 +48,30 @@ class ExpressionEvaluator final {
   using Bool = int32_t;
   static constexpr auto DataTypeBool = DataType::Int;
 
-  /**
-   * For Expressions that do not (and are not allowed to) reference any columns (e.g. in the LIMIT clause)
-   */
+  // Performance Hack:
+  //   For PQPSelectExpressions that are not correlated (i.e., that have no parameters), we pass previously
+  //   calculated results into the per-chunk evaluator so that they are only evaluated once, not per-chunk.
+  using UncorrelatedSelectResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
+
+  // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 
   /*
-   * Constructor for an ExpressionEvaluator able to evaluate expressions that reference columns.
-   * @param initial_chunk_id  Passing in a value is equivalent to calling `set_chunk_id()` after construction
+   * For Expressions that reference segments from a single table
+   * @param uncorrelated_select_results  Results from pre-computed uncorrelated selects, so they do not need to be
+   *                                     evaluated for every chunk. Solely for performance.
    */
-  ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID initial_chunk_id = ChunkID{0});
-
-  /**
-   * Set the index of the Chunk subsequent expression evaluations will take place on. Invalidates all data cached for
-   * the previously set ChunkID.
-   */
-  void set_chunk_id(const ChunkID chunk_id);
-
-  /**
-   * Performance Hack:
-   *  This function can optionally be called before starting the evaluation of expressions. It identifies
-   *  uncorrelated PQPSelectExpressions, executes them and caches their result, so that they do not have to be executed
-   *  for each Chunk.
-   */
-  void populate_uncorrelated_select_cache(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+  ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
+                      const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
 
   std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
   PosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
+
+  // Utility to populate a cache of UncorrelatedSelectResults
+  static std::shared_ptr<UncorrelatedSelectResults> populate_uncorrelated_select_results_cache(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
  private:
   template <typename Result>
@@ -193,16 +187,13 @@ class ExpressionEvaluator final {
 
   std::shared_ptr<const Table> _table;
   std::shared_ptr<const Chunk> _chunk;
-  ChunkID _chunk_id;
+  const ChunkID _chunk_id;
   size_t _output_row_count{1};
 
-  // Cache for materialized segment data for the current Chunk.
   // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized
   std::vector<std::shared_ptr<BaseExpressionResult>> _segment_materializations;
 
-  // Cache for pre-evaluated uncorrelated subselects
-  using UncorrelatedSelectResults = std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<const Table>>;
-  std::optional<UncorrelatedSelectResults> _uncorrelated_select_results;
+  const std::shared_ptr<const UncorrelatedSelectResults> _uncorrelated_select_results;
 };
 
 }  // namespace opossum
