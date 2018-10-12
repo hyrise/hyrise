@@ -10,9 +10,9 @@
 #include <random>
 #include <vector>
 
-#include "calibration_query_generator_predicates.hpp"
 #include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
+#include "calibration_query_generator_predicates.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

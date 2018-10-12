@@ -32,5 +32,5 @@ int main(int argc, char* argv[]) {
   const opossum::CalibrationConfiguration calibration_config = json_config;
   const auto cost_model_calibration = opossum::CostModelCalibration(calibration_config);
   cost_model_calibration.calibrate();
-//  cost_model_calibration.run_tpch();
+  //  cost_model_calibration.run_tpch();
 }
