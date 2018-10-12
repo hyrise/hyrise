@@ -43,8 +43,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
-  auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
+  auto ts = create_table_scan(gt, ColumnID{0}, PredicateCondition::Equals, 1234);
 
   auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
