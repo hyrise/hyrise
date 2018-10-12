@@ -15,6 +15,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -210,20 +211,12 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
 
     const auto is_like_predicate =
     predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
-    const auto is_null_predicate =
-    predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull;
 
     // Predicate pattern: <column> LIKE <non-null value>
     if (left_column_expression && is_like_predicate && right_value) {
       return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                  predicate_condition,
                                                  type_cast<std::string>(*right_value));
-    }
-
-    // Predicate pattern: <column> IS NULL
-    if (left_column_expression && is_null_predicate) {
-      return std::make_unique<IsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                   predicate_condition);
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>
@@ -241,6 +234,14 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
       return std::make_unique<ColumnComparisonTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                              predicate_condition,
                                                              right_column_expression->column_id);
+    }
+  }
+
+  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(_predicate)) {
+    // Predicate pattern: <column> IS NULL
+    if (const auto left_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
+      return std::make_unique<IsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                   is_null_expression->predicate_condition);
     }
   }
 

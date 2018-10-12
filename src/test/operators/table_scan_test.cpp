@@ -119,7 +119,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     TableColumnDefinitions column_definitions;
 
     for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
-      column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id));
+      column_definitions.emplace_back(table->column_name(column_id),
+      table->column_data_type(column_id), table->column_is_nullable(column_id));
 
       auto segment_out = std::make_shared<ReferenceSegment>(table, column_id, pos_list);
       segments.push_back(segment_out);
@@ -210,6 +211,16 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
   }
 
+  static std::shared_ptr<AbstractExpression> create_predicate_expression(const PredicateCondition predicate_condition,
+  const std::shared_ptr<AbstractExpression>& column, const std::shared_ptr<AbstractExpression>& value) {
+    if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
+      return std::make_shared<IsNullExpression>(predicate_condition, column);
+    } else {
+      return std::make_shared<BinaryPredicateExpression>(predicate_condition, column, value);
+    };
+
+  }
+
  protected:
   EncodingType _encoding_type;
   std::shared_ptr<TableWrapper> _int_int_compressed;
@@ -273,7 +284,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
 
   for (const auto& test : tests) {
     const auto column = get_column_expression(_int_int_compressed, ColumnID{0});
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(test.first, column, value_(6));
+    const auto predicate = create_predicate_expression(test.first, column, value_(6));
 
     auto scan_int = std::make_shared<TableScan>(_int_int_compressed, predicate);
     auto scan_int_partly = std::make_shared<TableScan>(_int_int_partly_compressed, predicate);
@@ -307,9 +318,9 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
     auto scan_partly1 = std::make_shared<TableScan>(_int_int_partly_compressed, less_than_(get_column_expression(_int_int_compressed, ColumnID{1}), 108));
     scan_partly1->execute();
 
-    const auto predicate2 = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(scan1, ColumnID{0}), value_(4));
+    const auto predicate2 = create_predicate_expression(test.first, get_column_expression(scan1, ColumnID{0}), value_(4));
     auto scan2 = std::make_shared<TableScan>(scan1, predicate2);
-    const auto predicate_partly2 = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(scan_partly1, ColumnID{0}), value_(4));
+    const auto predicate_partly2 = create_predicate_expression(test.first, get_column_expression(scan_partly1, ColumnID{0}), value_(4));
     auto scan_partly2 = std::make_shared<TableScan>(scan_partly1, predicate_partly2);
 
     scan2->execute();
@@ -334,7 +345,7 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
   auto table_wrapper = get_table_op_filtered();
 
   for (const auto& test : tests) {
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(table_wrapper, ColumnID{0}), value_(10));
+    const auto predicate = create_predicate_expression(test.first, get_column_expression(table_wrapper, ColumnID{0}), value_(10));
     auto scan_partly = std::make_shared<TableScan>(table_wrapper, predicate);
     scan_partly->execute();
 
@@ -356,11 +367,11 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueGreaterThanMaxDictio
   tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(30));
+    const auto predicate = create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(30));
     auto scan = std::make_shared<TableScan>(_int_int_compressed, predicate);
     scan->execute();
 
-    const auto predicate_partly = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(30));
+    const auto predicate_partly = create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(30));
     auto scan_partly =
         std::make_shared<TableScan>(_int_int_partly_compressed, predicate_partly);
     scan_partly->execute();
@@ -384,11 +395,11 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionar
   tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(-10));
+    const auto predicate = create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(-10));
     auto scan = std::make_shared<TableScan>(_int_int_compressed, predicate);
     scan->execute();
 
-    const auto predicate_partly = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(_int_int_partly_compressed, ColumnID{0}), value_(-10));
+    const auto predicate_partly = create_predicate_expression(test.first, get_column_expression(_int_int_partly_compressed, ColumnID{0}), value_(-10));
     auto scan_partly = std::make_shared<TableScan>(_int_int_partly_compressed, predicate_partly);
 
     scan_partly->execute();
@@ -470,11 +481,11 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
 
   for (const auto& test : tests) {
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(0));
+    const auto predicate = create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(0));
     auto scan = std::make_shared<TableScan>(_int_int_compressed, predicate);
     scan->execute();
 
-    const auto predicate_partly= std::make_shared<BinaryPredicateExpression>(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(0));
+    const auto predicate_partly= create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(0));
     auto scan_partly =
         std::make_shared<TableScan>(_int_int_partly_compressed, predicate_partly);
     scan_partly->execute();
@@ -630,7 +641,7 @@ TEST_P(OperatorsTableScanTest, NullSemantics) {
        PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals});
 
   for (auto predicate_condition : predicate_conditions) {
-    const auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, get_column_expression(get_table_op_null(), ColumnID{0}), null_());
+    const auto predicate = create_predicate_expression(predicate_condition, get_column_expression(get_table_op_null(), ColumnID{0}), null_());
     auto scan = std::make_shared<TableScan>(get_table_op_null(), predicate);
     scan->execute();
 
