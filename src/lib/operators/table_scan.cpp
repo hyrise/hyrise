@@ -190,19 +190,19 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
     auto right_value = std::optional<AllTypeVariant>{};
 
     if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(
-      left_operand); left_value_expression) {
+      left_operand)) {
       left_value = left_value_expression->value;
     }
     if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(
-      left_operand); left_parameter_expression) {
+      left_operand)) {
       left_value = left_parameter_expression->value();
     }
     if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(
-      right_operand); right_value_expression) {
+      right_operand)) {
       right_value = right_value_expression->value;
     }
     if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(
-      right_operand); right_parameter_expression) {
+      right_operand)) {
       right_value = right_parameter_expression->value();
     }
 
@@ -213,7 +213,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
     predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
 
     // Predicate pattern: <column> LIKE <non-null value>
-    if (left_column_expression && is_like_predicate && right_value) {
+    if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate && right_value) {
       return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                  predicate_condition,
                                                  type_cast<std::string>(*right_value));

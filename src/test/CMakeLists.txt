@@ -62,12 +62,12 @@ set(
     operators/index_scan_test.cpp
     operators/insert_test.cpp
     operators/join_equi_test.cpp
-    #operators/join_full_test.cpp
-    #operators/join_hash_test.cpp
-    #operators/join_index_test.cpp
-    #operators/join_null_test.cpp
-    #operators/join_semi_anti_test.cpp
-    #operators/join_test.hpp
+    operators/join_full_test.cpp
+    operators/join_hash_test.cpp
+    operators/join_index_test.cpp
+    operators/join_null_test.cpp
+    operators/join_semi_anti_test.cpp
+    operators/join_test.hpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/drop_view_test.cpp

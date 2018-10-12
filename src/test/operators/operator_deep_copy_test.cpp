@@ -169,12 +169,11 @@ TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
 }
 
 TEST_F(OperatorDeepCopyTest, DiamondShape) {
-  auto scan_a = create_table_scan(
-      _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
-  auto scan_b =
-  create_table_scan(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
-  auto scan_c =
-  create_table_scan(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  scan_a->execute();
+
+  auto scan_b = create_table_scan(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = create_table_scan(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
   auto copied_pqp = union_positions->deep_copy();

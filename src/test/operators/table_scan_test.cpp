@@ -199,7 +199,6 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
-    Print::print(table);
     ASSERT_EQ(expected.size(), 0u);
   }
 
