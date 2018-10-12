@@ -112,7 +112,7 @@ class OperatorsAggregateTest : public BaseTest {
     if (test_aggregate_on_reference_table) {
       // Perform a TableScan to create a reference table
       const auto table_scan =
-          std::make_shared<TableScan>(in, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+          std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
       table_scan->execute();
 
       // Perform the Aggregate on a reference table
@@ -499,7 +499,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
 
 TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 0});
+                                              less_than_(get_column_expression(_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
@@ -510,7 +510,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
 
 TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 0});
+                                              less_than_(get_column_expression(_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
@@ -526,7 +526,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+                                              less_than_(get_column_expression(_table_wrapper_1_1, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
@@ -535,7 +535,7 @@ TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+                                              less_than_(get_column_expression(_table_wrapper_2_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
@@ -545,7 +545,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
 
 TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+                                              less_than_(get_column_expression(_table_wrapper_2_1, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
@@ -554,7 +554,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+                                              less_than_(get_column_expression(_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
@@ -563,7 +563,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+                                              less_than_(get_column_expression(_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

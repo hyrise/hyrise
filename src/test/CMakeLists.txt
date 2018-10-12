@@ -50,42 +50,42 @@ set(
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
-    #operators/aggregate_test.cpp
-    #operators/alias_operator_test.cpp
-    #operators/delete_test.cpp
-    #operators/difference_test.cpp
-    #operators/export_binary_test.cpp
-    #operators/export_csv_test.cpp
-    #operators/get_table_test.cpp
-    #operators/import_binary_test.cpp
-    #operators/import_csv_test.cpp
-    #operators/index_scan_test.cpp
-    #operators/insert_test.cpp
-    #operators/join_equi_test.cpp
+    operators/aggregate_test.cpp
+    operators/alias_operator_test.cpp
+    operators/delete_test.cpp
+    operators/difference_test.cpp
+    operators/export_binary_test.cpp
+    operators/export_csv_test.cpp
+    operators/get_table_test.cpp
+    operators/import_binary_test.cpp
+    operators/import_csv_test.cpp
+    operators/index_scan_test.cpp
+    operators/insert_test.cpp
+    operators/join_equi_test.cpp
     #operators/join_full_test.cpp
     #operators/join_hash_test.cpp
     #operators/join_index_test.cpp
     #operators/join_null_test.cpp
     #operators/join_semi_anti_test.cpp
     #operators/join_test.hpp
-    #operators/limit_test.cpp
-    #operators/maintenance/create_view_test.cpp
-    #operators/maintenance/drop_view_test.cpp
-    #operators/maintenance/show_columns_test.cpp
-    #operators/maintenance/show_tables_test.cpp
-    #operators/operator_deep_copy_test.cpp
-    #operators/operator_join_predicate_test.cpp
-    #operators/operator_scan_predicate_test.cpp
-    #operators/print_test.cpp
-    #operators/product_test.cpp
-    #operators/projection_test.cpp
-    #operators/sort_test.cpp
-    #operators/table_scan_between_test.cpp
-    #operators/table_scan_string_test.cpp
+    operators/limit_test.cpp
+    operators/maintenance/create_view_test.cpp
+    operators/maintenance/drop_view_test.cpp
+    operators/maintenance/show_columns_test.cpp
+    operators/maintenance/show_tables_test.cpp
+    operators/operator_deep_copy_test.cpp
+    operators/operator_join_predicate_test.cpp
+    operators/operator_scan_predicate_test.cpp
+    operators/print_test.cpp
+    operators/product_test.cpp
+    operators/projection_test.cpp
+    operators/sort_test.cpp
+    operators/table_scan_between_test.cpp
+    operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
-    #operators/union_all_test.cpp
-    #operators/union_positions_test.cpp
-    #operators/update_test.cpp
+    operators/union_all_test.cpp
+    operators/union_positions_test.cpp
+    operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/dp_ccp_test.cpp

@@ -39,9 +39,9 @@ TEST_F(OperatorsProductTest, ValueSegments) {
 }
 
 TEST_F(OperatorsProductTest, ReferenceAndValueSegments) {
-  auto table_scan = std::make_shared<TableScan>(
+  auto table_scan = create_table_scan(
       _table_wrapper_a,
-      OperatorScanPredicate{OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234}});
+      ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   table_scan->execute();
 
   auto product = std::make_shared<Product>(table_scan, _table_wrapper_b);

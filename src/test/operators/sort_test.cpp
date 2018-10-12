@@ -70,7 +70,7 @@ TEST_P(OperatorsSortTest, AscendingSortOFilteredColumn) {
   input->execute();
 
   auto scan =
-      std::make_shared<TableScan>(input, OperatorScanPredicate{ColumnID{0}, PredicateCondition::NotEquals, 123});
+      create_table_scan(input, ColumnID{0}, PredicateCondition::NotEquals, 123);
   scan->execute();
 
   auto sort = std::make_shared<Sort>(scan, ColumnID{0}, OrderByMode::Ascending, 2u);

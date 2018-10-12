@@ -264,7 +264,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   table_wrapper->execute();
 
   auto scan =
-      std::make_shared<TableScan>(table_wrapper, OperatorScanPredicate{ColumnID{1}, PredicateCondition::NotEquals, 5});
+      create_table_scan(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
   scan->execute();
 
   auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);

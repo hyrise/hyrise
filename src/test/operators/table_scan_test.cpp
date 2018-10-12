@@ -203,14 +203,6 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op, const ColumnID column_id) {
-    Assert(op->get_output(), "Expected Operator to be executed");
-    const auto output_table = op->get_output();
-    const auto& column_definition = output_table->column_definitions().at(column_id);
-
-    return column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
-  }
-
   static std::shared_ptr<AbstractExpression> create_predicate_expression(const PredicateCondition predicate_condition,
   const std::shared_ptr<AbstractExpression>& column, const std::shared_ptr<AbstractExpression>& value) {
     if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
