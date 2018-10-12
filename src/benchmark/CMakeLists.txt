@@ -41,6 +41,8 @@ add_executable(
     cost_model_calibration/cost_model_feature_extractor.hpp
     cost_model_calibration/query/calibration_query_generator.cpp
     cost_model_calibration/query/calibration_query_generator.hpp
+    cost_model_calibration/query/calibration_query_generator_predicates.cpp
+    cost_model_calibration/query/calibration_query_generator_predicates.hpp
 )
 
 target_link_libraries(

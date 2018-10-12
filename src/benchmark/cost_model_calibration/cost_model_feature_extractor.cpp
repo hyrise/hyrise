@@ -2,6 +2,8 @@
 
 #include <json.hpp>
 
+#include <sys/resource.h>
+
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/projection.hpp"
@@ -60,12 +62,12 @@ const nlohmann::json CostModelFeatureExtractor::extract_features(const std::shar
     auto total_input_row_count =
         std::max<uint64_t>(1, left_input_row_count) * std::max<uint64_t>(1, right_input_row_count);
     auto output_selectivity = output_row_count / static_cast<double>(total_input_row_count);
-    auto output_chunk_count = output->chunk_count();
+    uint32_t output_chunk_count = output->chunk_count();
     auto output_memory_usage = output->estimate_memory_usage();
     auto output_chunk_size = output->max_chunk_size();
 
     operator_result["output_row_count"] = output_row_count;
-    operator_result["output_chunk_count"] = output_chunk_count.t;
+    operator_result["output_chunk_count"] = output_chunk_count;
     operator_result["output_memory_usage_bytes"] = output_memory_usage;
     operator_result["output_chunk_size"] = output_chunk_size;
     operator_result["output_selectivity"] = output_selectivity;
@@ -112,6 +114,10 @@ const nlohmann::json CostModelFeatureExtractor::extract_features(const std::shar
 const nlohmann::json CostModelFeatureExtractor::_extract_constant_hardware_features() {
   nlohmann::json hardware_features{};
 
+//  struct rusage r_usage;
+//  getrusage(RUSAGE_SELF,&r_usage);
+//  std::cout << r_usage.ru_maxrss << std::endl;
+
   // Hard-coded to MacBook Config
   hardware_features["l1_size_kb"] = 0;
   hardware_features["l1_block_size_kb"] = 0;
@@ -123,7 +129,7 @@ const nlohmann::json CostModelFeatureExtractor::_extract_constant_hardware_featu
   hardware_features["memory_size_gb"] = 8;
   hardware_features["memory_access_bandwith"] = 0;
   hardware_features["memory_access_latency"] = 0;
-  hardware_features["cpu_architecture"] = 0;  // Should be ENUM
+  hardware_features["cpu_architecture"] = 0;  // TODO(Sven): Should be ENUM
   hardware_features["num_cpu_cores"] = 2;
   hardware_features["cpu_clock_speed_mhz"] = 2400;
   hardware_features["num_numa_nodes"] = 0;
@@ -189,9 +195,12 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
     }
   }
 
+  // Mainly for debugging purposes
+  operator_result["scan_operator_description"] = op->description(DescriptionMode::SingleLine);
+//  operator_result["scan_operator_predicate"] = op->predicate();
   operator_result["scan_column_data_type"] = scan_column_data_type;
   operator_result["scan_column_memory_usage_bytes"] = scan_column_memory_usage_bytes;
-  operator_result["scan_column_distinct_value_count"] = 0;  // TODO(Sven): Ask Statistics for detailed information.
+  operator_result["scan_column_distinct_value_count"] = 0; // TODO(Sven): Ask Statistics for detailed information.
 
   return operator_result;
 }

@@ -10,6 +10,7 @@
 #include <random>
 #include <vector>
 
+#include "calibration_query_generator_predicates.hpp"
 #include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
 #include "utils/assert.hpp"
@@ -58,34 +59,12 @@ const std::string CalibrationQueryGenerator::_generate_join(
   auto left_join_column = "column_a";
   auto right_join_column = "column_a";
 
-  auto left_predicate = _generate_predicate(left_table->columns, "l.");
-  auto right_predicate = _generate_predicate(right_table->columns, "r.");
+  auto left_predicate = CalibrationQueryGeneratorPredicates::generate_predicate(left_table->columns, "l.");
+  auto right_predicate = CalibrationQueryGeneratorPredicates::generate_predicate(right_table->columns, "r.");
 
   auto select_columns = _generate_select_columns(columns);
   return boost::str(boost::format(string_template) % select_columns % left_table->table_name % right_table->table_name %
                     left_join_column % right_join_column % left_predicate % right_predicate);
-}
-
-const std::string CalibrationQueryGenerator::_generate_predicate(
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
-    const std::string column_name_prefix = "") {
-  std::random_device random_device;
-  std::mt19937 engine{random_device()};
-  std::uniform_int_distribution<u_int64_t> filter_column_dist(0, column_definitions.size() - 1);
-
-  auto predicate_template = "%1% %2% %3%";
-
-  auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-  auto filter_column_name = column_name_prefix + filter_column->first;
-  auto filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
-
-  // We only want to measure various selectivities.
-  // It shouldn't be that important whether we have Point or Range Lookups.
-  // Isn't it?
-
-  // At the same time this makes sure that the probability of having empty intermediate results is reduced.
-  auto predicate_sign = "<=";
-  return boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
 }
 
 const std::string CalibrationQueryGenerator::_generate_aggregate(
@@ -109,7 +88,7 @@ const std::string CalibrationQueryGenerator::_generate_aggregate(
   }
 
   for (size_t i = 0; i < number_of_predicates; i++) {
-    predicate_stream << _generate_predicate(column_definitions);
+    predicate_stream << CalibrationQueryGeneratorPredicates::generate_predicate(column_definitions);
 
     if (i < number_of_predicates - 1) {
       predicate_stream << " AND ";
@@ -138,7 +117,7 @@ const std::string CalibrationQueryGenerator::_generate_table_scan(
   std::stringstream predicate_stream;
 
   for (size_t i = 0; i < number_of_predicates; i++) {
-    predicate_stream << _generate_predicate(column_definitions);
+    predicate_stream << CalibrationQueryGeneratorPredicates::generate_predicate(column_definitions);
 
     if (i < number_of_predicates - 1) {
       predicate_stream << " AND ";
@@ -146,24 +125,6 @@ const std::string CalibrationQueryGenerator::_generate_table_scan(
   }
 
   return boost::str(boost::format(string_template) % select_columns % table_name % predicate_stream.str());
-}
-
-const std::string CalibrationQueryGenerator::_generate_table_scan_predicate_value(
-    const CalibrationColumnSpecification& column_definition) {
-  auto column_type = column_definition.type;
-  std::random_device random_device;
-  std::mt19937 engine{random_device()};
-  std::uniform_int_distribution<u_int16_t> int_dist(0, column_definition.distinct_values - 1);
-  std::uniform_real_distribution<> float_dist(0, column_definition.distinct_values - 1);
-  //      std::uniform_int_distribution<> char_dist(0, UCHAR_MAX);
-
-  u_int32_t seed;
-
-  if (column_type == "int") return std::to_string(int_dist(engine));
-  if (column_type == "string") return "'" + std::string(1, 'a' + rand_r(&seed) % 26) + "'";
-  if (column_type == "float") return std::to_string(float_dist(engine));
-
-  Fail("Unsupported data type in CalibrationQueryGenerator");
 }
 
 const std::vector<std::string> CalibrationQueryGenerator::_get_column_names(

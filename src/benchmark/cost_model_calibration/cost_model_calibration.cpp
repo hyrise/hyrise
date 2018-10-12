@@ -43,52 +43,54 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
     std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;
   }
 
-    const auto tables = opossum::TpchDbGenerator(0.01f, 100000).generate();
+  const auto tables = opossum::TpchDbGenerator(0.01f, 100000).generate();
 
-    for (auto& tpch_table : tables) {
-        const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
-        auto& table = tpch_table.second;
+  for (auto& tpch_table : tables) {
+      const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
+      auto& table = tpch_table.second;
 
-        ChunkEncodingSpec chunk_spec;
+      ChunkEncodingSpec chunk_spec;
 
-        for (size_t idx = 0; idx < table->column_count(); idx++) {
-            chunk_spec.push_back(SegmentEncodingSpec{});
-        }
+      for (size_t idx = 0; idx < table->column_count(); idx++) {
+          chunk_spec.push_back(SegmentEncodingSpec{});
+      }
 
-        ChunkEncoder::encode_all_chunks(table, chunk_spec);
-        StorageManager::get().add_table(table_name, table);
+      ChunkEncoder::encode_all_chunks(table, chunk_spec);
+      StorageManager::get().add_table(table_name, table);
 
-        std::cout << "Encoded table " << table_name << " successfully." << std::endl;
-    }
+      std::cout << "Encoded table " << table_name << " successfully." << std::endl;
+  }
 }
 
 void CostModelCalibration::run_tpch() const {
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
 
-    for (const auto& query : opossum::tpch_queries) {
-        std::map<std::string, nlohmann::json> operators {};
+    for (size_t i = 0; i < 10; i++) {
+        for (const auto &query : opossum::tpch_queries) {
+            std::map<std::string, nlohmann::json> operators{};
 
-        SQLQueryCache<SQLQueryPlan>::get().clear();
+            SQLQueryCache<SQLQueryPlan>::get().clear();
 
-        auto pipeline_builder = SQLPipelineBuilder{query.second};
-        pipeline_builder.disable_mvcc();
-        pipeline_builder.dont_cleanup_temporaries();
-        auto pipeline = pipeline_builder.create_pipeline();
+            auto pipeline_builder = SQLPipelineBuilder{query.second};
+            pipeline_builder.disable_mvcc();
+            pipeline_builder.dont_cleanup_temporaries();
+            auto pipeline = pipeline_builder.create_pipeline();
 
-        // Execute the query, we don't care about the results
-        pipeline.get_result_table();
+            // Execute the query, we don't care about the results
+            pipeline.get_result_table();
 
-        auto query_plans = pipeline.get_query_plans();
-        for (const auto& query_plan : query_plans) {
-            for (const auto& root : query_plan->tree_roots()) {
-                _traverse(root, operators);
+            auto query_plans = pipeline.get_query_plans();
+            for (const auto &query_plan : query_plans) {
+                for (const auto &root : query_plan->tree_roots()) {
+                    _traverse(root, operators);
+                }
             }
-        }
-        std::cout << "Finished TPCH " << query.first << std::endl;
+            std::cout << "Finished TPCH " << query.first << std::endl;
 
-        auto output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-        _write_result_json(output_path, _configuration, operators);
+            auto output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
+            _write_result_json(output_path, _configuration, operators);
+        }
     }
 }
 
