@@ -103,15 +103,6 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
   });
 }
 
-TEST_P(TableScanBetweenTest, NullValueAsParameter) {
-  const auto& data_type = std::get<0>(GetParam());
-  resolve_data_type(data_type, [&](const auto type) {
-    using DataType = typename decltype(type)::type;
-    auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, type_cast<DataType>(1), NullValue{});
-    EXPECT_THROW(scan->execute(), std::logic_error);
-  });
-}
-
 INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
                         TypedOperatorBaseTest::format);
 

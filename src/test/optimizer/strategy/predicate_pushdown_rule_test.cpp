@@ -212,32 +212,36 @@ TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughMultipleNodesTest) {
+TEST_F(PredicatePushdownRuleTest, NoPushdownOfComplexPredicate) {
   // Even if one predicate cannot be pushed down, others might be better off
-  auto sort_node =
-      std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
-  sort_node->set_left_input(_projection_pushdown_node);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_select_c, _a_b));
-  predicate_node_1->set_left_input(sort_node);
+  // clang-format off
+  const auto parameter = parameter_(ParameterID{0}, _a_a);
+  const auto subselect_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(_b_a, parameter))),
+    ProjectionNode::make(expression_vector(add_(_b_a, parameter)),
+      _table_b));
+  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, _a_a));
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
-  predicate_node_2->set_left_input(predicate_node_1);
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(_a_a, _a_b),
+    PredicateNode::make(less_than_(subselect, _a_b),
+      SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+         ProjectionNode::make(expression_vector(_a_a, _a_b),
+           _table_a))));
+  // clang-format on
 
-  auto actual_lqp = std::shared_ptr<AbstractLQPNode>();
-  actual_lqp = predicate_node_2;
-  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes predicate_node_1 under sort
-  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes predicate_node_2 under sort
-  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes predicate_node_2 under the projection
+  auto actual_lqp = std::static_pointer_cast<AbstractLQPNode>(input_lqp);
+  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes greater_than_(_a_a, _a_b) under sort
+  actual_lqp = StrategyBaseTest::apply_rule(_rule, actual_lqp);  // pushes greater_than_(_a_a, _a_b) under projection
 
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(greater_than_(_select_c, _a_b),
+  PredicateNode::make(less_than_(subselect, _a_b),
    SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
-     ProjectionNode::make(expression_vector(_a_a, _a_b, _select_c),
-      PredicateNode::make(greater_than_(_a_a, _a_b),
-        _table_a))));
-
+     ProjectionNode::make(expression_vector(_a_a, _a_b),
+       PredicateNode::make(greater_than_(_a_a, _a_b),
+         _table_a))));
   // clang-format on
 
   actual_lqp->print();
