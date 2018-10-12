@@ -10,6 +10,7 @@
 #include "utils/assert.hpp"
 
 #include "statistics/chunk_statistics/min_max_filter.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -145,6 +146,19 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicate) {
   EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::LessThanEquals, this->_in_between));
   EXPECT_FALSE(new_filter->does_not_contain(PredicateCondition::GreaterThanEquals, this->_in_between2));
   EXPECT_TRUE(new_filter->does_not_contain(PredicateCondition::GreaterThan, this->_in_between2));
+}
+
+TYPED_TEST(MinMaxFilterTest, SliceWithPredicateEmptyStatistics) {
+  const auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
+
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::LessThan, this->_values.front())));
+  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::LessThanEquals, this->_values.front())));
+  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, this->_values.back())));
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::GreaterThan, this->_values.back())));
 }
 
 }  // namespace opossum

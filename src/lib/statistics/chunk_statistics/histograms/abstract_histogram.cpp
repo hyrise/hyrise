@@ -13,6 +13,8 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "histogram_utils.hpp"
+#include "statistics/abstract_statistics_object.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
 #include "resolve_type.hpp"
@@ -632,7 +634,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    Fail("TODO");
+    return std::make_shared<EmptyStatisticsObject>();
   }
 
   const auto value = type_cast<T>(variant_value);

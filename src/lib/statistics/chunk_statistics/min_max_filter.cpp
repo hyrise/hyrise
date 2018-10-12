@@ -6,6 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "statistics/abstract_statistics_object.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -60,7 +61,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    Fail("NYI - return empty statistics object");
+    return std::make_shared<EmptyStatisticsObject>();
   }
 
   T min, max;
@@ -99,7 +100,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scale_with_selectivity(const float selectivity) const {
+std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scale_with_selectivity(const float /*selectivity*/) const {
   return std::make_shared<MinMaxFilter<T>>(_min, _max);
 }
 

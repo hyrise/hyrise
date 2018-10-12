@@ -9,6 +9,7 @@
 
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/chunk_statistics/min_max_filter.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
@@ -107,7 +108,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    Fail("NYI - return empty statistics object");
+    return std::make_shared<EmptyStatisticsObject>();
   }
 
   std::vector<std::pair<T, T>> ranges;
@@ -133,7 +134,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
 
       // If value is not in a gap, limit the last range's upper bound to value.
       if (value >= it->first) {
-          ranges.emplace_back(std::pair<T, T>{it->first, value});
+        ranges.emplace_back(std::pair<T, T>{it->first, value});
       }
     } break;
     case PredicateCondition::GreaterThan:
@@ -170,7 +171,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
 }
 
 template <typename T>
-std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scale_with_selectivity(const float selectivity) const {
+std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::scale_with_selectivity(const float /*selectivity*/) const {
   return std::make_shared<RangeFilter<T>>(_ranges);
 }
 

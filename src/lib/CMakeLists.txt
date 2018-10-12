@@ -367,7 +367,9 @@ set(
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
     statistics/column_statistics.cpp
-    statistics/column_statistics.cpp
+    statistics/column_statistics.hpp
+    statistics/empty_statistics_object.cpp
+    statistics/empty_statistics_object.hpp
     statistics/generate_column_statistics.cpp
     statistics/generate_column_statistics.hpp
     statistics/generate_table_statistics.cpp

@@ -9,6 +9,7 @@
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -149,6 +150,20 @@ TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicate) {
   EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::GreaterThan, 12)));
   EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::LessThan, 123'456)));
   EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::LessThan, 123'457)));
+}
+
+TYPED_TEST(AbstractHistogramIntTest, SliceWithPredicateEmptyStatistics) {
+  const auto filter = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
+
+  // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
+  EXPECT_TRUE(
+      std::dynamic_pointer_cast<EmptyStatisticsObject>(filter->slice_with_predicate(PredicateCondition::LessThan, 12)));
+  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::LessThanEquals, 12)));
+  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, 123'456)));
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::GreaterThan, 123'456)));
 }
 
 template <typename T>
@@ -326,6 +341,34 @@ TYPED_TEST(AbstractHistogramStringTest, EstimateCardinalityLike) {
             hist->estimate_cardinality(PredicateCondition::Like, "foo%").first / ipow(26, 13));
   EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge").first,
             hist->estimate_cardinality(PredicateCondition::Like, "foo%").first / ipow(26, 13));
+}
+
+TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicate) {
+  const auto hist = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                            "abcdefghijklmnopqrstuvwxyz", 4u);
+
+  // Check that histogram returns a copy of itself iff the predicate matches all values.
+  EXPECT_TRUE(
+      std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::GreaterThan, "abcc")));
+  EXPECT_FALSE(
+      std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::GreaterThan, "abcd")));
+  EXPECT_FALSE(std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::LessThan, "yyzz")));
+  EXPECT_TRUE(std::dynamic_pointer_cast<TypeParam>(hist->slice_with_predicate(PredicateCondition::LessThan, "yyzza")));
+}
+
+TYPED_TEST(AbstractHistogramStringTest, SliceWithPredicateEmptyStatistics) {
+  const auto filter = TypeParam::from_segment(this->_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u,
+                                              "abcdefghijklmnopqrstuvwxyz", 4u);
+
+  // Check that histogram returns an EmptyStatisticsObject iff predicate will not match any data.
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::LessThan, "abcd")));
+  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::LessThanEquals, "abcd")));
+  EXPECT_FALSE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::GreaterThanEquals, "yyzz")));
+  EXPECT_TRUE(std::dynamic_pointer_cast<EmptyStatisticsObject>(
+      filter->slice_with_predicate(PredicateCondition::GreaterThan, "yyzz")));
 }
 
 }  // namespace opossum
