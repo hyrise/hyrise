@@ -13,6 +13,7 @@
 #include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -197,6 +198,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
+    Print::print(table);
     ASSERT_EQ(expected.size(), 0u);
   }
 
@@ -561,6 +563,8 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutN
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
+  Print::print(table_wrapper);
+
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
       {PredicateCondition::IsNull, {}}, {PredicateCondition::IsNotNull, {12345, 123, 1234}}};
 
@@ -573,9 +577,11 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
+  Print::print(table_wrapper);
+
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
       {PredicateCondition::IsNull, {12, 123}},
-      {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
+      /*{PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}*/};
 
   scan_for_null_values(table_wrapper, tests);
 }
