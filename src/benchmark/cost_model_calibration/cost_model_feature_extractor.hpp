@@ -20,6 +20,8 @@ class CostModelFeatureExtractor {
   static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const TableScan>& op);
   static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const Projection>& op);
   static const nlohmann::json _extract_features_for_operator(const std::shared_ptr<const JoinHash>& op);
+
+  static const nlohmann::json _extract_features_for_segment(const std::shared_ptr<BaseSegment>& segment, const std::string& prefix);
 };
 
 }  // namespace opossum

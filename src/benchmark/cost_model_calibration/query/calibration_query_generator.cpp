@@ -27,7 +27,7 @@ const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
     queries.push_back(CalibrationQueryGenerator::_generate_table_scan(table_definition));
   }
 
-  //  queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
+  queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
 
   return queries;
 }
