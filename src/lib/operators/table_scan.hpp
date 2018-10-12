@@ -45,6 +45,11 @@ class TableScan : public AbstractReadOnlyOperator {
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
+  /**
+   * Create the TableScanImpl based on the predicate type. Public for testing purposes.
+   */
+  std::unique_ptr<AbstractTableScanImpl> get_impl() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -55,7 +60,6 @@ class TableScan : public AbstractReadOnlyOperator {
   void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  std::unique_ptr<AbstractTableScanImpl> _get_impl() const;
   void _on_cleanup() override;
 
  private:

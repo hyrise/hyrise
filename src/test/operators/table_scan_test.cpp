@@ -15,6 +15,12 @@
 #include "operators/table_scan.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/table_scan/column_comparison_table_scan_impl.hpp"
+#include "operators/table_scan/single_column_table_scan_impl.hpp"
+#include "operators/table_scan/expression_evaluator_table_scan_impl.hpp"
+#include "operators/table_scan/between_table_scan_impl.hpp"
+#include "operators/table_scan/is_null_table_scan_impl.hpp"
+#include "operators/table_scan/like_table_scan_impl.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
@@ -46,6 +52,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_table_op() {
     auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    table_wrapper->execute();
+    return table_wrapper;
+  }
+
+  std::shared_ptr<TableWrapper> get_int_string_table_op() {
+    auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 2));
     table_wrapper->execute();
     return table_wrapper;
   }
@@ -676,6 +688,31 @@ TEST_P(OperatorsTableScanTest, SetParameters) {
       _int_int_compressed, greater_than_equals_(column, expression_functional::parameter_(ParameterID{4})));
   scan_c->set_parameters(parameters);
   EXPECT_EQ(*scan_c->predicate(), *greater_than_equals_(column, expression_functional::parameter_(ParameterID{4})));
+}
+
+TEST_P(OperatorsTableScanTest, GetImpl) {
+  /**
+   * Test that the correct scanning backend is chosen
+   */
+
+  const auto column_a = column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto column_b = column_(ColumnID{1}, DataType::Float, false, "b");
+  const auto column_s = column_(ColumnID{1}, DataType::String, false, "c");
+  const auto column_an = column_(ColumnID{0}, DataType::String, true, "a");
+
+  // clang-format off
+  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnComparisonTableScanImpl*>(TableScan{get_table_op(), equals_(column_b, column_a)}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<LikeTableScanImpl*>(TableScan{get_int_string_table_op(), like_(column_s, "%s%")}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_table_op(), like_("hello", "%s%")}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), in_(column_a, list_(1, 2, 3))}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), in_(column_a, list_(1, 2, 3))}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), and_(greater_than_(column_a, 5), less_than_(column_b, 6))}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.get_impl().get()));  // NOLINT
+  // clang-format on
+
 }
 
 }  // namespace opossum

@@ -87,7 +87,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   const auto output_table = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
 
-  _impl = _get_impl();
+  _impl = get_impl();
 
   std::mutex output_mutex;
 
@@ -170,7 +170,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return output_table;
 }
 
-std::unique_ptr<AbstractTableScanImpl> TableScan::_get_impl() const {
+std::unique_ptr<AbstractTableScanImpl> TableScan::get_impl() const {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.
