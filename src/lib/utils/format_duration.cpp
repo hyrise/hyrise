@@ -14,7 +14,7 @@ std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
     const auto round_to_zero = a / b;
     auto round_to_nearest = a / b;
     if (a - round_to_zero * b >= b / 2) round_to_nearest += 1;
-    return std::pair<decltype(a), decltype(a)>{round_to_zero, round_to_nearest};
+    return std::make_pair(round_to_zero, round_to_nearest);
   };
 
   auto nanoseconds_remaining = total_nanoseconds.count();
