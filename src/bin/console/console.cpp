@@ -20,6 +20,7 @@
 #include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "operators/export_binary.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
@@ -112,6 +113,7 @@ Console::Console()
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
+  register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
@@ -482,6 +484,39 @@ int Console::_load_table(const std::string& args) {
     }
   } else {
     out("Error: Unsupported file extension '" + extension + "'\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
+}
+
+int Console::_export_table(const std::string& args) {
+  std::vector<std::string> arguments = trim_and_split(args);
+
+  if (arguments.size() != 2) {
+    out("Usage:\n");
+    out("  export TABLENAME FILEPATH\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& tablename = arguments[0];
+  const std::string& filepath = arguments[1];
+
+  auto& storage_manager = StorageManager::get();
+  if (!storage_manager.has_table(tablename)) {
+    out("Table does not exist in StorageManager");
+    return ReturnCode::Error;
+  }
+
+  out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  try {
+    const auto table = storage_manager.get_table(tablename);
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
+    auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filepath);
+    ex->execute();
+  } catch (const std::exception& exception) {
+    out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
