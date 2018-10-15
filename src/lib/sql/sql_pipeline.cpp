@@ -255,11 +255,11 @@ std::string SQLPipelineMetrics::to_string() const {
 
   std::ostringstream info_string;
   info_string << "Execution info: [";
-  info_string << "PARSE: " << format_duration(parse_time_nanos) << " µs, ";
-  info_string << "TRANSLATE: " << format_duration(total_translate_nanos) << " µs, ";
-  info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << " µs, ";
-  info_string << "COMPILE: " << format_duration(total_compile_nanos) << " µs, ";
-  info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " µs (wall time) | ";
+  info_string << "PARSE: " << format_duration(parse_time_nanos) << ", ";
+  info_string << "TRANSLATE: " << format_duration(total_translate_nanos) << ", ";
+  info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
+  info_string << "COMPILE: " << format_duration(total_compile_nanos) << ", ";
+  info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
   info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
   info_string << "]\n";
 
