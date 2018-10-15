@@ -534,7 +534,7 @@ int Console::_export_table(const std::string& args) {
       auto ex = std::make_shared<opossum::ExportCsv>(gt, filepath);
       ex->execute();
     } else {
-      out("Exporting to extension \"" + extension + "\" is not supported.");
+      out("Exporting to extension \"" + extension + "\" is not supported.\n");
       return ReturnCode::Error;
     }
   } catch (const std::exception& exception) {
