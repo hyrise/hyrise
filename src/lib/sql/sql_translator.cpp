@@ -903,7 +903,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
   AssertInput(!create_statement.select, "CREATE TABLE ... (SELECT...) not supported");
-  AssertInput(create_statement.columns, "CREATE TABLE: No columns specified. Parser bug?");
+  Assert(create_statement.columns, "CREATE TABLE: No columns specified. Parser bug?");
 
   auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
 
@@ -911,7 +911,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     const auto* parser_column_definition = create_statement.columns->at(column_id);
     auto& column_definition = column_definitions[column_id];
 
-    // TODO(anybody) SQLParser is missing support for Hyrises other types
+    // TODO(anybody) SQLParser is missing support for Hyrise's other types
     switch (parser_column_definition->type) {
       case hsql::ColumnDefinition::INT:
         column_definition.data_type = DataType::Long;

@@ -26,9 +26,9 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
 
     stream << "'" << column_definition.name << "' " << data_type_to_string.left.at(column_definition.data_type) << " ";
     if (column_definition.nullable) {
-      stream << "NULLABLE";
+      stream << "NULL";
     } else {
-      stream << "NON-NULL";
+      stream << "NOT NULL";
     }
 
     if (column_id + 1u < column_definitions.size()) {

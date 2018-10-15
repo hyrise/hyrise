@@ -40,4 +40,6 @@ TEST_F(DropTableTest, Execute) {
   EXPECT_FALSE(StorageManager::get().has_table("t"));
 }
 
+TEST_F(DropTableTest, NoSuchTable) { EXPECT_THROW(drop_table->execute(), std::logic_error); }
+
 }  // namespace opossum

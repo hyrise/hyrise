@@ -57,9 +57,13 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
       std::copy_n(casted_source->values().begin() + source_start_index, length, values.begin() + target_start_index);
 
       if (casted_source->is_nullable()) {
-        Assert(target_is_nullable, "Trying to insert NULL into non-NULL segment");
-        std::copy_n(casted_source->null_values().begin() + source_start_index, length,
-                    casted_target->null_values().begin() + target_start_index);
+        const auto nulls_begin_iter = casted_source->null_values().begin() + source_start_index;
+        const auto nulls_end_iter = nulls_begin_iter + length;
+
+        Assert(
+            target_is_nullable || std::none_of(nulls_begin_iter, nulls_end_iter, [](const auto& null) { return null; }),
+            "Trying to insert NULL into non-NULL segment");
+        std::copy(nulls_begin_iter, nulls_end_iter, casted_target->null_values().begin() + target_start_index);
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(source)) {
       // We use the segment type of the Dummy table used to insert a single null value.

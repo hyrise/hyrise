@@ -19,8 +19,7 @@ class CreateTableNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreateTableNodeTest, Description) {
-  EXPECT_EQ(create_table_node->description(),
-            "[CreateTable] Name: 'some_table' ('a' int NON-NULL, 'b' float NULLABLE)");
+  EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table' ('a' int NOT NULL, 'b' float NULL)");
 }
 
 TEST_F(CreateTableNodeTest, Equals) {
