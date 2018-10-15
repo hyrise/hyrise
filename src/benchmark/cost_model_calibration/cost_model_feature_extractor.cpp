@@ -162,18 +162,18 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
 
   if (chunk_count <= ChunkID{0}) {
     // Need to return some defaults in order to have full information in the end
-    operator_result["scan_column_encoding"] = EncodingType::Unencoded;
-    operator_result["is_scan_column_reference_column"] = false;
-    operator_result["scan_column_data_type"] = DataType::Int;  // Just any default
-    operator_result["scan_column_memory_usage_bytes"] = 0;
-    operator_result["scan_column_distinct_value_count"] = 0;
+    operator_result["scan_segment_encoding"] = EncodingType::Unencoded;
+    operator_result["is_scan_segment_reference_segment"] = false;
+    operator_result["scan_segment_data_type"] = DataType::Int;  // Just any default
+    operator_result["scan_segment_memory_usage_bytes"] = 0;
+    operator_result["scan_segment_distinct_value_count"] = 0;
     return operator_result;
   }
 
   operator_result["scan_operator_type"] = table_scan_op->predicate().predicate_condition;
 
-  const auto scan_column = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
-  const auto scan_segment_json = _extract_features_for_segment(scan_column, "scan_segment");
+  const auto scan_segment = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
+  const auto scan_segment_json = _extract_features_for_segment(scan_segment, "scan_segment");
   operator_result.insert(scan_segment_json.begin(), scan_segment_json.end());
 
   if (is_column_id(table_scan_op->predicate().value)) {
@@ -184,7 +184,7 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
     operator_result.insert(second_scan_segment_json.begin(), second_scan_segment_json.end());
   } else {
     operator_result["second_scan_segment_encoding"] = EncodingType::Unencoded;
-    operator_result["is_second_scan_segment_reference_column"] = false;
+    operator_result["is_second_scan_segment_reference_segment"] = false;
     operator_result["second_scan_segment_data_type"] = DataType::Int;  // Just any default
     operator_result["second_scan_segment_memory_usage_bytes"] = 0;
     operator_result["second_scan_segment_distinct_value_count"] = 0;
@@ -194,7 +194,7 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
   operator_result["scan_operator_description"] = op->description(DescriptionMode::SingleLine);
   //  operator_result["scan_operator_predicate"] = op->predicate();
 
-  operator_result["scan_column_distinct_value_count"] = 0;  // TODO(Sven): Ask Statistics for detailed information.
+  operator_result["scan_segment_distinct_value_count"] = 0;  // TODO(Sven): Ask Statistics for detailed information.
 
   return operator_result;
 }
@@ -202,20 +202,20 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
 const nlohmann::json CostModelFeatureExtractor::_extract_features_for_segment(const std::shared_ptr<BaseSegment>& segment, const std::string& prefix) {
   nlohmann::json operator_result {};
 
-  auto scan_column_data_type = segment->data_type();
-  auto scan_column_memory_usage_bytes = segment->estimate_memory_usage();
+  auto scan_segment_data_type = segment->data_type();
+  auto scan_segment_memory_usage_bytes = segment->estimate_memory_usage();
 
-  auto reference_column = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-  operator_result["is_" + prefix + "_reference_column"] = reference_column ? true : false;
+  auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+  operator_result["is_" + prefix + "_reference_segment"] = reference_segment ? true : false;
 
-  // Dereference ReferenceColumn for encoding feature
-  if (reference_column && reference_column->referenced_table()->chunk_count() > ChunkID{0}) {
-    auto underlying_column = reference_column->referenced_table()
+  // Dereference ReferenceSegment for encoding feature
+  if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
+    auto underlying_segment = reference_segment->referenced_table()
             ->get_chunk(ChunkID{0})
-            ->get_segment(reference_column->referenced_column_id());
-    auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_column);
-    if (encoded_scan_column) {
-      operator_result[prefix + "_encoding"] = encoded_scan_column->encoding_type();
+            ->get_segment(reference_segment->referenced_column_id());
+    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_segment);
+    if (encoded_scan_segment) {
+      operator_result[prefix + "_encoding"] = encoded_scan_segment->encoding_type();
     } else {
       operator_result[prefix + "_encoding"] = EncodingType::Unencoded;
     }
@@ -227,8 +227,8 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_segment(co
       operator_result[prefix + "_encoding"] = EncodingType::Unencoded;
     }
   }
-  operator_result[prefix + "_data_type"] = scan_column_data_type;
-  operator_result[prefix + "_memory_usage_bytes"] = scan_column_memory_usage_bytes;
+  operator_result[prefix + "_data_type"] = scan_segment_data_type;
+  operator_result[prefix + "_memory_usage_bytes"] = scan_segment_memory_usage_bytes;
 
   return operator_result;
 }
