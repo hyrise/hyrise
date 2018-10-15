@@ -172,7 +172,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 2. WHERE clause
   // 3. GROUP BY clause
   // 4. HAVING clause
-  // 5. SELECT clause
+  // 5. SELECT clause (incl. DISTINCT)
   // 6. UNION clause
   // 7. ORDER BY clause
   // 8. LIMIT clause
@@ -198,7 +198,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
-  // Also, implement DISTINCT x as GROUP BY x
   _translate_select_list_groupby_having(select);
 
   // Translate ORDER BY and LIMIT
@@ -737,17 +736,10 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
   _sql_identifier_resolver = post_select_sql_identifier_resolver;
 
   // Identify all GROUP BY expressions
-  auto group_by_columns = (select.groupBy ? select.groupBy->columns : nullptr);
-  if (select.selectDistinct && (!group_by_columns || group_by_columns->empty())) {
-    // Translate DISTINCT x as GROUP BY x. We only do this if we have no GROUP BY clause - otherwise, the DISTINCT
-    // is redundant anyway.
-    group_by_columns = select.selectList;
-  }
-
   auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  if (group_by_columns) {
-    group_by_expressions.reserve(group_by_columns->size());
-    for (const auto* group_by_hsql_expr : *group_by_columns) {
+  if (select.groupBy && select.groupBy->columns) {
+    group_by_expressions.reserve(select.groupBy->columns->size());
+    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
       const auto group_by_expression = _translate_hsql_expr(*group_by_hsql_expr, _sql_identifier_resolver);
       group_by_expressions.emplace_back(group_by_expression);
       if (pre_aggregate_expression_set.emplace(group_by_expression).second) {
@@ -826,6 +818,19 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
         _sql_identifier_resolver->set_column_name(output_expression, hsql_expr->alias);
       }
     }
+  }
+
+  // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
+  //
+  // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
+  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
+  // one that groups by both a and MIN(b) without calculating anything. Fixing this would require us to check for all
+  // GROUP BY cases whether the results are guaranteed to be unique or not. Doable, but currently no priority.
+  if (select.selectDistinct) {
+    // const auto& column_expressions = _current_lqp->column_expressions();
+    _current_lqp = AggregateNode::make(_inflated_select_list_expressions,
+                                       std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
   }
 }
 
