@@ -21,6 +21,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
@@ -517,12 +518,25 @@ int Console::_export_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
+  std::vector<std::string> file_parts;
+  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
+  const std::string& extension = file_parts.back();
+
   out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  auto gt = std::make_shared<GetTable>(tablename);
+  gt->execute();
+
   try {
-    auto gt = std::make_shared<GetTable>(tablename);
-    gt->execute();
-    auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
-    ex->execute();
+    if (extension == "bin") {
+      auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
+      ex->execute();
+    } else if (extension == "csv") {
+      auto ex = std::make_shared<opossum::ExportCsv>(gt, filepath);
+      ex->execute();
+    } else {
+      out("Exporting to extension \"" + extension + "\" is not supported.");
+      return ReturnCode::Error;
+    }
   } catch (const std::exception& exception) {
     out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
