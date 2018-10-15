@@ -79,6 +79,11 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   return table;
 }
 
+std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename) {
+  _meta = process_csv_meta_file(filename);
+  return _create_table_from_meta();
+}
+
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
   TableColumnDefinitions column_definitions;
   for (const auto& column_meta : _meta.columns) {
