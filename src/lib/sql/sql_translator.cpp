@@ -828,7 +828,6 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
   // one that groups by both a and MIN(b) without calculating anything. Fixing this would require us to check for all
   // GROUP BY cases whether the results are guaranteed to be unique or not. Doable, but currently no priority.
   if (select.selectDistinct) {
-    // const auto& column_expressions = _current_lqp->column_expressions();
     _current_lqp = AggregateNode::make(_inflated_select_list_expressions,
                                        std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
   }
