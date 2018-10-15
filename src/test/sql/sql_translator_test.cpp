@@ -966,7 +966,8 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, uncorrelated_parameter_(ParameterID{1})), uncorrelated_parameter_(ParameterID{2})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, uncorrelated_parameter_(ParameterID{1})),
+                                         uncorrelated_parameter_(ParameterID{2})),
     PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
       stored_table_node_int_float));
   // clang-format on
@@ -1043,7 +1044,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
     AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
       stored_table_node_int_float2));
 
-  const auto expected_sub_select_a = lqp_select_(expected_sub_select_lqp_a, std::make_pair(ParameterID{2}, int_float_a));
+  const auto expected_sub_select_a = lqp_select_(expected_sub_select_lqp_a,
+                                                 std::make_pair(ParameterID{2}, int_float_a));
 
   // "(SELECT int_float2.a + int_float.b)"
   const auto expected_sub_sub_select_lqp =
@@ -1059,7 +1061,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   ProjectionNode::make(expression_vector(add_(add_(max_(int_float2_b), parameter_int_float_b), sub_sub_select)),
     AggregateNode::make(expression_vector(), expression_vector(max_(int_float2_b)),
       stored_table_node_int_float2));
-  const auto expected_sub_select_b = lqp_select_(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b));
+  const auto expected_sub_select_b = lqp_select_(expected_sub_select_lqp_b,
+                                                 std::make_pair(ParameterID{3}, int_float_b));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(uncorrelated_parameter_(ParameterID{1}),
