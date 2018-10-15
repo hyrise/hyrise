@@ -11,15 +11,16 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/strategy/predicate_pushdown_rule.hpp"
+#include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "types.hpp"
+#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class PredicatePushdownRuleTest : public StrategyBaseTest {
+class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
@@ -37,7 +38,7 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
     _c_a = LQPColumnReference(_table_c, ColumnID{0});
     _c_b = LQPColumnReference(_table_c, ColumnID{1});
 
-    _rule = std::make_shared<PredicatePushdownRule>();
+    _rule = std::make_shared<PredicatePlacementRule>();
 
     {
       // Initialization of projection pushdown LQP
@@ -54,14 +55,14 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
     }
   }
 
-  std::shared_ptr<PredicatePushdownRule> _rule;
+  std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;
   LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
   std::shared_ptr<ProjectionNode> _projection_pushdown_node;
   std::shared_ptr<opossum::LQPSelectExpression> _select_c;
 };
 
-TEST_F(PredicatePushdownRuleTest, SimpleLiteralJoinPushdownTest) {
+TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
   join_node->set_left_input(_table_a);
   join_node->set_right_input(_table_b);
@@ -77,7 +78,7 @@ TEST_F(PredicatePushdownRuleTest, SimpleLiteralJoinPushdownTest) {
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, SimpleOneSideJoinPushdownTest) {
+TEST_F(PredicatePlacementRuleTest, SimpleOneSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
   join_node->set_left_input(_table_a);
   join_node->set_right_input(_table_b);
@@ -93,7 +94,7 @@ TEST_F(PredicatePushdownRuleTest, SimpleOneSideJoinPushdownTest) {
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
+TEST_F(PredicatePlacementRuleTest, SimpleBothSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_b, _b_a));
   join_node->set_left_input(_table_a);
   join_node->set_right_input(_table_b);
@@ -109,54 +110,57 @@ TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
-  auto sort_node =
-      std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
-  sort_node->set_left_input(_table_a);
+TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(_a_a, _a_b),
+    SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+      _table_a));
+  // clang-format on
 
-  auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
-  predicate_node->set_left_input(sort_node);
+  // clang-format off
+  const auto expected_lqp =
+  SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
+    PredicateNode::make(greater_than_(_a_a, _a_b),
+      _table_a));
+  // clang-format on
 
-  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  EXPECT_EQ(reordered, sort_node);
-  EXPECT_EQ(reordered->left_input(), predicate_node);
-  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
-  auto join_node_ab = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
-  auto join_node_bc = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_b_a, _c_a));
+TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      PredicateNode::make(greater_than_(_a_b, 123),
+        PredicateNode::make(equals_(_b_b, _a_b),
+          JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+            JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+              _table_b,
+              _table_c),
+            _table_a)))));
 
-  join_node_bc->set_left_input(_table_b);
-  join_node_bc->set_right_input(_table_c);
-  join_node_ab->set_left_input(join_node_bc);
-  join_node_ab->set_right_input(_table_a);
+  const auto expected_lqp =
+  PredicateNode::make(equals_(_b_b, _a_b),
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        _table_b,
+        PredicateNode::make(greater_than_(_c_a, 150),
+          PredicateNode::make(greater_than_(_c_a, 100),
+            _table_c))),
+      PredicateNode::make(greater_than_(_a_b, 123),
+        _table_a)));
+  // clang-format on
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(equals_(_b_b, _a_b));
-  predicate_node_0->set_left_input(join_node_ab);
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_a_b, 123));
-  predicate_node_1->set_left_input(predicate_node_0);
-
-  auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_c_a, 100));
-  predicate_node_2->set_left_input(predicate_node_1);
-
-  auto reordered0 = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
-  auto reordered1 = StrategyBaseTest::apply_rule(_rule, reordered0);
-  auto reordered = StrategyBaseTest::apply_rule(_rule, reordered1);
-
-  EXPECT_EQ(reordered, predicate_node_0);
-  EXPECT_EQ(reordered->left_input(), join_node_ab);
-  EXPECT_EQ(reordered->left_input()->left_input(), join_node_bc);
-  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_b);
-  EXPECT_EQ(reordered->left_input()->left_input()->right_input(), predicate_node_2);
-  EXPECT_EQ(reordered->left_input()->left_input()->right_input()->left_input(), _table_c);
-  EXPECT_EQ(reordered->left_input()->right_input(), predicate_node_1);
-  EXPECT_EQ(reordered->left_input()->right_input()->left_input(), _table_a);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePushdownRuleTest, AllowedValuePredicatePushdownThroughProjectionTest) {
+TEST_F(PredicatePlacementRuleTest, AllowedValuePredicatePushdownThroughProjectionTest) {
   // We can push `a > 4` under the projection because it does not depend on the subselect.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, value_(4)));
@@ -169,7 +173,7 @@ TEST_F(PredicatePushdownRuleTest, AllowedValuePredicatePushdownThroughProjection
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
+TEST_F(PredicatePlacementRuleTest, AllowedColumnPredicatePushdownThroughProjectionTest) {
   // We can push `a > b` under the projection because it does not depend on the subselect.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
@@ -182,7 +186,7 @@ TEST_F(PredicatePushdownRuleTest, AllowedColumnPredicatePushdownThroughProjectio
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
+TEST_F(PredicatePlacementRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
   // We can't push `(SELECT ...) > a.b` under the projection because the projection is responsible for the SELECT.
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_select_c, _a_b));
@@ -195,7 +199,7 @@ TEST_F(PredicatePushdownRuleTest, ForbiddenPredicatePushdownThroughProjectionTes
   EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughOtherPredicateTest) {
+TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   // Even if one predicate cannot be pushed down, others might be better off
 
   auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_select_c, _a_b));
@@ -212,7 +216,7 @@ TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePushdownRuleTest, NoPushdownOfComplexPredicate) {
+TEST_F(PredicatePlacementRuleTest, NoPushdownOfComplexPredicate) {
   // Even if one predicate cannot be pushed down, others might be better off
 
   // clang-format off
