@@ -510,10 +510,9 @@ int Console::_export_table(const std::string& args) {
 
   out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
   try {
-    const auto table = storage_manager.get_table(tablename);
-    auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-    auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filepath);
+    auto gt = std::make_shared<GetTable>(tablename);
+    gt->execute();
+    auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
     ex->execute();
   } catch (const std::exception& exception) {
     out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
