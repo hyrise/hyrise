@@ -141,7 +141,7 @@ inline detail::ternary<BetweenExpression> between_;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
+std::shared_ptr<LQPSelectExpression> lqp_select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
                                              Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
@@ -156,7 +156,7 @@ std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNo
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
+std::shared_ptr<PQPSelectExpression> pqp_select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
                                              const bool nullable, Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
@@ -209,7 +209,7 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
                                                  const bool nullable, const std::string& column_name);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> parameter_with_referenced_(const ParameterID parameter_id,
+std::shared_ptr<ParameterExpression> correlated_parameter_(const ParameterID parameter_id,
                                                                 const ReferencedExpression& referenced) {
   return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
 }
