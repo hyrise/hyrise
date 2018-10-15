@@ -22,6 +22,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
 #include "optimizer/optimizer.hpp"
@@ -480,6 +481,14 @@ int Console::_load_table(const std::string& args) {
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
+  } else if (extension == "bin") {
+    auto importer = std::make_shared<ImportBinary>(filepath, tablename);
+    try {
+      importer->execute();
+    } catch (const std::exception& exception) {
+      out("Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
