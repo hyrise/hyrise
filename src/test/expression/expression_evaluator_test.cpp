@@ -429,7 +429,7 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
   const auto a_id = ParameterID{0};
   const auto b_id = ParameterID{1};
 
-  auto a_plus_5_times_b = mul_(add_(parameter_(a_id, a), 5), parameter_(b_id, b));
+  auto a_plus_5_times_b = mul_(add_(correlated_parameter_(a_id, a), 5), correlated_parameter_(b_id, b));
 
   expression_set_parameters(a_plus_5_times_b, {{a_id, 12}, {b_id, 2}});
   EXPECT_TRUE(test_expression<int32_t>(*a_plus_5_times_b, {34}));
@@ -474,13 +474,13 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithoutPrecalculated) {
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto select_a = select_(pqp_a, DataType::Int, false);
+  const auto select_a = pqp_select_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto select_b = select_(pqp_b, DataType::Int, true);
+  const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
 
   // Test it without pre-calculated uncorrelated_select_results
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}));
@@ -499,13 +499,13 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithPrecalculated) {
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto select_a = select_(pqp_a, DataType::Int, false);
+  const auto select_a = pqp_select_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto select_b = select_(pqp_b, DataType::Int, true);
+  const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
 
   // Test it with pre-calculated uncorrelated_select_results
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
@@ -536,13 +536,13 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithBrokenPrecalculated) {
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a =
       std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
-  const auto select_a = select_(pqp_a, DataType::Int, false);
+  const auto select_a = pqp_select_(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto pqp_b =
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
-  const auto select_b = select_(pqp_b, DataType::Int, true);
+  const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
 
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
   table_wrapper_a->execute();
@@ -560,7 +560,7 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorrelatedWithBrokenPrecalculated) {
   const auto projection_c =
       std::make_shared<Projection>(table_scan_c, expression_vector(PQPColumnExpression::from_table(*table_a, "b")));
   projection_c->execute();
-  const auto select_c = select_(projection_c, DataType::Int, true);
+  const auto select_c = pqp_select_(projection_c, DataType::Int, true);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(3, select_c), {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_c), {1}));
   EXPECT_THROW(test_expression<int32_t>(table_a, *in_(4, select_c), {0}, uncorrelated_select_results),
@@ -576,9 +576,9 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   //  2      (3, 6, 9, 12)
   //  3      (4, 8, 12, 16)
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
-  const auto mul_a = mul_(parameter_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "a"));
+  const auto mul_a = mul_(uncorrelated_parameter_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "a"));
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
-  const auto select_a = select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto select_a = pqp_select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_a), {1, 1, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0, 1, 1, 0}));
@@ -595,9 +595,9 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   //  2      (36, NULL, 37, NULL)
   //  3      (37, NULL, 38, NULL)
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
-  const auto add_b = add_(parameter_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "c"));
+  const auto add_b = add_(uncorrelated_parameter_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "c"));
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
-  const auto select_b = select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto select_b = pqp_select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, select_b), {1, 1, std::nullopt, std::nullopt}));
@@ -619,13 +619,13 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
    *    table_a;
    */
   const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
-  const auto parameter_a = parameter_(ParameterID{0});
+  const auto parameter_a = uncorrelated_parameter_(ParameterID{0});
   const auto a_plus_x_projection =
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
   const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(
       a_plus_x_projection, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 13});
   const auto pqp_select_expression =
-      select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+      pqp_select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));

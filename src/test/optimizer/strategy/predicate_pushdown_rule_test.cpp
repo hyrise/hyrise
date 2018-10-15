@@ -44,11 +44,11 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
       auto int_float_node_a = StoredTableNode::make("a");
       auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
 
-      auto parameter_c = parameter_(ParameterID{0}, a);
+      auto parameter_c = correlated_parameter_(ParameterID{0}, a);
       auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
                                        ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
 
-      _select_c = select_(lqp_c, std::make_pair(ParameterID{0}, a));
+      _select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a));
 
       _projection_pushdown_node = ProjectionNode::make(expression_vector(_a_a, _a_b, _select_c), _table_a);
     }
