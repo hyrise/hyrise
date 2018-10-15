@@ -29,19 +29,19 @@ class LQPSelectExpressionTest : public ::testing::Test {
 
     // clang-format off
     lqp_a =
-    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_(ParameterID{0})))),
-      ProjectionNode::make(expression_vector(add_(a, parameter_(ParameterID{0}))),
+    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, uncorrelated_parameter_(ParameterID{0})))),
+      ProjectionNode::make(expression_vector(add_(a, uncorrelated_parameter_(ParameterID{0}))),
         int_float_node_a));
 
-    parameter_c = parameter_(ParameterID{0}, a);
+    parameter_c = correlated_parameter_(ParameterID{0}, a);
     lqp_c =
     AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_c))),
       ProjectionNode::make(expression_vector(add_(a, parameter_c)),
         int_float_node_a));
     // clang-format on
 
-    select_a = select_(lqp_a);
-    select_c = select_(lqp_c, std::make_pair(ParameterID{0}, a));
+    select_a = lqp_select_(lqp_a);
+    select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a));
   }
 
   void TearDown() { StorageManager::reset(); }
@@ -60,28 +60,28 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
 
   // clang-format off
   const auto lqp_b =
-  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_(ParameterID{0})))),
-    ProjectionNode::make(expression_vector(add_(a, parameter_(ParameterID{0}))),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, uncorrelated_parameter_(ParameterID{0})))),
+    ProjectionNode::make(expression_vector(add_(a, uncorrelated_parameter_(ParameterID{0}))),
       int_float_node_a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");
   const auto a2 = int_float_node_b->get_column("a");
-  const auto parameter_d = parameter_(ParameterID{0}, a2);
+  const auto parameter_d = correlated_parameter_(ParameterID{0}, a2);
   const auto lqp_d =
   AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a));
 
-  const auto parameter_e = parameter_(ParameterID{0}, b);
+  const auto parameter_e = correlated_parameter_(ParameterID{0}, b);
   const auto lqp_e =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a));
   // clang-format on
 
-  const auto select_b = select_(lqp_b);
-  const auto select_d = select_(lqp_d, std::make_pair(ParameterID{0}, a));
-  const auto select_e = select_(lqp_e, std::make_pair(ParameterID{0}, b));
+  const auto select_b = lqp_select_(lqp_b);
+  const auto select_d = lqp_select_(lqp_d, std::make_pair(ParameterID{0}, a));
+  const auto select_e = lqp_select_(lqp_e, std::make_pair(ParameterID{0}, b));
 
   EXPECT_EQ(*select_a, *select_b);
   EXPECT_NE(*select_a, *select_c);
@@ -127,7 +127,7 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
       int_float_node_a));
   // clang-format off
 
-  EXPECT_TRUE(select_(lqp_c)->is_nullable());
+  EXPECT_TRUE(lqp_select_(lqp_c)->is_nullable());
 }
 
 TEST_F(LQPSelectExpressionTest, AsColumnName) {
