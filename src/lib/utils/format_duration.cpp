@@ -8,7 +8,8 @@
 namespace opossum {
 
 std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
-  // Returns the result of a positive integer division rounded both to zero and to the nearest int
+  // Returns the result of a positive integer division rounded both to zero and to the nearest int so that 60900ms
+  // are returned as 61s, not 60s
   const auto div_both = [](const auto a, const auto b) {
     DebugAssert(a >= 0 && b > 0, "Can only operate on positive integers");
     const auto round_to_zero = a / b;
