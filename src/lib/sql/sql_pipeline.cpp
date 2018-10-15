@@ -235,20 +235,17 @@ const SQLPipelineMetrics& SQLPipeline::metrics() {
 }
 
 std::string SQLPipelineMetrics::to_string() const {
-  auto total_translate_micros = std::chrono::microseconds::zero();
-  auto total_optimize_micros = std::chrono::microseconds::zero();
-  auto total_compile_micros = std::chrono::microseconds::zero();
-  auto total_execute_micros = std::chrono::microseconds::zero();
+  auto total_translate_nanos = std::chrono::nanoseconds::zero();
+  auto total_optimize_nanos = std::chrono::nanoseconds::zero();
+  auto total_compile_nanos = std::chrono::nanoseconds::zero();
+  auto total_execute_nanos = std::chrono::nanoseconds::zero();
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_metric : statement_metrics) {
-    total_translate_micros +=
-        std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->translate_time_nanos);
-    total_optimize_micros +=
-        std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->optimize_time_nanos);
-    total_compile_micros += std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->compile_time_nanos);
-    total_execute_micros +=
-        std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->execution_time_nanos);
+    total_translate_nanos += statement_metric->translate_time_nanos;
+    total_optimize_nanos += statement_metric->optimize_time_nanos;
+    total_compile_nanos += statement_metric->compile_time_nanos;
+    total_execute_nanos += statement_metric->execution_time_nanos;
 
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }
@@ -257,11 +254,16 @@ std::string SQLPipelineMetrics::to_string() const {
 
   std::ostringstream info_string;
   info_string << "Execution info: [";
-  info_string << "PARSE: " << parse_time_nanos.count() << " µs, ";
-  info_string << "TRANSLATE: " << total_translate_micros.count() << " µs, ";
-  info_string << "OPTIMIZE: " << total_optimize_micros.count() << " µs, ";
-  info_string << "COMPILE: " << total_compile_micros.count() << " µs, ";
-  info_string << "EXECUTE: " << total_execute_micros.count() << " µs (wall time) | ";
+  info_string << "PARSE: " << std::chrono::duration_cast<std::chrono::microseconds>(parse_time_nanos.count())
+              << " µs, ";
+  info_string << "TRANSLATE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_translate_nanos).count()
+              << " µs, ";
+  info_string << "OPTIMIZE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_optimize_nanos).count()
+              << " µs, ";
+  info_string << "COMPILE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_compile_nanos).count()
+              << " µs, ";
+  info_string << "EXECUTE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_execute_nanos).count()
+              << " µs (wall time) | ";
   info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
   info_string << "]\n";
 
