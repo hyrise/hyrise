@@ -29,8 +29,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   hsql::SQLParser::parse(sql, &parse_result);
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
-  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_micros.count());
+  _metrics.parse_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - start);
+  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_nanos.count());
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
@@ -242,10 +242,13 @@ std::string SQLPipelineMetrics::to_string() const {
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_metric : statement_metrics) {
-    total_translate_micros += statement_metric->translate_time_micros;
-    total_optimize_micros += statement_metric->optimize_time_micros;
-    total_compile_micros += statement_metric->compile_time_micros;
-    total_execute_micros += statement_metric->execution_time_micros;
+    total_translate_micros +=
+        std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->translate_time_nanos);
+    total_optimize_micros +=
+        std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->optimize_time_nanos);
+    total_compile_micros += std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->compile_time_nanos);
+    total_execute_micros +=
+        std::chrono::duration_cast<std::chrono::microseconds>(statement_metric->execution_time_nanos);
 
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }
@@ -254,7 +257,7 @@ std::string SQLPipelineMetrics::to_string() const {
 
   std::ostringstream info_string;
   info_string << "Execution info: [";
-  info_string << "PARSE: " << parse_time_micros.count() << " µs, ";
+  info_string << "PARSE: " << parse_time_nanos.count() << " µs, ";
   info_string << "TRANSLATE: " << total_translate_micros.count() << " µs, ";
   info_string << "OPTIMIZE: " << total_optimize_micros.count() << " µs, ";
   info_string << "COMPILE: " << total_compile_micros.count() << " µs, ";
