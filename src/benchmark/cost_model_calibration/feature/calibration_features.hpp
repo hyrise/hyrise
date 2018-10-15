@@ -49,7 +49,7 @@ namespace opossum {
                 {"output_chunk_count", s.output_chunk_count},
                 {"output_memory_usage_bytes", s.output_memory_usage_bytes},
                 {"output_chunk_size", s.output_chunk_size},
-                {"output_selectivity", s.input_table_size_ratio}
+                {"output_selectivity", s.output_selectivity}
         };
     }
 
@@ -71,7 +71,7 @@ namespace opossum {
         s.output_chunk_count = j.value("output_chunk_count", 0);
         s.output_memory_usage_bytes = j.value("output_memory_usage_bytes", 0);
         s.output_chunk_size = j.value("output_chunk_size", 0);
-        s.output_chunk_size = j.value("output_chunk_size", 0);
+        s.output_selectivity = j.value("output_selectivity", 0);
     }
 
 }  // namespace opossum
