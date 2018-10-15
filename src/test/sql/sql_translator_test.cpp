@@ -382,7 +382,7 @@ TEST_F(SQLTranslatorTest, WhereExists) {
       compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
-  const auto parameter_int_float_a = parameter_(ParameterID{0}, int_float_a);
+  const auto parameter_int_float_a = parameter_with_referenced_(ParameterID{0}, int_float_a);
   const auto sub_select_lqp =
   PredicateNode::make(equals_(parameter_int_float_a, int_float2_a), stored_table_node_int_float2);
   const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
@@ -401,7 +401,7 @@ TEST_F(SQLTranslatorTest, WhereWithCorrelatedSelect) {
   const auto actual_lqp =
       compile_query("SELECT * FROM int_float WHERE a > (SELECT MIN(a + int_float.b) FROM int_float2);");
 
-  const auto parameter_b = parameter_(ParameterID{0}, int_float_b);
+  const auto parameter_b = parameter_with_referenced_(ParameterID{0}, int_float_b);
 
   // clang-format off
   const auto sub_select_lqp =
@@ -596,7 +596,7 @@ TEST_F(SQLTranslatorTest, SubSelectSelectList) {
   const auto actual_lqp = compile_query("SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f");
 
   // clang-format off
-  const auto parameter_d = parameter_(ParameterID{0}, int_float5_d);
+  const auto parameter_d = parameter_with_referenced_(ParameterID{0}, int_float5_d);
   const auto a_plus_d = add_(int_float_a, parameter_d);
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_d)),
@@ -673,8 +673,8 @@ TEST_F(SQLTranslatorTest, InCorrelatedSelect) {
       "b)");
 
   // clang-format off
-  const auto parameter_a = parameter_(ParameterID{1}, int_float_a);
-  const auto parameter_b = parameter_(ParameterID{0}, int_float_b);
+  const auto parameter_a = parameter_with_referenced_(ParameterID{1}, int_float_a);
+  const auto parameter_b = parameter_with_referenced_(ParameterID{0}, int_float_b);
 
   const auto b_times_a_times_a = mul_(mul_(parameter_b, parameter_a), parameter_a);
 
@@ -990,8 +990,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
   // clang-format off
-  const auto parameter_int_float_b = parameter_(ParameterID{1}, int_float_b);
-  const auto parameter_int_float2_a = parameter_(ParameterID{0}, int_float2_a);
+  const auto parameter_int_float_b = parameter_with_referenced_(ParameterID{1}, int_float_b);
+  const auto parameter_int_float2_a = parameter_with_referenced_(ParameterID{0}, int_float2_a);
 
   // "(SELECT int_float2.a + int_float.b)"
   const auto expected_sub_sub_select_lqp =
@@ -1033,9 +1033,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
   // clang-format off
-  const auto parameter_int_float_a = parameter_(ParameterID{2}, int_float_a);
-  const auto parameter_int_float_b = parameter_(ParameterID{3}, int_float_b);
-  const auto parameter_int_float2_a = parameter_(ParameterID{4}, int_float2_a);
+  const auto parameter_int_float_a = parameter_with_referenced_(ParameterID{2}, int_float_a);
+  const auto parameter_int_float_b = parameter_with_referenced_(ParameterID{3}, int_float_b);
+  const auto parameter_int_float2_a = parameter_with_referenced_(ParameterID{4}, int_float2_a);
 
   // "(SELECT MIN(b) + int_float.a FROM int_float2)"
   const auto expected_sub_select_lqp_a =
@@ -1147,7 +1147,7 @@ TEST_F(SQLTranslatorTest, ExistsCorrelated) {
 
   // clang-format off
   const auto sub_select_lqp =
-  PredicateNode::make(greater_than_(int_float_a, parameter_(ParameterID{0}, int_float2_b)),
+  PredicateNode::make(greater_than_(int_float_a, parameter_with_referenced_(ParameterID{0}, int_float2_b)),
     stored_table_node_int_float);
   const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float2_b));
 

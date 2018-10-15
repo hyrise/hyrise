@@ -429,7 +429,7 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
   const auto a_id = ParameterID{0};
   const auto b_id = ParameterID{1};
 
-  auto a_plus_5_times_b = mul_(add_(parameter_(a_id, a), 5), parameter_(b_id, b));
+  auto a_plus_5_times_b = mul_(add_(parameter_with_referenced_(a_id, a), 5), parameter_with_referenced_(b_id, b));
 
   expression_set_parameters(a_plus_5_times_b, {{a_id, 12}, {b_id, 2}});
   EXPECT_TRUE(test_expression<int32_t>(*a_plus_5_times_b, {34}));

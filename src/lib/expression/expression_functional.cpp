@@ -30,11 +30,11 @@ std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id) 
   return std::make_shared<ParameterExpression>(parameter_id);
 }
 
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
-std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
                                              const std::string& column_name) {
   return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
 }

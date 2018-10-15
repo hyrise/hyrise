@@ -389,7 +389,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
-  const auto parameter_a = parameter_(ParameterID{0}, b1);
+  const auto parameter_a = parameter_with_referenced_(ParameterID{0}, b1);
 
   // clang-format off
   const auto sub_select_lqp =

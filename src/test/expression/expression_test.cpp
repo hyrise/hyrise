@@ -111,8 +111,8 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(and_(1, 0)->requires_computation());
   EXPECT_TRUE(unary_minus_(5)->requires_computation());
   EXPECT_FALSE(parameter_(ParameterID{5})->requires_computation());
-  EXPECT_FALSE(parameter_(ParameterID{5}, a)->requires_computation());
-  EXPECT_FALSE(column_(a)->requires_computation());
+  EXPECT_FALSE(parameter_with_referenced_(ParameterID{5}, a)->requires_computation());
+  EXPECT_FALSE(lqp_column_(a)->requires_computation());
   EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
   EXPECT_FALSE(value_(5)->requires_computation());
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
@@ -158,7 +158,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(null_()->as_column_name(), "NULL");
   EXPECT_EQ(cast_("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
   EXPECT_EQ(parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
-  EXPECT_EQ(parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
+  EXPECT_EQ(parameter_with_referenced_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
 }
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
@@ -240,8 +240,8 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(case_(1, 1, null_())->is_nullable());
   EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable());
   EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_FALSE(column_(a)->is_nullable());
-  EXPECT_TRUE(column_(a_nullable)->is_nullable());
+  EXPECT_FALSE(lqp_column_(a)->is_nullable());
+  EXPECT_TRUE(lqp_column_(a_nullable)->is_nullable());
   EXPECT_FALSE(cast_(12, DataType::String)->is_nullable());
   EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable());
   EXPECT_TRUE(sum_(null_())->is_nullable());

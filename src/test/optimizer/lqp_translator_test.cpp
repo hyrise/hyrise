@@ -262,8 +262,8 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
    * LQP resembles:
    *   SELECT (SELECT MIN(a + int_float5.d + int_float5.a) FROM int_float), a FROM int_float5;
    */
-  const auto parameter_a = parameter_(ParameterID{0}, int_float5_a);
-  const auto parameter_d = parameter_(ParameterID{1}, int_float5_d);
+  const auto parameter_a = parameter_with_referenced_(ParameterID{0}, int_float5_a);
+  const auto parameter_d = parameter_with_referenced_(ParameterID{1}, int_float5_d);
 
   const auto a_plus_a_plus_d = add_(int_float_a, add_(parameter_a, parameter_d));
 
@@ -786,7 +786,7 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto a_plus_b_in_temporary_column = column_(ColumnID{1}, DataType::Float, false, "a + b");
+  const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, false, "a + b");
 
   EXPECT_EQ(table_scan->predicate().column_id, ColumnID{0});
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(a_plus_b_in_temporary_column, 3));
@@ -821,7 +821,7 @@ TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto select_in_temporary_column = column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
+  const auto select_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(select_in_temporary_column, 3));
 }

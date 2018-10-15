@@ -204,13 +204,13 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
 }
 
 std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id);
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference);
-std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,
-                                             const std::string& column_name);
+std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference);
+std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
+                                                 const bool nullable, const std::string& column_name);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id,
-                                                const ReferencedExpression& referenced) {
+std::shared_ptr<ParameterExpression> parameter_with_referenced_(const ParameterID parameter_id,
+                                                                const ReferencedExpression& referenced) {
   return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
 }
 

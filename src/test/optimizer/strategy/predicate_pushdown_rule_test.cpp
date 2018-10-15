@@ -44,7 +44,7 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
       auto int_float_node_a = StoredTableNode::make("a");
       auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
 
-      auto parameter_c = parameter_(ParameterID{0}, a);
+      auto parameter_c = parameter_with_referenced_(ParameterID{0}, a);
       auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
                                        ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
 
