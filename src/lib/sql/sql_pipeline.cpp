@@ -8,6 +8,7 @@
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
@@ -254,16 +255,11 @@ std::string SQLPipelineMetrics::to_string() const {
 
   std::ostringstream info_string;
   info_string << "Execution info: [";
-  info_string << "PARSE: " << std::chrono::duration_cast<std::chrono::microseconds>(parse_time_nanos.count())
-              << " µs, ";
-  info_string << "TRANSLATE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_translate_nanos).count()
-              << " µs, ";
-  info_string << "OPTIMIZE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_optimize_nanos).count()
-              << " µs, ";
-  info_string << "COMPILE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_compile_nanos).count()
-              << " µs, ";
-  info_string << "EXECUTE: " << std::chrono::duration_cast<std::chrono::microseconds>(total_execute_nanos).count()
-              << " µs (wall time) | ";
+  info_string << "PARSE: " << format_duration(parse_time_nanos) << " µs, ";
+  info_string << "TRANSLATE: " << format_duration(total_translate_nanos) << " µs, ";
+  info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << " µs, ";
+  info_string << "COMPILE: " << format_duration(total_compile_nanos) << " µs, ";
+  info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " µs (wall time) | ";
   info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
   info_string << "]\n";
 
