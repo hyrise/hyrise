@@ -386,7 +386,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = opossum::TpccTableGenerator().generate_all_tables();
     for (auto& [table_name, table] : tables) {
-      StorageManager::get().add_table(table_name, table);
+      StorageManager::get().add_or_replace_table(table_name, table);
     }
     return ReturnCode::Ok;
   }
@@ -398,7 +398,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
     return ReturnCode::Error;
   }
 
-  opossum::StorageManager::get().add_table(tablename, table);
+  opossum::StorageManager::get().add_or_replace_table(tablename, table);
   return ReturnCode::Ok;
 }
 
@@ -472,10 +472,9 @@ int Console::_load_table(const std::string& args) {
       auto table = opossum::load_table(filepath, DEFAULT_CHUNK_SIZE);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
-        storage_manager.drop_table(tablename);
         out("Table " + tablename + " already existed. Replaced it.\n");
       }
-      StorageManager::get().add_table(tablename, table);
+      StorageManager::get().add_or_replace_table(tablename, table);
     } catch (const std::exception& exception) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;

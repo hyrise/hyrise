@@ -312,7 +312,7 @@ void TpchDbGenerator::generate_and_store() {
   const auto tables = generate();
 
   for (auto& table : tables) {
-    StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
+    StorageManager::get().add_or_replace_table(tpch_table_names.at(table.first), table.second);
   }
 }
 

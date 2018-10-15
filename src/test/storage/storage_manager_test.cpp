@@ -41,6 +41,20 @@ TEST_F(StorageManagerTest, AddTableTwice) {
                std::exception);
 }
 
+TEST_F(StorageManagerTest, ReplaceTable) {
+  auto& sm = StorageManager::get();
+  auto new_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
+  sm.add_or_replace_table("first_table", new_table);
+  EXPECT_EQ(sm.get_table("first_table"), new_table);
+}
+
+TEST_F(StorageManagerTest, ReplaceTableRespectsViews) {
+  auto& sm = StorageManager::get();
+  EXPECT_THROW(
+      sm.add_or_replace_table("first_view", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),
+      std::exception);
+}
+
 TEST_F(StorageManagerTest, GetTable) {
   auto& sm = StorageManager::get();
   auto t3 = sm.get_table("first_table");
