@@ -167,6 +167,11 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
     operator_result["scan_segment_data_type"] = DataType::Int;  // Just any default
     operator_result["scan_segment_memory_usage_bytes"] = 0;
     operator_result["scan_segment_distinct_value_count"] = 0;
+    operator_result["second_scan_segment_encoding"] = EncodingType::Unencoded;
+    operator_result["is_second_scan_segment_reference_segment"] = false;
+    operator_result["second_scan_segment_data_type"] = DataType::Int;  // Just any default
+    operator_result["second_scan_segment_memory_usage_bytes"] = 0;
+    operator_result["second_scan_segment_distinct_value_count"] = 0;
     return operator_result;
   }
 
@@ -192,7 +197,6 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
 
   // Mainly for debugging purposes
   operator_result["scan_operator_description"] = op->description(DescriptionMode::SingleLine);
-  //  operator_result["scan_operator_predicate"] = op->predicate();
 
   operator_result["scan_segment_distinct_value_count"] = 0;  // TODO(Sven): Ask Statistics for detailed information.
 
