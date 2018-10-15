@@ -11,7 +11,7 @@ namespace opossum {
 
     struct CalibrationFeatures {
         size_t execution_time_ns = 0;
-        size_t input_table_size_ratio = 0;
+        double input_table_size_ratio = 0.0;
 
         size_t left_input_row_count = 0;
         size_t left_input_chunk_count = 0;
@@ -27,7 +27,7 @@ namespace opossum {
         size_t output_chunk_count = 0;
         size_t output_memory_usage_bytes = 0;
         size_t output_chunk_size = 0;
-        size_t output_selectivity = 0;
+        double output_selectivity = 0.0;
     };
 
     inline void to_json(nlohmann::json& j, const CalibrationFeatures& s) {
