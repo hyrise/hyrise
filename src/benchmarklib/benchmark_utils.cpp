@@ -288,7 +288,7 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(const SegmentEncodingSpec default_encoding_spec)
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec)
     : EncodingConfig{default_encoding_spec, {}, {}} {}
 
 EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec,
