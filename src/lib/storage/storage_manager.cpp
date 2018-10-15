@@ -17,14 +17,7 @@ namespace opossum {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
-  Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
-
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
-  }
-
-  table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
-  _tables.emplace(name, std::move(table));
+  add_or_replace_table(name, std::move(table));
 }
 
 void StorageManager::drop_table(const std::string& name) {
@@ -37,6 +30,17 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
   return iter->second;
+}
+
+void StorageManager::add_or_replace_table(const std::string& name, std::shared_ptr<Table> table) {
+  Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
+
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
+  }
+
+  table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
+  _tables[name] = std::move(table);
 }
 
 bool StorageManager::has_table(const std::string& name) const { return _tables.count(name); }
