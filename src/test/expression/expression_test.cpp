@@ -65,8 +65,8 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_EQ(*is_null_(a), *is_null_(a));
   EXPECT_NE(*is_null_(a), *is_null_(b));
   EXPECT_EQ(*is_not_null_(a), *is_not_null_(a));
-  EXPECT_EQ(*parameter_(ParameterID{4}), *parameter_(ParameterID{4}));
-  EXPECT_NE(*parameter_(ParameterID{4}), *parameter_(ParameterID{5}));
+  EXPECT_EQ(*uncorrelated_parameter_(ParameterID{4}), *uncorrelated_parameter_(ParameterID{4}));
+  EXPECT_NE(*uncorrelated_parameter_(ParameterID{4}), *uncorrelated_parameter_(ParameterID{5}));
   EXPECT_EQ(*extract_(DatetimeComponent::Month, "1999-07-30"), *extract_(DatetimeComponent::Month, "1999-07-30"));
   EXPECT_NE(*extract_(DatetimeComponent::Day, "1999-07-30"), *extract_(DatetimeComponent::Month, "1999-07-30"));
   EXPECT_EQ(*unary_minus_(6), *unary_minus_(6));
@@ -110,7 +110,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(is_null_(null_())->requires_computation());
   EXPECT_TRUE(and_(1, 0)->requires_computation());
   EXPECT_TRUE(unary_minus_(5)->requires_computation());
-  EXPECT_FALSE(parameter_(ParameterID{5})->requires_computation());
+  EXPECT_FALSE(uncorrelated_parameter_(ParameterID{5})->requires_computation());
   EXPECT_FALSE(correlated_parameter_(ParameterID{5}, a)->requires_computation());
   EXPECT_FALSE(lqp_column_(a)->requires_computation());
   EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
@@ -157,7 +157,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(value_(3.25)->as_column_name(), "3.25");
   EXPECT_EQ(null_()->as_column_name(), "NULL");
   EXPECT_EQ(cast_("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
-  EXPECT_EQ(parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
+  EXPECT_EQ(uncorrelated_parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
   EXPECT_EQ(correlated_parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
 }
 

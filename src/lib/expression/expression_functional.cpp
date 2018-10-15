@@ -26,7 +26,7 @@ std::shared_ptr<ValueExpression> null_() { // NOLINT - clang-tidy doesn't like t
   return std::make_shared<ValueExpression>(NullValue{});
 }
 
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<ParameterExpression> uncorrelated_parameter_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<ParameterExpression>(parameter_id);
 }
 

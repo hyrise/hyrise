@@ -966,8 +966,8 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, parameter_(ParameterID{1})), parameter_(ParameterID{2})),
-    PredicateNode::make(greater_than_(int_float_a, parameter_(ParameterID{0})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, uncorrelated_parameter_(ParameterID{1})), uncorrelated_parameter_(ParameterID{2})),
+    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1062,10 +1062,10 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   const auto expected_sub_select_b = lqp_select_(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(parameter_(ParameterID{1}),
+  ProjectionNode::make(expression_vector(uncorrelated_parameter_(ParameterID{1}),
                                          expected_sub_select_a,
                                          expected_sub_select_b),
-    PredicateNode::make(greater_than_(int_float_a, parameter_(ParameterID{0})),
+    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
       stored_table_node_int_float));
   // clang-format on
 
