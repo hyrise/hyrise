@@ -249,13 +249,11 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     query_tasks.insert(query_tasks.end(), tasks.begin(), tasks.end());
   }
 
-  // If necessary, keep plans for visualization
+  // If necessary, keep plans for visualization. We prefer the last one over the first one, because the instruction
+  // caches are not properly filled during the first execution.
   if (_config.enable_visualization) {
-    const auto query_plans_iter = _query_plans.find(name);
-    if (query_plans_iter == _query_plans.end()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
-      _query_plans.emplace(name, plans);
-    }
+    QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+    _query_plans[name] = plans;
   }
   return query_tasks;
 }
@@ -272,13 +270,11 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query, const std::f
 
   if (done_callback) done_callback();
 
-  // If necessary, keep plans for visualization
+  // If necessary, keep plans for visualization. We prefer the last one over the first one, because the instruction
+  // caches are not properly filled during the first execution.
   if (_config.enable_visualization) {
-    const auto query_plans_iter = _query_plans.find(name);
-    if (query_plans_iter == _query_plans.end()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
-      _query_plans.emplace(name, plans);
-    }
+    QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+    _query_plans[name] = plans;
   }
 }
 
