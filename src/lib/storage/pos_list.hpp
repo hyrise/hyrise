@@ -41,8 +41,6 @@ struct PosList : private pmr_vector<RowID> {
   /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
-  virtual ~PosList() final = default;
-
   PosList& operator=(PosList&& other) {
     Vector::operator=(std::move(other));
     return *this;
