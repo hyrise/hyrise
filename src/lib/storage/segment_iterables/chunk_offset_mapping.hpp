@@ -5,6 +5,7 @@
 
 #include "storage/pos_list.hpp"
 #include "types.hpp"
+#include "utils/uninitialized_vector.hpp"
 
 namespace opossum {
 
@@ -23,7 +24,7 @@ struct ChunkOffsetMapping {
 /**
  * @brief list of chunk offset mappings
  */
-using ChunkOffsetsList = std::vector<ChunkOffsetMapping>;
+using ChunkOffsetsList = uninitialized_vector<ChunkOffsetMapping>;
 
 using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
 using ChunkOffsetsByChunkID = std::vector<ChunkOffsetsList>;

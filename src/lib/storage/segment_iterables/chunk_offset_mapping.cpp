@@ -25,7 +25,6 @@ ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list, const 
       const auto row_id = pos_list[chunk_offset];
       if (row_id.is_null()) continue;
 
-      // Returns ChunkOffsetsList for row_id.chunk_id or creates new
       auto& mapped_chunk_offsets = chunk_offsets_by_chunk_id[row_id.chunk_id];
 
       mapped_chunk_offsets.emplace_back(chunk_offset, row_id.chunk_offset);
