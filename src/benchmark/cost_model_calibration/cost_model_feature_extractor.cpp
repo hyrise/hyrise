@@ -151,6 +151,8 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
     const auto second_scan_segment = left_input_table->get_chunk(ChunkID{0})->get_segment(second_scan_id);
     const auto second_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(second_scan_segment);
 
+    features.uses_second_column = true;
+
     features.is_second_scan_segment_reference_segment = second_reference_segment ? true : false;
     features.second_scan_segment_encoding = _get_encoding_type_for_segment(second_reference_segment);
     features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, second_scan_id);

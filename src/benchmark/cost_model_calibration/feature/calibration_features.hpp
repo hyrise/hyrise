@@ -10,7 +10,7 @@
 namespace opossum {
 
     struct CalibrationFeatures {
-        size_t execution_time_ns = 0;
+        long long int execution_time_ns = 0;
         double input_table_size_ratio = 0.0;
 
         size_t left_input_row_count = 0;

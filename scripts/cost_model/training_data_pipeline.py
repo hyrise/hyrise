@@ -28,10 +28,10 @@ def split_in_train_and_test(df):
 	return df[msk], df[~msk]
 
 def extract_features_and_target(df):
-	dfX=df.drop('execution_time_ns', axis=1)
-	dfY=df['execution_time_ns']
+	X=df.drop('execution_time_ns', axis=1)
+	y=df['execution_time_ns']
 
-	return dfX, dfY
+	return X, y
 
 def normalize_features(train_data, test_data):
 	"""Reads unnormalized training and test data and returns both normalized"""
@@ -56,3 +56,25 @@ def transform_calibration_results(raw_data, features = [], dummies = [], operato
 		return extract_features_and_target(df)
 
 	return { operator_type: transform_single_df(values) for operator_type, values in raw_data.items()}
+
+def prepare_df_table_scan(source):
+	data = load_json_results(source)
+	df = transform_to_dataframe(data['TableScan'])
+	df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
+	df['second_scan_segment_encoding'] = df['second_scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
+	#TODO: add uses_second_column as boolean
+	df['is_scan_segment_reference_segment'] = df['is_scan_segment_reference_segment'].astype('category', categories=[False, True])
+	df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment'].astype('category', categories=[False, True])
+	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
+	df['second_scan_segment_data_type'] = df['second_scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
+	df = generate_dummies(df, [
+		'scan_segment_encoding',
+		'second_scan_segment_encoding',
+		'is_scan_segment_reference_segment',
+		'is_second_scan_segment_reference_segment',
+		'scan_segment_data_type',
+		'second_scan_segment_data_type'
+	]).dropna()
+
+	df = df.drop('scan_operator_description', axis=1)
+	return df

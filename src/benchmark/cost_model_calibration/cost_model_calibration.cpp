@@ -66,7 +66,7 @@ void CostModelCalibration::run_tpch() const {
   const auto scheduler = std::make_shared<NodeQueueScheduler>();
   CurrentScheduler::set(scheduler);
 
-  for (size_t i = 0; i < 10; i++) {
+  for (size_t i = 0; i < 1; i++) {
     for (const auto& query : opossum::tpch_queries) {
       std::map<std::string, nlohmann::json> operators{};
 
