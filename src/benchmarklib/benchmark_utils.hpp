@@ -118,6 +118,7 @@ struct BenchmarkConfig {
   const uint clients = 1;
   const bool enable_visualization = false;
   std::ostream& out;
+  const Duration warmup_duration = std::chrono::seconds(10);
 
   static const char* description;
 

@@ -166,6 +166,8 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 
 void BenchmarkRunner::_benchmark_individual_queries() {
   for (const auto& named_query : _queries) {
+    _warmup_individual_query(named_query);
+
     const auto& name = named_query.first;
     _config.out << "- Benchmarking Query " << name << std::endl;
 
@@ -216,6 +218,41 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     CurrentScheduler::wait_for_tasks(tasks);
     Assert(currently_running_clients == 0, "All query runs must be finished at this point");
   }
+}
+
+void BenchmarkRunner::_warmup_individual_query(const NamedQuery& named_query) {
+  const auto& name = named_query.first;
+  _config.out << "- Warming up for Query " << name << std::endl;
+
+  // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
+  // let a simulated client schedule the next query, as well as the total number of finished queries so far
+  auto currently_running_clients = std::atomic_uint{0};
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto state = BenchmarkState{_config.warmup_duration};
+
+  while (state.keep_running()) {
+    // We want to only schedule as many queries simultaneously as we have simulated clients
+    if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
+      currently_running_clients++;
+
+      // The on_query_done callback will be appended to the last Task of the query,
+      // to signal that the query was finished
+      auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
+
+      auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
+      tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  }
+  state.set_done();
+
+  // Wait for the rest of the tasks that didn't make it in time
+  // TODO(leander/anyone): To be replaced with something like CurrentScheduler::abort(),
+  // that properly removes all remaining tasks from all queues, without having to wait for them
+  CurrentScheduler::wait_for_tasks(tasks);
+  Assert(currently_running_clients == 0, "All query runs must be finished at this point");
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
