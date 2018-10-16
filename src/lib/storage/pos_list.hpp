@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+// TODO explain why this has to be final
+
 struct PosList : private pmr_vector<RowID> {
  public:
   using Vector = pmr_vector<RowID>;
@@ -45,6 +47,18 @@ struct PosList : private pmr_vector<RowID> {
     Vector::operator=(std::move(other));
     return *this;
   }
+  void guarantee_single_chunk() { _references_single_chunk = true; }
+
+  bool references_single_chunk() const { return _references_single_chunk; }
+
+  // std::vector<ChunkOffset> offsets() {
+  //   Assert(references_single_chunk(),
+  //          "Can only convert PosList to ChunkOffsetsList if it is guaranteed to refer to a single chunk");
+  //   std::vector<ChunkOffset> list(size());
+  //   for (auto i = 0ul; i < size(); ++i) list[i] = (*this)[i].chunk_offset;
+  //   return list;
+  // }
+
   using Vector::assign;
   using Vector::get_allocator;
 
@@ -87,6 +101,9 @@ struct PosList : private pmr_vector<RowID> {
   friend bool operator==(const PosList& lhs, const PosList& rhs);
   friend bool operator==(const PosList& lhs, const pmr_vector<RowID>& rhs);
   friend bool operator==(const pmr_vector<RowID>& lhs, const PosList& rhs);
+
+ private:
+  bool _references_single_chunk = false;
 };
 
 inline bool operator==(const PosList& lhs, const PosList& rhs) {
