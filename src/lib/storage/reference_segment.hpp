@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "base_segment.hpp"
+#include "storage/pos_list.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

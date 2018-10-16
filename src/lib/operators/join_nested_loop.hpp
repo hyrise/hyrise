@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
+#include "storage/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {

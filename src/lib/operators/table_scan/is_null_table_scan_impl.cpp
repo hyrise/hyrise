@@ -25,7 +25,7 @@ void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
   auto context = std::static_pointer_cast<Context>(base_context);
   BaseSingleColumnTableScanImpl::handle_segment(base_segment, base_context);
 
-  const auto pos_list = *base_segment.pos_list();
+  const auto& pos_list = *base_segment.pos_list();
 
   // Additionally to the null values in the referencED segment, we need to find null values in the referencING segment
   if (_predicate_condition == PredicateCondition::IsNull) {

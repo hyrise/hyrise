@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "storage/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
