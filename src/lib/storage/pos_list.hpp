@@ -51,13 +51,13 @@ struct PosList : private pmr_vector<RowID> {
 
   bool references_single_chunk() const { return _references_single_chunk; }
 
-  // std::vector<ChunkOffset> offsets() {
-  //   Assert(references_single_chunk(),
-  //          "Can only convert PosList to ChunkOffsetsList if it is guaranteed to refer to a single chunk");
-  //   std::vector<ChunkOffset> list(size());
-  //   for (auto i = 0ul; i < size(); ++i) list[i] = (*this)[i].chunk_offset;
-  //   return list;
-  // }
+  std::vector<ChunkOffset> convert_to_offsets() const {
+    Assert(references_single_chunk(),
+           "Can only convert PosList to ChunkOffsetsList if it is guaranteed to refer to a single chunk");
+    std::vector<ChunkOffset> list(size());
+    for (auto i = 0ul; i < size(); ++i) list[i] = (*this)[i].chunk_offset;
+    return list;
+  }
 
   using Vector::assign;
   using Vector::get_allocator;
