@@ -31,7 +31,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
       auto begin = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, position_filter.cbegin(),
-                                                      position_filter.cend()};
+                                                      position_filter.cbegin()};
       auto end = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, position_filter.cbegin(),
                                                     position_filter.cend()};
       functor(begin, end);
@@ -79,7 +79,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
-                                         SegmentIteratorValue<ValueID>>{position_filter_begin, position_filter_it},
+                                         SegmentIteratorValue<ValueID>>{std::move(position_filter_begin), std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
 

@@ -25,7 +25,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
   template <typename Functor>
   void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
-    auto begin = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cend()};
+    auto begin = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cbegin()};
     auto end = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cend()};
     functor(begin, end);
   }

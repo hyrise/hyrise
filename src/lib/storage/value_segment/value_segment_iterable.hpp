@@ -31,12 +31,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     if (_segment.is_nullable()) {
       auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), position_filter.cbegin(),
-                                       position_filter.cend()};
+                                       position_filter.cbegin()};
       auto end = PointAccessIterator{_segment.values(), _segment.null_values(), position_filter.cbegin(),
                                      position_filter.cend()};
       functor(begin, end);
     } else {
-      auto begin = NonNullPointAccessIterator{_segment.values(), position_filter.cbegin(), position_filter.cend()};
+      auto begin = NonNullPointAccessIterator{_segment.values(), position_filter.cbegin(), position_filter.cbegin()};
       auto end = NonNullPointAccessIterator{_segment.values(), position_filter.cbegin(), position_filter.cend()};
       functor(begin, end);
     }

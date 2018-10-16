@@ -79,8 +79,6 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   const ChunkOffsetMapping chunk_offsets() const {
     DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
-    std::cout << "Returning {" << static_cast<ChunkOffset>(std::distance(_position_filter_begin, _position_filter_it))
-              << ", " << _position_filter_it->chunk_offset << "}" << std::endl;
     return {static_cast<ChunkOffset>(std::distance(_position_filter_begin, _position_filter_it)),
             _position_filter_it->chunk_offset};
   }

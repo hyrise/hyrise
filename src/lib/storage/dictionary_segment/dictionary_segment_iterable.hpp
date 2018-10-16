@@ -39,7 +39,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
       auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
-                                                      position_filter.cbegin(), position_filter.cend()};
+                                                      position_filter.cbegin(), position_filter.cbegin()};
       auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
                                                     position_filter.cbegin(), position_filter.cend()};
       functor(begin, end);
@@ -100,7 +100,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     PointAccessIterator(const Dictionary& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
-                                         SegmentIteratorValue<T>>{position_filter_begin, position_filter_it},
+                                         SegmentIteratorValue<T>>{std::move(position_filter_begin), std::move(position_filter_it)},
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
