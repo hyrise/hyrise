@@ -12,13 +12,11 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
-#include "utils/murmur_hash.hpp"
 #include "utils/uninitialized_vector.hpp"
 
 namespace opossum {
 
-// currently using 32bit Murmur
-using Hash = uint32_t;
+using Hash = size_t;
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -62,81 +60,10 @@ struct RadixContainer {
   std::vector<size_t> partition_offsets;
 };
 
-/*
-Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
-*/
-template <typename LeftType, typename HashedType>
-std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
-  /*
-  NUMA notes:
-  The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
-  */
-  std::vector<std::optional<HashTable<HashedType>>> hashtables;
-  hashtables.resize(radix_container.partition_offsets.size());
-
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(radix_container.partition_offsets.size());
-
-  for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
-       ++current_partition_id) {
-    const auto partition_left_begin =
-        current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
-    const auto partition_left_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
-    const auto partition_size = partition_left_end - partition_left_begin;
-
-    // Skip empty partitions, so that we don't have too many empty hash tables
-    if (partition_size == 0) {
-      continue;
-    }
-
-    jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id,
-                                                 partition_size]() {
-      auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
-
-      // Potentially oversizing the hash table when values are often repeated.
-      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.
-      auto hashtable = HashTable<HashedType>(partition_size);
-
-      for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
-        auto& element = partition_left[partition_offset];
-
-        if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-          // skip initialized PartionedElements that might be part of the materialization phase
-          continue;
-        }
-
-        auto [it, inserted] =  // NOLINT
-            hashtable.try_emplace(type_cast<HashedType>(std::move(element.value)), SmallPosList{element.row_id});
-        if (!inserted) {
-          // We already have the value in the map
-          it->second.emplace_back(element.row_id);
-        }
-      }
-
-      hashtables[current_partition_id] = std::move(hashtable);
-    }));
-    jobs.back()->schedule();
-  }
-
-  CurrentScheduler::wait_for_tasks(jobs);
-
-  return hashtables;
-}
-
-/*
-Hashes the given value into the HashedType that is defined by the current Hash Traits.
-Performs a lexical cast first, if necessary.
-*/
-template <typename OriginalType, typename HashedType>
-constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
-  return murmur2<HashedType>(type_cast<HashedType>(value), seed);
-}
-
 template <typename T, typename HashedType>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms,
-                                    const size_t radix_bits, const unsigned int partitioning_seed,
-                                    bool keep_nulls = false) {
+                                    const size_t radix_bits, bool keep_nulls = false) {
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
@@ -180,7 +107,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Hash hashed_value = std::hash<HashedType>{}(type_cast<HashedType>(value.value()));
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -234,6 +161,68 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
 
   return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}};
+}
+
+/*
+Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
+*/
+template <typename LeftType, typename HashedType>
+std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
+  /*
+  NUMA notes:
+  The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
+  */
+  std::vector<std::optional<HashTable<HashedType>>> hashtables;
+  hashtables.resize(radix_container.partition_offsets.size());
+
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  jobs.reserve(radix_container.partition_offsets.size());
+
+  for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
+       ++current_partition_id) {
+    const auto partition_left_begin =
+        current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_left_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
+    const auto partition_size = partition_left_end - partition_left_begin;
+
+    // Skip empty partitions, so that we don't have too many empty hash tables
+    if (partition_size == 0) {
+      continue;
+    }
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id,
+                                                 partition_size]() {
+      auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
+
+      // Potentially oversizing the hash table when values are often repeated.
+      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.
+      auto hashtable = HashTable<HashedType>(partition_size);
+
+      for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
+        auto& element = partition_left[partition_offset];
+
+        if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
+          // Skip initialized PartionedElements that might remain after materialization phase.
+          continue;
+        }
+
+        auto casted_value = type_cast<HashedType>(std::move(element.value));
+        auto it = hashtable.find(casted_value);
+        if (it != hashtable.end()) {
+          it->second.emplace_back(element.row_id);
+        } else {
+          hashtable.emplace(casted_value, SmallPosList{element.row_id});
+        }
+      }
+
+      hashtables[current_partition_id] = std::move(hashtable);
+    }));
+    jobs.back()->schedule();
+  }
+
+  CurrentScheduler::wait_for_tasks(jobs);
+
+  return hashtables;
 }
 
 template <typename T>
