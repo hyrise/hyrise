@@ -1245,12 +1245,14 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto actual_lqp = compile_query("SHOW TABLES");
   const auto expected_lqp = ShowTablesNode::make();
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
   const auto expected_lqp = ShowColumnsNode::make("int_float");
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
