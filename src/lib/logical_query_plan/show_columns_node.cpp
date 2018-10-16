@@ -19,9 +19,9 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ShowColumnsNode::column_
   if (!_column_expressions) {
     _column_expressions.emplace();
     // column_name, column_type, is_nullable
-    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{0}}));
-    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{1}}));
-    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{2}}));
+    _column_expressions->emplace_back(lqp_column_(LQPColumnReference{shared_from_this(), ColumnID{0}}));
+    _column_expressions->emplace_back(lqp_column_(LQPColumnReference{shared_from_this(), ColumnID{1}}));
+    _column_expressions->emplace_back(lqp_column_(LQPColumnReference{shared_from_this(), ColumnID{2}}));
   }
 
   return *_column_expressions;
