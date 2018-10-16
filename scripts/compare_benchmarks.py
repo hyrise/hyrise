@@ -55,7 +55,10 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 	if old['name'] != new['name']:
 		print("Benchmark name mismatch")
 		exit()
-	diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
+	if float(old['items_per_second']) - 1 > 0.0:
+		diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
+	else:
+		diff = float('nan')
 	average_diff_sum += diff
 	diff_formatted = format_diff(diff)
 
