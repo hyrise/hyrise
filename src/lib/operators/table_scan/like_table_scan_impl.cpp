@@ -33,7 +33,7 @@ void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
   auto& left_segment = static_cast<const ValueSegment<std::string>&>(base_segment);
   auto left_iterable = ValueSegmentIterable<std::string>{left_segment};
 
-  _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
+  _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets);
 }
 
 void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
@@ -45,7 +45,7 @@ void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
 
   resolve_encoded_segment_type<std::string>(base_segment, [&](const auto& typed_segment) {
     auto left_iterable = create_iterable_from_segment(typed_segment);
-    _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
+    _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets);
   });
 }
 
@@ -73,7 +73,7 @@ void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment
 
   // LIKE matches all rows
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    attribute_vector_iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
@@ -88,14 +88,14 @@ void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment
 
   const auto dictionary_lookup = [&dictionary_matches](const ValueID& value) { return dictionary_matches[value]; };
 
-  attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+  attribute_vector_iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
     this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
   });
 }
 
 template <typename Iterable>
 void LikeTableScanImpl::_scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
-                                       const ChunkOffsetsList* const mapped_chunk_offsets) {
+                                       const std::unique_ptr<ChunkOffsetsList>& mapped_chunk_offsets) {
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
     iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
       this->_unary_scan(matcher, left_it, left_end, chunk_id, matches_out);

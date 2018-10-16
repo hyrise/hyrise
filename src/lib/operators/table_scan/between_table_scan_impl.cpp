@@ -41,7 +41,7 @@ void BetweenTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
 
     auto left_segment_iterable = create_iterable_from_segment(left_segment);
 
-    left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    left_segment_iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
       _between_scan_with_value<true>(left_it, left_end, type_cast<ColumnDataType>(_left_value),
                                      type_cast<ColumnDataType>(_right_value), chunk_id, matches_out);
     });
@@ -63,7 +63,7 @@ void BetweenTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment
     resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {
       auto left_segment_iterable = create_iterable_from_segment(typed_segment);
 
-      left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+      left_segment_iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
         _between_scan_with_value<true>(left_it, left_end, type_cast<Type>(_left_value), type_cast<Type>(_right_value),
                                        chunk_id, matches_out);
       });
@@ -86,7 +86,7 @@ void BetweenTableScanImpl::handle_segment(const BaseDictionarySegment& base_segm
   if (left_value_id == ValueID{0} &&  // NOLINT
       right_value_id == static_cast<ValueID>(base_segment.unique_values_count())) {
     // all values match
-    column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    column_iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
@@ -99,7 +99,7 @@ void BetweenTableScanImpl::handle_segment(const BaseDictionarySegment& base_segm
     return;
   }
 
-  column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+  column_iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
     this->_between_scan_with_value<false>(left_it, left_end, left_value_id, right_value_id, chunk_id, matches_out);
   });
 }

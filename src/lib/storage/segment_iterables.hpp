@@ -148,7 +148,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
-  void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
+  void with_iterators(const std::unique_ptr<ChunkOffsetsList>& mapped_chunk_offsets, const Functor& functor) const {
     if (mapped_chunk_offsets == nullptr) {
       _self()._on_with_iterators(functor);
     } else {
@@ -159,7 +159,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
-  void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
+  void for_each(const std::unique_ptr<ChunkOffsetsList>& mapped_chunk_offsets, const Functor& functor) const {
     with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
       for (; it != end; ++it) {
         functor(*it);

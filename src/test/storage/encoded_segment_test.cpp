@@ -69,27 +69,27 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  ChunkOffsetsList create_sequential_chunk_offsets_list() {
-    auto list = ChunkOffsetsList{};
+  std::unique_ptr<ChunkOffsetsList> create_sequential_chunk_offsets_list() {
+    auto list = std::make_unique<ChunkOffsetsList>();
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
     for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
       if (bernoulli_dist(engine)) {
-        list.push_back({into_referencing++, into_referenced});
+        list->push_back({into_referencing++, into_referenced});
       }
     }
 
     return list;
   }
 
-  ChunkOffsetsList create_random_access_chunk_offsets_list() {
+  std::unique_ptr<ChunkOffsetsList> create_random_access_chunk_offsets_list() {
     auto list = create_sequential_chunk_offsets_list();
 
     auto random_device = std::random_device{};
     std::default_random_engine engine{random_device()};
-    std::shuffle(list.begin(), list.end(), engine);
+    std::shuffle(list->begin(), list->end(), engine);
 
     return list;
   }
@@ -192,9 +192,9 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
+    value_segment_iterable.with_iterators(chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(
-          &chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+          chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
             for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
               EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
@@ -219,9 +219,9 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
+    value_segment_iterable.with_iterators(chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(
-          &chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+          chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
             for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
               EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 

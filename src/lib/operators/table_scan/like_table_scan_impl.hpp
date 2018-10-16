@@ -52,7 +52,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    */
   template <typename Iterable>
   void _scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
-                      const ChunkOffsetsList* const mapped_chunk_offsets);
+                      const std::unique_ptr<ChunkOffsetsList>& mapped_chunk_offsets);
 
   /**
    * Used for dictionary segments
