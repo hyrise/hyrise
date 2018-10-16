@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "bytell_hash_map.hpp"
-#include "join_hash/hash_traits.hpp"
 #include "join_hash/hash_functions.hpp"
+#include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -20,7 +20,6 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
-
 
 namespace opossum {
 
@@ -255,8 +254,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // materialize left table
-      materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
-                                                                  _radix_bits);
+      materialized_left =
+          materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left, _radix_bits);
 
       if (_radix_bits > 0) {
         // radix partition the left table
@@ -275,8 +274,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // Materialize right table. 'keep_nulls' makes sure that the relation on
       // the right materializes NULL values when executing an OUTER join.
-      materialized_right = materialize_input<RightType, HashedType>(
-          right_in_table, _column_ids.second, histograms_right, _radix_bits, keep_nulls);
+      materialized_right = materialize_input<RightType, HashedType>(right_in_table, _column_ids.second,
+                                                                    histograms_right, _radix_bits, keep_nulls);
 
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the

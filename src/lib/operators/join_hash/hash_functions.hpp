@@ -3,6 +3,7 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include "bytell_hash_map.hpp"
 #include "hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -43,16 +44,23 @@ using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninit
 // smaller side.
 using SmallPosList = boost::container::small_vector<RowID, 1>;
 
+// In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
+// with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
 template <typename T>
-using HashTable = std::unordered_map<T, SmallPosList>;
+using HashTable = ska::bytell_hash_map<T, SmallPosList>;
 
 /*
-This struct used in two phases:
+This struct contains radix-partitioned data in a contiguous buffer, as well as a list of offsets for each partition.
+The offsets denote the accumulated sizes (we cannot use the last element's position because we could not recognize
+empty first containers).
+
+This struct is used in two phases:
   - the result of the materialization phase, at this time partitioned by chunks
-  TODO
-This struct contains radix-partitioned data in a contiguous buffer, as well as a list of
-offsets for each partition. The offsets denote the accumulated sizes.
-We cannot use the last element's position because we could not recognize empty first containers.
+    as we parallelize the materialization phase via chunks
+  - the result of the radix clustering phase
+
+As the radix clustering might be skipped (when radix_bits == 0), both the materialization as well as the radix
+clustering methods yield RadixContainers.
 */
 template <typename T>
 struct RadixContainer {
@@ -62,8 +70,8 @@ struct RadixContainer {
 
 template <typename T, typename HashedType>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms,
-                                    const size_t radix_bits, bool keep_nulls = false) {
+                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                    bool keep_nulls = false) {
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
@@ -194,9 +202,8 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
                                                  partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
-      // Potentially oversizing the hash table when values are often repeated.
-      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.
-      auto hashtable = HashTable<HashedType>(partition_size);
+      // slightly oversize the hash table to avoid unnecessary rebuilds
+      auto hashtable = HashTable<HashedType>(static_cast<size_t>(partition_size * 1.2));
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         auto& element = partition_left[partition_offset];
@@ -230,9 +237,9 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                            bool keep_nulls = false) {
-  // materialized items
-  // TODO: left here from merge ...
-  const std::shared_ptr<Partition<T>>& materialized = radix_container.elements;
+  // materialized items of radix container
+  const Partition<T>& container_elements = *radix_container.elements;
+
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
 
@@ -242,7 +249,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   // allocate new (shared) output
   auto output = std::make_shared<Partition<T>>();
-  output->resize(materialized->size());
+  output->resize(container_elements.size());
 
   auto& offsets = static_cast<std::vector<size_t>&>(*chunk_offsets);
 
@@ -273,12 +280,12 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
       if (chunk_id < offsets.size() - 1) {
         input_size = offsets[chunk_id + 1] - input_offset;
       } else {
-        input_size = materialized->size() - input_offset;
+        input_size = container_elements.size() - input_offset;
       }
 
       auto& out = static_cast<Partition<T>&>(*output);
       for (size_t chunk_offset = input_offset; chunk_offset < input_offset + input_size; ++chunk_offset) {
-        auto& element = (*materialized)[chunk_offset];
+        auto& element = container_elements[chunk_offset];
 
         if (!keep_nulls && element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
           continue;
@@ -497,8 +504,8 @@ inline PosListsBySegment setup_pos_lists_by_segment(const std::shared_ptr<const 
 }
 
 inline void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                           const PosListsBySegment& input_pos_list_ptrs_sptrs_by_segments,
-                           std::shared_ptr<PosList> pos_list) {
+                                  const PosListsBySegment& input_pos_list_ptrs_sptrs_by_segments,
+                                  std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop

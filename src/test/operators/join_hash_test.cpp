@@ -1,15 +1,12 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-// #include "operators/join_hash.cpp"  // to access free functions build() etc.
 #include "operators/join_hash.hpp"
 #include "operators/join_hash/hash_functions.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
-
-#include <chrono>
 
 namespace opossum {
 
@@ -43,11 +40,11 @@ class JoinHashTest : public BaseTest {
     _table_with_nulls->execute();
 
     // filters retains all rows
-    _table_tpch_orders_scanned =
-        std::make_shared<TableScan>(_table_tpch_orders, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
+    _table_tpch_orders_scanned = std::make_shared<TableScan>(
+        _table_tpch_orders, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
     _table_tpch_orders_scanned->execute();
-    _table_tpch_lineitems_scanned =
-        std::make_shared<TableScan>(_table_tpch_lineitems, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
+    _table_tpch_lineitems_scanned = std::make_shared<TableScan>(
+        _table_tpch_lineitems, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
     _table_tpch_lineitems_scanned->execute();
   }
 
@@ -55,7 +52,8 @@ class JoinHashTest : public BaseTest {
 
   static size_t _table_size_zero_one;
   static std::shared_ptr<Table> _table_zero_one;
-  static std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems, _table_with_nulls;
+  static std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems,
+      _table_with_nulls;
   static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
 
   // Accumulates the RowIDs hidden behind the iterator element (hash map stores PosLists, not RowIDs)
@@ -71,7 +69,8 @@ class JoinHashTest : public BaseTest {
 
 size_t JoinHashTest::_table_size_zero_one = 0;
 std::shared_ptr<Table> JoinHashTest::_table_zero_one = NULL;
-std::shared_ptr<TableWrapper> JoinHashTest::_table_wrapper_small, JoinHashTest::_table_tpch_orders, JoinHashTest::_table_tpch_lineitems, JoinHashTest::_table_with_nulls = NULL;
+std::shared_ptr<TableWrapper> JoinHashTest::_table_wrapper_small, JoinHashTest::_table_tpch_orders,
+    JoinHashTest::_table_tpch_lineitems, JoinHashTest::_table_with_nulls = NULL;
 std::shared_ptr<TableScan> JoinHashTest::_table_tpch_orders_scanned, JoinHashTest::_table_tpch_lineitems_scanned = NULL;
 
 TEST_F(JoinHashTest, OperatorName) {
@@ -128,13 +127,14 @@ TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
   EXPECT_EQ(hash_map_without_nulls.size(), pow(2, radix_bit_count));
 
   // get count of non-NULL values in table
-  auto table_without_nulls_scanned =
-      std::make_shared<TableScan>(_table_with_nulls, OperatorScanPredicate{ColumnID{0}, PredicateCondition::IsNotNull, 0});
+  auto table_without_nulls_scanned = std::make_shared<TableScan>(
+      _table_with_nulls, OperatorScanPredicate{ColumnID{0}, PredicateCondition::IsNotNull, 0});
   table_without_nulls_scanned->execute();
 
   // now that build removed the unneeded init values, map sizes should differ
-  EXPECT_EQ(this->get_row_count(hash_map_without_nulls.at(0).value().begin(), hash_map_without_nulls.at(0).value().end()),
-    table_without_nulls_scanned->get_output()->row_count());
+  EXPECT_EQ(
+      this->get_row_count(hash_map_without_nulls.at(0).value().begin(), hash_map_without_nulls.at(0).value().end()),
+      table_without_nulls_scanned->get_output()->row_count());
 }
 
 TEST_F(JoinHashTest, MaterializeInputHistograms) {
