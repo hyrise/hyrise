@@ -194,6 +194,8 @@ enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNu
 
 enum class TableType { References, Data };
 
+enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
+
 enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };

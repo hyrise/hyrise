@@ -216,6 +216,8 @@ set(
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
+    operators/table_scan/between_table_scan_impl.cpp
+    operators/table_scan/between_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
@@ -250,10 +252,12 @@ set(
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/constant_calculation_rule.cpp
+    optimizer/strategy/constant_calculation_rule.hpp
+    optimizer/strategy/exists_reformulation_rule.cpp
+    optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
@@ -338,6 +342,16 @@ set(
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/histograms/abstract_histogram.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.hpp
+    statistics/chunk_statistics/histograms/histogram_utils.cpp
+    statistics/chunk_statistics/histograms/histogram_utils.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
@@ -373,6 +387,7 @@ set(
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment/dictionary_encoder.hpp
     storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp
     storage/fixed_string_dictionary_segment.hpp
@@ -509,8 +524,6 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
-    utils/murmur_hash.cpp
-    utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp

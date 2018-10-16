@@ -2,6 +2,10 @@
 
 #include <string>
 
+#include "expression/expression_functional.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
+
 namespace opossum {
 
 ShowColumnsNode::ShowColumnsNode(const std::string& table_name)
@@ -10,6 +14,18 @@ ShowColumnsNode::ShowColumnsNode(const std::string& table_name)
 std::string ShowColumnsNode::description() const { return "[ShowColumns] Table: '" + _table_name + "'"; }
 
 const std::string& ShowColumnsNode::table_name() const { return _table_name; }
+
+const std::vector<std::shared_ptr<AbstractExpression>>& ShowColumnsNode::column_expressions() const {
+  if (!_column_expressions) {
+    _column_expressions.emplace();
+    // column_name, column_type, is_nullable
+    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{0}}));
+    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{1}}));
+    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{2}}));
+  }
+
+  return *_column_expressions;
+}
 
 std::shared_ptr<AbstractLQPNode> ShowColumnsNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return ShowColumnsNode::make(_table_name);
