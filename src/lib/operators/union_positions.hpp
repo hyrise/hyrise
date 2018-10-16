@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "operators/abstract_read_only_operator.hpp"
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 
