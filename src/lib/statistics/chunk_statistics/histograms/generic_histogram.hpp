@@ -51,17 +51,18 @@ class GenericHistogram : public AbstractHistogram<T> {
   HistogramCountType total_count() const override;
 
   BinID bin_count() const override;
+
+  T bin_minimum(const BinID index) const override;
+  T bin_maximum(const BinID index) const override;
+  HistogramCountType bin_height(const BinID index) const override;
+  HistogramCountType bin_distinct_count(const BinID index) const override;
+
   std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
 
  protected:
   BinID _bin_for_value(const T& value) const override;
 
   BinID _next_bin_for_value(const T& value) const override;
-  T _bin_minimum(const BinID index) const override;
-  T _bin_maximum(const BinID index) const override;
-  HistogramCountType _bin_height(const BinID index) const override;
-
-  HistogramCountType _bin_distinct_count(const BinID index) const override;
 
  private:
   const GenericBinData<T> _bin_data;

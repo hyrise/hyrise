@@ -94,7 +94,7 @@ BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
   const auto it = std::lower_bound(_bin_data.bin_maxima.cbegin(), _bin_data.bin_maxima.cend(), value);
   const auto index = static_cast<BinID>(std::distance(_bin_data.bin_maxima.cbegin(), it));
 
-  if (it == _bin_data.bin_maxima.cend() || value < _bin_minimum(index) || value > _bin_maximum(index)) {
+  if (it == _bin_data.bin_maxima.cend() || value < bin_minimum(index) || value > bin_maximum(index)) {
     return INVALID_BIN_ID;
   }
 
@@ -113,25 +113,25 @@ BinID GenericHistogram<T>::_next_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-T GenericHistogram<T>::_bin_minimum(const BinID index) const {
+T GenericHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < _bin_data.bin_minima.size(), "Index is not a valid bin.");
   return _bin_data.bin_minima[index];
 }
 
 template <typename T>
-T GenericHistogram<T>::_bin_maximum(const BinID index) const {
+T GenericHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_data.bin_maxima.size(), "Index is not a valid bin.");
   return _bin_data.bin_maxima[index];
 }
 
 template <typename T>
-HistogramCountType GenericHistogram<T>::_bin_height(const BinID index) const {
+HistogramCountType GenericHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < _bin_data.bin_heights.size(), "Index is not a valid bin.");
   return _bin_data.bin_heights[index];
 }
 
 template <typename T>
-HistogramCountType GenericHistogram<T>::_bin_distinct_count(const BinID index) const {
+HistogramCountType GenericHistogram<T>::bin_distinct_count(const BinID index) const {
   DebugAssert(index < _bin_data.bin_distinct_counts.size(), "Index is not a valid bin.");
   return _bin_data.bin_distinct_counts[index];
 }

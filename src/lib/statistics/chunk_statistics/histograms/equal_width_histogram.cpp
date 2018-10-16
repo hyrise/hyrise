@@ -160,7 +160,7 @@ BinID EqualWidthHistogram<T>::bin_count() const {
 }
 
 template <typename T>
-HistogramCountType EqualWidthHistogram<T>::_bin_height(const BinID index) const {
+HistogramCountType EqualWidthHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < _bin_data.bin_heights.size(), "Index is not a valid bin.");
   return _bin_data.bin_heights[index];
 }
@@ -177,7 +177,7 @@ HistogramCountType EqualWidthHistogram<T>::total_distinct_count() const {
 }
 
 template <typename T>
-HistogramCountType EqualWidthHistogram<T>::_bin_distinct_count(const BinID index) const {
+HistogramCountType EqualWidthHistogram<T>::bin_distinct_count(const BinID index) const {
   DebugAssert(index < _bin_data.bin_distinct_counts.size(), "Index is not a valid bin.");
   return _bin_data.bin_distinct_counts[index];
 }
@@ -203,7 +203,7 @@ AbstractHistogram<std::string>::HistogramWidthType EqualWidthHistogram<std::stri
 }
 
 template <typename T>
-T EqualWidthHistogram<T>::_bin_minimum(const BinID index) const {
+T EqualWidthHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   // If it's the first bin, return _minimum.
@@ -212,11 +212,11 @@ T EqualWidthHistogram<T>::_bin_minimum(const BinID index) const {
   }
 
   // Otherwise, return the next representable value of the previous bin's max.
-  return this->_get_next_value(_bin_maximum(index - 1));
+  return this->_get_next_value(bin_maximum(index - 1));
 }
 
 template <typename T>
-T EqualWidthHistogram<T>::_bin_maximum(const BinID index) const {
+T EqualWidthHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   // If it's the last bin, return max.
@@ -256,12 +256,12 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
 
     BinID bin_id;
     if (_bin_data.bin_count_with_larger_range == 0u ||
-        value <= _bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
+        value <= bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
       const auto repr_min = this->_convert_string_to_number_representation(_bin_data.minimum);
       bin_id = (num_value - repr_min) / this->_bin_width(0u);
     } else {
       const auto num_base_min =
-          this->_convert_string_to_number_representation(_bin_minimum(_bin_data.bin_count_with_larger_range));
+          this->_convert_string_to_number_representation(bin_minimum(_bin_data.bin_count_with_larger_range));
       bin_id = _bin_data.bin_count_with_larger_range +
                (num_value - num_base_min) / this->_bin_width(_bin_data.bin_count_with_larger_range);
     }
@@ -272,7 +272,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     // The exception is if this is the last bin, then it is actually part of the last bin,
     // because that edge is stored separately and therefore not trimmed to the prefix length.
     // We checked earlier that it is not larger than maximum().
-    if (value.length() > this->_string_prefix_length && value.find(_bin_maximum(bin_id)) == 0 &&
+    if (value.length() > this->_string_prefix_length && value.find(bin_maximum(bin_id)) == 0 &&
         bin_id < bin_count() - 1) {
       return bin_id + 1;
     }
@@ -280,13 +280,13 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     return bin_id;
   } else {
     if (_bin_data.bin_count_with_larger_range == 0u ||
-        value <= _bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
+        value <= bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
       // All bins up to that point have the exact same width, so we can use index 0.
       return (value - _bin_data.minimum) / _bin_width(0u);
     }
 
     // All bins after that point have the exact same width as well, so we use that as the new base and add it up.
-    return _bin_data.bin_count_with_larger_range + (value - _bin_minimum(_bin_data.bin_count_with_larger_range)) /
+    return _bin_data.bin_count_with_larger_range + (value - bin_minimum(_bin_data.bin_count_with_larger_range)) /
                                                        _bin_width(_bin_data.bin_count_with_larger_range);
   }
 }

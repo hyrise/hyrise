@@ -176,7 +176,7 @@ BinID EqualHeightHistogram<T>::_next_bin_for_value(const T& value) const {
 }
 
 template <typename T>
-T EqualHeightHistogram<T>::_bin_minimum(const BinID index) const {
+T EqualHeightHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   // If it's the first bin, return _minimum.
@@ -185,23 +185,23 @@ T EqualHeightHistogram<T>::_bin_minimum(const BinID index) const {
   }
 
   // Otherwise, return the next representable value of the previous bin's max.
-  return this->_get_next_value(_bin_maximum(index - 1));
+  return this->_get_next_value(bin_maximum(index - 1));
 }
 
 template <typename T>
-T EqualHeightHistogram<T>::_bin_maximum(const BinID index) const {
+T EqualHeightHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_data.bin_maxima.size(), "Index is not a valid bin.");
   return _bin_data.bin_maxima[index];
 }
 
 template <typename T>
-HistogramCountType EqualHeightHistogram<T>::_bin_height(const BinID index) const {
+HistogramCountType EqualHeightHistogram<T>::bin_height(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
   return total_count() / bin_count() + (total_count() % bin_count() > 0 ? 1 : 0);
 }
 
 template <typename T>
-HistogramCountType EqualHeightHistogram<T>::_bin_distinct_count(const BinID index) const {
+HistogramCountType EqualHeightHistogram<T>::bin_distinct_count(const BinID index) const {
   DebugAssert(index < _bin_data.bin_distinct_counts.size(), "Index is not a valid bin.");
   return _bin_data.bin_distinct_counts[index];
 }

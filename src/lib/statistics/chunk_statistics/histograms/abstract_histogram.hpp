@@ -137,22 +137,22 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * Returns the smallest value in the bin.
    */
-  virtual T _bin_minimum(const BinID index) const = 0;
+  virtual T bin_minimum(const BinID index) const = 0;
 
   /**
    * Returns the largest value in a bin.
    */
-  virtual T _bin_maximum(const BinID index) const = 0;
+  virtual T bin_maximum(const BinID index) const = 0;
 
   /**
    * Returns the number of values in a bin.
    */
-  virtual HistogramCountType _bin_height(const BinID index) const = 0;
+  virtual HistogramCountType bin_height(const BinID index) const = 0;
 
   /**
    * Returns the number of distinct values in a bin.
    */
-  virtual HistogramCountType _bin_distinct_count(const BinID index) const = 0;
+  virtual HistogramCountType bin_distinct_count(const BinID index) const = 0;
 
  protected:
   /**

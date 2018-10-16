@@ -344,6 +344,7 @@ set(
     statistics/cardinality.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
+    statistics/cardinality_estimator.ipp
     statistics/chunk_statistics2.cpp
     statistics/chunk_statistics2.hpp
     statistics/chunk_statistics/chunk_statistics.cpp

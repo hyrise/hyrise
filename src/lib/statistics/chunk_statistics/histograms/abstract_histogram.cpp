@@ -53,8 +53,8 @@ std::string AbstractHistogram<T>::description() const {
 
   stream << "  edges / counts " << std::endl;
   for (BinID bin = 0u; bin < bin_count(); bin++) {
-    stream << "              [" << _bin_minimum(bin) << ", " << _bin_maximum(bin) << "]: ";
-    stream << _bin_height(bin) << std::endl;
+    stream << "              [" << bin_minimum(bin) << ", " << bin_maximum(bin) << "]: ";
+    stream << bin_height(bin) << std::endl;
   }
 
   return stream.str();
@@ -80,12 +80,12 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
 
 template <typename T>
 T AbstractHistogram<T>::minimum() const {
-  return _bin_minimum(0u);
+  return bin_minimum(0u);
 }
 
 template <typename T>
 T AbstractHistogram<T>::maximum() const {
-  return _bin_maximum(bin_count() - 1u);
+  return bin_maximum(bin_count() - 1u);
 }
 
 template <>
@@ -101,15 +101,15 @@ std::string AbstractHistogram<std::string>::_convert_number_representation_to_st
 template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::_bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
-  return _get_next_value(_bin_maximum(index) - _bin_minimum(index));
+  return _get_next_value(bin_maximum(index) - bin_minimum(index));
 }
 
 template <>
 AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto repr_min = _convert_string_to_number_representation(_bin_minimum(index));
-  const auto repr_max = _convert_string_to_number_representation(_bin_maximum(index));
+  const auto repr_min = _convert_string_to_number_representation(bin_minimum(index));
+  const auto repr_max = _convert_string_to_number_representation(bin_maximum(index));
   return repr_max - repr_min + 1u;
 }
 
@@ -155,10 +155,10 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
+    return static_cast<float>(value - bin_minimum(bin_id)) / _bin_width(bin_id);
   } else {
-    const auto bin_min = _bin_minimum(bin_id);
-    const auto bin_max = _bin_maximum(bin_id);
+    const auto bin_min = bin_minimum(bin_id);
+    const auto bin_max = bin_maximum(bin_id);
     const auto common_prefix_len = common_prefix_length(bin_min, bin_max);
 
     DebugAssert(value.substr(0, common_prefix_len) == bin_min.substr(0, common_prefix_len),
@@ -181,7 +181,7 @@ bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_
     case PredicateCondition::Equals: {
       const auto bin_id = _bin_for_value(value);
       // It is possible for EqualWidthHistograms to have empty bins.
-      return bin_id == INVALID_BIN_ID || _bin_height(bin_id) == 0ul;
+      return bin_id == INVALID_BIN_ID || bin_height(bin_id) == 0ul;
     }
     case PredicateCondition::NotEquals:
       return minimum() == value && maximum() == value;
@@ -217,10 +217,10 @@ bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_
 
       // In an EqualWidthHistogram, if both values fall into a bin that has no elements,
       // and there are either no bins in between or none of them have any elements, we can also prune the predicate.
-      if (value_bin != INVALID_BIN_ID && value2_bin != INVALID_BIN_ID && _bin_height(value_bin) == 0 &&
-          _bin_height(value2_bin) == 0) {
+      if (value_bin != INVALID_BIN_ID && value2_bin != INVALID_BIN_ID && bin_height(value_bin) == 0 &&
+          bin_height(value2_bin) == 0) {
         for (auto current_bin = value_bin + 1; current_bin < value2_bin; current_bin++) {
-          if (_bin_height(current_bin) > 0ul) {
+          if (bin_height(current_bin) > 0ul) {
             return false;
           }
         }
@@ -319,7 +319,7 @@ bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition p
           // but is the next value after it.
           if (search_prefix_next_value_bin != INVALID_BIN_ID &&
               search_prefix_next_bin == search_prefix_next_value_bin &&
-              _bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value) {
+              bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value) {
             return true;
           }
         }
@@ -329,11 +329,11 @@ bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition p
         // If the count of search_prefix_next_value_bin is not 0 but search_prefix_next_value is the lower bin edge,
         // we can still prune, because search_prefix_next_value is not part of the range (same as above).
         if (search_prefix_bin != INVALID_BIN_ID && search_prefix_next_value_bin != INVALID_BIN_ID &&
-            _bin_height(search_prefix_bin) == 0u &&
-            (_bin_height(search_prefix_next_value_bin) == 0u ||
-             _bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value)) {
+            bin_height(search_prefix_bin) == 0u &&
+            (bin_height(search_prefix_next_value_bin) == 0u ||
+             bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value)) {
           for (auto current_bin = search_prefix_bin + 1; current_bin < search_prefix_next_value_bin; current_bin++) {
-            if (_bin_height(current_bin) > 0u) {
+            if (bin_height(current_bin) > 0u) {
               return false;
             }
           }
@@ -397,12 +397,12 @@ std::pair<float, bool> AbstractHistogram<T>::_estimate_cardinality(
   switch (predicate_type) {
     case PredicateCondition::Equals: {
       const auto index = _bin_for_value(value);
-      const auto bin_count_distinct = _bin_distinct_count(index);
+      const auto bin_count_distinct = bin_distinct_count(index);
 
       // This should never be false because does_not_contain should have been true further up if this was the case.
       DebugAssert(bin_count_distinct > 0u, "0 distinct values in bin.");
 
-      return {static_cast<float>(_bin_height(index)) / static_cast<float>(bin_count_distinct),
+      return {static_cast<float>(bin_height(index)) / static_cast<float>(bin_count_distinct),
               bin_count_distinct == 1u ? true : false};
     }
     case PredicateCondition::NotEquals: {
@@ -428,12 +428,12 @@ std::pair<float, bool> AbstractHistogram<T>::_estimate_cardinality(
         index = _next_bin_for_value(value);
         estimate_is_certain = true;
       } else {
-        cardinality += _share_of_bin_less_than_value(index, value) * _bin_height(index);
+        cardinality += _share_of_bin_less_than_value(index, value) * bin_height(index);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.
       for (BinID bin = 0u; bin < index; bin++) {
-        cardinality += _bin_height(bin);
+        cardinality += bin_height(bin);
       }
 
       /**
@@ -657,7 +657,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       const auto value_bin_id = _bin_for_value(value);
 
       // Do not create empty bin.
-      const auto new_bin_count = _bin_distinct_count(value_bin_id) == 1u ? bin_count() - 1 : bin_count();
+      const auto new_bin_count = bin_distinct_count(value_bin_id) == 1u ? bin_count() - 1 : bin_count();
 
       bin_minima.resize(new_bin_count);
       bin_maxima.resize(new_bin_count);
@@ -668,11 +668,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         // TODO(anyone) we currently do not manipulate the bin bounds if `variant_value` equals such a bound. We would
         //              expect the accuracy improvement to be minimal, if we did. Also, this would be hard to do for
         //              strings.
-        bin_minima[bin_id] = _bin_minimum(bin_id);
-        bin_maxima[bin_id] = _bin_maximum(bin_id);
+        bin_minima[bin_id] = bin_minimum(bin_id);
+        bin_maxima[bin_id] = bin_maximum(bin_id);
 
         if (bin_id == value_bin_id) {
-          const auto distinct_count = _bin_distinct_count(bin_id);
+          const auto distinct_count = bin_distinct_count(bin_id);
 
           // Do not create empty bin.
           if (distinct_count == 1) {
@@ -682,11 +682,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
           const auto value_count =
               estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first;
 
-          bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_height(bin_id) - value_count));
+          bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(bin_height(bin_id) - value_count));
           bin_distinct_counts[bin_id] = distinct_count - 1;
         } else {
-          bin_heights[bin_id] = _bin_height(bin_id);
-          bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
+          bin_heights[bin_id] = bin_height(bin_id);
+          bin_distinct_counts[bin_id] = bin_distinct_count(bin_id);
         }
       }
     } break;
@@ -707,7 +707,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         } else {
           sliced_bin_count = next_bin_for_value;
         }
-      } else if (predicate_type == PredicateCondition::LessThan && value == _bin_minimum(bin_for_value)) {
+      } else if (predicate_type == PredicateCondition::LessThan && value == bin_minimum(bin_for_value)) {
         // If the predicate is LessThan and the value is the lower edge of a bin, we do not need to include that bin.
         sliced_bin_count = bin_for_value;
       } else {
@@ -724,9 +724,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       // If value is not in a gap, calculate the share of the last bin to slice, and write it to back of the vectors.
       // Otherwise take the whole bin later.
       auto last_sliced_bin_id = sliced_bin_count;
-      if (value < _bin_maximum(last_sliced_bin_id - 1)) {
+      if (value < bin_maximum(last_sliced_bin_id - 1)) {
         last_sliced_bin_id--;
-        bin_minima.back() = _bin_minimum(last_sliced_bin_id);
+        bin_minima.back() = bin_minimum(last_sliced_bin_id);
         // TODO(anyone): this could be previous_value(value) for LessThan, but this is not available for strings
         // and we do not expect it to make a big difference.
         bin_maxima.back() = value;
@@ -734,16 +734,16 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         const auto less_than_bound = predicate_type == PredicateCondition::LessThan ? value : _get_next_value(value);
         const auto sliced_bin_share = _share_of_bin_less_than_value(last_sliced_bin_id, less_than_bound);
         bin_heights.back() =
-            static_cast<HistogramCountType>(std::ceil(_bin_height(last_sliced_bin_id) * sliced_bin_share));
+            static_cast<HistogramCountType>(std::ceil(bin_height(last_sliced_bin_id) * sliced_bin_share));
         bin_distinct_counts.back() =
-            static_cast<HistogramCountType>(std::ceil(_bin_distinct_count(last_sliced_bin_id) * sliced_bin_share));
+            static_cast<HistogramCountType>(std::ceil(bin_distinct_count(last_sliced_bin_id) * sliced_bin_share));
       }
 
       for (auto bin_id = BinID{0}; bin_id < last_sliced_bin_id; ++bin_id) {
-        bin_minima[bin_id] = _bin_minimum(bin_id);
-        bin_maxima[bin_id] = _bin_maximum(bin_id);
-        bin_heights[bin_id] = _bin_height(bin_id);
-        bin_distinct_counts[bin_id] = _bin_distinct_count(bin_id);
+        bin_minima[bin_id] = bin_minimum(bin_id);
+        bin_maxima[bin_id] = bin_maximum(bin_id);
+        bin_heights[bin_id] = bin_height(bin_id);
+        bin_distinct_counts[bin_id] = bin_distinct_count(bin_id);
       }
     } break;
 
@@ -765,7 +765,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         } else {
           sliced_bin_count = bin_count() - next_bin_for_value;
         }
-      } else if (predicate_type == PredicateCondition::GreaterThan && value == _bin_maximum(bin_for_value)) {
+      } else if (predicate_type == PredicateCondition::GreaterThan && value == bin_maximum(bin_for_value)) {
         // If the predicate is GreaterThan and the value is the upper edge of a bin, we do not need to include that bin.
         sliced_bin_count = bin_count() - bin_for_value - 1;
       } else {
@@ -781,32 +781,32 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_heights.resize(sliced_bin_count);
       bin_distinct_counts.resize(sliced_bin_count);
 
-      bin_maxima.front() = _bin_maximum(first_sliced_bin_id);
+      bin_maxima.front() = bin_maximum(first_sliced_bin_id);
 
       // If value is not in a gap, calculate the share of the bin to slice. Otherwise take the whole bin.
-      if (value > _bin_minimum(first_sliced_bin_id)) {
+      if (value > bin_minimum(first_sliced_bin_id)) {
         bin_minima.front() = predicate_type == PredicateCondition::GreaterThan ? _get_next_value(value) : value;
 
         // For GreaterThan, `_get_previous_value(value)` would be more correct, but we don't have that for strings
         const auto sliced_bin_share = 1.0f - _share_of_bin_less_than_value(first_sliced_bin_id, value);
 
         bin_heights.front() =
-            static_cast<HistogramCountType>(std::ceil(_bin_height(first_sliced_bin_id) * sliced_bin_share));
+            static_cast<HistogramCountType>(std::ceil(bin_height(first_sliced_bin_id) * sliced_bin_share));
         bin_distinct_counts.front() =
-            static_cast<HistogramCountType>(std::ceil(_bin_distinct_count(first_sliced_bin_id) * sliced_bin_share));
+            static_cast<HistogramCountType>(std::ceil(bin_distinct_count(first_sliced_bin_id) * sliced_bin_share));
       } else {
-        bin_minima.front() = _bin_minimum(first_sliced_bin_id);
-        bin_heights.front() = _bin_height(first_sliced_bin_id);
-        bin_distinct_counts.front() = _bin_distinct_count(first_sliced_bin_id);
+        bin_minima.front() = bin_minimum(first_sliced_bin_id);
+        bin_heights.front() = bin_height(first_sliced_bin_id);
+        bin_distinct_counts.front() = bin_distinct_count(first_sliced_bin_id);
       }
 
       const auto first_complete_bin_id = BinID{bin_count() - sliced_bin_count + 1};
       for (auto bin_id = first_complete_bin_id; bin_id < bin_count(); ++bin_id) {
         const auto sliced_bin_id = bin_id - first_complete_bin_id + 1;
-        bin_minima[sliced_bin_id] = _bin_minimum(bin_id);
-        bin_maxima[sliced_bin_id] = _bin_maximum(bin_id);
-        bin_heights[sliced_bin_id] = _bin_height(bin_id);
-        bin_distinct_counts[sliced_bin_id] = _bin_distinct_count(bin_id);
+        bin_minima[sliced_bin_id] = bin_minimum(bin_id);
+        bin_maxima[sliced_bin_id] = bin_maximum(bin_id);
+        bin_heights[sliced_bin_id] = bin_height(bin_id);
+        bin_distinct_counts[sliced_bin_id] = bin_distinct_count(bin_id);
       }
     } break;
 
