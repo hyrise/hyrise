@@ -25,6 +25,9 @@ class PredicatePlacementRule : public AbstractRule {
                                   const LQPInputSide input_side,
                         std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes);
 
+  static std::vector<std::shared_ptr<PredicateNode>> _pull_up_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
+                                                                        const LQPInputSide input_side);
+
   // Insert a set of nodes below a node
   static void _insert_nodes(const std::shared_ptr<AbstractLQPNode>& node,
                                  const LQPInputSide input_side,

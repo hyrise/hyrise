@@ -19,10 +19,43 @@ bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   // traverse() requires the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
-  root_node->print();
-
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes);
+
+  // TODO(moritz) Handle multiple outputs
+  _pull_up_traversal(root_node, LQPInputSide::Left);
+
+//  std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>> search_stack;
+//  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited;
+//  search_stack.emplace_back(root_node, LQPInputSide::Left);
+//  visited.insert(root_node);
+//
+//  while (!search_stack.empty()) {
+//    const auto current_node = search_stack.back().first;
+//    const auto input_node = current_node->input(search_stack.back().second);
+//
+//    if (!input_node || visited.find(input_node) != visited.end()) {
+//      search_stack.pop_back();
+//      continue;
+//    }
+//
+//    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
+//        _is_expensive_predicate(predicate_node->predicate)) {
+//
+//      auto stack_iter = search_stack.rbegin();
+//      for (; stack_iter != search_stack.rend(); ++stack_iter) {
+//
+//      }
+//
+//    }
+//
+//    const auto input_node2 = current_node->input(search_stack.back().second);
+//
+//    if (input_node != input_node2) continue;
+//
+//    search_stack.emplace_back(input_node, LQPInputSide::Left);
+//    search_stack.emplace_back(input_node, LQPInputSide::Right);
+//  }
 
   // No easy way to tell whether the plan changed
   return false;
@@ -87,6 +120,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     } break;
 
     default: {
+      // All not explicitly handled node types are barriers and we do not push predicates past them.
       _insert_nodes(current_node, input_side, push_down_nodes);
 
       if (input_node->left_input()) {
@@ -99,6 +133,41 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       }
     }
   }
+}
+
+std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
+                                                                      const LQPInputSide input_side) {
+  if (!current_node) return {};
+  const auto input_node = current_node->input(input_side);
+  if (!input_node) return {};
+
+  auto candidate_nodes = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Left);
+  auto candidate_nodes_right = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
+  candidate_nodes.insert(candidate_nodes.end(), candidate_nodes_right.begin(), candidate_nodes_right.end());
+
+  if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
+  predicate_node && _is_expensive_predicate(predicate_node->predicate)) {
+
+    candidate_nodes.emplace_back(predicate_node);
+    lqp_remove_node(predicate_node);
+  }
+
+  auto pull_up_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+
+  switch (current_node->type) {
+    case LQPNodeType::Join: {
+      const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
+
+      if (join_node->join_mode == JoinMode::Inner) pull_up_nodes = candidate_nodes;
+      else _insert_nodes(current_node, input_side, candidate_nodes);
+    } break;
+
+    default: {
+      _insert_nodes(current_node, input_side, candidate_nodes);
+    }
+  }
+
+  return pull_up_nodes;
 }
 
 void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node,
