@@ -54,7 +54,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
         predicate_output_chunk_statistics->segment_statistics.resize(
             predicate_input_chunk_statistics->segment_statistics.size());
 
-        auto predicate_chunk_selectivity = 1.0f;
+        auto predicate_chunk_selectivity = Selectivity{1};
 
         /**
          * Manipulate statistics of column that we scan on
@@ -95,7 +95,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
                   boost::get<AllTypeVariant>(operator_scan_predicate.value), value2_all_type_variant));
 
           if (predicate_input_chunk_statistics->row_count == 0) {
-            predicate_chunk_selectivity = 0.0f;
+            predicate_chunk_selectivity = Selectivity{0};
           } else {
             predicate_chunk_selectivity =
                 sliced_statistics_object->total_count() / predicate_input_chunk_statistics->row_count;
@@ -111,13 +111,14 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
         /**
          * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
          */
-                for (auto column_id = ColumnID{0};
-                     column_id < predicate_input_chunk_statistics->segment_statistics.size();
-                     ++column_id) {
-                  if (column_id == operator_scan_predicate.column_id) continue;
+        for (auto column_id = ColumnID{0}; column_id < predicate_input_chunk_statistics->segment_statistics.size();
+             ++column_id) {
+          if (column_id == operator_scan_predicate.column_id) continue;
 
-                  predicate_output_chunk_statistics->segment_statistics[column_id] = predicate_input_chunk_statistics->segment_statistics[column_id]->scale_with_selectivity(predicate_chunk_selectivity);
-                }
+          predicate_output_chunk_statistics->segment_statistics[column_id] =
+              predicate_input_chunk_statistics->segment_statistics[column_id]->scale_with_selectivity(
+                  predicate_chunk_selectivity);
+        }
 
         /**
          * Adjust ChunkStatistics row_count

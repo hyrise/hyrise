@@ -5,11 +5,19 @@
 #include <utility>
 
 #include "cardinality.hpp"
+#include "selectivity.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
 namespace opossum {
+
+enum class EstimateType { MatchesNone, MatchesExactly, MatchesApproximately, MatchesAll };
+
+struct CardinalityEstimate {
+  Cardinality cardinality;
+  EstimateType type;
+};
 
 class AbstractStatisticsObject {
  public:
@@ -20,7 +28,7 @@ class AbstractStatisticsObject {
    * Returns the estimated cardinality and a bool indicating whether the statistics object is absolutely certain about
    * that cardinality or not.
    */
-  virtual std::pair<Cardinality, bool> estimate_cardinality(
+  virtual CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
@@ -34,7 +42,7 @@ class AbstractStatisticsObject {
   /**
    * Return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
-  virtual std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const = 0;
+  virtual std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const = 0;
 };
 
 }  // namespace opossum

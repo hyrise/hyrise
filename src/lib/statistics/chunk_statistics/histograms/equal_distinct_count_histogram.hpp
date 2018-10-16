@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_histogram.hpp"
+#include "statistics/selectivity.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -81,7 +82,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   HistogramCountType bin_height(const BinID index) const override;
   HistogramCountType bin_distinct_count(const BinID index) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
 
  protected:
   /**

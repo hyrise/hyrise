@@ -16,7 +16,7 @@ class EmptyStatisticsObject : public AbstractStatisticsObject {
  public:
   EmptyStatisticsObject() = default;
 
-  std::pair<Cardinality, bool> estimate_cardinality(
+  CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
@@ -24,7 +24,7 @@ class EmptyStatisticsObject : public AbstractStatisticsObject {
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
 };
 
 }  // namespace opossum

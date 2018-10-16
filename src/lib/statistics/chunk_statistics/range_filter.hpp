@@ -30,10 +30,7 @@ class RangeFilter : public AbstractStatisticsObject {
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary,
                                                       uint32_t max_ranges_count = MAX_RANGES_COUNT);
 
-  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
-
-  std::pair<float, bool> estimate_cardinality(
+  CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
@@ -41,7 +38,11 @@ class RangeFilter : public AbstractStatisticsObject {
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
+
+ protected:
+  bool _does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
   std::vector<std::pair<T, T>> _ranges;

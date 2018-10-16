@@ -76,27 +76,12 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   std::string description() const;
 
-  /**
-   * Returns the estimated selectivity, given a predicate type and its parameter(s).
-   * It will always be between 0 and 1.
-   * It also returns whether the histogram can be absolutely certain about the selectivity.
-   */
-  std::pair<float, bool> estimate_selectivity(const PredicateCondition predicate_type,
-                                              const AllTypeVariant& variant_value,
-                                              const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
-
-  /**
-   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
-   * Specifically, if this method returns true, the predicate does not yield any results.
-   * If this method returns false, the predicate might yield results.
-   * This method is specialized for strings to handle predicates uniquely applicable to string columns.
-   */
-  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
-
-  std::pair<float, bool> estimate_cardinality(
+  CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+  // TODO(tim): move to AbstractStatisticsObject once it has total_count().
+  CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;
 
   std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
@@ -165,16 +150,25 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * Calculates the estimated cardinality for predicate types supported by all data types.
    */
-  std::pair<float, bool> _estimate_cardinality(
-      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  CardinalityEstimate _estimate_cardinality(const PredicateCondition predicate_type,
+                                            const AllTypeVariant& variant_value,
+                                            const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  /**
+   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
+   * Specifically, if this method returns true, the predicate does not yield any results.
+   * If this method returns false, the predicate might yield results.
+   * This method is specialized for strings to handle predicates uniquely applicable to string columns.
+   */
+  bool _does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Returns whether a given predicate type and its parameter(s) can belong to a bin or not
    * for predicate types supported by all data types.
    */
-  bool _does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+  bool _general_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Given a value, returns the next representable value.

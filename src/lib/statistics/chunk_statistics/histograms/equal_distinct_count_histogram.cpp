@@ -222,7 +222,7 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const 
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> EqualDistinctCountHistogram<T>::scale_with_selectivity(
-    const float selectivity) const {
+    const Selectivity selectivity) const {
   auto bin_minima = _bin_data.bin_minima;
   auto bin_maxima = _bin_data.bin_maxima;
 

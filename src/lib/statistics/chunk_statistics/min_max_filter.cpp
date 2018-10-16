@@ -16,43 +16,13 @@ template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T min, T max) : _min(min), _max(max) {}
 
 template <typename T>
-bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                       const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<T>(variant_value);
-  // Operators work as follows: value_from_table <operator> value
-  // e.g. OpGreaterThan: value_from_table > value
-  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
-  switch (predicate_type) {
-    case PredicateCondition::GreaterThan:
-      return value >= _max;
-    case PredicateCondition::GreaterThanEquals:
-      return value > _max;
-    case PredicateCondition::LessThan:
-      return value <= _min;
-    case PredicateCondition::LessThanEquals:
-      return value < _min;
-    case PredicateCondition::Equals:
-      return value < _min || value > _max;
-    case PredicateCondition::NotEquals:
-      return value == _min && value == _max;
-    case PredicateCondition::Between: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
-      return value > _max || value2 < _min;
-    }
-    default:
-      return false;
-  }
-}
-
-template <typename T>
-std::pair<float, bool> MinMaxFilter<T>::estimate_cardinality(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return {0.f, true};
+CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
+                                                          const AllTypeVariant& variant_value,
+                                                          const std::optional<AllTypeVariant>& variant_value2) const {
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+    return {Cardinality{0}, EstimateType::MatchesNone};
   } else {
-    return {1.f, false};
+    return {Cardinality{0}, EstimateType::MatchesApproximately};
   }
 }
 
@@ -60,7 +30,7 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
     return std::make_shared<EmptyStatisticsObject>();
   }
 
@@ -102,6 +72,36 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scale_with_selectivity(const float /*selectivity*/) const {
   return std::make_shared<MinMaxFilter<T>>(_min, _max);
+}
+
+template <typename T>
+bool MinMaxFilter<T>::_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                        const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto value = type_cast<T>(variant_value);
+  // Operators work as follows: value_from_table <operator> value
+  // e.g. OpGreaterThan: value_from_table > value
+  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
+  switch (predicate_type) {
+    case PredicateCondition::GreaterThan:
+      return value >= _max;
+    case PredicateCondition::GreaterThanEquals:
+      return value > _max;
+    case PredicateCondition::LessThan:
+      return value <= _min;
+    case PredicateCondition::LessThanEquals:
+      return value < _min;
+    case PredicateCondition::Equals:
+      return value < _min || value > _max;
+    case PredicateCondition::NotEquals:
+      return value == _min && value == _max;
+    case PredicateCondition::Between: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = type_cast<T>(*variant_value2);
+      return value > _max || value2 < _min;
+    }
+    default:
+      return false;
+  }
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(MinMaxFilter);

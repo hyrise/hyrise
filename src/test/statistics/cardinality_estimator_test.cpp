@@ -78,17 +78,26 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   const auto plan_output_statistics_0 = plan_output_statistics->chunk_statistics.at(0);
   ASSERT_EQ(plan_output_statistics_0->segment_statistics.size(), 2u);
 
-  const auto plan_output_statistics_0_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(plan_output_statistics_0->segment_statistics.at(0));
-  const auto plan_output_statistics_0_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(plan_output_statistics_0->segment_statistics.at(1));
+  const auto plan_output_statistics_0_a =
+      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(plan_output_statistics_0->segment_statistics.at(0));
+  const auto plan_output_statistics_0_b =
+      std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(plan_output_statistics_0->segment_statistics.at(1));
   ASSERT_TRUE(plan_output_statistics_0_a);
   ASSERT_TRUE(plan_output_statistics_0_b);
 
   ASSERT_TRUE(plan_output_statistics_0_a->generic_histogram);
   ASSERT_TRUE(plan_output_statistics_0_b->equal_width_histogram);
 
-  EXPECT_TRUE(plan_output_statistics_0_a->generic_histogram->does_not_contain(PredicateCondition::LessThan, 50));
-  EXPECT_FLOAT_EQ(plan_output_statistics_0_a->generic_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75).first, 10.f);
-  EXPECT_FLOAT_EQ(plan_output_statistics_0_b->equal_width_histogram->estimate_cardinality(PredicateCondition::LessThan, 50).first, 5.f);
+  EXPECT_EQ(plan_output_statistics_0_a->generic_histogram->estimate_cardinality(PredicateCondition::LessThan, 50).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(
+      plan_output_statistics_0_a->generic_histogram->estimate_cardinality(PredicateCondition::GreaterThan, 75)
+          .cardinality,
+      10.f);
+  EXPECT_FLOAT_EQ(
+      plan_output_statistics_0_b->equal_width_histogram->estimate_cardinality(PredicateCondition::LessThan, 50)
+          .cardinality,
+      5.f);
 }
 
 TEST_F(CardinalityEstimatorTest, TwoPredicates) {
@@ -104,22 +113,16 @@ TEST_F(CardinalityEstimatorTest, TwoPredicates) {
 
 TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerJoinWithNumericHistograms) {
   const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60},
-    std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
-    std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5},
-    std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1}
-  );
+      std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+      std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
 
   const auto histogram_right = std::make_shared<GenericHistogram<int32_t>>(
-    std::vector<int32_t>{20, 30, 50},
-    std::vector<int32_t>{29, 39, 59},
-    std::vector<HistogramCountType>{10, 5, 10},
-    std::vector<HistogramCountType>{7, 2, 10}
-  );
+      std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59}, std::vector<HistogramCountType>{10, 5, 10},
+      std::vector<HistogramCountType>{7, 2, 10});
 
   EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_cardinality_of_inner_join_with_numeric_histograms<int32_t>(
-    histogram_left, histogram_right
-  ), (10.f * 10.f * (1.f / 7.f)) + (20.f * 5.f * (1.f / 8.f)) + (15.f * 10.f * (1.f / 10.f)));
+                      histogram_left, histogram_right),
+                  (10.f * 10.f * (1.f / 7.f)) + (20.f * 5.f * (1.f / 8.f)) + (15.f * 10.f * (1.f / 10.f)));
 }
 
 }  // namespace opossum

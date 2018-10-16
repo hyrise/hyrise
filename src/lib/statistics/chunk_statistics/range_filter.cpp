@@ -19,87 +19,13 @@ template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)) {}
 
 template <typename T>
-bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                      const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<T>(variant_value);
-  // Operators work as follows: value_from_table <operator> value
-  // e.g. OpGreaterThan: value_from_table > value
-  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
-  switch (predicate_type) {
-    case PredicateCondition::GreaterThan: {
-      auto& max = _ranges.back().second;
-      return value >= max;
-    }
-    case PredicateCondition::GreaterThanEquals: {
-      auto& max = _ranges.back().second;
-      return value > max;
-    }
-    case PredicateCondition::LessThan: {
-      auto& min = _ranges.front().first;
-      return value <= min;
-    }
-    case PredicateCondition::LessThanEquals: {
-      auto& min = _ranges.front().first;
-      return value < min;
-    }
-    case PredicateCondition::Equals: {
-      for (const auto& bounds : _ranges) {
-        const auto& [min, max] = bounds;
-
-        if (value >= min && value <= max) {
-          return false;
-        }
-      }
-      return true;
-    }
-    case PredicateCondition::NotEquals: {
-      return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
-    }
-    case PredicateCondition::Between: {
-      Assert(variant_value2, "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
-
-      if (value > value2) {
-        return true;
-      }
-
-      if (does_not_contain(PredicateCondition::GreaterThanEquals, variant_value) ||
-          does_not_contain(PredicateCondition::LessThanEquals, *variant_value2)) {
-        return true;
-      }
-
-      const auto lower_bound_value_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
-                                                         [](const auto& a, const auto& b) { return a.second < b; });
-
-      // If value belongs to a non-gap, we do not know whether the value is in the data or not.
-      if (value >= (*lower_bound_value_it).first) {
-        return false;
-      }
-
-      const auto lower_bound_value2_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2,
-                                                          [](const auto& a, const auto& b) { return a.second < b; });
-
-      // If value2 belongs to a non-gap, we do not know whether the value is in the data or not.
-      if (value2 >= (*lower_bound_value2_it).first) {
-        return false;
-      }
-
-      // If both values fall into the same gap, the data does not contain any of the values between value and value2.
-      return lower_bound_value_it == lower_bound_value2_it;
-    }
-    default:
-      return false;
-  }
-}
-
-template <typename T>
-std::pair<float, bool> RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
-                                                            const AllTypeVariant& variant_value,
-                                                            const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return {0.f, true};
+CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
+                                                         const AllTypeVariant& variant_value,
+                                                         const std::optional<AllTypeVariant>& variant_value2) const {
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+    return {Cardinality{0}, EstimateType::MatchesNone};
   } else {
-    return {1.f, false};
+    return {Cardinality{0}, EstimateType::MatchesApproximately};
   }
 }
 
@@ -107,7 +33,7 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
     return std::make_shared<EmptyStatisticsObject>();
   }
 
@@ -130,7 +56,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
         ranges.emplace_back(*it);
       }
 
-      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
+      DebugAssert(it != _ranges.cend(), "_does_not_contain() should have caught that.");
 
       // If value is not in a gap, limit the last range's upper bound to value.
       if (value >= it->first) {
@@ -142,7 +68,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
       auto it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
                                  [](const auto& a, const auto& b) { return a.second < b; });
 
-      DebugAssert(it != _ranges.cend(), "does_not_contain() should have caught that.");
+      DebugAssert(it != _ranges.cend(), "_does_not_contain() should have caught that.");
 
       // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
       if (value <= it->first) {
@@ -227,6 +153,80 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   }
 
   return std::make_unique<RangeFilter<T>>(std::move(ranges));
+}
+
+template <typename T>
+bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                       const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto value = type_cast<T>(variant_value);
+  // Operators work as follows: value_from_table <operator> value
+  // e.g. OpGreaterThan: value_from_table > value
+  // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
+  switch (predicate_type) {
+    case PredicateCondition::GreaterThan: {
+      auto& max = _ranges.back().second;
+      return value >= max;
+    }
+    case PredicateCondition::GreaterThanEquals: {
+      auto& max = _ranges.back().second;
+      return value > max;
+    }
+    case PredicateCondition::LessThan: {
+      auto& min = _ranges.front().first;
+      return value <= min;
+    }
+    case PredicateCondition::LessThanEquals: {
+      auto& min = _ranges.front().first;
+      return value < min;
+    }
+    case PredicateCondition::Equals: {
+      for (const auto& bounds : _ranges) {
+        const auto& [min, max] = bounds;
+
+        if (value >= min && value <= max) {
+          return false;
+        }
+      }
+      return true;
+    }
+    case PredicateCondition::NotEquals: {
+      return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
+    }
+    case PredicateCondition::Between: {
+      Assert(variant_value2, "Between operator needs two values.");
+      const auto value2 = type_cast<T>(*variant_value2);
+
+      if (value > value2) {
+        return true;
+      }
+
+      if (_does_not_contain(PredicateCondition::GreaterThanEquals, variant_value) ||
+          _does_not_contain(PredicateCondition::LessThanEquals, *variant_value2)) {
+        return true;
+      }
+
+      const auto lower_bound_value_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
+                                                         [](const auto& a, const auto& b) { return a.second < b; });
+
+      // If value belongs to a non-gap, we do not know whether the value is in the data or not.
+      if (value >= (*lower_bound_value_it).first) {
+        return false;
+      }
+
+      const auto lower_bound_value2_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2,
+                                                          [](const auto& a, const auto& b) { return a.second < b; });
+
+      // If value2 belongs to a non-gap, we do not know whether the value is in the data or not.
+      if (value2 >= (*lower_bound_value2_it).first) {
+        return false;
+      }
+
+      // If both values fall into the same gap, the data does not contain any of the values between value and value2.
+      return lower_bound_value_it == lower_bound_value2_it;
+    }
+    default:
+      return false;
+  }
 }
 
 template class RangeFilter<int32_t>;

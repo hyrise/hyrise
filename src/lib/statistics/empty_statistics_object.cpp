@@ -10,10 +10,10 @@
 
 namespace opossum {
 
-std::pair<Cardinality, bool> EmptyStatisticsObject::estimate_cardinality(
+CardinalityEstimate EmptyStatisticsObject::estimate_cardinality(
     const PredicateCondition /*predicate_type*/, const AllTypeVariant& /*variant_value*/,
     const std::optional<AllTypeVariant>& /*variant_value2*/) const {
-  return {0, true};
+  return {Cardinality{0}, EstimateType::MatchesNone};
 }
 
 std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::slice_with_predicate(

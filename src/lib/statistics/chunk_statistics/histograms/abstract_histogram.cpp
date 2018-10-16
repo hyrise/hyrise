@@ -172,9 +172,9 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
 }
 
 template <typename T>
-bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_type,
-                                             const AllTypeVariant& variant_value,
-                                             const std::optional<AllTypeVariant>& variant_value2) const {
+bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_type,
+                                                     const AllTypeVariant& variant_value,
+                                                     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast<T>(variant_value);
 
   switch (predicate_type) {
@@ -196,12 +196,12 @@ bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
 
-      if (does_not_contain(PredicateCondition::GreaterThanEquals, value)) {
+      if (_does_not_contain(PredicateCondition::GreaterThanEquals, value)) {
         return true;
       }
 
       const auto value2 = type_cast<T>(*variant_value2);
-      if (does_not_contain(PredicateCondition::LessThanEquals, value2) || value2 < value) {
+      if (_does_not_contain(PredicateCondition::LessThanEquals, value2) || value2 < value) {
         return true;
       }
 
@@ -239,16 +239,16 @@ bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_
 }
 
 template <typename T>
-bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_type,
-                                            const AllTypeVariant& variant_value,
-                                            const std::optional<AllTypeVariant>& variant_value2) const {
-  return _does_not_contain(predicate_type, variant_value, variant_value2);
+bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_type,
+                                             const AllTypeVariant& variant_value,
+                                             const std::optional<AllTypeVariant>& variant_value2) const {
+  return _general_does_not_contain(predicate_type, variant_value, variant_value2);
 }
 
 template <>
-bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition predicate_type,
-                                                      const AllTypeVariant& variant_value,
-                                                      const std::optional<AllTypeVariant>& variant_value2) const {
+bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition predicate_type,
+                                                       const AllTypeVariant& variant_value,
+                                                       const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast<std::string>(variant_value);
 
   // Only allow supported characters in search value.
@@ -261,7 +261,7 @@ bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition p
   switch (predicate_type) {
     case PredicateCondition::Like: {
       if (!LikeMatcher::contains_wildcard(value)) {
-        return does_not_contain(PredicateCondition::Equals, value);
+        return _does_not_contain(PredicateCondition::Equals, value);
       }
 
       // If the pattern starts with a MatchAll, we can not prune it.
@@ -283,19 +283,19 @@ bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition p
       const auto match_all_index = value.find('%');
       if (match_all_index != std::string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
-        if (does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
+        if (_does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
           return true;
         }
 
         const auto search_prefix_next_value = next_value(search_prefix, _supported_characters, search_prefix.length());
 
         // If the next value is the same as the prefix, it means that there is no larger value in the domain
-        // of substrings. In that case we cannot prune, because otherwise we previous check would already return true.
+        // of substrings. In that case we cannot prune, because otherwise the previous check would already return true.
         if (search_prefix == search_prefix_next_value) {
           return false;
         }
 
-        if (does_not_contain(PredicateCondition::LessThan, search_prefix_next_value)) {
+        if (_does_not_contain(PredicateCondition::LessThan, search_prefix_next_value)) {
           return true;
         }
 
@@ -347,7 +347,7 @@ bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition p
     }
     case PredicateCondition::NotLike: {
       if (!LikeMatcher::contains_wildcard(value)) {
-        return does_not_contain(PredicateCondition::NotEquals, variant_value);
+        return _does_not_contain(PredicateCondition::NotEquals, variant_value);
       }
 
       // If the pattern starts with a MatchAll, we can only prune it if it matches all values.
@@ -380,16 +380,16 @@ bool AbstractHistogram<std::string>::does_not_contain(const PredicateCondition p
       return false;
     }
     default:
-      return _does_not_contain(predicate_type, variant_value, variant_value2);
+      return _general_does_not_contain(predicate_type, variant_value, variant_value2);
   }
 }
 
 template <typename T>
-std::pair<float, bool> AbstractHistogram<T>::_estimate_cardinality(
+CardinalityEstimate AbstractHistogram<T>::_estimate_cardinality(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return {0.f, true};
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+    return {Cardinality{0}, EstimateType::MatchesNone};
   }
 
   const auto value = type_cast<T>(variant_value);
@@ -402,34 +402,37 @@ std::pair<float, bool> AbstractHistogram<T>::_estimate_cardinality(
       // This should never be false because does_not_contain should have been true further up if this was the case.
       DebugAssert(bin_count_distinct > 0u, "0 distinct values in bin.");
 
-      return {static_cast<float>(bin_height(index)) / static_cast<float>(bin_count_distinct),
-              bin_count_distinct == 1u ? true : false};
+      return {static_cast<Cardinality>(bin_height(index)) / bin_count_distinct,
+              bin_count_distinct == 1u ? EstimateType::MatchesExactly : EstimateType::MatchesApproximately};
     }
-    case PredicateCondition::NotEquals: {
-      const auto estimate_pair = _estimate_cardinality(PredicateCondition::Equals, variant_value);
-      return {total_count() - estimate_pair.first, estimate_pair.second};
-    }
+    case PredicateCondition::NotEquals:
+      return invert_estimate(_estimate_cardinality(PredicateCondition::Equals, variant_value));
     case PredicateCondition::LessThan: {
       if (value > maximum()) {
-        return {total_count(), true};
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll};
       }
 
       // This should never be false because does_not_contain should have been true further up if this was the case.
       DebugAssert(value >= minimum(), "Value smaller than min of histogram.");
 
+      auto cardinality = Cardinality{0};
+      auto estimate_type = EstimateType::MatchesApproximately;
       auto index = _bin_for_value(value);
-      auto cardinality = 0.f;
-
-      auto estimate_is_certain = false;
 
       if (index == INVALID_BIN_ID) {
         // The value is within the range of the histogram, but does not belong to a bin.
         // Therefore, we need to sum up the counts of all bins with a max < value.
         index = _next_bin_for_value(value);
-        estimate_is_certain = true;
+        estimate_type = EstimateType::MatchesExactly;
+      } else if (value == bin_minimum(index) || bin_height(index) == 0u) {
+        // If the value is exactly the lower bin edge or the bin is empty,
+        // we do not have to add anything of that bin and know the cardinality exactly.
+        estimate_type = EstimateType::MatchesExactly;
       } else {
         cardinality += _share_of_bin_less_than_value(index, value) * bin_height(index);
       }
+
+      DebugAssert(index != INVALID_BIN_ID, "Should have been caught by _does_not_contain().");
 
       // Sum up all bins before the bin (or gap) containing the value.
       for (BinID bin = 0u; bin < index; bin++) {
@@ -449,43 +452,65 @@ std::pair<float, bool> AbstractHistogram<T>::_estimate_cardinality(
        * Therefore, if we calculate the share of the last bin based on _count_per_bin
        * we might end up with an estimate higher than total_count(), which is then capped.
        */
-      return {std::min(cardinality, static_cast<float>(total_count())), estimate_is_certain};
+      return {std::min(cardinality, static_cast<Cardinality>(total_count())), estimate_type};
     }
     case PredicateCondition::LessThanEquals:
       return estimate_cardinality(PredicateCondition::LessThan, _get_next_value(value));
-    case PredicateCondition::GreaterThanEquals: {
-      const auto estimate_pair = estimate_cardinality(PredicateCondition::LessThan, variant_value);
-      return {total_count() - estimate_pair.first, estimate_pair.second};
-    }
-    case PredicateCondition::GreaterThan: {
-      const auto estimate_pair = estimate_cardinality(PredicateCondition::LessThanEquals, variant_value);
-      return {total_count() - estimate_pair.first, estimate_pair.second};
-    }
+    case PredicateCondition::GreaterThanEquals:
+      return invert_estimate(estimate_cardinality(PredicateCondition::LessThan, variant_value));
+    case PredicateCondition::GreaterThan:
+      return invert_estimate(estimate_cardinality(PredicateCondition::LessThanEquals, variant_value));
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = type_cast<T>(*variant_value2);
 
       if (value2 < value) {
-        return {0.f, true};
+        return {Cardinality{0}, EstimateType::MatchesNone};
       }
 
-      const auto estimate_pair_lte_value2 = estimate_cardinality(PredicateCondition::LessThanEquals, *variant_value2);
-      const auto estimate_pair_lt_value = estimate_cardinality(PredicateCondition::LessThan, variant_value);
-      return {estimate_pair_lte_value2.first - estimate_pair_lt_value.first,
-              estimate_pair_lte_value2.second && estimate_pair_lt_value.second};
+      const auto estimate_lt_value = estimate_cardinality(PredicateCondition::LessThan, variant_value);
+      const auto estimate_lte_value2 = estimate_cardinality(PredicateCondition::LessThanEquals, *variant_value2);
+
+      if (estimate_lt_value.type == EstimateType::MatchesAll) {
+        DebugAssert(estimate_lte_value2.type == EstimateType::MatchesAll, "Estimate types do not match.");
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll};
+      }
+
+      if (estimate_lt_value.type == EstimateType::MatchesNone) {
+        DebugAssert(estimate_lte_value2.type != EstimateType::MatchesNone,
+                    "Should have been caught by _does_not_contain().");
+        return {estimate_lte_value2.cardinality, estimate_lte_value2.type};
+      }
+
+      if (estimate_lte_value2.type == EstimateType::MatchesNone) {
+        DebugAssert(estimate_lt_value.type == EstimateType::MatchesNone, "Estimate types do not match.");
+        return {Cardinality{0}, EstimateType::MatchesNone};
+      }
+
+      /**
+       * If either estimate type is approximate, the whole result is approximate.
+       * All other estimate types are exact (including MatchesNone and MatchesAll),
+       * so the result estimate type is exact as well.
+       */
+      const auto estimate_type = estimate_lt_value.type == EstimateType::MatchesApproximately ||
+                                         estimate_lte_value2.type == EstimateType::MatchesApproximately
+                                     ? EstimateType::MatchesApproximately
+                                     : EstimateType::MatchesExactly;
+
+      return {estimate_lte_value2.cardinality - estimate_lt_value.cardinality, estimate_type};
     }
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
       Fail("Predicate NOT LIKE is not supported for non-string columns.");
     default:
       // TODO(anyone): implement more meaningful things here
-      return {total_count(), false};
+      return {static_cast<Cardinality>(total_count()), EstimateType::MatchesApproximately};
   }
 }
 
 // Specialization for numbers.
 template <typename T>
-std::pair<float, bool> AbstractHistogram<T>::estimate_cardinality(
+CardinalityEstimate AbstractHistogram<T>::estimate_cardinality(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   return _estimate_cardinality(predicate_type, variant_value, variant_value2);
@@ -493,7 +518,7 @@ std::pair<float, bool> AbstractHistogram<T>::estimate_cardinality(
 
 // Specialization for strings.
 template <>
-std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
+CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = type_cast<std::string>(variant_value);
@@ -505,8 +530,8 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
       (predicate_type == PredicateCondition::Like || predicate_type == PredicateCondition::NotLike ? "_%" : "");
   Assert(value.find_first_not_of(allowed_characters) == std::string::npos, "Unsupported characters.");
 
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return {0.f, true};
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+    return {Cardinality{0}, EstimateType::MatchesNone};
   }
 
   switch (predicate_type) {
@@ -519,7 +544,7 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
       // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
       const auto single_char_count = std::count(value.cbegin(), value.cend(), '_');
       if (single_char_count > 0u) {
-        return {total_count(), false};
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesApproximately};
       }
 
       const auto any_chars_count = std::count(value.cbegin(), value.cend(), '%');
@@ -528,7 +553,7 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
 
       // Match everything.
       if (value == "%") {
-        return {total_count(), true};
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll};
       }
 
       if (value.front() != '%') {
@@ -582,11 +607,12 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
         const auto count_smaller_next_value =
             search_prefix == search_prefix_next_value
                 ? total_count()
-                : estimate_cardinality(PredicateCondition::LessThan, search_prefix_next_value).first;
+                : estimate_cardinality(PredicateCondition::LessThan, search_prefix_next_value).cardinality;
 
-        return {(count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix).first) /
-                    ipow(_supported_characters.length(), additional_characters),
-                false};
+        return {
+            (count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix).cardinality) /
+                ipow(_supported_characters.length(), additional_characters),
+            EstimateType::MatchesApproximately};
       }
 
       /**
@@ -599,7 +625,8 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
        * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
        */
       const auto fixed_characters = value.length() - any_chars_count;
-      return {static_cast<float>(total_count()) / ipow(_supported_characters.length(), fixed_characters), false};
+      return {static_cast<Cardinality>(total_count()) / ipow(_supported_characters.length(), fixed_characters),
+              EstimateType::MatchesApproximately};
     }
     case PredicateCondition::NotLike: {
       if (!LikeMatcher::contains_wildcard(value)) {
@@ -610,11 +637,10 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
       // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
       const auto single_char_count = std::count(value.cbegin(), value.cend(), '_');
       if (single_char_count > 0u) {
-        return {total_count(), false};
+        return {static_cast<Cardinality>(total_count()), EstimateType::MatchesApproximately};
       }
 
-      const auto estimate_pair = estimate_cardinality(PredicateCondition::Like, variant_value);
-      return {total_count() - estimate_pair.first, estimate_pair.second};
+      return invert_estimate(estimate_cardinality(PredicateCondition::Like, variant_value));
     }
     default:
       return _estimate_cardinality(predicate_type, variant_value, variant_value2);
@@ -622,18 +648,25 @@ std::pair<float, bool> AbstractHistogram<std::string>::estimate_cardinality(
 }
 
 template <typename T>
-std::pair<float, bool> AbstractHistogram<T>::estimate_selectivity(
-    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto estimate_pair = estimate_cardinality(predicate_type, variant_value, variant_value2);
-  return {estimate_pair.first / total_count(), estimate_pair.second};
+CardinalityEstimate AbstractHistogram<T>::invert_estimate(const CardinalityEstimate& estimate) const {
+  switch (estimate.type) {
+    case EstimateType::MatchesNone:
+      return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll};
+    case EstimateType::MatchesAll:
+      return {Cardinality{0}, EstimateType::MatchesNone};
+    case EstimateType::MatchesExactly:
+    case EstimateType::MatchesApproximately:
+      return {total_count() - estimate.cardinality, estimate.type};
+    default:
+      Fail("EstimateType not supported.");
+  }
 }
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (does_not_contain(predicate_type, variant_value, variant_value2)) {
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
     return std::make_shared<EmptyStatisticsObject>();
   }
 
@@ -649,7 +682,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_minima.emplace_back(value);
       bin_maxima.emplace_back(value);
       bin_heights.emplace_back(static_cast<HistogramCountType>(
-          std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).first)));
+          std::ceil(estimate_cardinality(PredicateCondition::Equals, variant_value).cardinality)));
       bin_distinct_counts.emplace_back(1);
     } break;
 
@@ -680,7 +713,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
           }
 
           const auto value_count =
-              estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).first;
+              estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).cardinality;
 
           bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(bin_height(bin_id) - value_count));
           bin_distinct_counts[bin_id] = distinct_count - 1;
@@ -714,7 +747,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         sliced_bin_count = bin_for_value + 1;
       }
 
-      DebugAssert(sliced_bin_count > 0, "This should have been caught by does_not_contain().");
+      DebugAssert(sliced_bin_count > 0, "This should have been caught by _does_not_contain().");
 
       bin_minima.resize(sliced_bin_count);
       bin_maxima.resize(sliced_bin_count);
@@ -772,7 +805,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         sliced_bin_count = bin_count() - bin_for_value;
       }
 
-      DebugAssert(sliced_bin_count > 0, "This should have been caught by does_not_contain().");
+      DebugAssert(sliced_bin_count > 0, "This should have been caught by _does_not_contain().");
 
       const auto first_sliced_bin_id = BinID{bin_count() - sliced_bin_count};
 

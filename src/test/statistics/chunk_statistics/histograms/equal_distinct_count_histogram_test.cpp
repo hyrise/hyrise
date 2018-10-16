@@ -35,146 +35,168 @@ TEST_F(EqualDistinctCountHistogramTest, Basic) {
   const auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{0}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0}).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{12}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).first, 1.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{12}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).cardinality, 1.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{1'234}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'234}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{123'456}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).first, 2.5f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{123'456}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).cardinality, 2.5f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{1'000'000}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'000'000}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).cardinality, 0.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, UnevenBins) {
   auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       _int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{0}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0}).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{12}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).first, 1.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{12}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 12).cardinality, 1.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{1'234}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'234}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'234).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{123'456}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).first, 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{123'456}).type,
+            EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 123'456).cardinality, 3.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{1'000'000}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1'000'000}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1'000'000).cardinality, 0.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, Float) {
   auto hist =
       EqualDistinctCountHistogram<float>::from_segment(_float2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{0.4f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0.4f).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0.4f}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0.4f).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{0.5f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0.5f).first, 4 / 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{0.5f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 0.5f).cardinality, 4 / 4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{1.1f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1.1f).first, 4 / 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1.1f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1.1f).cardinality, 4 / 4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{1.3f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1.3f).first, 4 / 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{1.3f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 1.3f).cardinality, 4 / 4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{2.2f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.2f).first, 4 / 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{2.2f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.2f).cardinality, 4 / 4.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{2.3f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.3f).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{2.3f}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.3f).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{2.5f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.5f).first, 6 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{2.5f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.5f).cardinality, 6 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{2.9f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.9f).first, 6 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{2.9f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 2.9f).cardinality, 6 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{3.3f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.3f).first, 6 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{3.3f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.3f).cardinality, 6 / 3.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{3.5f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.5f).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{3.5f}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.5f).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{3.6f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.6f).first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{3.6f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.6f).cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{3.9f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.9f).first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{3.9f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 3.9f).cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{6.1f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 6.1f).first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{6.1f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 6.1f).cardinality, 4 / 3.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, AllTypeVariant{6.2f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 6.2f).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, AllTypeVariant{6.2f}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, 6.2f).cardinality, 0.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, String) {
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
       _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "a"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "aa"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "aa").first, 3 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "aa").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "aa").cardinality, 3 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "ab"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ab").first, 3 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ab").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ab").cardinality, 3 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "b"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "b").first, 3 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "b").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "b").cardinality, 3 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "birne"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "birne").first, 3 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "birne").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "birne").cardinality, 3 / 3.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "biscuit"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "biscuit").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "biscuit").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "biscuit").cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "bla"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bla").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bla").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bla").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "blubb"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "blubb").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "blubb").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "blubb").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "bums"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bums").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bums").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bums").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "ttt"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ttt").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ttt").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ttt").cardinality, 4 / 3.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "turkey"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "turkey").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "turkey").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "turkey").cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "uuu"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uuu").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uuu").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uuu").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "vvv"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "vvv").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "vvv").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "vvv").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "www"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "www").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "www").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "www").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "xxx"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxx").first, 4 / 3.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxx").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxx").cardinality, 4 / 3.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "yyy"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyy").first, 4 / 2.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyy").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyy").cardinality, 4 / 2.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "zzz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzz").first, 4 / 2.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzz").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzz").cardinality, 4 / 2.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "zzzzzz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzzzzz").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzzzzz").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzzzzz").cardinality, 0.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringPruning) {
@@ -189,157 +211,183 @@ TEST_F(EqualDistinctCountHistogramTest, StringPruning) {
       _string2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "abcdefghijklmnopqrstuvwxyz", 3u);
 
   // These values are smaller than values in bin 0.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, ""));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "a"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "a").type, EstimateType::MatchesNone);
 
   // These values fall within bin 0.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "aa"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "aaa"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "b"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "bir"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "bira"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "birne"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "aa").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "aaa").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "b").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bir").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bira").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "birne").type, EstimateType::MatchesApproximately);
 
   // These values are between bin 0 and 1.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "birnea"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "bis"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "biscuit"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "bja"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "bk"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "bkz"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "bl"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "birnea").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bis").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "biscuit").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bja").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bk").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bkz").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bl").type, EstimateType::MatchesNone);
 
   // These values fall within bin 1.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "bla"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "c"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "mmopasdasdasd"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "s"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "t"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "tt"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "ttt"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "bla").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "c").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "mmopasdasdasd").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "s").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "t").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "tt").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ttt").type, EstimateType::MatchesApproximately);
 
   // These values are between bin 1 and 2.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "ttta"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "tttzzzzz"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "turkey"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "uut"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "uutzzzzz"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "ttta").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "tttzzzzz").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "turkey").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uut").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uutzzzzz").type, EstimateType::MatchesNone);
 
   // These values fall within bin 2.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "uuu"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "uuuzzz"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "uv"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "uvz"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "v"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "w"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "wzzzzzzzzz"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "x"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "xxw"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "xxx"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uuu").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uuuzzz").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uv").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "uvz").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "v").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "w").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "wzzzzzzzzz").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "x").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxw").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxx").type, EstimateType::MatchesApproximately);
 
   // These values are between bin 2 and 3.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "xxxa"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "xxxzzzzzz"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "xy"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "xyzz"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "y"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "yyx"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "yyxzzzzz"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxxa").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xxxzzzzzz").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xy").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "xyzz").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "y").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyx").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyxzzzzz").type, EstimateType::MatchesNone);
 
   // These values fall within bin 3.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "yyy"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "yyyzzzzz"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "yz"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "z"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Equals, "zzz"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyy").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yyyzzzzz").type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "yz").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "z").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzz").type, EstimateType::MatchesApproximately);
 
   // These values are greater than the upper bound of the histogram.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "zzza"));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Equals, "zzzzzzzzz"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzza").type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, "zzzzzzzzz").type, EstimateType::MatchesNone);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, LessThan) {
   auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       _int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{12}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{70}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).first, (70.f - 12) / (123 - 12 + 1) * 2);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{70}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 70).cardinality,
+                  (70.f - 12) / (123 - 12 + 1) * 2);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{1'234}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).first, 2.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'234}).type,
+            EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'234).cardinality, 2.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{12'346}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).first, 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{12'346}).type,
+            EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 12'346).cardinality, 4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{123'456}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).first, 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'456}).type,
+            EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'456).cardinality, 4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{123'457}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).first, 7.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{123'457}).type,
+            EstimateType::MatchesAll);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 123'457).cardinality, 7.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{1'000'000}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).first, 7.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1'000'000}).type,
+            EstimateType::MatchesAll);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1'000'000).cardinality, 7.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, FloatLessThan) {
   auto hist =
       EqualDistinctCountHistogram<float>::from_segment(_float2->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{0.5f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 0.5f).first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{0.5f}).type,
+            EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 0.5f).cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{1.0f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.0f).first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1.0f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.0f).cardinality,
                   (1.0f - 0.5f) / std::nextafter(2.2f - 0.5f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{1.7f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.7f).first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{1.7f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1.7f).cardinality,
                   (1.7f - 0.5f) / std::nextafter(2.2f - 0.5f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan,
-                                      AllTypeVariant{std::nextafter(2.2f, std::numeric_limits<float>::infinity())}));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
+                                       AllTypeVariant{std::nextafter(2.2f, std::numeric_limits<float>::infinity())})
+                .type,
+            EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
                                              std::nextafter(2.2f, std::numeric_limits<float>::infinity()))
-                      .first,
+                      .cardinality,
                   4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{2.5f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 2.5f).first, 4.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{2.5f}).type,
+            EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 2.5f).cardinality, 4.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{3.0f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.0f).first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.0f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.0f).cardinality,
                   4.f + (3.0f - 2.5f) / std::nextafter(3.3f - 2.5f, std::numeric_limits<float>::infinity()) * 6);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{3.3f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.3f).first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.3f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.3f).cardinality,
                   4.f + (3.3f - 2.5f) / std::nextafter(3.3f - 2.5f, std::numeric_limits<float>::infinity()) * 6);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan,
-                                      AllTypeVariant{std::nextafter(3.3f, std::numeric_limits<float>::infinity())}));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
+                                       AllTypeVariant{std::nextafter(3.3f, std::numeric_limits<float>::infinity())})
+                .type,
+            EstimateType::MatchesExactly);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
                                              std::nextafter(3.3f, std::numeric_limits<float>::infinity()))
-                      .first,
+                      .cardinality,
                   4.f + 6.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{3.6f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.6f).first, 4.f + 6.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.6f}).type,
+            EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.6f).cardinality, 4.f + 6.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{3.9f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.9f).first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{3.9f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 3.9f).cardinality,
                   4.f + 6.f + (3.9f - 3.6f) / std::nextafter(6.1f - 3.6f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, AllTypeVariant{5.9f}));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 5.9f).first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, AllTypeVariant{5.9f}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 5.9f).cardinality,
                   4.f + 6.f + (5.9f - 3.6f) / std::nextafter(6.1f - 3.6f, std::numeric_limits<float>::infinity()) * 4);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan,
-                                      AllTypeVariant{std::nextafter(6.1f, std::numeric_limits<float>::infinity())}));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
+                                       AllTypeVariant{std::nextafter(6.1f, std::numeric_limits<float>::infinity())})
+                .type,
+            EstimateType::MatchesAll);
   EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan,
                                              std::nextafter(6.1f, std::numeric_limits<float>::infinity()))
-                      .first,
+                      .cardinality,
                   4.f + 6.f + 4.f);
 }
 
@@ -391,187 +439,189 @@ TEST_F(EqualDistinctCountHistogramTest, StringLessThan) {
   constexpr auto bin_4_count = 3.f;
   constexpr auto total_count = bin_1_count + bin_2_count + bin_3_count + bin_4_count;
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::LessThan, "aaaa"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaa").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaa").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaa").cardinality, 0.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::LessThan, "abcd"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcd").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcd").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality, 0.f);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "abce"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abce").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abce").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abce").cardinality,
                   1 / bin_1_width * bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "abcf"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcf").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcf").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcf").cardinality,
                   2 / bin_1_width * bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "abcf"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "abcf").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-      hist->estimate_cardinality(PredicateCondition::LessThan, "cccc").first,
+      hist->estimate_cardinality(PredicateCondition::LessThan, "cccc").cardinality,
       (2 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
        1 + 2 * (ipow(26, 1) + ipow(26, 0)) + 1 + 2 * (ipow(26, 0)) + 1 - bin_1_lower) /
           bin_1_width * bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "dddd"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "dddd").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-      hist->estimate_cardinality(PredicateCondition::LessThan, "dddd").first,
+      hist->estimate_cardinality(PredicateCondition::LessThan, "dddd").cardinality,
       (3 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
        1 + 3 * (ipow(26, 1) + ipow(26, 0)) + 1 + 3 * (ipow(26, 0)) + 1 - bin_1_lower) /
           bin_1_width * bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "efgg"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgg").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgg").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgg").cardinality,
                   (bin_1_width - 2) / bin_1_width * bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "efgh"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgh").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgh").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgh").cardinality,
                   (bin_1_width - 1) / bin_1_width * bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "efgi"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgi").first, bin_1_count);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgi").type, EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "efgi").cardinality, bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "ijkl"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkl").first, bin_1_count);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkl").type, EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkl").cardinality, bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "ijkm"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkm").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkm").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkm").cardinality,
                   1 / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "ijkn"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkn").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkn").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ijkn").cardinality,
                   2 / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "jjjj"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "jjjj").type, EstimateType::MatchesApproximately);
   EXPECT_FLOAT_EQ(
-      hist->estimate_cardinality(PredicateCondition::LessThan, "jjjj").first,
+      hist->estimate_cardinality(PredicateCondition::LessThan, "jjjj").cardinality,
       (9 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) +
        1 + 9 * (ipow(26, 1) + ipow(26, 0)) + 1 + 9 * (ipow(26, 0)) + 1 - bin_2_lower) /
               bin_2_width * bin_2_count +
           bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "kkkk"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "kkkk").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "kkkk").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "kkkk").cardinality,
                   (10 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    10 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 10 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    10 * (ipow(26, 0)) + 1 - bin_2_lower) /
                           bin_2_width * bin_2_count +
                       bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "lzzz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "lzzz").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "lzzz").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "lzzz").cardinality,
                   (11 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    25 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 25 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    25 * (ipow(26, 0)) + 1 - bin_2_lower) /
                           bin_2_width * bin_2_count +
                       bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "mnoo"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnoo").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnoo").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnoo").cardinality,
                   (bin_2_width - 2) / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "mnop"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnop").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnop").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnop").cardinality,
                   (bin_2_width - 1) / bin_2_width * bin_2_count + bin_1_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "mnoq"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnoq").first, bin_1_count + bin_2_count);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnoq").type, EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "mnoq").cardinality,
+                  bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "oopp"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopp").first, bin_1_count + bin_2_count);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopp").type, EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopp").cardinality,
+                  bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "oopq"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopq").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopq").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopq").cardinality,
                   1 / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "oopr"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopr").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopr").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "oopr").cardinality,
                   2 / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "pppp"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "pppp").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "pppp").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "pppp").cardinality,
                   (15 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 15 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "qqqq"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qqqq").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qqqq").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qqqq").cardinality,
                   (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    16 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 16 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    16 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "qllo"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qllo").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qllo").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qllo").cardinality,
                   (16 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    11 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 11 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    14 * (ipow(26, 0)) + 1 - bin_3_lower) /
                           bin_3_width * bin_3_count +
                       bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "qrss"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrss").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrss").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrss").cardinality,
                   (bin_3_width - 2) / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "qrst"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrst").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrst").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrst").cardinality,
                   (bin_3_width - 1) / bin_3_width * bin_3_count + bin_1_count + bin_2_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "qrsu"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrsu").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrsu").type, EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "qrsu").cardinality,
                   bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "uvwx"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwx").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwx").type, EstimateType::MatchesExactly);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwx").cardinality,
                   bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "uvwy"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwy").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwy").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwy").cardinality,
                   1 / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "uvwz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwz").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwz").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "uvwz").cardinality,
                   2 / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "vvvv"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "vvvv").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "vvvv").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "vvvv").cardinality,
                   (21 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    21 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 21 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    21 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "xxxx"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "xxxx").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "xxxx").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "xxxx").cardinality,
                   (23 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    23 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 23 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    23 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "ycip"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ycip").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ycip").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "ycip").cardinality,
                   (24 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    2 * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 8 * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    15 * (ipow(26, 0)) + 1 - bin_4_lower) /
                           bin_4_width * bin_4_count +
                       bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "yyzy"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzy").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzy").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzy").cardinality,
                   (bin_4_width - 2) / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "yyzz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzz").first,
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzz").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yyzz").cardinality,
                   (bin_4_width - 1) / bin_4_width * bin_4_count + bin_1_count + bin_2_count + bin_3_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "yz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yz").first, total_count);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yz").type, EstimateType::MatchesAll);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "yz").cardinality, total_count);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThan, "zzzz"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzz").first, total_count);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzz").type, EstimateType::MatchesAll);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "zzzz").cardinality, total_count);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringLikePrefix) {
@@ -579,76 +629,83 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikePrefix) {
       _string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 4u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // First bin: [abcd, efgh], so everything before is prunable.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "a"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a").cardinality, 0.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "aa%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%").cardinality, 0.f);
 
   // Complexity of prefix pattern does not matter for pruning decision.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "aa%zz%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%zz%").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%zz%").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "aa%zz%").cardinality, 0.f);
 
   // Even though "aa%" is prunable, "a%" is not!
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "a%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
   // Since there are no values smaller than "abcd", [abcd, azzz] is the range that "a%" covers.
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "b").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "a").first);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "b").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "abcd").first);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "b").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "a").cardinality);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "b").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "abcd").cardinality);
 
   // No wildcard, no party.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "abcd"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "abcd").first,
-                  hist->estimate_cardinality(PredicateCondition::Equals, "abcd").first);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "abcd").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "abcd").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::Equals, "abcd").cardinality);
 
   // Classic cases for prefix search.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "ab%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "ab%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "ac").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "ab").first);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "ab%").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "ab%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "ac").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "ab").cardinality);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "c%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "c%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "d").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "c").first);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "c%").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "c%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "d").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "c").cardinality);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "cfoobar%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoobar%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "cfoobas").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "cfoobar").first);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoobar%").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "cfoobar%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "cfoobas").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "cfoobar").cardinality);
 
   // Use upper bin boundary as range limit, since there are no other values starting with e in other bins.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "e%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThan, "f").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "e").first);
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").first,
-                  hist->estimate_cardinality(PredicateCondition::LessThanEquals, "efgh").first -
-                      hist->estimate_cardinality(PredicateCondition::LessThan, "e").first);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").type, EstimateType::MatchesApproximately);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThan, "f").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").cardinality,
+                  hist->estimate_cardinality(PredicateCondition::LessThanEquals, "efgh").cardinality -
+                      hist->estimate_cardinality(PredicateCondition::LessThan, "e").cardinality);
 
   // Second bin starts at ijkl, so there is a gap between efgh and ijkl.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "f%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "f%").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "f%").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "f%").cardinality, 0.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "ii%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "ii%").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "ii%").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "ii%").cardinality, 0.f);
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "iizzzzzzzz%"));
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").first, 0.f);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%").cardinality, 0.f);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruning) {
   const auto hist = EqualDistinctCountHistogram<int32_t>::from_segment(
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
 
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Between, AllTypeVariant{50}, AllTypeVariant{60}));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Between, AllTypeVariant{123}, AllTypeVariant{124}));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Between, AllTypeVariant{124}, AllTypeVariant{12'344}));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'344}));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'345}));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{50}, AllTypeVariant{60}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{123}, AllTypeVariant{124}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{124}, AllTypeVariant{12'344}).type,
+            EstimateType::MatchesNone);
+  EXPECT_EQ(
+      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'344}).type,
+      EstimateType::MatchesNone);
+  EXPECT_EQ(
+      hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{12'344}, AllTypeVariant{12'345}).type,
+      EstimateType::MatchesApproximately);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
@@ -656,7 +713,8 @@ TEST_F(EqualDistinctCountHistogramTest, IntBetweenPruningSpecial) {
       this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 1u);
 
   // Make sure that pruning does not do anything stupid with one bin.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1'000'000}));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Between, AllTypeVariant{0}, AllTypeVariant{1'000'000}).type,
+            EstimateType::MatchesAll);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
@@ -671,7 +729,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
   // First bin: [aaaaaaaa, aaaaaaaz].
   // Common prefix: 'aaaaaaa'
   // (repr(m) - repr(a)) / (repr(z) - repr(a) + 1) * bin_1_count
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaaaaam").first,
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaaaaam").cardinality,
                   (12.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
                    (0 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1)) /
                       (25 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
@@ -681,7 +739,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
   // Second bin: [aaaaffff, aaaaffsd].
   // Common prefix: 'aaaaff'
   // (repr(pr) - repr(ff)) / (repr(sd) - repr(ff) + 1) * bin_2_count + bin_1_count
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaaffpr").first,
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaaffpr").cardinality,
                   (15.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    17.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 -
                    (5 * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
@@ -697,7 +755,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringCommonPrefix) {
   // Second bin: [aaaappwp, aaaazzal].
   // Common prefix: 'aaaa'
   // (repr(tttt) - repr(ppwp)) / (repr(zzal) - repr(ppwp) + 1) * bin_3_count + bin_1_count + bin_2_count
-  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaatttt").first,
+  EXPECT_FLOAT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, "aaaatttt").cardinality,
                   (19.f * (ipow(26, 3) + ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 +
                    19.f * (ipow(26, 2) + ipow(26, 1) + ipow(26, 0)) + 1 + 19.f * (ipow(26, 1) + ipow(26, 0)) + 1 +
                    19.f * ipow(26, 0) + 1 -
@@ -730,42 +788,42 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikeEdgePruning) {
       _string_like_pruning->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 3u, "abcdefghijklmnopqrstuvwxyz", 4u);
 
   // Not prunable, because values start with the character.
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "a%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "b%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "a%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "b%").type, EstimateType::MatchesApproximately);
 
   // Prunable, because in a gap.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "c%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "c%").type, EstimateType::MatchesNone);
 
   // This is the interesting part.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "d%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "d%").type, EstimateType::MatchesNone);
 
   // Not prunable, because bin range is [e, uuu].
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "e%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "f%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "g%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "h%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "i%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "j%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "k%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "l%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "m%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "n%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "o%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "p%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "q%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "r%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "s%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "t%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "u%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "e%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "f%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "g%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "h%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "i%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "j%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "k%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "l%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "m%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "n%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "o%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "p%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "q%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "r%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "s%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "t%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "u%").type, EstimateType::MatchesApproximately);
 
   // The second more interesting test.
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::Like, "v%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "v%").type, EstimateType::MatchesNone);
 
   // Not prunable, because bin range is [wa, zzz].
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "w%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "x%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "y%"));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::Like, "z%"));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "w%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "x%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "y%").type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Like, "z%").type, EstimateType::MatchesApproximately);
 }
 
 TEST_F(EqualDistinctCountHistogramTest, SliceWithPredicate) {
@@ -778,83 +836,98 @@ TEST_F(EqualDistinctCountHistogramTest, SliceWithPredicate) {
   // clang-format on
   auto new_hist = std::shared_ptr<GenericHistogram<int32_t>>{};
 
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::LessThan, 1));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
-  EXPECT_FALSE(hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
-  EXPECT_TRUE(hist->does_not_contain(PredicateCondition::GreaterThan, 100));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
 
   new_hist =
       std::static_pointer_cast<GenericHistogram<int32_t>>(hist->slice_with_predicate(PredicateCondition::Equals, 15));
   // New histogram should have 15 as min and max.
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 15));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 15));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 15));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).first, 40.f / 10);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type, EstimateType::MatchesAll);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type, EstimateType::MatchesAll);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::NotEquals, 15));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 100));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).first, (40 - 40.f / 10) / 9);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 23).cardinality, (40 - 40.f / 10) / 9);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::LessThanEquals, 15));
   // New bin should start at same value as before and end at 15.
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 15));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 15));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).first, 24.f / 6);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 15).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 24.f / 6);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::LessThanEquals, 27));
   // New bin should start at same value as before and end before first gap (because 27 is in that first gap).
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 25));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 25));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).first, 40.f / 10);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 25).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 25).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 10).cardinality, 40.f / 10);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::GreaterThanEquals, 15));
   // New bin should start at 15 and end at same value as before.
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 15));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 100));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).first, 18.f / 5);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::GreaterThanEquals, 27));
   // New bin should start after the first gap (because 27 is in that first gap) and end at same value as before.
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 30));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 30));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 100));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 100));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::Between, 51, 59));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).first, 30.f / 10);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 30).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 30).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 100).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 100).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 35).cardinality, 30.f / 10);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::Between, 0, 17));
   // New bin should start at same value as before (because 0 is smaller than the min of the histogram) and end at 17.
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 1));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 17));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 17));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).first, 40.f / 10);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 1).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 1).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 17).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 17).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 15).cardinality, 40.f / 10);
 
   new_hist = std::static_pointer_cast<GenericHistogram<int32_t>>(
       hist->slice_with_predicate(PredicateCondition::Between, 15, 77));
   // New bin should start at 15 and end right before the second gap (because 77 is in that gap).
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::LessThan, 15));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::LessThanEquals, 15));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::Between, 51, 59));
-  EXPECT_FALSE(new_hist->does_not_contain(PredicateCondition::GreaterThanEquals, 75));
-  EXPECT_TRUE(new_hist->does_not_contain(PredicateCondition::GreaterThan, 75));
-  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).first, 18.f / 5);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThan, 15).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::LessThanEquals, 15).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::Between, 51, 59).type, EstimateType::MatchesNone);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThanEquals, 75).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(new_hist->estimate_cardinality(PredicateCondition::GreaterThan, 75).type, EstimateType::MatchesNone);
+  EXPECT_FLOAT_EQ(new_hist->estimate_cardinality(PredicateCondition::Equals, 18).cardinality, 18.f / 5);
 }
 
 }  // namespace opossum
