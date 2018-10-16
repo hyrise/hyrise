@@ -24,24 +24,29 @@ struct PosList : private pmr_vector<RowID> {
   using reverse_iterator = Vector::reverse_iterator;
   using const_reverse_iterator = Vector::const_reverse_iterator;
 
-  /* (1) */ PosList() noexcept(noexcept(allocator_type())) {}
-  /* (1) */ explicit PosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
-  /* (2) */ PosList(size_type count, const RowID& value, const allocator_type& alloc = allocator_type())
+  /* (1 ) */ PosList() noexcept(noexcept(allocator_type())) {}
+  /* (1 ) */ explicit PosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
+  /* (2 ) */ PosList(size_type count, const RowID& value, const allocator_type& alloc = allocator_type())
       : Vector(count, value, alloc) {}
-  /* (3) */ explicit PosList(size_type count, const allocator_type& alloc = allocator_type()) : Vector(count, alloc) {}
-  /* (4) */ template <class InputIt>
+  /* (3 ) */ explicit PosList(size_type count, const allocator_type& alloc = allocator_type()) : Vector(count, alloc) {}
+  /* (4 ) */ template <class InputIt>
   PosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
-  /* (5) */ // PosList(const Vector& other) : Vector(other); - Oh no, you don't.
-  /* (5) */ // PosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
-  /* (6) */ PosList(Vector&& other) noexcept : Vector(std::forward<Vector>(other)) {}
-  /* (7) */ PosList(Vector&& other, const allocator_type& alloc) : Vector(std::forward<Vector>(other), alloc) {}
-  /* (8) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
+  /* (5 ) */  // PosList(const Vector& other) : Vector(other); - Oh no, you don't.
+  /* (5 ) */  // PosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
+  /* (6 ) */ PosList(PosList&& other) noexcept : Vector(std::forward<Vector>(other)) {}
+  /* (6+) */ PosList(Vector&& other) noexcept : Vector(std::forward<Vector>(other)) {}
+  /* (7 ) */ PosList(PosList&& other, const allocator_type& alloc) : Vector(std::forward<Vector>(other), alloc) {}
+  /* (7+) */ PosList(Vector&& other, const allocator_type& alloc) : Vector(std::forward<Vector>(other), alloc) {}
+  /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
   virtual ~PosList() final = default;
 
-  using Vector::operator=;
+  PosList& operator=(PosList&& other) {
+    Vector::operator=(std::move(other));
+    return *this;
+  }
   using Vector::assign;
   using Vector::get_allocator;
 
@@ -87,15 +92,15 @@ struct PosList : private pmr_vector<RowID> {
 };
 
 inline bool operator==(const PosList& lhs, const PosList& rhs) {
-    return static_cast<pmr_vector<RowID>>(lhs) == static_cast<pmr_vector<RowID>>(rhs);
+  return static_cast<pmr_vector<RowID>>(lhs) == static_cast<pmr_vector<RowID>>(rhs);
 }
 
 inline bool operator==(const PosList& lhs, const pmr_vector<RowID>& rhs) {
-    return static_cast<pmr_vector<RowID>>(lhs) == rhs;
+  return static_cast<pmr_vector<RowID>>(lhs) == rhs;
 }
 
 inline bool operator==(const pmr_vector<RowID>& lhs, const PosList& rhs) {
-    return lhs == static_cast<pmr_vector<RowID>>(rhs);
+  return lhs == static_cast<pmr_vector<RowID>>(rhs);
 }
 
 }  // namespace opossum
