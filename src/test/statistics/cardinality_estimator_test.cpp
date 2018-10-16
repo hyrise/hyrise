@@ -102,4 +102,24 @@ TEST_F(CardinalityEstimatorTest, TwoPredicates) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
 }
 
+TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerJoinWithNumericHistograms) {
+  const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60},
+    std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+    std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5},
+    std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1}
+  );
+
+  const auto histogram_right = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>{20, 30, 50},
+    std::vector<int32_t>{29, 39, 59},
+    std::vector<HistogramCountType>{10, 5, 10},
+    std::vector<HistogramCountType>{7, 2, 10}
+  );
+
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_cardinality_of_inner_join_with_numeric_histograms<int32_t>(
+    histogram_left, histogram_right
+  ), (10.f * 10.f * (1.f / 7.f)) + (20.f * 5.f * (1.f / 8.f)) + (15.f * 10.f * (1.f / 10.f)));
+}
+
 }  // namespace opossum

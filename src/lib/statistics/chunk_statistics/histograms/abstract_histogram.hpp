@@ -134,6 +134,26 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   virtual HistogramCountType total_distinct_count() const = 0;
 
+  /**
+   * Returns the smallest value in the bin.
+   */
+  virtual T _bin_minimum(const BinID index) const = 0;
+
+  /**
+   * Returns the largest value in a bin.
+   */
+  virtual T _bin_maximum(const BinID index) const = 0;
+
+  /**
+   * Returns the number of values in a bin.
+   */
+  virtual HistogramCountType _bin_height(const BinID index) const = 0;
+
+  /**
+   * Returns the number of distinct values in a bin.
+   */
+  virtual HistogramCountType _bin_distinct_count(const BinID index) const = 0;
+
  protected:
   /**
    * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.
@@ -199,26 +219,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
-
-  /**
-   * Returns the smallest value in the bin.
-   */
-  virtual T _bin_minimum(const BinID index) const = 0;
-
-  /**
-   * Returns the largest value in a bin.
-   */
-  virtual T _bin_maximum(const BinID index) const = 0;
-
-  /**
-   * Returns the number of values in a bin.
-   */
-  virtual HistogramCountType _bin_height(const BinID index) const = 0;
-
-  /**
-   * Returns the number of distinct values in a bin.
-   */
-  virtual HistogramCountType _bin_distinct_count(const BinID index) const = 0;
 
   // String histogram-specific members.
   // See general explanation for details.
