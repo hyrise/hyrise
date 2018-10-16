@@ -20,9 +20,9 @@ class ShowColumnsNodeTest : public ::testing::Test {
 
 TEST_F(ShowColumnsNodeTest, Columns) {
   ASSERT_EQ(_show_columns_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_show_columns_node->column_expressions().at(0), *column_({_show_columns_node, ColumnID{0}}));
-  EXPECT_EQ(*_show_columns_node->column_expressions().at(1), *column_({_show_columns_node, ColumnID{1}}));
-  EXPECT_EQ(*_show_columns_node->column_expressions().at(2), *column_({_show_columns_node, ColumnID{2}}));
+  EXPECT_EQ(*_show_columns_node->column_expressions().at(0), *lqp_column_({_show_columns_node, ColumnID{0}}));
+  EXPECT_EQ(*_show_columns_node->column_expressions().at(1), *lqp_column_({_show_columns_node, ColumnID{1}}));
+  EXPECT_EQ(*_show_columns_node->column_expressions().at(2), *lqp_column_({_show_columns_node, ColumnID{2}}));
 }
 
 TEST_F(ShowColumnsNodeTest, Description) {
