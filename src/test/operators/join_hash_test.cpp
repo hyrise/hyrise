@@ -19,7 +19,16 @@ This contains the tests for the JoinHash implementation.
 
 class JoinHashTest : public BaseTest {
  protected:
-  void SetUp() override {
+  static void SetUpTestCase() {
+    _table_size_zero_one = 1'000;
+
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _table_size_zero_one);
+    for (auto i = size_t{0}; i < _table_size_zero_one; ++i) {
+      _table_zero_one->append({static_cast<int>(i % 2)});
+    }
+
     _table_wrapper_small = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
 
@@ -42,8 +51,12 @@ class JoinHashTest : public BaseTest {
     _table_tpch_lineitems_scanned->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems, _table_with_nulls;
-  std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
+  void SetUp() override {}
+
+  static size_t _table_size_zero_one;
+  static std::shared_ptr<Table> _table_zero_one;
+  static std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems, _table_with_nulls;
+  static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
 
   // Accumulates the RowIDs hidden behind the iterator element (hash map stores PosLists, not RowIDs)
   template <typename Iter>
@@ -56,13 +69,14 @@ class JoinHashTest : public BaseTest {
   }
 };
 
+size_t JoinHashTest::_table_size_zero_one = 0;
+std::shared_ptr<Table> JoinHashTest::_table_zero_one = NULL;
+std::shared_ptr<TableWrapper> JoinHashTest::_table_wrapper_small, JoinHashTest::_table_tpch_orders, JoinHashTest::_table_tpch_lineitems, JoinHashTest::_table_with_nulls = NULL;
+std::shared_ptr<TableScan> JoinHashTest::_table_tpch_orders_scanned, JoinHashTest::_table_tpch_lineitems_scanned = NULL;
+
 TEST_F(JoinHashTest, OperatorName) {
-  auto start = std::chrono::steady_clock::now();
   auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
-  auto finish = std::chrono::steady_clock::now();
-  auto time = std::chrono::duration_cast<std::chrono::microseconds>(finish - start).count();
-  std::cout << "Took " << time << std::endl;
 
   EXPECT_EQ(join->name(), "JoinHash");
 }
@@ -72,8 +86,8 @@ TEST_F(JoinHashTest, DISABLED_ChunkCount) {
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 10);
   join->execute();
 
-  // due to the per-chunk grouping in the outputting phase, the number of output chunks should
-  // at max be the number of chunks in the input tables
+  // While radix clustering is well-suited for very large tables, it also yield many output tables.
+  // This test checks whether we create more chunks that existing in the input (which should not be the case).
   EXPECT_TRUE(join->get_output()->chunk_count() <=
               std::max(_table_tpch_orders_scanned->get_output()->chunk_count(),
                        _table_tpch_lineitems_scanned->get_output()->chunk_count()));
@@ -82,7 +96,7 @@ TEST_F(JoinHashTest, DISABLED_ChunkCount) {
 TEST_F(JoinHashTest, MaterializeInput) {
   std::vector<std::vector<size_t>> histograms;
   auto radix_container =
-      materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 17);
+      materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 27);
 
   EXPECT_EQ(radix_container.elements->size(), _table_tpch_lineitems_scanned->get_output()->row_count());
 }
@@ -124,16 +138,36 @@ TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
 
 TEST_F(JoinHashTest, MaterializeInputHistograms) {
   std::vector<std::vector<size_t>> histograms;
-  materialize_input<int, int>(_table_tpch_lineitems_scanned->get_output(), ColumnID{0}, histograms, 0, 17);
 
+  // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
+  // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
+  materialize_input<int, int>(_table_zero_one, ColumnID{0}, histograms, 1, 17);
   size_t histogram_offset_sum = 0;
   for (const auto& radix_count_per_chunk : histograms) {
     for (auto count : radix_count_per_chunk) {
+      EXPECT_EQ(count, this->_table_size_zero_one / 2);
       histogram_offset_sum += count;
     }
   }
+  EXPECT_EQ(histogram_offset_sum, _table_zero_one->row_count());
 
-  EXPECT_EQ(histogram_offset_sum, _table_tpch_lineitems_scanned->get_output()->row_count());
+  histograms.clear();
+
+  // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
+  // significant bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11).
+  // Since the radix clusters are determine by hashing the value, we do not know in which cluster
+  // the values are going to be stored.
+  size_t empty_cluster_count = 0;
+  materialize_input<int, int>(_table_zero_one, ColumnID{0}, histograms, 2, 17);
+  for (const auto& radix_count_per_chunk : histograms) {
+    for (auto count : radix_count_per_chunk) {
+      // Againg: due to the hashing, we do not know which cluster holds the value
+      // But we know that two buckets have tab _table_size_zero_one/2 items and two none items.
+      EXPECT_TRUE(count == this->_table_size_zero_one / 2 || count == 0);
+      if (count == 0) ++empty_cluster_count;
+    }
+  }
+  EXPECT_EQ(empty_cluster_count, 2);
 }
 
 }  // namespace opossum
