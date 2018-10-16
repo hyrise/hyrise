@@ -21,7 +21,7 @@ class ShowTablesNodeTest : public BaseTest {
 
 TEST_F(ShowTablesNodeTest, Columns) {
   ASSERT_EQ(_show_tables_node->column_expressions().size(), 1u);
-  EXPECT_EQ(*_show_tables_node->column_expressions().at(0), *column_({_show_tables_node, ColumnID{0}}));
+  EXPECT_EQ(*_show_tables_node->column_expressions().at(0), *lqp_column_({_show_tables_node, ColumnID{0}}));
 }
 
 TEST_F(ShowTablesNodeTest, Description) { EXPECT_EQ(_show_tables_node->description(), "[ShowTables]"); }
