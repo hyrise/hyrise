@@ -357,7 +357,7 @@ int Console::_help(const std::string&) {
   out("Available commands:\n");
   out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  load FILEPATH TABLENAME                 - Load table from disc specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("  load FILEPATH TABLENAME                 - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
   out("                                               The import type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
   out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
