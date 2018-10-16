@@ -1,3 +1,6 @@
+
+
+
 #pragma once
 
 #include <utility>
@@ -34,12 +37,14 @@ struct PosList : private pmr_vector<RowID> {
       : Vector(std::move(first), std::move(last)) {}
   /* (5 ) */  // PosList(const Vector& other) : Vector(other); - Oh no, you don't.
   /* (5 ) */  // PosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
-  /* (6 ) */ PosList(PosList&& other) noexcept : Vector(std::move(other)) {}
-  /* (6+) */ PosList(Vector&& other) noexcept : Vector(std::move(other)) {}
-  /* (7 ) */ PosList(PosList&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
-  /* (7+) */ PosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
+  /* (6 ) */ PosList(PosList&& other) noexcept : Vector(std::forward<Vector>(other)) {}
+  /* (6+) */ PosList(Vector&& other) noexcept : Vector(std::forward<Vector>(other)) {}
+  /* (7 ) */ PosList(PosList&& other, const allocator_type& alloc) : Vector(std::forward<Vector>(other), alloc) {}
+  /* (7+) */ PosList(Vector&& other, const allocator_type& alloc) : Vector(std::forward<Vector>(other), alloc) {}
   /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
+
+  //virtual ~PosList() final = default;
 
   PosList& operator=(PosList&& other) {
     Vector::operator=(std::move(other));
