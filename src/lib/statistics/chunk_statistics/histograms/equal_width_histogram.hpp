@@ -81,6 +81,8 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    */
   BinID bin_count() const override;
 
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
+
  protected:
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;
@@ -177,9 +179,6 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    * For strings simply call the method in AbstractHistogram.
    */
   typename AbstractHistogram<T>::HistogramWidthType _bin_width(const BinID index) const override;
-
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const float selectivity) const override;
-
  private:
   const EqualWidthBinData<T> _bin_data;
 };

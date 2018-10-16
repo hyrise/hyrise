@@ -111,13 +111,13 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
         /**
          * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
          */
-        //        for (auto column_id = ColumnID{0};
-        //             column_id < predicate_input_chunk_statistics->segment_statistics.size();
-        //             ++column_id) {
-        //          if (column_id == operator_scan_predicate.column_id) continue;
-        //
-        //          predicate_output_chunk_statistics->segment_statistics[column_id] =  ...
-        //        }
+                for (auto column_id = ColumnID{0};
+                     column_id < predicate_input_chunk_statistics->segment_statistics.size();
+                     ++column_id) {
+                  if (column_id == operator_scan_predicate.column_id) continue;
+
+                  predicate_output_chunk_statistics->segment_statistics[column_id] = predicate_input_chunk_statistics->segment_statistics[column_id]->scale_with_selectivity(predicate_chunk_selectivity);
+                }
 
         /**
          * Adjust ChunkStatistics row_count

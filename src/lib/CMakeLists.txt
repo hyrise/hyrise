@@ -376,6 +376,7 @@ set(
     statistics/generate_table_statistics.hpp
     statistics/segment_statistics2.cpp
     statistics/segment_statistics2.hpp
+    statistics/selectivity.hpp
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
     statistics/table_statistics.cpp
