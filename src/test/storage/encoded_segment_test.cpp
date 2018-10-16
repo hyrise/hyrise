@@ -85,7 +85,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<PosList> create_random_access_position_filter() {
-    auto list = create_sequential_chunk_offsets_list();
+    auto list = create_sequential_position_filter();
 
     auto random_device = std::random_device{};
     std::default_random_engine engine{random_device()};
@@ -186,7 +186,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
+  auto chunk_offsets_list = this->create_sequential_position_filter();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
@@ -213,7 +213,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
+  auto chunk_offsets_list = this->create_random_access_position_filter();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);

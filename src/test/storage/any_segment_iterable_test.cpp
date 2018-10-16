@@ -36,6 +36,7 @@ class AnySegmentIterableTest : public BaseTest {
 
   std::shared_ptr<PosList> create_sequential_position_filter() {
     auto list = std::make_shared<PosList>();
+    list->guarantee_single_chunk();
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};

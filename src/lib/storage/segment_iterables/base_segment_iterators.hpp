@@ -71,31 +71,31 @@ struct ChunkOffsetMapping {
 template <typename Derived, typename Value>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessSegmentIterator(const PosList& position_filter)
-      : _chunk_offsets_begin{position_filter.begin()}, _chunk_offsets_it{position_filter.begin()} {
-    DebugAssert(position_filter.references_single_chunk(),
-                "Expected input PosList to reference single chunk as ChunkIDs will be ignored");
-  }
+  explicit BasePointAccessSegmentIterator(const PosList::const_iterator position_filter_begin,
+                                          PosList::const_iterator position_filter_it)
+      : _position_filter_begin{std::move(position_filter_begin)}, _position_filter_it{std::move(position_filter_it)} {}
 
  protected:
   const ChunkOffsetMapping chunk_offsets() const {
-    DebugAssert(_chunk_offsets_it->chunk_offset != INVALID_CHUNK_OFFSET,
+    DebugAssert(_position_filter_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
-    return {static_cast<ChunkOffset>(std::distance(_chunk_offsets_begin, _chunk_offsets_it)),
-            _chunk_offsets_it->chunk_offset};
+    std::cout << "Returning {" << static_cast<ChunkOffset>(std::distance(_position_filter_begin, _position_filter_it))
+              << ", " << _position_filter_it->chunk_offset << "}" << std::endl;
+    return {static_cast<ChunkOffset>(std::distance(_position_filter_begin, _position_filter_it)),
+            _position_filter_it->chunk_offset};
   }
 
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_chunk_offsets_it; }
+  void increment() { ++_position_filter_it; }
   bool equal(const BasePointAccessSegmentIterator& other) const {
-    return (_chunk_offsets_it == other._chunk_offsets_it);
+    return (_position_filter_it == other._position_filter_it);
   }
 
  private:
-  const PosList::const_iterator _chunk_offsets_begin;
-  PosList::const_iterator _chunk_offsets_it;
+  const PosList::const_iterator _position_filter_begin;
+  PosList::const_iterator _position_filter_it;
 };
 
 }  // namespace opossum

@@ -29,15 +29,16 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decoder.get(), *position_filter};
+                                                                 decoder.get(), position_filter.cbegin(),
+                                                                 position_filter.cend()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT>{*position_filter};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter.cbegin(), position_filter.cend()};
 
       functor(begin, end);
     });
@@ -104,9 +105,10 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
    public:
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        OffsetValueDecompressorT* attribute_decoder, const PosList& position_filter)
+                        OffsetValueDecompressorT* attribute_decoder,
+                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
-                                         SegmentIteratorValue<T>>{position_filter},
+                                         SegmentIteratorValue<T>>{position_filter_begin, position_filter_it},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decoder{attribute_decoder} {}

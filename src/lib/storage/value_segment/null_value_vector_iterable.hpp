@@ -24,9 +24,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    auto begin = PointAccessIterator{_null_values, *position_filter};
-    auto end = PointAccessIterator{_null_values, *position_filter};
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+    auto begin = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cend()};
+    auto end = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cend()};
     functor(begin, end);
   }
 
@@ -63,8 +63,12 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values, const PosList& position_filter)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue>{position_filter},
+    explicit PointAccessIterator(const NullValueVector& null_values,
+                                 const PosList::const_iterator position_filter_begin,
+                                 PosList::const_iterator position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue>{std::move(
+                                                                                            position_filter_begin),
+                                                                                        std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:

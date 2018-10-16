@@ -33,14 +33,15 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin =
-          PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder, *position_filter};
-      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder, *position_filter};
+      auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
+                                                      position_filter.cbegin(), position_filter.cend()};
+      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
+                                                    position_filter.cbegin(), position_filter.cend()};
       functor(begin, end);
     });
   }
@@ -97,8 +98,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>> {
    public:
     PointAccessIterator(const Dictionary& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
-                        const PosList& position_filter)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>>{position_filter},
+                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
+                                         SegmentIteratorValue<T>>{position_filter_begin, position_filter_it},
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}

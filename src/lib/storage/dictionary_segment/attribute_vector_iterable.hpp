@@ -25,13 +25,15 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, *position_filter};
-      auto end = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, *position_filter};
+      auto begin = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, position_filter.cbegin(),
+                                                      position_filter.cend()};
+      auto end = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, position_filter.cbegin(),
+                                                    position_filter.cend()};
       functor(begin, end);
     });
   }
@@ -74,9 +76,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<ValueID>> {
    public:
-    PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder, const PosList& position_filter)
+    PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder,
+                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
-                                         SegmentIteratorValue<ValueID>>{position_filter},
+                                         SegmentIteratorValue<ValueID>>{position_filter_begin, position_filter_it},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
 

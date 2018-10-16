@@ -68,7 +68,8 @@ class IterablesTest : public BaseTest {
     table_strings = load_table("src/test/tables/string.tbl", Chunk::MAX_SIZE);
 
     position_filter = std::make_shared<PosList>(
-        PosList{{RowID{0}, ChunkOffset{0}}, {RowID{0}, ChunkOffset{2}}, {RowID{0}, ChunkOffset{3}}});
+        PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
+    position_filter->guarantee_single_chunk();
   }
 
   std::shared_ptr<Table> table;

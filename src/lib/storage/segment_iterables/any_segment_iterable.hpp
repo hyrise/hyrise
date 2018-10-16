@@ -78,7 +78,7 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     _iterable._on_with_iterators(position_filter, [&functor](auto it, auto end) {
       using SegmentIteratorValueT = typename std::iterator_traits<decltype(it)>::value_type;
       using DataTypeT = typename SegmentIteratorValueT::Type;

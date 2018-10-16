@@ -24,11 +24,11 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   }
 
   template <typename Functor>
-  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     auto begin =
-        PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(), *position_filter};
+        PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(), position_filter};
     auto end =
-        PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(), *position_filter};
+        PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(), position_filter};
 
     functor(begin, end);
   }
@@ -96,8 +96,11 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>> {
    public:
     explicit PointAccessIterator(const pmr_vector<T>& values, const pmr_vector<bool>& null_values,
-                                 const pmr_vector<ChunkOffset>& end_positions, const PosList& position_filter)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{position_filter},
+                                 const pmr_vector<ChunkOffset>& end_positions,
+                                 const PosList::const_iterator position_filter_begin,
+                                 PosList::const_iterator position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{std::move(position_filter_begin),
+                                                                                       std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
