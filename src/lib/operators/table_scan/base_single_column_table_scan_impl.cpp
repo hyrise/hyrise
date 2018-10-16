@@ -8,7 +8,7 @@
 #include "storage/chunk.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
+#include "storage/split_pos_list_by_chunk_id.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
@@ -40,19 +40,17 @@ void BaseSingleColumnTableScanImpl::handle_segment(const ReferenceSegment& segme
   auto& matches_out = context->_matches_out;
 
   auto referenced_chunk_count = segment.referenced_table()->chunk_count();
-  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*segment.pos_list(), referenced_chunk_count);
+  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(segment.pos_list(), referenced_chunk_count);
 
   // Visit each referenced segment
   for (auto referenced_chunk_id = ChunkID{0}; referenced_chunk_id < referenced_chunk_count; ++referenced_chunk_id) {
-    auto& mapped_chunk_offsets = chunk_offsets_by_chunk_id[referenced_chunk_id];
-    if (mapped_chunk_offsets.empty()) continue;
+    auto& position_filter = chunk_offsets_by_chunk_id[referenced_chunk_id];
+    if (!position_filter || position_filter->empty()) continue;
 
     const auto chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
-    auto mapped_chunk_offsets_ptr = std::make_unique<ChunkOffsetsList>(std::move(mapped_chunk_offsets));
-
-    auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
+    auto new_context = std::make_shared<Context>(chunk_id, matches_out, position_filter);
 
     resolve_data_and_segment_type(*referenced_segment, [&](const auto data_type_t, const auto& resolved_segment) {
       static_cast<AbstractSegmentVisitor*>(this)->handle_segment(resolved_segment, new_context);

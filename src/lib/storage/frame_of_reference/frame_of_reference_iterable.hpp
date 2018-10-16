@@ -29,15 +29,15 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decoder.get(), mapped_chunk_offsets.cbegin()};
+                                                                 decoder.get(), *position_filter};
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT>{mapped_chunk_offsets.cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{*position_filter};
 
       functor(begin, end);
     });
@@ -104,16 +104,16 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
    public:
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        OffsetValueDecompressorT* attribute_decoder, ChunkOffsetsIterator chunk_offsets_it)
+                        OffsetValueDecompressorT* attribute_decoder, const PosList& position_filter)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
-                                         SegmentIteratorValue<T>>{chunk_offsets_it},
+                                         SegmentIteratorValue<T>>{position_filter},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decoder{attribute_decoder} {}
 
     // End Iterator
-    explicit PointAccessIterator(ChunkOffsetsIterator chunk_offsets_it)
-        : PointAccessIterator{nullptr, nullptr, nullptr, chunk_offsets_it} {}
+    explicit PointAccessIterator(const PosList& position_filter)
+        : PointAccessIterator{nullptr, nullptr, nullptr, position_filter} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

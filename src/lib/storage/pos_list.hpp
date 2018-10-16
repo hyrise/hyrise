@@ -4,12 +4,18 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-// TODO explain why this has to be final
+// For a long time, PosList was just a pmr_vector<RowID>. With this class, we want to add functionality to that vector,
+// more specifically, flags that give us some guarantees about its contents. If we know, e.g., that all entries point
+// into the same chunk, we can simplify things in split_pos_list_by_chunk_id.
+// Inheriting from std::vector is generally not encouraged, because the STL containers are not prepared for
+// inheritance. By making the inheritance private and this class final, we can assure that the problems that come with
+// a non-virtual destructor do not occur.
 
-struct PosList : private pmr_vector<RowID> {
+struct PosList final : private pmr_vector<RowID> {
  public:
   using Vector = pmr_vector<RowID>;
 
@@ -36,20 +42,36 @@ struct PosList : private pmr_vector<RowID> {
       : Vector(std::move(first), std::move(last)) {}
   /* (5 ) */  // PosList(const Vector& other) : Vector(other); - Oh no, you don't.
   /* (5 ) */  // PosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
-  /* (6 ) */ PosList(PosList&& other) noexcept : Vector(std::move(other)) {}
+  /* (6 ) */ PosList(PosList&& other) noexcept
+      : Vector(std::move(other)), _references_single_chunk{other._references_single_chunk} {}
   /* (6+) */ PosList(Vector&& other) noexcept : Vector(std::move(other)) {}
-  /* (7 ) */ PosList(PosList&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
+  /* (7 ) */ PosList(PosList&& other, const allocator_type& alloc)
+      : Vector(std::move(other), alloc), _references_single_chunk{other._references_single_chunk} {}
   /* (7+) */ PosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
   /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
   PosList& operator=(PosList&& other) {
+    _references_single_chunk = other._references_single_chunk;
     Vector::operator=(std::move(other));
     return *this;
   }
+
   void guarantee_single_chunk() { _references_single_chunk = true; }
 
-  bool references_single_chunk() const { return _references_single_chunk; }
+  bool references_single_chunk() const {
+    if (_references_single_chunk) {
+      DebugAssert(
+          [&]() {
+            if (size() == 0) return true;
+            const auto& common_chunk_id = (*this)[0].chunk_id;
+            return std::all_of(cbegin(), cend(),
+                               [&](const auto& row_id) { return row_id.chunk_id == common_chunk_id; });
+          }(),
+          "Chunk was marked as referencing only a single chunk, but references more");
+    }
+    return _references_single_chunk;
+  }
 
   using Vector::assign;
   using Vector::get_allocator;

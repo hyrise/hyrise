@@ -69,22 +69,22 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  std::unique_ptr<ChunkOffsetsList> create_sequential_chunk_offsets_list() {
-    auto list = std::make_unique<ChunkOffsetsList>();
+  std::shared_ptr<PosList> create_sequential_position_filter() {
+    auto list = std::make_shared<PosList>();
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
+    for (auto into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
       if (bernoulli_dist(engine)) {
-        list->push_back({into_referencing++, into_referenced});
+        list->push_back(RowID{ChunkID{0}, into_referenced});
       }
     }
 
     return list;
   }
 
-  std::unique_ptr<ChunkOffsetsList> create_random_access_chunk_offsets_list() {
+  std::shared_ptr<PosList> create_random_access_position_filter() {
     auto list = create_sequential_chunk_offsets_list();
 
     auto random_device = std::random_device{};

@@ -34,15 +34,15 @@ class AnySegmentIterableTest : public BaseTest {
     return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  std::unique_ptr<ChunkOffsetsList> create_sequential_chunk_offsets_list() {
-    auto list = std::make_unique<ChunkOffsetsList>();
+  std::shared_ptr<PosList> create_sequential_position_filter() {
+    auto list = std::make_shared<PosList>();
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
+    for (auto into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
       if (bernoulli_dist(engine)) {
-        list->push_back({into_referencing++, into_referenced});
+        list->push_back(RowID{ChunkID{0}, into_referenced});
       }
     }
 
@@ -74,7 +74,7 @@ TEST_F(AnySegmentIterableTest, RandomlyIterateOverSegment) {
   auto iterable = ValueSegmentIterable<int32_t>{*_segment};
   auto any_iterable = AnySegmentIterable{iterable};
 
-  const auto chunk_offsets_list = create_sequential_chunk_offsets_list();
+  const auto chunk_offsets_list = create_sequential_position_filter();
 
   iterable.with_iterators(chunk_offsets_list, [&](auto it, auto end) {
     any_iterable.with_iterators(chunk_offsets_list, [&](auto any_it, auto any_end) {

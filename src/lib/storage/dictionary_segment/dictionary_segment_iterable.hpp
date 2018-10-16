@@ -33,15 +33,14 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
-                                                      mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
-                                                    mapped_chunk_offsets.cend()};
+      auto begin =
+          PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder, *position_filter};
+      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder, *position_filter};
       functor(begin, end);
     });
   }
@@ -98,8 +97,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>> {
    public:
     PointAccessIterator(const Dictionary& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
-                        ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>>{chunk_offsets_it},
+                        const PosList& position_filter)
+        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>>{position_filter},
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}

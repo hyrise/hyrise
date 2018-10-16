@@ -67,14 +67,14 @@ class IterablesTest : public BaseTest {
     table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
     table_strings = load_table("src/test/tables/string.tbl", Chunk::MAX_SIZE);
 
-    chunk_offsets = std::make_unique<std::vector<ChunkOffsetMapping>>(
-        std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}});
+    position_filter = std::make_shared<PosList>(
+        PosList{{RowID{0}, ChunkOffset{0}}, {RowID{0}, ChunkOffset{2}}, {RowID{0}, ChunkOffset{3}}});
   }
 
   std::shared_ptr<Table> table;
   std::shared_ptr<Table> table_with_null;
   std::shared_ptr<Table> table_strings;
-  std::unique_ptr<std::vector<ChunkOffsetMapping>> chunk_offsets;
+  std::shared_ptr<PosList> position_filter;
 };
 
 TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
@@ -100,7 +100,7 @@ TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(chunk_offsets, SumUpWithIterator{sum});
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -128,7 +128,7 @@ TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(chunk_offsets, SumUpWithIterator{sum});
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 13'579u);
 }
@@ -160,7 +160,7 @@ TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
   auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(chunk_offsets, SumUpWithIterator{sum});
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -192,7 +192,7 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
   auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
 
   auto concatenate = std::string();
-  iterable.with_iterators(chunk_offsets, AppendWithIterator{concatenate});
+  iterable.with_iterators(position_filter, AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxyyyuuu");
 }

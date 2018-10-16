@@ -26,12 +26,16 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const auto begin_it = pos_list.begin();
     const auto end_it = pos_list.end();
 
+    // If we are guaranteed that the reference segment refers to a single chunk, we can do some optimizations.
+    // For example, we can use a single, non-virtual segment accessor instead of having to keep multiple and using
+    // virtual method calls.
+
     if (pos_list.references_single_chunk() && pos_list.size() > 0) {
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
       resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
         using SegmentType = std::decay_t<decltype(typed_segment)>;
 
-        if constexpr(!std::is_same_v<SegmentType, ReferenceSegment>) {
+        if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
           auto accessor = SegmentAccessor<T, SegmentType>(typed_segment);
 
           auto begin = SingleChunkIterator<decltype(accessor)>{accessor, begin_it, begin_it};
@@ -54,7 +58,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   const ReferenceSegment& _segment;
 
  private:
-  // TODO Doc
+  // The iterator for cases where we iterate over a single referenced chunk
   template <typename Accessor>
   class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor>, SegmentIteratorValue<T>> {
    public:
@@ -63,9 +67,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    public:
     explicit SingleChunkIterator(const Accessor& accessor, const PosListIterator& begin_pos_list_it,
                                  const PosListIterator& pos_list_it)
-        : _begin_pos_list_it{begin_pos_list_it},
-          _pos_list_it{pos_list_it},
-          _accessor{accessor} {}
+        : _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it}, _accessor{accessor} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -98,6 +100,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const Accessor& _accessor;
   };
 
+  // The iterator for cases where we potentially iterate over multiple referenced chunks
   class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentIteratorValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;

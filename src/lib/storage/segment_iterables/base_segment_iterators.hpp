@@ -2,7 +2,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
+#include "storage/pos_list.hpp"
 #include "storage/segment_iterables/segment_iterator_values.hpp"
 #include "types.hpp"
 
@@ -50,38 +50,39 @@ class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost:
                             public JitBaseSegmentIterator {};
 
 /**
+ * Mapping between chunk offset into a reference segment and
+ * its dereferenced counter part, i.e., a reference into the
+ * referenced value or dictionary segment.
+ */
+struct ChunkOffsetMapping {
+  ChunkOffset into_referencing;  // chunk offset in reference segment
+  ChunkOffset into_referenced;   // chunk offset in referenced segment
+};
+
+/**
  * @brief base class of all point-access iterators used by iterables
  *
  * This iterator should be used whenever a reference segment is “dereferenced”,
  * i.e., its underlying value or dictionary segment is iterated over.
- * index_into_referenced is the index into the underlying data structure.
- * index_of_referencing is the current index in the reference segment.
- *
- *
- * Example Usage
- *
- * class Iterator : public BasePointAccessSegmentIterator<Iterator, Value> {
- *  public:
- *   Iterator(const ChunkOffsetIterator& chunk_offset_it)
- *       : BasePointAccessSegmentIterator<Iterator, Value>{chunk_offset_it} {}
- *
- *  private:
- *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
- *
- *   Value dereference() const { return Value{}; }
- * };
+ * The passed position_filter is used to select which of the iterable's values
+ * are returned.
  */
+
 template <typename Derived, typename Value>
 class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessSegmentIterator(const ChunkOffsetsIterator& chunk_offsets_it)
-      : _chunk_offsets_it{chunk_offsets_it} {}
+  explicit BasePointAccessSegmentIterator(const PosList& position_filter)
+      : _chunk_offsets_begin{position_filter.begin()}, _chunk_offsets_it{position_filter.begin()} {
+    DebugAssert(position_filter.references_single_chunk(),
+                "Expected input PosList to reference single chunk as ChunkIDs will be ignored");
+  }
 
  protected:
-  const ChunkOffsetMapping& chunk_offsets() const {
-    DebugAssert(_chunk_offsets_it->into_referenced != INVALID_CHUNK_OFFSET,
+  const ChunkOffsetMapping chunk_offsets() const {
+    DebugAssert(_chunk_offsets_it->chunk_offset != INVALID_CHUNK_OFFSET,
                 "Invalid ChunkOffset, calling code should handle null values");
-    return *_chunk_offsets_it;
+    return {static_cast<ChunkOffset>(std::distance(_chunk_offsets_begin, _chunk_offsets_it)),
+            _chunk_offsets_it->chunk_offset};
   }
 
  private:
@@ -93,7 +94,8 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   }
 
  private:
-  ChunkOffsetsIterator _chunk_offsets_it;
+  const PosList::const_iterator _chunk_offsets_begin;
+  PosList::const_iterator _chunk_offsets_it;
 };
 
 }  // namespace opossum

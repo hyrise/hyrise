@@ -28,14 +28,14 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     if (_segment.is_nullable()) {
-      auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator{_segment.values(), _segment.null_values(), mapped_chunk_offsets.cend()};
+      auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), *position_filter};
+      auto end = PointAccessIterator{_segment.values(), _segment.null_values(), *position_filter};
       functor(begin, end);
     } else {
-      auto begin = NonNullPointAccessIterator{_segment.values(), mapped_chunk_offsets.cbegin()};
-      auto end = NonNullPointAccessIterator{_segment.values(), mapped_chunk_offsets.cend()};
+      auto begin = NonNullPointAccessIterator{_segment.values(), *position_filter};
+      auto end = NonNullPointAccessIterator{_segment.values(), *position_filter};
       functor(begin, end);
     }
   }
@@ -111,8 +111,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueVector = pmr_concurrent_vector<T>;
 
    public:
-    explicit NonNullPointAccessIterator(const ValueVector& values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentIteratorValue<T>>{chunk_offsets_it},
+    explicit NonNullPointAccessIterator(const ValueVector& values, const PosList& position_filter)
+        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentIteratorValue<T>>{position_filter},
           _values{values} {}
 
    private:
@@ -135,8 +135,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
    public:
     explicit PointAccessIterator(const ValueVector& values, const NullValueVector& null_values,
-                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{chunk_offsets_it},
+                                 const PosList& position_filter)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{position_filter},
           _values{values},
           _null_values{null_values} {}
 

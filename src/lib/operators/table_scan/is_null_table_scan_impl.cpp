@@ -38,7 +38,7 @@ void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
 void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto& position_filter = context->_position_filter;
 
   if (_matches_all(base_segment)) {
     _add_all(*context, base_segment.size());
@@ -54,25 +54,25 @@ void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
 
   auto base_segment_iterable = NullValueVectorIterable{base_segment.null_values()};
 
-  base_segment_iterable.with_iterators(mapped_chunk_offsets,
+  base_segment_iterable.with_iterators(position_filter,
                                        [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto& position_filter = context->_position_filter;
 
   auto base_segment_iterable = create_iterable_from_attribute_vector(base_segment);
 
-  base_segment_iterable.with_iterators(mapped_chunk_offsets,
+  base_segment_iterable.with_iterators(position_filter,
                                        [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto& position_filter = context->_position_filter;
 
   const auto base_column_type = _in_table->column_data_type(_left_column_id);
 
@@ -83,7 +83,7 @@ void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
       auto base_segment_iterable = create_iterable_from_segment(typed_segment);
 
       base_segment_iterable.with_iterators(
-          mapped_chunk_offsets, [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+          position_filter, [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
     });
   });
 }
@@ -117,11 +117,11 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) {
 void IsNullTableScanImpl::_add_all(Context& context, size_t segment_size) {
   auto& matches_out = context._matches_out;
   const auto chunk_id = context._chunk_id;
-  const auto& mapped_chunk_offsets = context._mapped_chunk_offsets;
+  const auto& position_filter = context._position_filter;
 
-  if (mapped_chunk_offsets) {
-    for (const auto& chunk_offsets : *mapped_chunk_offsets) {
-      matches_out.emplace_back(RowID{chunk_id, chunk_offsets.into_referencing});
+  if (position_filter) {
+    for (const auto& row_id : *position_filter) {
+      matches_out.emplace_back(row_id);
     }
   } else {
     for (auto chunk_offset = 0u; chunk_offset < segment_size; ++chunk_offset) {
