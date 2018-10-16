@@ -24,11 +24,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList
     for (auto chunk_id = ChunkID{0}; chunk_id < number_of_chunks; ++chunk_id) {
       pos_lists_by_chunk_id[chunk_id] = std::make_shared<PosList>();
       pos_lists_by_chunk_id[chunk_id]->guarantee_single_chunk();
-    }
-
-    // Assume uniform distribution and allocate some memory
-    for (auto& output_pos_list : pos_lists_by_chunk_id) {
-      output_pos_list->reserve(input_pos_list->size() / number_of_chunks);
+      pos_lists_by_chunk_id[chunk_id]->reserve(input_pos_list->size() / number_of_chunks);
     }
 
     // Iterate over the input_pos_list and split the entries by chunk_id

@@ -186,15 +186,15 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto chunk_offsets_list = this->create_sequential_position_filter();
+  auto position_filter = this->create_sequential_position_filter();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
+    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(
-          chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+          position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
             for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
               EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
@@ -213,15 +213,15 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto chunk_offsets_list = this->create_random_access_position_filter();
+  auto position_filter = this->create_random_access_position_filter();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
+    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(
-          chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+          position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
             for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
               EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
