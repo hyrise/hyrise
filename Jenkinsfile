@@ -3,7 +3,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 node {
   stage ("Start") {
     script {
-      // githubNotify context: 'CI Pipeline', status: 'PENDING'
+      githubNotify context: 'CI Pipeline', status: 'PENDING'
 
       // Cancel previous builds
       if (env.BRANCH_NAME != 'master') {
@@ -23,7 +23,9 @@ node {
   def oppossumCI = docker.image('hyrise/opossum-ci:18.04');
   oppossumCI.pull()
   // create ccache volume on host using:
-  // mkdir /mnt/ccache; mount -t tmpfs -o size=10G none /mnt/ccache
+  // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
+  // or add it to /etc/fstab:
+  // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
 
   oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro\" --privileged=true") {
     try {
@@ -93,7 +95,8 @@ node {
       }, clangDebugTidy: {
         stage("clang-debug:tidy") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmark hyriseBenchmarkTPCH hyriseConsole hyriseServer -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           } else {
             Utils.markStageSkippedForConditional("clangDebugTidy")
           }
@@ -165,7 +168,7 @@ node {
             ])
             script {
               coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-              // githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
+              githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
             }
           } else {
             Utils.markStageSkippedForConditional("clangDebugCoverage")
@@ -205,9 +208,9 @@ node {
       stage("Cleanup") {
         // Clean up workspace.
         script {
-          // githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+          githubNotify context: 'CI Pipeline', status: 'SUCCESS'
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            // githubNotify context: 'Full CI', status: 'SUCCESS'
+            githubNotify context: 'Full CI', status: 'SUCCESS'
           }
         }
         step([$class: 'WsCleanup'])
@@ -215,7 +218,7 @@ node {
     } catch (error) {
       stage ("Cleanup after fail") {
         script {
-          // githubNotify context: 'CI Pipeline', status: 'FAILURE'
+          githubNotify context: 'CI Pipeline', status: 'FAILURE'
           if (env.BRANCH_NAME == 'master') {
             slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
           }
