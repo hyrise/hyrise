@@ -45,6 +45,13 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<ExistsReformulationRule>();
   }
 
+  std::shared_ptr<AbstractLQPNode> apply_exists_rule(const std::shared_ptr<AbstractLQPNode>& lqp) {
+    auto copied_lqp = lqp->deep_copy();
+    StrategyBaseTest::apply_rule(_rule, copied_lqp);
+
+    return copied_lqp;
+  }
+
   std::shared_ptr<ExistsReformulationRule> _rule;
 
   std::shared_ptr<StoredTableNode> node_table_a, node_table_b;
@@ -152,17 +159,13 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
           ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
-  // apply exists reformulation rule
-  auto modified_lqp = input_lqp->deep_copy();
-  StrategyBaseTest::apply_rule(_rule, modified_lqp);
-
   const auto compare_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
                      ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
                      node_table_b));
 
-  EXPECT_LQP_EQ(modified_lqp, compare_lqp);
+  EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), compare_lqp);
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
@@ -178,17 +181,13 @@ TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
           ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
-  // apply exists reformulation rule
-  auto modified_lqp = input_lqp->deep_copy();
-  StrategyBaseTest::apply_rule(_rule, modified_lqp);
-
   const auto compare_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
                      ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), node_table_a),
                      node_table_b));
 
-  EXPECT_LQP_EQ(modified_lqp, compare_lqp);
+  EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), compare_lqp);
 }
 
 // Apply the rule to various queries which should NOT be modified by the reformulation rule.
