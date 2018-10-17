@@ -752,17 +752,17 @@ const char* const tpch_query_19 =
  *          SELECT p_partkey
  *          FROM part
  *          WHERE
- *            p_name like '[COLOR]%')
- *            AND ps_availqty > (
- *                SELECT 0.5 * sum(l_quantity)
- *                FROM lineitem
- *                WHERE
- *                    l_partkey = ps_partkey
- *                    AND l_suppkey = ps_suppkey
- *                    AND l_shipdate >= date('[DATE]')
- *                    AND l_shipdate < date('[DATE]') + interval '1' year
- *            )
+ *            p_name like '[COLOR]%'
+ *        ) AND ps_availqty > (
+ *          SELECT 0.5 * sum(l_quantity)
+ *          FROM lineitem
+ *          WHERE
+ *            l_partkey = ps_partkey
+ *            AND l_suppkey = ps_suppkey
+ *            AND l_shipdate >= date('[DATE]')
+ *            AND l_shipdate < date('[DATE]') + interval '1' year
  *        )
+ *    )
  *    AND s_nationkey = n_nationkey
  *    AND n_name = '[NATION]'
  * ORDER BY s_name;
