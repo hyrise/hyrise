@@ -80,7 +80,9 @@ TEST_F(JoinHashTest, OperatorName) {
   EXPECT_EQ(join->name(), "JoinHash");
 }
 
-TEST_F(JoinHashTest, DISABLED_ChunkCount) {
+// Once we bring in the PosList optimization flag REFERS_TO_SINGLE_CHUNK_ONLY, this test will ensure
+// that the join does not unnecessarily add chunks (e.g., discussed in #698).
+TEST_F(JoinHashTest, DISABLED_ChunkCount /* #698 */) {
   auto join = std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 10);
   join->execute();
