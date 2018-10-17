@@ -25,13 +25,16 @@ struct SumUpWithIterator {
     _sum = 0u;
 
     for (; begin != end; ++begin) {
-      if ((*begin).is_null()) continue;
+      _accessed_offsets.emplace_back(begin->chunk_offset());
 
-      _sum += (*begin).value();
+      if (begin->is_null()) continue;
+
+      _sum += begin->value();
     }
   }
 
   uint32_t& _sum;
+  std::vector<ChunkOffset>& _accessed_offsets;
 };
 
 struct SumUp {
@@ -87,9 +90,11 @@ TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
@@ -101,9 +106,11 @@ TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 12'480u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
@@ -115,9 +122,11 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 13'702u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
@@ -129,9 +138,11 @@ TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 13'579u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
 }
 
 TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
@@ -145,9 +156,11 @@ TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
   auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
@@ -161,9 +174,11 @@ TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
   auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(position_filter, SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 12'480u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
 }
 
 TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
@@ -208,9 +223,11 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIterator{sum});
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
@@ -222,6 +239,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
   iterable.for_each(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825u);
@@ -236,6 +254,7 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
+  auto accessed_offsets = (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}});
   iterable.for_each(SumUp{sum});
 
   EXPECT_EQ(sum, 13'702u);

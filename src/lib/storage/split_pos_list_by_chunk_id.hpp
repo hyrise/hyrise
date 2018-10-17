@@ -9,7 +9,12 @@
 
 namespace opossum {
 
-using PosListsByChunkID = std::vector<std::shared_ptr<const PosList>>;
+struct SplittedPosList {
+	std::shared_ptr<PosList> position_filter;
+	std::vector<ChunkOffset> original_positions;
+};
+
+using PosListsByChunkID = std::vector<SplittedPosList>;
 
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList>& input_pos_list,
                                              const size_t number_of_chunks);

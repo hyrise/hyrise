@@ -119,14 +119,9 @@ void IsNullTableScanImpl::_add_all(Context& context, size_t segment_size) {
   const auto chunk_id = context._chunk_id;
   const auto& position_filter = context._position_filter;
 
-  if (position_filter) {
-    for (const auto& row_id : *position_filter) {
-      matches_out.emplace_back(row_id);
-    }
-  } else {
-    for (auto chunk_offset = 0u; chunk_offset < segment_size; ++chunk_offset) {
-      matches_out.emplace_back(RowID{chunk_id, chunk_offset});
-    }
+  const auto num_rows = position_filter ? position_filter->size() : segment_size;
+  for (auto chunk_offset = 0u; chunk_offset < num_rows; ++chunk_offset) {
+    matches_out.emplace_back(RowID{chunk_id, chunk_offset});
   }
 }
 
