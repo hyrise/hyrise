@@ -286,8 +286,6 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
-    scheduler/processing_unit.cpp
-    scheduler/processing_unit.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/topology.cpp
