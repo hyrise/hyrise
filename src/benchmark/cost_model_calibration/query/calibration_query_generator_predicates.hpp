@@ -2,11 +2,10 @@
 
 #include <json.hpp>
 
+#include <map>
 #include <string>
-#include <vector>
 
 #include "../configuration/calibration_column_specification.hpp"
-#include "../configuration/calibration_table_specification.hpp"
 
 namespace opossum {
 

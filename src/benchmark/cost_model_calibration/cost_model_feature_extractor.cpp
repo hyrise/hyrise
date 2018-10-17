@@ -140,9 +140,9 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
   const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
   features.scan_segment_data_type = segment->data_type();
 
-  auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-  features.is_scan_segment_reference_segment = reference_segment ? true : false;
-  features.scan_segment_encoding = _get_encoding_type_for_segment(reference_segment);
+  const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
+  features.scan_segment_encoding = encoding_reference_pair.first;
+  features.is_scan_segment_reference_segment = encoding_reference_pair.second;
   features.scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, table_scan_op->predicate().column_id);
 
   if (is_column_id(table_scan_op->predicate().value)) {
@@ -153,8 +153,9 @@ const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
 
     features.uses_second_segment = true;
 
-    features.is_second_scan_segment_reference_segment = second_reference_segment ? true : false;
-    features.second_scan_segment_encoding = _get_encoding_type_for_segment(second_reference_segment);
+    const auto second_encoding_reference_pair = _get_encoding_type_for_segment(segment);
+    features.is_second_scan_segment_reference_segment = second_encoding_reference_pair.second;
+    features.second_scan_segment_encoding = second_encoding_reference_pair.first;
     features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, second_scan_id);
     features.second_scan_segment_data_type = second_scan_segment->data_type();
   }
@@ -176,28 +177,34 @@ size_t CostModelFeatureExtractor::_get_memory_usage_for_column(const std::shared
   return memory_usage;
 }
 
-EncodingType CostModelFeatureExtractor::_get_encoding_type_for_segment(const std::shared_ptr<ReferenceSegment>& reference_segment) {
+std::pair<EncodingType, bool> CostModelFeatureExtractor::_get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment) {
+  auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+
     // Dereference ReferenceSegment for encoding feature
+    // TODO(Sven): add test for empty referenced table
     if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
         auto underlying_segment = reference_segment->referenced_table()
                 ->get_chunk(ChunkID{0})
                 ->get_segment(reference_segment->referenced_column_id());
         auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_segment);
         if (encoded_scan_segment) {
-            return encoded_scan_segment->encoding_type();
+            return std::make_pair(encoded_scan_segment->encoding_type(), true);
         }
+        return std::make_pair(EncodingType::Unencoded, true);
     } else {
-        auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(reference_segment);
+        auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
         if (encoded_scan_segment) {
-            return encoded_scan_segment->encoding_type();
+            return std::make_pair(encoded_scan_segment->encoding_type(), false);
         }
+      return std::make_pair(EncodingType::Unencoded, false);
     }
 
-    return EncodingType::Unencoded;
+    //
+//    return std::make_pair(EncodingType::Unencoded, false);
 }
 
 const nlohmann::json CostModelFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const Projection>& op) {
+        const std::shared_ptr<const Projection>& op) {
   nlohmann::json operator_result{};
 
   // TODO(Sven): Add features that signal whether subselects need to be executed

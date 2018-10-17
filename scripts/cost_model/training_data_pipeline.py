@@ -12,16 +12,10 @@ def load_json_results(path):
 	with open(path) as json_data:
 		return json.load(json_data)['operators']
 
-def transform_to_dataframe(data):
-	return pd.DataFrame(data)
-
 def select_features(df, features = []):
 	if len(features) == 0:
 		return df
 	return df[features]
-
-def generate_dummies(df, dummy_columns):
-	return pd.get_dummies(df, columns=dummy_columns)
 
 def split_in_train_and_test(df):
 	msk = np.random.rand(len(df)) < 0.8
@@ -59,7 +53,7 @@ def transform_calibration_results(raw_data, features = [], dummies = [], operato
 
 def prepare_df_table_scan(source):
 	data = load_json_results(source)
-	df = transform_to_dataframe(data['TableScan'])
+	df = pd.DataFrame(data['TableScan'])
 	df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
 	df['second_scan_segment_encoding'] = df['second_scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
 	df['uses_second_column'] = df['uses_second_column'].astype('category', categories=[False, True])
@@ -67,15 +61,7 @@ def prepare_df_table_scan(source):
 	df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment'].astype('category', categories=[False, True])
 	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
 	df['second_scan_segment_data_type'] = df['second_scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
-	df = generate_dummies(df, [
-		'scan_segment_encoding',
-		'second_scan_segment_encoding',
-		'is_scan_segment_reference_segment',
-		'uses_second_column',
-		'is_second_scan_segment_reference_segment',
-		'scan_segment_data_type',
-		'second_scan_segment_data_type'
-	]).dropna()
+	df = pd.get_dummies(df).dropna()
 
 	df = df.drop('scan_operator_description', axis=1)
 	return df
