@@ -13,6 +13,7 @@
 #include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
 #include "calibration_query_generator_predicates.hpp"
+#include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -91,7 +92,9 @@ const std::optional<std::pair<std::string, std::string>> CalibrationQueryGenerat
 
   for (const auto & left_column : left_columns) {
     for (const auto & right_column : right_columns) {
-      if (left_column.second.type == right_column.second.type) {
+      const auto left_type = data_type_to_string.right.at(left_column.second.type);
+
+      if (left_column.second.type == right_column.second.type && left_type != DataType::String) {
         return std::pair {left_column.first, right_column.first };
       }
     }

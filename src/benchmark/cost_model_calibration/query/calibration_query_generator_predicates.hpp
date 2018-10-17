@@ -16,7 +16,7 @@ class CalibrationQueryGeneratorPredicates {
 
  private:
     static const std::string _generate_predicate(
-            const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+            std::map<std::string, CalibrationColumnSpecification>& column_definitions,
             const std::string column_name_prefix = "");
 
   static const std::string _generate_table_scan_predicate_value(

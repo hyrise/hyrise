@@ -12,7 +12,7 @@ namespace opossum {
         DataType scan_segment_data_type = DataType::Int; // Just any default
         size_t scan_segment_memory_usage_bytes = 0;
         size_t scan_segment_distinct_value_count = 0;
-        bool uses_second_column = false;
+        bool uses_second_segment = false;
         EncodingType second_scan_segment_encoding = EncodingType::Unencoded;
         bool is_second_scan_segment_reference_segment = false;
         DataType second_scan_segment_data_type = DataType::Int; // Just any default
@@ -29,7 +29,7 @@ namespace opossum {
                 {"scan_segment_data_type", s.scan_segment_data_type},
                 {"scan_segment_memory_usage_bytes", s.scan_segment_memory_usage_bytes},
                 {"scan_segment_distinct_value_count", s.scan_segment_distinct_value_count},
-                {"uses_second_column", s.uses_second_column},
+                {"uses_second_segment", s.uses_second_segment},
                 {"second_scan_segment_encoding", s.second_scan_segment_encoding},
                 {"is_second_scan_segment_reference_segment", s.is_second_scan_segment_reference_segment},
                 {"second_scan_segment_data_type", s.second_scan_segment_data_type},
@@ -46,7 +46,7 @@ namespace opossum {
         s.scan_segment_data_type = j.value("scan_segment_data_type", DataType::Int);
         s.scan_segment_memory_usage_bytes = j.value("scan_segment_memory_usage_bytes", 0);
         s.scan_segment_distinct_value_count = j.value("scan_segment_distinct_value_count", 0);
-        s.uses_second_column = j.value("uses_second_column", false);
+        s.uses_second_segment = j.value("uses_second_segment", false);
         s.second_scan_segment_encoding = j.value("second_scan_segment_encoding", EncodingType::Unencoded);
         s.is_second_scan_segment_reference_segment = j.value("is_second_scan_segment_reference_segment", false);
         s.second_scan_segment_data_type = j.value("second_scan_segment_data_type", DataType::Int);

@@ -62,7 +62,7 @@ def prepare_df_table_scan(source):
 	df = transform_to_dataframe(data['TableScan'])
 	df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
 	df['second_scan_segment_encoding'] = df['second_scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
-	#TODO: add uses_second_column as boolean
+	df['uses_second_column'] = df['uses_second_column'].astype('category', categories=[False, True])
 	df['is_scan_segment_reference_segment'] = df['is_scan_segment_reference_segment'].astype('category', categories=[False, True])
 	df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment'].astype('category', categories=[False, True])
 	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
@@ -71,6 +71,7 @@ def prepare_df_table_scan(source):
 		'scan_segment_encoding',
 		'second_scan_segment_encoding',
 		'is_scan_segment_reference_segment',
+		'uses_second_column',
 		'is_second_scan_segment_reference_segment',
 		'scan_segment_data_type',
 		'second_scan_segment_data_type'

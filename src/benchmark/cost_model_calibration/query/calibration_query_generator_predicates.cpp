@@ -26,8 +26,10 @@ namespace opossum {
 
       std::stringstream predicate_stream;
 
+      auto remaining_column_definitions = column_definitions;
+
       for (size_t i = 0; i < number_of_predicates; i++) {
-        predicate_stream << _generate_predicate(column_definitions, column_name_prefix);
+        predicate_stream << _generate_predicate(remaining_column_definitions, column_name_prefix);
 
         if (i < number_of_predicates - 1) {
           predicate_stream << " AND ";
@@ -37,7 +39,7 @@ namespace opossum {
     }
 
 const std::string CalibrationQueryGeneratorPredicates::_generate_predicate(
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    std::map<std::string, CalibrationColumnSpecification>& column_definitions,
     const std::string column_name_prefix) {
   std::random_device random_device;
   std::mt19937 engine{random_device()};
@@ -52,7 +54,6 @@ const std::string CalibrationQueryGeneratorPredicates::_generate_predicate(
   std::optional<std::pair<std::string, CalibrationColumnSpecification>> second_column;
   for (const auto& column : column_definitions) {
     if (column.first == filter_column->first) continue;
-
     if (column.second.type != filter_column->second.type) continue;
 
     second_column = column;
@@ -69,6 +70,9 @@ const std::string CalibrationQueryGeneratorPredicates::_generate_predicate(
       third_column = column;
     }
   }
+
+  // Avoid filtering on the same column twice
+  column_definitions.erase(filter_column->first);
 
   // We only want to measure various selectivities.
   // It shouldn't be that important whether we have Point or Range Lookups.
