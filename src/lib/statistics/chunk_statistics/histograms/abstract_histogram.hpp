@@ -83,9 +83,16 @@ class AbstractHistogram : public AbstractStatisticsObject {
   // TODO(tim): move to AbstractStatisticsObject once it has total_count().
   CardinalityEstimate invert_estimate(const CardinalityEstimate& estimate) const;
 
+  // TODO(tim): think about and talk to Moritz/Markus whether it makes sense to add this to CardinalityEstimate struct.
+  float estimate_distinct_count(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
   std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+  std::shared_ptr<AbstractHistogram<T>> split_at_bin_edges(
+      const std::vector<std::pair<T, T>>& additional_bin_edges) const;
 
   /**
    * Returns the lower bound (minimum value) of the histogram.

@@ -7,8 +7,11 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <boost/functional/hash.hpp>
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
@@ -648,6 +651,75 @@ CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
 }
 
 template <typename T>
+float AbstractHistogram<T>::estimate_distinct_count(const PredicateCondition predicate_type,
+                                                    const AllTypeVariant& variant_value,
+                                                    const std::optional<AllTypeVariant>& variant_value2) const {
+  if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
+    return 0.f;
+  }
+
+  const auto value = type_cast<T>(variant_value);
+
+  switch (predicate_type) {
+    case PredicateCondition::Equals: {
+      return 1.f;
+    }
+    case PredicateCondition::NotEquals: {
+      if (_bin_for_value(value) == INVALID_BIN_ID) {
+        return total_distinct_count();
+      }
+
+      return total_distinct_count() - 1.f;
+    }
+    case PredicateCondition::LessThan: {
+      if (value > maximum()) {
+        return total_distinct_count();
+      }
+
+      auto distinct_count = 0.f;
+      auto bin_id = _bin_for_value(value);
+      if (bin_id == INVALID_BIN_ID) {
+        // The value is within the range of the histogram, but does not belong to a bin.
+        // Therefore, we need to sum up the distinct counts of all bins with a max < value.
+        bin_id = _next_bin_for_value(value);
+      } else {
+        distinct_count += _share_of_bin_less_than_value(bin_id, value) * bin_distinct_count(bin_id);
+      }
+
+      // Sum up all bins before the bin (or gap) containing the value.
+      for (BinID bin = 0u; bin < bin_id; bin++) {
+        distinct_count += bin_distinct_count(bin);
+      }
+
+      return distinct_count;
+    }
+    case PredicateCondition::LessThanEquals:
+      return estimate_distinct_count(PredicateCondition::LessThan, _get_next_value(value));
+    case PredicateCondition::GreaterThanEquals:
+      return total_distinct_count() - estimate_distinct_count(PredicateCondition::LessThan, value);
+    case PredicateCondition::GreaterThan:
+      return total_distinct_count() - estimate_distinct_count(PredicateCondition::LessThanEquals, value);
+    case PredicateCondition::Between: {
+      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      const auto value2 = type_cast<T>(*variant_value2);
+
+      if (value2 < value) {
+        return 0.f;
+      }
+
+      return estimate_distinct_count(PredicateCondition::LessThanEquals, value2) -
+             estimate_distinct_count(PredicateCondition::LessThan, value);
+    }
+    // TODO(tim): implement like
+    // case PredicateCondition::Like:
+    // case PredicateCondition::NotLike:
+    // TODO(anyone): implement more meaningful things here
+    default:
+      return total_distinct_count();
+  }
+}
+
+template <typename T>
 CardinalityEstimate AbstractHistogram<T>::invert_estimate(const CardinalityEstimate& estimate) const {
   switch (estimate.type) {
     case EstimateType::MatchesNone:
@@ -856,6 +928,103 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
       Fail("PredicateCondition not supported by Histograms");
+  }
+
+  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                               std::move(bin_distinct_counts));
+}
+
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
+    const std::vector<std::pair<T, T>>& additional_bin_edges) const {
+  /**
+   * Create vector with pairs for each split.
+   * For a lower bin edge e, the new histogram will have to be split at previous_value(e) and e.
+   * For an upper bin edge e, the new histogram will have to be split at e and next_value(e).
+   *
+   * We can safely ignore duplicate splits, so we use a set first and then copy the splits to a vector.
+   * Also, we will create splits in gaps for now, but we will not create any actual bins for them later on.
+   */
+  const auto current_bin_count = bin_count();
+
+  std::unordered_set<std::pair<T, T>, boost::hash<std::pair<T, T>>> split_set;
+
+  for (auto bin_id = BinID{0}; bin_id < current_bin_count; bin_id++) {
+    const auto bin_min = bin_minimum(bin_id);
+    const auto bin_max = bin_maximum(bin_id);
+    if constexpr (std::is_arithmetic_v<T>) {
+      split_set.insert(std::make_pair(previous_value(bin_min), bin_min));
+      split_set.insert(std::make_pair(bin_max, next_value(bin_max)));
+    } else {
+      // TODO(tim): turn into compile-time error
+      Fail("Not supported for strings.");
+    }
+  }
+
+  for (const auto& edge_pair : additional_bin_edges) {
+    if constexpr (std::is_arithmetic_v<T>) {
+      split_set.insert(std::make_pair(previous_value(edge_pair.first), edge_pair.first));
+      split_set.insert(std::make_pair(edge_pair.second, next_value(edge_pair.second)));
+    } else {
+      // TODO(tim): turn into compile-time error
+      Fail("Not supported for strings.");
+    }
+  }
+
+  /**
+   * Split pairs into single values.
+   * These are the new bin edges, and we have to sort them.
+   */
+  std::vector<T> all_edges(split_set.size() * 2);
+  size_t edge_idx = 0;
+  for (const auto& split_pair : split_set) {
+    all_edges[edge_idx] = split_pair.first;
+    all_edges[edge_idx + 1] = split_pair.second;
+    edge_idx += 2;
+  }
+
+  std::sort(all_edges.begin(), all_edges.end());
+
+  /**
+   * Remove the first and last value.
+   * These are the values introduced in the first step for the first and last split.
+   * The lower edge of bin 0 basically added the upper edge of bin -1,
+   * and the upper edge of the last bin basically added the lower edge of the bin after the last bin.
+   * Both values are obviously not needed.
+   */
+  all_edges.erase(all_edges.begin());
+  all_edges.pop_back();
+
+  std::vector<T> bin_minima;
+  std::vector<T> bin_maxima;
+  std::vector<HistogramCountType> bin_heights;
+  std::vector<HistogramCountType> bin_distinct_counts;
+
+  // We do not resize the vectors because we might not need all the slots because bins can be empty.
+  const auto new_bin_count = all_edges.size() / 2;
+  bin_minima.reserve(new_bin_count);
+  bin_maxima.reserve(new_bin_count);
+  bin_heights.reserve(new_bin_count);
+  bin_distinct_counts.reserve(new_bin_count);
+
+  /**
+   * Create new bins.
+   * Bin edges are defined by consecutive values in pairs of two.
+   */
+  for (auto bin_id = BinID{0}; bin_id < new_bin_count; bin_id++) {
+    const auto bin_min = all_edges[bin_id * 2];
+    const auto bin_max = all_edges[bin_id * 2 + 1];
+
+    const auto estimate = estimate_cardinality(PredicateCondition::Between, bin_min, bin_max);
+    if (estimate.type == EstimateType::MatchesNone) {
+      continue;
+    }
+
+    bin_minima.emplace_back(bin_min);
+    bin_maxima.emplace_back(bin_max);
+    bin_heights.emplace_back(static_cast<HistogramCountType>(std::ceil(estimate.cardinality)));
+    bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(
+        std::ceil(estimate_distinct_count(PredicateCondition::Between, bin_min, bin_max))));
   }
 
   return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
