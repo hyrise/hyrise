@@ -27,6 +27,7 @@ RUN apt-get update \
         llvm \
         llvm-6.0-tools \
         man \
+        ninja \
         parallel \
         python2.7 \
         python-pip \
