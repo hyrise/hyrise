@@ -145,7 +145,7 @@ class SQLTranslator final {
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
 
-  // "Inflated" because als wildcard will be inflated to the expressions they actually represent
+  // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
 };
 

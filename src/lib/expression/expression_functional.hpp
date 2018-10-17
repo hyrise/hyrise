@@ -141,8 +141,8 @@ inline detail::ternary<BetweenExpression> between_;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
-                                             Args&&... parameter_id_expression_pairs) {
+std::shared_ptr<LQPSelectExpression> lqp_select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
+                                                 Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<LQPSelectExpression>(
@@ -156,8 +156,8 @@ std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNo
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                             const bool nullable, Args&&... parameter_id_column_id_pairs) {
+std::shared_ptr<PQPSelectExpression> pqp_select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
+                                                 const bool nullable, Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<PQPSelectExpression>(
@@ -203,14 +203,14 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
   return std::make_shared<ExtractExpression>(datetime_component, to_expression(from));
 }
 
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id);
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference);
-std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,
-                                             const std::string& column_name);
+std::shared_ptr<ParameterExpression> uncorrelated_parameter_(const ParameterID parameter_id);
+std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference);
+std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
+                                                 const bool nullable, const std::string& column_name);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id,
-                                                const ReferencedExpression& referenced) {
+std::shared_ptr<ParameterExpression> correlated_parameter_(const ParameterID parameter_id,
+                                                           const ReferencedExpression& referenced) {
   return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
 }
 

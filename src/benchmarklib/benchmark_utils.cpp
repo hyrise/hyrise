@@ -54,13 +54,9 @@ bool BenchmarkState::keep_running() {
   return true;
 }
 
-void BenchmarkState::set_done() {
-  state = State::Over;
-}
+void BenchmarkState::set_done() { state = State::Over; }
 
-bool BenchmarkState::is_done() {
-  return state == State::Over;
-}
+bool BenchmarkState::is_done() { return state == State::Over; }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
@@ -292,12 +288,13 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec)
-    : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec)
+    : EncodingConfig{default_encoding_spec, {}, {}} {}
 
-EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec,
+                               DataTypeEncodingMapping type_encoding_mapping,
                                TableSegmentEncodingMapping encoding_mapping)
-    : default_encoding_spec{std::move(default_encoding_spec)},
+    : default_encoding_spec{default_encoding_spec},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
