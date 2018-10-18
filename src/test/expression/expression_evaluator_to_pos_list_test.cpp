@@ -81,6 +81,8 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *in_(x, list_(9, "hello", 10)), {0, 1, 2}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *in_(x, list_(1, 2, 7)), {1}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_in_(x, list_(9, "hello", 10)), {3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *not_in_(x, list_(1, 2, 7)), {0, 2}));
 
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *like_(s1, "%a%"), {0, 2, 3}));
 

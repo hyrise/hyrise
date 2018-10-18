@@ -223,23 +223,33 @@ TEST_F(PredicatePlacementRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
 }
 
-TEST_F(PredicatePlacementRuleTest, PullUpPastInnerAndCrossJoin) {
+TEST_F(PredicatePlacementRuleTest, MovePastInnerSemiAntiCrossJoin) {
   // clang-format off
   const auto input_lqp =
-  JoinNode::make(JoinMode::Cross,
-    JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
-      PredicateNode::make(exists_(_subselect),
-        _table_a),
-      _table_c),
-    _table_c);
+  PredicateNode::make(less_than_(_a_a, 5),
+    JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
+      JoinNode::make(JoinMode::Anti, equals_(_c_a, _a_a),
+        JoinNode::make(JoinMode::Cross,
+          JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
+            PredicateNode::make(exists_(_subselect),
+              _table_a),
+            _table_c),
+          StoredTableNode::make("c")),
+        StoredTableNode::make("c")),
+      StoredTableNode::make("c")));
 
   const auto expected_lqp =
   PredicateNode::make(exists_(_subselect),
-    JoinNode::make(JoinMode::Cross,
-      JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
-        _table_a,
-        _table_c),
-      _table_c));
+    JoinNode::make(JoinMode::Semi, equals_(_c_a, _a_a),
+      JoinNode::make(JoinMode::Anti, equals_(_c_a, _a_a),
+        JoinNode::make(JoinMode::Cross,
+          JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
+            PredicateNode::make(less_than_(_a_a, 5),
+              _table_a),
+            _table_c),
+          StoredTableNode::make("c")),
+        StoredTableNode::make("c")),
+      StoredTableNode::make("c")));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

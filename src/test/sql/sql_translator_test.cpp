@@ -462,23 +462,6 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
   EXPECT_LQP_EQ(actual_lqp_h, expected_lqp_h);
 }
 
-TEST_F(SQLTranslatorTest, WhereNotFallback) {
-  /**
-   * If we can't inverse a predicate to apply NOT, we translate the NOT expression from
-   * "NOT <some_expression>" to "<some_expression> == 0"
-   */
-
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE NOT (a IN (1, 2));");
-
-  // clang-format off
-  const auto expected_lqp =
-  PredicateNode::make(equals_(in_(int_float_a, list_(1, 2)), 0),
-    stored_table_node_int_float);
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto actual_lqp = compile_query("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
 
@@ -711,12 +694,22 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
 TEST_F(SQLTranslatorTest, InArray) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
 
-  const auto a_plus_7_in = in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4));
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4)),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, NotInArray) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 NOT IN (1+2,3,4)");
 
   // clang-format off
   const auto expected_lqp =
-    PredicateNode::make(a_plus_7_in,
-         stored_table_node_int_float);
+  PredicateNode::make(not_in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4)),
+    stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

@@ -1146,7 +1146,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           if (expr.select) {
             // `a IN (SELECT ...)`
             const auto sub_select = _translate_hsql_sub_select(*expr.select, sql_identifier_resolver);
-            return std::make_shared<InExpression>(left, sub_select);
+            return std::make_shared<InExpression>(PredicateCondition::In, left, sub_select);
 
           } else {
             // `a IN (x, y, z)`
@@ -1160,7 +1160,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             }
 
             const auto array = std::make_shared<ListExpression>(arguments);
-            return std::make_shared<InExpression>(left, array);
+            return std::make_shared<InExpression>(PredicateCondition::In, left, array);
           }
         }
 
@@ -1284,8 +1284,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
                    greater_than_(between_expression->value(), between_expression->upper_bound()));
       } else {
         const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
-        Assert(in_expression, "Expected BetweenExpression");
-        return equals_(in_expression->deep_copy(), 0);
+        return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
+                                              in_expression->value(), in_expression->set());
       }
     } break;
 
