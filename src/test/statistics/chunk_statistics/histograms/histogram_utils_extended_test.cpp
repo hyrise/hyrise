@@ -25,15 +25,15 @@ class HistogramUtilsExtendedTest : public BaseTest {
   std::string _next_value(const std::string& value) { return next_value(value, _supported_characters, _prefix_length); }
 
  protected:
-  const std::string _supported_characters{"abcdefghijklmnopqrstuvwxyz"};
-  const size_t _prefix_length{4u};
+  const std::string _supported_characters{"abcd"};
+  const size_t _prefix_length{3u};
 };
 
 TEST_F(HistogramUtilsExtendedTest, NumberToStringBruteForce) {
-  constexpr auto max = 475'254ul;
+  constexpr auto max = 84ul;
 
   EXPECT_EQ(_convert_string_to_number_representation(""), 0ul);
-  EXPECT_EQ(_convert_string_to_number_representation("zzzz"), max);
+  EXPECT_EQ(_convert_string_to_number_representation("ddd"), max);
 
   for (auto number = 0u; number < max; number++) {
     EXPECT_LT(_convert_number_representation_to_string(number), _convert_number_representation_to_string(number + 1));
@@ -41,10 +41,10 @@ TEST_F(HistogramUtilsExtendedTest, NumberToStringBruteForce) {
 }
 
 TEST_F(HistogramUtilsExtendedTest, StringToNumberBruteForce) {
-  constexpr auto max = 475'254ul;
+  constexpr auto max = 84ul;
 
   EXPECT_EQ(_convert_string_to_number_representation(""), 0ul);
-  EXPECT_EQ(_convert_string_to_number_representation("zzzz"), max);
+  EXPECT_EQ(_convert_string_to_number_representation("ddd"), max);
 
   for (auto number = 0u; number < max; number++) {
     EXPECT_EQ(_convert_string_to_number_representation(_convert_number_representation_to_string(number)), number);
@@ -52,10 +52,10 @@ TEST_F(HistogramUtilsExtendedTest, StringToNumberBruteForce) {
 }
 
 TEST_F(HistogramUtilsExtendedTest, NextValueBruteForce) {
-  constexpr auto max = 475'254ul;
+  constexpr auto max = 84ul;
 
   EXPECT_EQ(_convert_string_to_number_representation(""), 0ul);
-  EXPECT_EQ(_convert_string_to_number_representation("zzzz"), max);
+  EXPECT_EQ(_convert_string_to_number_representation("ddd"), max);
 
   for (auto number = 1u; number <= max; number++) {
     const auto number_string = _convert_number_representation_to_string(number);
