@@ -25,38 +25,6 @@ bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   // TODO(moritz) Handle multiple outputs
   _pull_up_traversal(root_node, LQPInputSide::Left);
 
-//  std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>> search_stack;
-//  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited;
-//  search_stack.emplace_back(root_node, LQPInputSide::Left);
-//  visited.insert(root_node);
-//
-//  while (!search_stack.empty()) {
-//    const auto current_node = search_stack.back().first;
-//    const auto input_node = current_node->input(search_stack.back().second);
-//
-//    if (!input_node || visited.find(input_node) != visited.end()) {
-//      search_stack.pop_back();
-//      continue;
-//    }
-//
-//    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
-//        _is_expensive_predicate(predicate_node->predicate)) {
-//
-//      auto stack_iter = search_stack.rbegin();
-//      for (; stack_iter != search_stack.rend(); ++stack_iter) {
-//
-//      }
-//
-//    }
-//
-//    const auto input_node2 = current_node->input(search_stack.back().second);
-//
-//    if (input_node != input_node2) continue;
-//
-//    search_stack.emplace_back(input_node, LQPInputSide::Left);
-//    search_stack.emplace_back(input_node, LQPInputSide::Right);
-//  }
-
   // No easy way to tell whether the plan changed
   return false;
 }
@@ -152,22 +120,51 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
     lqp_remove_node(predicate_node);
   }
 
-  auto pull_up_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+  if (current_node->output_count() > 1) {
+    // No pull up past nodes with more than one output, because if we did, the other outputs would loose the
+    // predicate we pulled up
+    _insert_nodes(current_node, input_side, candidate_nodes);
+    return {};
+  }
 
   switch (current_node->type) {
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
 
-      if (join_node->join_mode == JoinMode::Inner) pull_up_nodes = candidate_nodes;
-      else _insert_nodes(current_node, input_side, candidate_nodes);
+      if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
+        return candidate_nodes;
+      } else {
+        // No PullUp past non-inner/cross joins for now
+        _insert_nodes(current_node, input_side, candidate_nodes);
+      }
     } break;
 
-    default: {
-      _insert_nodes(current_node, input_side, candidate_nodes);
-    }
-  }
+    case LQPNodeType::Alias:
+    case LQPNodeType::Predicate:
+      return candidate_nodes;
 
-  return pull_up_nodes;
+    case LQPNodeType::Projection: {
+      auto pull_up_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      auto blocked_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+
+      for (const auto& candidate_node : candidate_nodes) {
+        if (expression_evaluable_on_lqp(candidate_node->predicate, current_node)) {
+          pull_up_nodes.emplace_back(pull_up_nodes);
+        } else {
+          blocked_nodes.emplace_back(pull_up_nodes);
+        }
+      }
+
+      _insert_nodes(current_node, input_side, blocked_nodes);
+      return pull_up_nodes    ;
+
+    } break;
+
+    default:
+      // No pull up past all other node types
+      _insert_nodes(current_node, input_side, candidate_nodes);
+      return {};
+  }
 }
 
 void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node,
