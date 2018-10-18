@@ -172,7 +172,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 2. WHERE clause
   // 3. GROUP BY clause
   // 4. HAVING clause
-  // 5. SELECT clause
+  // 5. SELECT clause (incl. DISTINCT)
   // 6. UNION clause
   // 7. ORDER BY clause
   // 8. LIMIT clause
@@ -180,7 +180,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   AssertInput(select.selectList != nullptr, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
   AssertInput(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
-  AssertInput(!select.selectDistinct, "DISTINCT is not yet supported");
 
   // Translate FROM
   if (select.fromTable) {
@@ -819,6 +818,18 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
         _sql_identifier_resolver->set_column_name(output_expression, hsql_expr->alias);
       }
     }
+  }
+
+  // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
+  //
+  // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
+  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
+  // one that groups by both a and MIN(b) without calculating anything. Fixing this should be done by an optimizer rule
+  // that checks for each GROUP BY whether it guarantees the results to be unique or not. Doable, but no priority.
+  if (select.selectDistinct) {
+    _current_lqp = AggregateNode::make(_inflated_select_list_expressions,
+                                       std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
   }
 }
 

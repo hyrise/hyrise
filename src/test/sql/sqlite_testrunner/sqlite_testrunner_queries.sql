@@ -107,6 +107,14 @@ SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
 
+-- DISTINCT
+SELECT DISTINCT a FROM mixed;
+SELECT DISTINCT a FROM mixed GROUP BY a;
+SELECT DISTINCT a, b FROM mixed;
+SELECT DISTINCT * FROM mixed;
+SELECT DISTINCT a, MIN(b) FROM mixed GROUP BY a;
+SELECT DISTINCT MIN(b) FROM mixed GROUP BY a;
+
 -- Join, GROUP BY, Having, ...
 SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
 SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT id_int_int_int_100.* FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
