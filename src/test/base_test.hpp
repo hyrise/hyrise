@@ -111,7 +111,7 @@ class BaseTestWithParam
     }
 
     return std::make_shared<TableScan>(in, predicate);
-  };
+  }
 };
 
 using BaseTest = BaseTestWithParam<void>;

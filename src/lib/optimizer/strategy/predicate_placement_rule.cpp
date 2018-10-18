@@ -46,7 +46,6 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       } else {
         _push_down_traversal(input_node, input_side, push_down_nodes);
       }
-
     } break;
 
     case LQPNodeType::Join: {
@@ -76,7 +75,6 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
       _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes);
       _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes);
-
     } break;
 
     case LQPNodeType::Alias:
@@ -158,7 +156,6 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
 
       _insert_nodes(current_node, input_side, blocked_nodes);
       return pull_up_nodes;
-
     } break;
 
     default:

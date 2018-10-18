@@ -10,12 +10,12 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "types.hpp"
 #include "testing_assert.hpp"
+#include "types.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -58,7 +58,6 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _parameter_a_a = correlated_parameter_(ParameterID{0}, _a_a);
     _subselect_lqp = PredicateNode::make(equals_(_parameter_a_a, _b_a), _table_b);
     _subselect = lqp_select_(_subselect_lqp, std::make_pair(ParameterID{0}, _a_a));
-
   }
 
   std::shared_ptr<ParameterExpression> _parameter_a_a;

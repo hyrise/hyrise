@@ -220,7 +220,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       return std::make_shared<IsNullExpression>(predicate_condition, column);
     } else {
       return std::make_shared<BinaryPredicateExpression>(predicate_condition, column, value);
-    };
+    }
   }
 
  protected:

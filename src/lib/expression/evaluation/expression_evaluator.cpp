@@ -977,7 +977,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
                       auto value = Bool{0};
-                      ExpressionEvaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));
+                      ExpressionEvaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));  // NOLINT
                       if (value != 0) {
                         result_pos_list.emplace_back(_chunk_id, chunk_offset);
                       }
