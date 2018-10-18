@@ -57,4 +57,25 @@ constexpr bool is_valid_name(const char* name) {
                        param10, param11, param12)                                                                    \
   BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, \
                    param11, param12);
+
+#else
+
+// Because TSan has issues and throw false positives, we don't use probes in TSan builds
+#ifdef __SANITIZE_THREAD__
+
+#undef DTRACE_PROBE
+#undef DTRACE_PROBE1
+#undef DTRACE_PROBE2
+#undef DTRACE_PROBE3
+#undef DTRACE_PROBE4
+#undef DTRACE_PROBE5
+#undef DTRACE_PROBE6
+#undef DTRACE_PROBE7
+#undef DTRACE_PROBE8
+#undef DTRACE_PROBE9
+#undef DTRACE_PROBE10
+#undef DTRACE_PROBE11
+#undef DTRACE_PROBE12
+
+#endif
 #endif
