@@ -199,7 +199,8 @@ TEST_F(HistogramUtilsTest, NextValueBruteForce) {
   for (auto number = 1u; number <= max; number++) {
     const auto number_string = convert_number_representation_to_string(number, supported_characters, prefix_length);
     const auto next_value_of_previous_number =
-        _next_value(convert_number_representation_to_string(number - 1, supported_characters, prefix_length));
+        next_value(convert_number_representation_to_string(number - 1, supported_characters, prefix_length),
+                   supported_characters, prefix_length);
     EXPECT_EQ(number_string, next_value_of_previous_number);
   }
 }
