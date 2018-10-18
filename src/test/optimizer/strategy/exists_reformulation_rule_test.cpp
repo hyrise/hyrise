@@ -215,7 +215,8 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfExistsWithOrPredicate) {
       expression_vector(node_table_a_col_a, node_table_a_col_b),
       PredicateNode::make(
           not_equals_(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)), 0),
-          ProjectionNode::make(expression_vector(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)), node_table_a_col_a, node_table_a_col_b),
+          ProjectionNode::make(expression_vector(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)),
+                                                 node_table_a_col_a, node_table_a_col_b),
                                node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
@@ -241,7 +242,8 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfInequalityJoinPredicates) {
 }
 
 TEST_F(ExistsReformulationRuleTest, NoRewriteOfMultipleJoinPredicates) {
-  // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a = table_b.b)
+  // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b
+  //    WHERE table_a.a = table_b.a and table_a.a = table_b.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
   const auto subselect_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_b), node_table_b);
   const auto subselect_lqp2 = PredicateNode::make(equals_(parameter, node_table_b_col_a), subselect_lqp);
@@ -257,7 +259,8 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfMultipleJoinPredicates) {
 }
 
 TEST_F(ExistsReformulationRuleTest, NoRewriteOfExternalJoinPredicatesMoreThanOnce) {
-  // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b WHERE table_a.a = table_b.a and table_a.a < 17)
+  // SELECT * FROM table_a WHERE NOT EXISTS (SELECT * FROM table_b
+  //    WHERE table_a.a = table_b.a and table_a.a < 17)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
   const auto subselect_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_a), node_table_b);
   const auto subselect_lqp2 = PredicateNode::make(less_than_(parameter, 17), subselect_lqp);
