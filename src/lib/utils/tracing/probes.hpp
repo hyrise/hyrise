@@ -90,6 +90,6 @@ constexpr bool is_valid_name(const char* name) {
 
 #pragma GCC diagnostic pop
 
-#endif // defined(__has_feature)
-#endif // __has_feature(thread_sanitizer)
-#endif // else-branch of defined(__APPLE__) || defined(__MACOS__)
+#endif  // defined(__has_feature)
+#endif  // __has_feature(thread_sanitizer)
+#endif  // else-branch of defined(__APPLE__) || defined(__MACOS__)
