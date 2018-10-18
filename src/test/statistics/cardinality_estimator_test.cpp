@@ -120,7 +120,7 @@ TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerJoinWithNumericHistog
       std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59}, std::vector<HistogramCountType>{10, 5, 10},
       std::vector<HistogramCountType>{7, 2, 10});
 
-  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_cardinality_of_inner_join_with_numeric_histograms<int32_t>(
+  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_numeric_histograms<int32_t>(
                       histogram_left, histogram_right),
                   (10.f * 10.f * (1.f / 7.f)) + (20.f * 5.f * (1.f / 8.f)) + (15.f * 10.f * (1.f / 10.f)));
 }

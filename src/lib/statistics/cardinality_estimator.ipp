@@ -5,12 +5,10 @@
 
 namespace opossum {
 
-template<typename T>
-Cardinality CardinalityEstimator::estimate_cardinality_of_inner_join_with_numeric_histograms(
-  const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
-  const std::shared_ptr<AbstractHistogram<T>>& right_histogram
-  ) {
-
+template <typename T>
+Cardinality CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_numeric_histograms(
+    const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
+    const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};
   auto total_cardinality = Cardinality{0.0f};
@@ -31,10 +29,11 @@ Cardinality CardinalityEstimator::estimate_cardinality_of_inner_join_with_numeri
       continue;
     }
 
-    DebugAssert(left_histogram->bin_maximum(left_idx) == right_histogram->bin_maximum(right_idx), "Histogram bin boundaries do not match");
+    DebugAssert(left_histogram->bin_maximum(left_idx) == right_histogram->bin_maximum(right_idx),
+                "Histogram bin boundaries do not match");
 
-    const auto distinct_max = static_cast<float>(std::max(left_histogram->bin_distinct_count(left_idx),
-    right_histogram->bin_distinct_count(right_idx)));
+    const auto distinct_max = static_cast<float>(
+        std::max(left_histogram->bin_distinct_count(left_idx), right_histogram->bin_distinct_count(right_idx)));
 
     const auto value_count_product = left_histogram->bin_height(left_idx) * right_histogram->bin_height(right_idx);
 
