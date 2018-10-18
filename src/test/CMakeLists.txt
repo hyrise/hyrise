@@ -247,7 +247,6 @@ set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
-    statistics/chunk_statistics/histograms/histogram_utils_extended_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
