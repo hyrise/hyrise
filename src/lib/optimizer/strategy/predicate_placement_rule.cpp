@@ -113,8 +113,10 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   auto candidate_nodes_right = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
   candidate_nodes.insert(candidate_nodes.end(), candidate_nodes_right.begin(), candidate_nodes_right.end());
 
+  // Expensive PredicateNodes become candidates for a PullUp, but only IFF they have exactly one output connection.
+  // If they have more, we cannot move them.
   if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
-  predicate_node && _is_expensive_predicate(predicate_node->predicate)) {
+  predicate_node && _is_expensive_predicate(predicate_node->predicate) && predicate_node->output_count() == 1) {
 
     candidate_nodes.emplace_back(predicate_node);
     lqp_remove_node(predicate_node);
@@ -136,6 +138,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       } else {
         // No PullUp past non-inner/cross joins for now
         _insert_nodes(current_node, input_side, candidate_nodes);
+        return {};
       }
     } break;
 
@@ -148,15 +151,15 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       auto blocked_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
 
       for (const auto& candidate_node : candidate_nodes) {
-        if (expression_evaluable_on_lqp(candidate_node->predicate, current_node)) {
-          pull_up_nodes.emplace_back(pull_up_nodes);
+        if (expression_evaluable_on_lqp(candidate_node->predicate, *current_node)) {
+          pull_up_nodes.emplace_back(candidate_node);
         } else {
-          blocked_nodes.emplace_back(pull_up_nodes);
+          blocked_nodes.emplace_back(candidate_node);
         }
       }
 
       _insert_nodes(current_node, input_side, blocked_nodes);
-      return pull_up_nodes    ;
+      return pull_up_nodes;
 
     } break;
 

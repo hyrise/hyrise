@@ -318,19 +318,19 @@ TEST_F(PredicatePlacementRuleTest, NoPullUpPastNodeWithMultipleOutputsNoPullUpPa
    * Test that Nodes with multiple outputs are treated as barriers, and so are UnionNodes
    */
   // clang-format off
-  const auto predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subselect), _table_a);
-
+  const auto input_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subselect), _table_a);
   const auto input_lqp =
   UnionNode::make(UnionMode::Positions,
     PredicateNode::make(exists_(_subselect),
-      predicate_node_with_multiple_outputs),
-    predicate_node_with_multiple_outputs);
+      input_predicate_node_with_multiple_outputs),
+    input_predicate_node_with_multiple_outputs);
 
+  const auto expected_predicate_node_with_multiple_outputs = PredicateNode::make(exists_(_subselect), _table_a);
   const auto expected_lqp =
   UnionNode::make(UnionMode::Positions,
     PredicateNode::make(exists_(_subselect),
-      predicate_node_with_multiple_outputs),
-    predicate_node_with_multiple_outputs);
+      expected_predicate_node_with_multiple_outputs),
+    expected_predicate_node_with_multiple_outputs);
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
