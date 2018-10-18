@@ -857,7 +857,9 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   return results;
 }
 
-std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults> ExpressionEvaluator::populate_uncorrelated_select_results_cache(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults>
+ExpressionEvaluator::populate_uncorrelated_select_results_cache(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
   auto evaluator = ExpressionEvaluator{};
   for (const auto& expression : expressions) {
@@ -1053,13 +1055,15 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       switch (exists_expression.exists_expression_type) {
         case ExistsExpressionType::Exists:
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-            if (select_result_tables[chunk_offset]->row_count() > 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            if (select_result_tables[chunk_offset]->row_count() > 0)
+              result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
           break;
 
         case ExistsExpressionType::NotExists:
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-            if (select_result_tables[chunk_offset]->row_count() == 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            if (select_result_tables[chunk_offset]->row_count() == 0)
+              result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
           break;
       }

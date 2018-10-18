@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "base_test.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -64,8 +64,7 @@ class ColumnStatisticsTest : public BaseTest {
         auto right_operand = PQPColumnExpression::from_table(*table, column_2);
         auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
 
-        auto table_scan =
-            std::make_shared<TableScan>(table_wrapper, predicate);
+        auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,

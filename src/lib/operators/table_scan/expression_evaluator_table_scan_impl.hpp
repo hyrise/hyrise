@@ -1,8 +1,8 @@
 #pragma once
 
 #include "abstract_table_scan_impl.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {
 
@@ -15,15 +15,16 @@ class Table;
  */
 class ExpressionEvaluatorTableScanImpl : public AbstractTableScanImpl {
  public:
-  ExpressionEvaluatorTableScanImpl(const std::shared_ptr<const Table>& in_table, const std::shared_ptr<AbstractExpression>& expression);
+  ExpressionEvaluatorTableScanImpl(const std::shared_ptr<const Table>& in_table,
+                                   const std::shared_ptr<AbstractExpression>& expression);
 
   std::string description() const override;
   std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) override;
 
  private:
-   std::shared_ptr<const Table> _in_table;
-   std::shared_ptr<AbstractExpression> _expression;
-   std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults> _uncorrelated_select_results;
+  std::shared_ptr<const Table> _in_table;
+  std::shared_ptr<AbstractExpression> _expression;
+  std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults> _uncorrelated_select_results;
 };
 
 }  // namespace opossum

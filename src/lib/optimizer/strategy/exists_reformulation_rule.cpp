@@ -54,7 +54,6 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
         return ExpressionVisitation::VisitArguments;
       });
 
-
       // Early out
       if (correlated_parameter_usage_count > 1) {
         return LQPVisitation::DoNotVisitInputs;
@@ -82,14 +81,14 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       return LQPVisitation::DoNotVisitInputs;
     }
 
-
     // Skip over nodes until we find a predicate node that we could potentially extract a join predicate from
     subselect_predicate_node = std::dynamic_pointer_cast<PredicateNode>(subselect_node);
     if (!subselect_predicate_node) {
       return LQPVisitation::VisitInputs;
     }
 
-    const auto subselect_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(subselect_predicate_node->predicate);
+    const auto subselect_predicate_expression =
+        std::dynamic_pointer_cast<BinaryPredicateExpression>(subselect_predicate_node->predicate);
     if (!subselect_predicate_expression) {
       return LQPVisitation::VisitInputs;
     }
@@ -104,7 +103,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     auto parameter_expression = std::shared_ptr<ParameterExpression>();
 
     if (subselect_predicate_expression->arguments[0]->type == ExpressionType::LQPColumn &&
-    subselect_predicate_expression->arguments[1]->type == ExpressionType::Parameter) {
+        subselect_predicate_expression->arguments[1]->type == ExpressionType::Parameter) {
       // Column left, parameter right
       inner_column_expression =
           std::static_pointer_cast<LQPColumnExpression>(subselect_predicate_expression->arguments[0]);
@@ -128,8 +127,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
 
     // Build the join predicate
-    join_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, subselect_expression->arguments[0],
-                                                                 inner_column_expression);
+    join_predicate = std::make_shared<BinaryPredicateExpression>(
+        PredicateCondition::Equals, subselect_expression->arguments[0], inner_column_expression);
 
     // Join predicate found, we can stop
     return LQPVisitation::DoNotVisitInputs;
@@ -149,7 +148,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   }
 
   // Build the join node and put it into the LQP in the place of the predicate
-  const auto join_mode = exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::Anti;
+  const auto join_mode =
+      exists_expression->exists_expression_type == ExistsExpressionType::Exists ? JoinMode::Semi : JoinMode::Anti;
   const auto join_node = JoinNode::make(join_mode, join_predicate);
   lqp_replace_node(predicate_node, join_node);
   join_node->set_right_input(subselect_expression->lqp);

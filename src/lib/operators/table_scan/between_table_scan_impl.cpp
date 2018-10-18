@@ -22,9 +22,7 @@ BetweenTableScanImpl::BetweenTableScanImpl(const std::shared_ptr<const Table>& i
       _left_value{left_value},
       _right_value{right_value} {}
 
-std::string BetweenTableScanImpl::description() const {
-  return "BetweenScan";
-}
+std::string BetweenTableScanImpl::description() const { return "BetweenScan"; }
 
 void BetweenTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
                                           std::shared_ptr<SegmentVisitorContext> base_context) {

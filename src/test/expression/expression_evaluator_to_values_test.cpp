@@ -623,9 +623,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
   const auto parameter_a = uncorrelated_parameter_(ParameterID{0});
   const auto a_plus_x_projection =
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
-  const auto a_plus_x_column = column_(ColumnID{0}, DataType::Int, false, "");
-  const auto a_plus_x_eq_13_scan =
-      std::make_shared<TableScan>(a_plus_x_projection, equals_(a_plus_x_column, 13));
+  const auto a_plus_x_column = pqp_column_(ColumnID{0}, DataType::Int, false, "");
+  const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(a_plus_x_projection, equals_(a_plus_x_column, 13));
   const auto pqp_select_expression =
       pqp_select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 

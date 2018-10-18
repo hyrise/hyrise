@@ -3,10 +3,10 @@
 #include <functional>
 #include <memory>
 
+#include "abstract_table_scan_impl.hpp"
 #include "storage/segment_iterables.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "abstract_table_scan_impl.hpp"
 
 namespace opossum {
 

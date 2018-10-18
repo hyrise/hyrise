@@ -4,10 +4,10 @@
 #include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 
@@ -33,8 +33,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   const LQPInputSide input_side,
                                                   std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) {
   const auto input_node = current_node->input(input_side);
-  if (!input_node) return; // Allow calling without checks
-
+  if (!input_node) return;  // Allow calling without checks
 
   switch (input_node->type) {
     case LQPNodeType::Predicate: {
@@ -103,8 +102,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   }
 }
 
-std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
-                                                                      const LQPInputSide input_side) {
+std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_traversal(
+    const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
   if (!current_node) return {};
   const auto input_node = current_node->input(input_side);
   if (!input_node) return {};
@@ -116,8 +115,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   // Expensive PredicateNodes become candidates for a PullUp, but only IFF they have exactly one output connection.
   // If they have more, we cannot move them.
   if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
-  predicate_node && _is_expensive_predicate(predicate_node->predicate) && predicate_node->output_count() == 1) {
-
+      predicate_node && _is_expensive_predicate(predicate_node->predicate) && predicate_node->output_count() == 1) {
     candidate_nodes.emplace_back(predicate_node);
     lqp_remove_node(predicate_node);
   }
@@ -170,9 +168,8 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   }
 }
 
-void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node,
-                          const LQPInputSide input_side,
-                          const std::vector<std::shared_ptr<PredicateNode>>& predicate_nodes) {
+void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide input_side,
+                                           const std::vector<std::shared_ptr<PredicateNode>>& predicate_nodes) {
   // First node gets inserted on the @param input_side, all others on the left side of their output.
   auto current_node = node;
   auto current_input_side = input_side;
@@ -196,7 +193,7 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
   auto predicate_contains_correlated_subselect = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
     if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-    select_expression && !select_expression->arguments.empty()) {
+        select_expression && !select_expression->arguments.empty()) {
       predicate_contains_correlated_subselect = true;
       return ExpressionVisitation::DoNotVisitArguments;
     } else {

@@ -233,7 +233,7 @@ std::optional<AllTypeVariant> expression_get_value(const AbstractExpression& exp
     const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
     DebugAssert(parameter_expression.value(), "ParameterExpression doesn't have a value set");
     return *parameter_expression.value();
-  } else if (expression.type == ExpressionType::Value)  {
+  } else if (expression.type == ExpressionType::Value) {
     return static_cast<const ValueExpression&>(expression).value;
   } else {
     return std::nullopt;

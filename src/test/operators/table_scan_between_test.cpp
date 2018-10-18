@@ -1,4 +1,4 @@
-    #include <tuple>
+#include <tuple>
 
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/table_scan.hpp"

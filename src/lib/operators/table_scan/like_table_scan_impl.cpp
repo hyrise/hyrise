@@ -24,9 +24,7 @@ LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_tabl
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
-std::string LikeTableScanImpl::description() const {
-  return "LikeScan";
-}
+std::string LikeTableScanImpl::description() const { return "LikeScan"; }
 
 void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
                                        std::shared_ptr<SegmentVisitorContext> base_context) {

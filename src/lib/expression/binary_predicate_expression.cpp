@@ -13,15 +13,14 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition pr
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
                                                      const std::shared_ptr<AbstractExpression>& right_operand)
     : AbstractPredicateExpression(predicate_condition, {left_operand, right_operand}) {
-
 #if IS_DEBUG
-  const auto valid_predicate_conditions = {PredicateCondition::Equals, PredicateCondition::NotEquals, PredicateCondition::GreaterThan,
-                                           PredicateCondition::GreaterThanEquals, PredicateCondition::LessThan, PredicateCondition::LessThanEquals, PredicateCondition::Like,
-                                           PredicateCondition::NotLike};
+  const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
+                                           PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
+                                           PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
+                                           PredicateCondition::Like,        PredicateCondition::NotLike};
   const auto it = std::find(valid_predicate_conditions.begin(), valid_predicate_conditions.end(), predicate_condition);
   DebugAssert(it != valid_predicate_conditions.end(), "Invalid PredicateCondition for BinaryPredicateExpression");
 #endif
-
 }
 
 const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_operand() const { return arguments[0]; }

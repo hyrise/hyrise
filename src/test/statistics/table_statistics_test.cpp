@@ -6,8 +6,8 @@
 
 #include "all_parameter_variant.hpp"
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 #include "expression/expression_functional.hpp"
+#include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/base_column_statistics.hpp"
@@ -45,25 +45,25 @@ class TableStatisticsTest : public BaseTest {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
 
-    auto column = PQPColumnExpression::from_table(*table_with_statistics.table, table_with_statistics.table->column_name(column_id));
+    auto column = PQPColumnExpression::from_table(*table_with_statistics.table,
+                                                  table_with_statistics.table->column_name(column_id));
 
     auto left_operand = std::shared_ptr<AbstractExpression>{};
     if (is_parameter_id(value)) {
-      left_operand = parameter_(boost::get<ParameterID>(value));
+      left_operand = uncorrelated_parameter_(boost::get<ParameterID>(value));
     } else {
       left_operand = value_(boost::get<AllTypeVariant>(value));
     }
 
     std::shared_ptr<TableScan> table_scan;
     if (predicate_condition == PredicateCondition::Between) {
-      auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, greater_than_equals_(column, left_operand));
+      auto first_table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_equals_(column, left_operand));
       first_table_scan->execute();
 
-      table_scan =
-          std::make_shared<TableScan>(first_table_scan, less_than_equals_(column, *value2));
+      table_scan = std::make_shared<TableScan>(first_table_scan, less_than_equals_(column, *value2));
     } else {
-      table_scan = std::make_shared<TableScan>(table_wrapper, std::make_shared<BinaryPredicateExpression>(predicate_condition, column, left_operand));
+      table_scan = std::make_shared<TableScan>(
+          table_wrapper, std::make_shared<BinaryPredicateExpression>(predicate_condition, column, left_operand));
     }
     table_scan->execute();
 

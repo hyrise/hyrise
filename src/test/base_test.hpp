@@ -83,17 +83,21 @@ class BaseTestWithParam
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
-  static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op, const ColumnID column_id) {
+  static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,
+                                                                   const ColumnID column_id) {
     Assert(op->get_output(), "Expected Operator to be executed");
     const auto output_table = op->get_output();
     const auto& column_definition = output_table->column_definitions().at(column_id);
 
-    return column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
+    return pqp_column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
   }
 
   // Utility to create table scans
-  static std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in, const ColumnID column_id,
-  const PredicateCondition predicate_condition, const AllTypeVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt) {
+  static std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in,
+                                                      const ColumnID column_id,
+                                                      const PredicateCondition predicate_condition,
+                                                      const AllTypeVariant& value,
+                                                      const std::optional<AllTypeVariant>& value2 = std::nullopt) {
     const auto column_expression = get_column_expression(in, column_id);
 
     auto predicate = std::shared_ptr<AbstractExpression>{};

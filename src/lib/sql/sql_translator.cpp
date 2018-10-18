@@ -948,7 +948,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
         }
         case LogicalOperator::Or:
           return PredicateNode::make(expression, current_node);
-
       }
     } break;
 
@@ -1173,7 +1172,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         case hsql::kOpExists:
           AssertInput(expr.select, "Expected SELECT argument for EXISTS");
-          return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_resolver), ExistsExpressionType::Exists);
+          return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_resolver),
+                                                    ExistsExpressionType::Exists);
 
         default:
           FailInput("Not handling this OperatorType yet");
@@ -1266,18 +1266,19 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
-      if (const auto *binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression *>(&expression);
-      binary_predicate_expression) {
+      if (const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
+          binary_predicate_expression) {
         // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
         return std::make_shared<BinaryPredicateExpression>(
-        inverse_predicate_condition(binary_predicate_expression->predicate_condition),
-        binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand());
-      } else if (const auto is_null_expression = dynamic_cast<const IsNullExpression *>(&expression);
-      is_null_expression) {
+            inverse_predicate_condition(binary_predicate_expression->predicate_condition),
+            binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand());
+      } else if (const auto is_null_expression = dynamic_cast<const IsNullExpression*>(&expression);
+                 is_null_expression) {
         // NOT (IS NULL ...) -> IS NOT NULL ...
-        return std::make_shared<IsNullExpression>(
-        inverse_predicate_condition(is_null_expression->predicate_condition), is_null_expression->operand());
-      } else if (const auto *between_expression = dynamic_cast<const BetweenExpression *>(&expression); between_expression) {
+        return std::make_shared<IsNullExpression>(inverse_predicate_condition(is_null_expression->predicate_condition),
+                                                  is_null_expression->operand());
+      } else if (const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
+                 between_expression) {
         // a BETWEEN b AND c -> a < b OR a > c
         return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
                    greater_than_(between_expression->value(), between_expression->upper_bound()));
@@ -1291,21 +1292,24 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
     case ExpressionType::Logical: {
       const auto* logical_expression = static_cast<const LogicalExpression*>(&expression);
 
-      switch(logical_expression->logical_operator) {
+      switch (logical_expression->logical_operator) {
         case LogicalOperator::And:
-          return or_(_inverse_predicate(*logical_expression->left_operand()), _inverse_predicate(*logical_expression->right_operand()));
+          return or_(_inverse_predicate(*logical_expression->left_operand()),
+                     _inverse_predicate(*logical_expression->right_operand()));
         case LogicalOperator::Or:
-          return and_(_inverse_predicate(*logical_expression->left_operand()), _inverse_predicate(*logical_expression->right_operand()));
+          return and_(_inverse_predicate(*logical_expression->left_operand()),
+                      _inverse_predicate(*logical_expression->right_operand()));
       }
-
     }
 
     case ExpressionType::Exists: {
       const auto* exists_expression = static_cast<const ExistsExpression*>(&expression);
 
-      switch(exists_expression->exists_expression_type) {
-        case ExistsExpressionType::Exists: return not_exists_(exists_expression->select());
-        case ExistsExpressionType::NotExists: return exists_(exists_expression->select());
+      switch (exists_expression->exists_expression_type) {
+        case ExistsExpressionType::Exists:
+          return not_exists_(exists_expression->select());
+        case ExistsExpressionType::NotExists:
+          return exists_(exists_expression->select());
       }
     } break;
 

@@ -8,9 +8,9 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "optimizer/strategy/exists_reformulation_rule.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
@@ -44,14 +44,14 @@ class ExistsReformulationRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(ExistsReformulationRuleTest, SimpleExistsToSemiJoin) {
-  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   // clang-format off
   const auto subselect_lqp =
   PredicateNode::make(equals_(node_table_b_col_a, parameter),
     node_table_b);
 
-  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
   PredicateNode::make(exists_(subselect),
@@ -69,14 +69,14 @@ TEST_F(ExistsReformulationRuleTest, SimpleExistsToSemiJoin) {
 }
 
 TEST_F(ExistsReformulationRuleTest, SimpleNotExistsToAntiJoin) {
-  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   // clang-format off
   const auto subselect_lqp =
   PredicateNode::make(equals_(node_table_b_col_a, parameter),
     node_table_b);
 
-  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
   PredicateNode::make(not_exists_(subselect),
@@ -94,7 +94,7 @@ TEST_F(ExistsReformulationRuleTest, SimpleNotExistsToAntiJoin) {
 }
 
 TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
-  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   /**
    * Test that there can be...
@@ -114,7 +114,7 @@ TEST_F(ExistsReformulationRuleTest, ComplexSubquery) {
             node_table_b),
           node_table_a))));
 
-  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp =
   PredicateNode::make(not_exists_(subselect),

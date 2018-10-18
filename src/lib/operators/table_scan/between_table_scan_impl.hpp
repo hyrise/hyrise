@@ -27,7 +27,7 @@ class BetweenTableScanImpl : public BaseSingleColumnTableScanImpl {
                        const AllTypeVariant& left_value, const AllTypeVariant& right_value);
 
   std::string description() const override;
-  
+
   void handle_segment(const BaseValueSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 

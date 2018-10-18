@@ -8,6 +8,7 @@
 #include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
@@ -15,7 +16,6 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
-#include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -98,7 +98,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
-   final_batch.add_rule(std::make_shared<PredicatePlacementRule>());
+  final_batch.add_rule(std::make_shared<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
   final_batch.add_rule(std::make_shared<PredicateReorderingRule>());

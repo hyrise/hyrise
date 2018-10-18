@@ -208,7 +208,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 }
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
-const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate, node->left_input()));
 }
 
@@ -433,8 +433,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
 }
 
 std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
-const std::shared_ptr<AbstractExpression>& lqp_expression,
-const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractExpression>& lqp_expression, const std::shared_ptr<AbstractLQPNode>& node) const {
   auto pqp_expression = lqp_expression->deep_copy();
 
   /**
@@ -462,10 +461,9 @@ const std::shared_ptr<AbstractLQPNode>& node) const {
       auto sub_select_parameters = PQPSelectExpression::Parameters{};
       sub_select_parameters.reserve(lqp_select_expression->parameter_count());
 
-      for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count();
-           ++parameter_idx) {
+      for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count(); ++parameter_idx) {
         const auto parameter_column_id =
-        node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
+            node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
         sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_column_id);
       }
 

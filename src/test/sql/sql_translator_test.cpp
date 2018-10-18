@@ -392,16 +392,15 @@ TEST_F(SQLTranslatorTest, WhereExists) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-
 TEST_F(SQLTranslatorTest, WhereNotExists) {
   const auto actual_lqp =
       compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
-  const auto parameter_int_float_a = parameter_(ParameterID{0}, int_float_a);
+  const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
   const auto sub_select_lqp =
   PredicateNode::make(equals_(parameter_int_float_a, int_float2_a), stored_table_node_int_float2);
-  const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
+  const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
 
   const auto expected_lqp =
   PredicateNode::make(not_exists_(sub_select),
@@ -1199,7 +1198,7 @@ TEST_F(SQLTranslatorTest, NotExists) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(not_exists_(select_(stored_table_node_int_float))),
+  ProjectionNode::make(expression_vector(not_exists_(lqp_select_(stored_table_node_int_float))),
     DummyTableNode::make());
   // clang-format on
 

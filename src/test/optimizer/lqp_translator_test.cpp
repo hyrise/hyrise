@@ -747,7 +747,8 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   ASSERT_NE(projection_b, nullptr);
 
   const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, false, "a + b");
-  const auto scan_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(table_scan->predicate()->arguments.at(0));
+  const auto scan_column_expression =
+      std::dynamic_pointer_cast<PQPColumnExpression>(table_scan->predicate()->arguments.at(0));
 
   ASSERT_TRUE(scan_column_expression);
   EXPECT_EQ(scan_column_expression->column_id, ColumnID{0});

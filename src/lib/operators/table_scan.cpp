@@ -4,16 +4,16 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <string>
 #include <sstream>
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -41,8 +41,7 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {
-}
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
 
 TableScan::~TableScan() = default;
 
@@ -72,7 +71,7 @@ void TableScan::_on_set_transaction_context(const std::weak_ptr<TransactionConte
   expressions_set_transaction_context({_predicate}, transaction_context);
 }
 
-void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters){
+void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   expression_set_parameters(_predicate, parameters);
 }
 
@@ -189,20 +188,16 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::get_impl() const {
     auto left_value = std::optional<AllTypeVariant>{};
     auto right_value = std::optional<AllTypeVariant>{};
 
-    if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(
-      left_operand)) {
+    if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(left_operand)) {
       left_value = left_value_expression->value;
     }
-    if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(
-      left_operand)) {
+    if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(left_operand)) {
       left_value = left_parameter_expression->value();
     }
-    if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(
-      right_operand)) {
+    if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(right_operand)) {
       right_value = right_value_expression->value;
     }
-    if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(
-      right_operand)) {
+    if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(right_operand)) {
       right_value = right_parameter_expression->value();
     }
 
@@ -210,13 +205,13 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::get_impl() const {
     if (right_value && right_value->type() == typeid(NullValue)) right_value.reset();
 
     const auto is_like_predicate =
-    predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
+        predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
 
     // Predicate pattern: <column> LIKE <non-null value>
-    if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate && right_value) {
+    if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
+        right_value) {
       return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                 predicate_condition,
-                                                 type_cast<std::string>(*right_value));
+                                                 predicate_condition, type_cast<std::string>(*right_value));
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>
@@ -232,14 +227,14 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::get_impl() const {
     // Predicate pattern: <column> <binary predicate_condition> <column>
     if (left_column_expression && right_column_expression) {
       return std::make_unique<ColumnComparisonTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                             predicate_condition,
-                                                             right_column_expression->column_id);
+                                                             predicate_condition, right_column_expression->column_id);
     }
   }
 
   if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(_predicate)) {
     // Predicate pattern: <column> IS NULL
-    if (const auto left_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
+    if (const auto left_column_expression =
+            std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
       return std::make_unique<IsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
                                                    is_null_expression->predicate_condition);
     }
@@ -252,8 +247,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::get_impl() const {
     const auto upper_bound_value = expression_get_value(*between_expression->upper_bound());
 
     // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
-    if (left_column && lower_bound_value && upper_bound_value && lower_bound_value->type() == upper_bound_value->type()) {
-      return std::make_unique<BetweenTableScanImpl>(input_table_left(), left_column->column_id, *lower_bound_value, *upper_bound_value);
+    if (left_column && lower_bound_value && upper_bound_value &&
+        lower_bound_value->type() == upper_bound_value->type()) {
+      return std::make_unique<BetweenTableScanImpl>(input_table_left(), left_column->column_id, *lower_bound_value,
+                                                    *upper_bound_value);
     }
   }
 
