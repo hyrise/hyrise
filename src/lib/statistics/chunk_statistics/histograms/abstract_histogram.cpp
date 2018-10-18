@@ -1031,6 +1031,17 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
                                                std::move(bin_distinct_counts));
 }
 
+template <typename T>
+std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_edges() const {
+  std::vector<std::pair<T, T>> bin_edges(bin_count());
+
+  for (auto bin_id = BinID{0}; bin_id < bin_edges.size(); bin_id++) {
+    bin_edges[bin_id] = std::make_pair(bin_minimum(bin_id), bin_maximum(bin_id));
+  }
+
+  return bin_edges;
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AbstractHistogram);
 
 }  // namespace opossum

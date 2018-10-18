@@ -180,53 +180,70 @@ TEST_F(GenericHistogramTest, SliceWithPredicate) {
 }
 
 TEST_F(GenericHistogramTest, SplitAtBinEdges) {
-  {
-    // clang-format off
+  // clang-format off
     const auto hist = std::make_shared<GenericHistogram<int32_t>>(
             std::vector<int32_t>{1,  30, 60, 80},
             std::vector<int32_t>{25, 50, 75, 100},
             std::vector<HistogramCountType>{40, 30, 20, 10},
             std::vector<HistogramCountType>{10, 20, 15, 5});
-    // clang-format on
+  // clang-format on
 
-    const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
-    const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
-    const auto expected_heights = std::vector<HistogramCountType>{15, 10, 16, 9, 22, 20, 10};
-    const auto expected_distinct_counts = std::vector<HistogramCountType>{4, 3, 4, 6, 15, 15, 5};
+  const auto expected_minima = std::vector<int32_t>{1, 10, 16, 30, 36, 60, 80};
+  const auto expected_maxima = std::vector<int32_t>{9, 15, 25, 35, 50, 75, 100};
+  const auto expected_heights = std::vector<HistogramCountType>{15, 10, 16, 9, 22, 20, 10};
+  const auto expected_distinct_counts = std::vector<HistogramCountType>{4, 3, 4, 6, 15, 15, 5};
 
-    const auto new_hist = hist->split_at_bin_edges(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
-    EXPECT_EQ(new_hist->bin_count(), expected_minima.size());
+  const auto new_hist = hist->split_at_bin_edges(std::vector<std::pair<int32_t, int32_t>>{{10, 15}, {28, 35}});
+  EXPECT_EQ(new_hist->bin_count(), expected_minima.size());
 
-    for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
-      EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
-      EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
-      EXPECT_EQ(new_hist->bin_height(bin_id), expected_heights[bin_id]);
-      EXPECT_EQ(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id]);
-    }
+  for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
+    EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
+    EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
+    EXPECT_EQ(new_hist->bin_height(bin_id), expected_heights[bin_id]);
+    EXPECT_EQ(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id]);
+  }
+}
+
+TEST_F(GenericHistogramTest, SplitAtBinEdgesTwoHistograms) {
+  // clang-format off
+  const auto hist_1 = std::make_shared<GenericHistogram<int32_t>>(
+          std::vector<int32_t>{0,  5, 15, 20, 35, 45, 50},
+          std::vector<int32_t>{4, 10, 18, 29, 40, 48, 51},
+
+          // We only care about the bin edges in this test.
+          std::vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1},
+          std::vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1});
+
+  const auto hist_2 = std::make_shared<GenericHistogram<int32_t>>(
+          std::vector<int32_t>{2, 12, 40, 45, 50},
+          std::vector<int32_t>{7, 25, 42, 48, 52},
+
+          // We only care about the bin edges in this test.
+          std::vector<HistogramCountType>{1, 1, 1, 1, 1},
+          std::vector<HistogramCountType>{1, 1, 1, 1, 1});
+
+  // Even though the histograms are supposed to have the same bin edges, they do not exactly match.
+  // The reason is that bins which do not contain any values are not created,
+  // so some bins are missing in one histogram, and some are missing in the other.
+  const auto hist_1_expected_minima = std::vector<int32_t>{0, 2, 5,  8,     15,     20, 26, 35, 40,     45, 50};
+  const auto hist_2_expected_minima = std::vector<int32_t>{   2, 5,     12, 15, 19, 20,         40, 41, 45, 50, 52};
+  const auto hist_1_expected_maxima = std::vector<int32_t>{1, 4, 7, 10,     18,     25, 29, 39, 40,     48, 51};
+  const auto hist_2_expected_maxima = std::vector<int32_t>{   4, 7,     14, 18, 19, 25,         40, 42, 48, 51, 52};
+  // clang-format on
+
+  const auto new_hist_1 = hist_1->split_at_bin_edges(hist_2->bin_edges());
+  const auto new_hist_2 = hist_2->split_at_bin_edges(hist_1->bin_edges());
+  EXPECT_EQ(new_hist_1->bin_count(), hist_1_expected_minima.size());
+  EXPECT_EQ(new_hist_2->bin_count(), hist_2_expected_minima.size());
+
+  for (auto bin_id = BinID{0}; bin_id < hist_1_expected_minima.size(); bin_id++) {
+    EXPECT_EQ(new_hist_1->bin_minimum(bin_id), hist_1_expected_minima[bin_id]);
+    EXPECT_EQ(new_hist_1->bin_maximum(bin_id), hist_1_expected_maxima[bin_id]);
   }
 
-  {
-    // clang-format off
-    const auto hist = std::make_shared<GenericHistogram<int32_t>>(
-            std::vector<int32_t>{0,  5, 15, 20, 35, 45, 50},
-            std::vector<int32_t>{4, 10, 18, 29, 40, 48, 51},
-
-            // We only care about the bin edges in this test.
-            std::vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1},
-            std::vector<HistogramCountType>{1, 1, 1, 1, 1, 1, 1});
-    // clang-format on
-
-    const auto expected_minima = std::vector<int32_t>{0, 2, 5, 8, 15, 20, 26, 35, 40, 45, 50};
-    const auto expected_maxima = std::vector<int32_t>{1, 4, 7, 10, 18, 25, 29, 39, 40, 48, 51};
-
-    const auto new_hist = hist->split_at_bin_edges(
-        std::vector<std::pair<int32_t, int32_t>>{{2, 7}, {12, 25}, {40, 42}, {45, 48}, {50, 52}});
-    EXPECT_EQ(new_hist->bin_count(), expected_minima.size());
-
-    for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
-      EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
-      EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
-    }
+  for (auto bin_id = BinID{0}; bin_id < hist_2_expected_minima.size(); bin_id++) {
+    EXPECT_EQ(new_hist_2->bin_minimum(bin_id), hist_2_expected_minima[bin_id]);
+    EXPECT_EQ(new_hist_2->bin_maximum(bin_id), hist_2_expected_maxima[bin_id]);
   }
 }
 
