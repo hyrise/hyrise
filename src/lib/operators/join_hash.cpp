@@ -97,7 +97,29 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped) {
-    /*
+    if (radix_bits.has_value()) {
+      _radix_bits = radix_bits.value();
+    } else {
+      _radix_bits = _calculate_radix_bits();
+    }
+  }
+
+ protected:
+  const std::shared_ptr<const AbstractOperator> _left, _right;
+  const JoinMode _mode;
+  const ColumnIDPair _column_ids;
+  const PredicateCondition _predicate_condition;
+  const bool _inputs_swapped;
+
+  std::shared_ptr<Table> _output_table;
+
+  size_t _radix_bits;
+
+  // Determine correct type for hashing
+  using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
+
+  size_t _calculate_radix_bits() {
+      /*
       Setting number of bits for radix clustering:
       The number of bits is used to create probe partitions with a size that can
       be expected to fit into the L2 cache.
@@ -112,11 +134,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto build_relation_size = _left->get_output()->row_count();
     const auto probe_relation_size = _right->get_output()->row_count();
 
-    if (radix_bits.has_value()) {
-      _radix_bits = radix_bits.value();
-      return;
-    }
-
     if (build_relation_size > probe_relation_size) {
       /*
         Hash joins perform best for join relations with a small left join partner. In case the
@@ -124,7 +141,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         input will be switched (e.g., due to the join type), the user will be warned.
       */
       std::string warning{"Left relation larger than right relation hash join"};
-      warning += inputs_swapped ? " (input relations have been swapped)." : ".";
+      warning += _inputs_swapped ? " (input relations have been swapped)." : ".";
       PerformanceWarning(warning);
     }
 
@@ -145,22 +162,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    _radix_bits = std::ceil(std::log2(cluster_count));
+    return std::ceil(std::log2(cluster_count));
   }
-
- protected:
-  const std::shared_ptr<const AbstractOperator> _left, _right;
-  const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
-  const bool _inputs_swapped;
-
-  std::shared_ptr<Table> _output_table;
-
-  size_t _radix_bits;
-
-  // Determine correct type for hashing
-  using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
   std::shared_ptr<const Table> _on_execute() override {
     /*
