@@ -223,7 +223,7 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfExistsWithOrPredicate) {
 }
 
 /*
-  The following cases tests whether queries we do currently not rewrite are really not modified by the rule.
+  The following cases test whether queries we currently do not rewrite are really not modified by the rule.
   Note, rewriting these cases to joins might be possible but as of now we do not rewrite them.
 */
 TEST_F(ExistsReformulationRuleTest, NoRewriteOfInequalityJoinPredicates) {
