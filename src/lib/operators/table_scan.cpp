@@ -184,9 +184,8 @@ void TableScan::_init_scan() {
     const auto right_value = boost::get<AllTypeVariant>(*_predicate.value2);
 
     Assert(left_value.which() == right_value.which(),
-                "Expected left and right value to be of the same type (see operator_scan_predicate.cpp)");
-    Assert(!variant_is_null(left_value) && !variant_is_null(right_value),
-                "Expected BETWEEN values to be non-null");
+           "Expected left and right value to be of the same type (see operator_scan_predicate.cpp)");
+    Assert(!variant_is_null(left_value) && !variant_is_null(right_value), "Expected BETWEEN values to be non-null");
 
     _impl = std::make_unique<BetweenTableScanImpl>(_in_table, column_id, left_value, right_value);
   } else if (is_variant(parameter)) {
