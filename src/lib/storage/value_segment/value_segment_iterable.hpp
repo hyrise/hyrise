@@ -126,7 +126,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      return SegmentIteratorValue<T>{_values[chunk_offsets.offset_in_referenced_chunk], false, chunk_offsets.offset_in_poslist};
+      return SegmentIteratorValue<T>{_values[chunk_offsets.offset_in_referenced_chunk], false,
+                                     chunk_offsets.offset_in_poslist};
     }
 
    private:
@@ -154,7 +155,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       const auto& chunk_offsets = this->chunk_offsets();
 
       return SegmentIteratorValue<T>{_values[chunk_offsets.offset_in_referenced_chunk],
-                                     _null_values[chunk_offsets.offset_in_referenced_chunk], chunk_offsets.offset_in_poslist};
+                                     _null_values[chunk_offsets.offset_in_referenced_chunk],
+                                     chunk_offsets.offset_in_poslist};
     }
 
    private:
