@@ -15,9 +15,11 @@ class TableStatistics;
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  CreateTable,
   CreateView,
   Delete,
   DropView,
+  DropTable,
   DummyTable,
   Insert,
   Join,

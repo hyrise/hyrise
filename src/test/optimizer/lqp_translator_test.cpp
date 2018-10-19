@@ -14,6 +14,8 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -31,6 +33,8 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
@@ -824,6 +828,35 @@ TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
   const auto select_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(select_in_temporary_column, 3));
+}
+
+TEST_F(LQPTranslatorTest, CreateTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto lqp = CreateTableNode::make("t", column_definitions);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
+  EXPECT_EQ(pqp->input_left(), nullptr);
+
+  const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
+  EXPECT_EQ(create_table->table_name, "t");
+  EXPECT_EQ(create_table->column_definitions, column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, DropTable) {
+  const auto lqp = DropTableNode::make("t");
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::DropTable);
+  EXPECT_EQ(pqp->input_left(), nullptr);
+
+  const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
+  EXPECT_EQ(drop_table->table_name, "t");
 }
 
 }  // namespace opossum
