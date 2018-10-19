@@ -346,9 +346,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     if (list_expression.elements().empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{
-        in_expression.is_negated()
-      });
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     if (left_expression.data_type() == DataType::Null) {
@@ -384,7 +383,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     if (type_compatible_elements.empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -482,7 +482,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
 
             result_nulls[chunk_offset] =
-            (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
+                (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
           }
 
         } else {
@@ -500,9 +500,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
      */
 
-    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*
-    std::make_shared<InExpression>(in_expression.predicate_condition, in_expression.value(), list_(in_expression.set()))
-    );
+    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
+        in_expression.predicate_condition, in_expression.value(), list_(in_expression.set())));
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
@@ -1005,7 +1004,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
                       auto matches = Bool{0};
-                      ExpressionFunctorType{}(matches, left_result.value(chunk_offset), right_result.value(chunk_offset));  // NOLINT
+                      ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
+                                              right_result.value(chunk_offset));
                       if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
                     }
                   } else {

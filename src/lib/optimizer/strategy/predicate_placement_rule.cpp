@@ -56,7 +56,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
       // It is safe to move predicates down past Inner, Cross, Semi and Anti Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-      join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate, *join_node->left_input());
           const auto move_to_right = expression_evaluable_on_lqp(push_down_node->predicate, *join_node->right_input());

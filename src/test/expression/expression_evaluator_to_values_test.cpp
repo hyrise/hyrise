@@ -485,24 +485,24 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectUncorrelatedWithoutPrecalculated
   const auto select_b = pqp_select_(pqp_b, DataType::Int, true);
 
   // Test it without pre-calculated uncorrelated_select_results
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, select_a), {1, 1, 1, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), select_a), {1, 1, 0, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 1, 1, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, select_b), {1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, select_b), {std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", select_b), {0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, select_b), {1, std::nullopt, 1, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, select_a), {1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, select_a), {1, 1, 1, 1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), select_a), {1, 1, 0, 0}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 1, 1, 0}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.0, select_b), {1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34.5, select_b), {std::nullopt}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_("hello", select_b), {0}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(c, select_b), {1, std::nullopt, 1, std::nullopt}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, select_a), {1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, select_a), {0, 0, 0, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(add_(a, 2), select_a), {0, 0, 1, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, select_a), {0, 0, 0, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, select_b), {0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.0, select_b), {0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.5, select_b), {std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_("hello", select_b), {1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(c, select_b), {0, std::nullopt, 0, std::nullopt}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(add_(a, 2), select_a), {0, 0, 1, 1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, select_a), {0, 0, 0, 1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, select_b), {0}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.0, select_b), {0}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34.5, select_b), {std::nullopt}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_("hello", select_b), {1}));
+  //  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(c, select_b), {0, std::nullopt, 0, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, InSelectUncorrelatedWithPrecalculated) {
@@ -590,18 +590,18 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
   const auto select_a = pqp_select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_a), {1, 1, 0, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0, 1, 1, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(16, select_a), {0, 0, 0, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 0, 0, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_a),
-//                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(4, select_a), {1, 1, 0, 1}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, select_a), {0, 1, 1, 0}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(16, select_a), {0, 0, 0, 1}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(b, select_a), {1, 0, 0, 0}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_a),
+                                         {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(4, select_a), {0, 0, 1, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, select_a), {1, 0, 0, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(16, select_a), {1, 1, 1, 0}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, select_a), {0, 1, 1, 1}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), select_a),
-//                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(6, select_a), {1, 0, 0, 1}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(16, select_a), {1, 1, 1, 0}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(b, select_a), {0, 1, 1, 1}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), select_a),
+                                         {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 
   // PQP that returns the column "c" added to the current value in "a"
   //
@@ -615,22 +615,22 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
   const auto select_b = pqp_select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1, std::nullopt, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, select_b), {1, 1, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_b),
-//                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36, select_b), {std::nullopt, 1, 1, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.0, select_b), {std::nullopt, 1, 1, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.3, select_b),
-//                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, select_b), {0, std::nullopt, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(35, select_b), {0, 0, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), select_b),
-//                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36, select_b), {std::nullopt, 0, 0, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.0, select_b), {std::nullopt, 0, 0, std::nullopt}));
-//  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.3, select_b),
-//                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(34, select_b), {1, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(35, select_b), {1, 1, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(null_(), select_b),
+                                         {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36, select_b), {std::nullopt, 1, 1, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.0, select_b), {std::nullopt, 1, 1, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.3, select_b),
+                                         {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(34, select_b), {0, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(35, select_b), {0, 0, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(null_(), select_b),
+                                         {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36, select_b), {std::nullopt, 0, 0, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.0, select_b), {std::nullopt, 0, 0, std::nullopt}));
+    EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.3, select_b),
+                                         {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInListLiterals) {
@@ -654,9 +654,10 @@ TEST_F(ExpressionEvaluatorToValuesTest, NotInListLiterals) {
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInListSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, list_(1.0, 3.0)), {0, 1, 0, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(a, list_(null_(), 1.0, 3.0)), {0, std::nullopt, 0, std::nullopt}));
   EXPECT_TRUE(
-  test_expression<int32_t>(table_a, *not_in_(sub_(mul_(a, 2), 2), list_(b, 6, null_(), 0)), {0, std::nullopt, 0, 0}));
+      test_expression<int32_t>(table_a, *not_in_(a, list_(null_(), 1.0, 3.0)), {0, std::nullopt, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(sub_(mul_(a, 2), 2), list_(b, 6, null_(), 0)),
+                                       {0, std::nullopt, 0, 0}));
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInArbitraryExpression) {
