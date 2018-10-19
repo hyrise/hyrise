@@ -749,8 +749,6 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
 
   auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
 
-  Print::print(first_subselect_sql_pipeline.get_result_table());
-
   const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);

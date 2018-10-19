@@ -81,6 +81,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
   /**
    * To keep the code simple for now, transform the InExpression like this:
    * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+   * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
    *
    * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
    * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
@@ -105,7 +106,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
 
   std::shared_ptr<AbstractExpression> rewritten_expression;
 
-  if (in_expression.negated()) {
+  if (in_expression.is_negated()) {
     // a NOT IN (1,2,3) --> a != 1 AND a != 2 AND a != 3
     rewritten_expression = not_equals_(in_expression.value(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
@@ -346,7 +347,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     if (list_expression.elements().empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{
-        in_expression.negated()
+        in_expression.is_negated()
       });
     }
 
@@ -383,7 +384,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     if (type_compatible_elements.empty()) {
       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{in_expression.negated()});
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -408,7 +409,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           }
           std::sort(right_values.begin(), right_values.end());
 
-          result_values.resize(left_view.size(), in_expression.negated());
+          result_values.resize(left_view.size(), in_expression.is_negated());
           if (left_view.is_nullable()) {
             result_nulls.resize(left_view.size());
           }
@@ -420,7 +421,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             }
             if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
                 it != right_values.cend() && *it == left_view.value(chunk_offset)) {
-              result_values[chunk_offset] = !in_expression.negated();
+              result_values[chunk_offset] = !in_expression.is_negated();
             }
           }
         } else {
@@ -478,7 +479,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               list_contains_null |= list.is_null(list_element_idx);
             }
 
-            if (in_expression.negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
+            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
 
             result_nulls[chunk_offset] =
             (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
@@ -997,17 +998,15 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                 using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
 
                 resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
-                  using ExpressionEvaluator = typename decltype(functor)::type;
+                  using ExpressionFunctorType = typename decltype(functor)::type;
 
-                  if constexpr (ExpressionEvaluator::template supports<Bool, LeftDataType, RightDataType>::value) {
+                  if constexpr (ExpressionFunctorType::template supports<Bool, LeftDataType, RightDataType>::value) {
                     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
-                      auto value = Bool{0};
-                      ExpressionEvaluator{}(value, left_result.value(chunk_offset), right_result.value(chunk_offset));  // NOLINT
-                      if (value != 0) {
-                        result_pos_list.emplace_back(_chunk_id, chunk_offset);
-                      }
+                      auto matches = Bool{0};
+                      ExpressionFunctorType{}(matches, left_result.value(chunk_offset), right_result.value(chunk_offset));  // NOLINT
+                      if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
                     }
                   } else {
                     Fail("Argument types not compatible");
@@ -1040,6 +1039,12 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
         case PredicateCondition::NotIn:
         case PredicateCondition::Like:
         case PredicateCondition::NotLike: {
+          // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
+          // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
+          // for these ExpressionTypes could be. But
+          // a) such implementations would require lots of code, there is little potential for code sharing between the
+          //    evaluate-to-PosList and evaluate-to-Result implementations
+          // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_view.size(); ++chunk_offset) {

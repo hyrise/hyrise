@@ -15,7 +15,7 @@ class InExpression : public AbstractPredicateExpression {
    * Utility for better readability
    * @return predicate_condition == PredicateCondition::NotIn
    */
-  bool negated() const;
+  bool is_negated() const;
 
   const std::shared_ptr<AbstractExpression>& value() const;
   const std::shared_ptr<AbstractExpression>& set() const;

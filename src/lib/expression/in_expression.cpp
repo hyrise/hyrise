@@ -13,7 +13,7 @@ InExpression::InExpression(const PredicateCondition predicate_condition, const s
   DebugAssert(predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn, "Expected either IN or NOT IN as PredicateCondition");
 }
 
-bool InExpression::negated() const {
+bool InExpression::is_negated() const {
   return predicate_condition == PredicateCondition::NotIn;
 }
 

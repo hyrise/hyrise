@@ -213,16 +213,6 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  static std::shared_ptr<AbstractExpression> create_predicate_expression(
-      const PredicateCondition predicate_condition, const std::shared_ptr<AbstractExpression>& column,
-      const std::shared_ptr<AbstractExpression>& value) {
-    if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
-      return std::make_shared<IsNullExpression>(predicate_condition, column);
-    } else {
-      return std::make_shared<BinaryPredicateExpression>(predicate_condition, column, value);
-    }
-  }
-
  protected:
   EncodingType _encoding_type;
   std::shared_ptr<TableWrapper> _int_int_compressed;
@@ -471,14 +461,10 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
 
   for (const auto& test : tests) {
-    const auto predicate =
-        create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(0));
-    auto scan = std::make_shared<TableScan>(_int_int_compressed, predicate);
+    auto scan = create_table_scan(_int_int_compressed, ColumnID{0}, test.first, 0);
     scan->execute();
 
-    const auto predicate_partly =
-        create_predicate_expression(test.first, get_column_expression(_int_int_compressed, ColumnID{0}), value_(0));
-    auto scan_partly = std::make_shared<TableScan>(_int_int_partly_compressed, predicate_partly);
+    auto scan_partly = create_table_scan(_int_int_partly_compressed, ColumnID{0}, test.first, 0);
     scan_partly->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -567,8 +553,6 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutN
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  Print::print(table_wrapper);
-
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
       {PredicateCondition::IsNull, {}}, {PredicateCondition::IsNotNull, {12345, 123, 1234}}};
 
@@ -581,11 +565,9 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  Print::print(table_wrapper);
-
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
       {PredicateCondition::IsNull, {12, 123}},
-      /*{PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}*/};
+      {PredicateCondition::IsNotNull, {12345, NULL_VALUE, 1234, 12345, 12, 1234}}};
 
   scan_for_null_values(table_wrapper, tests);
 }
@@ -634,9 +616,7 @@ TEST_P(OperatorsTableScanTest, NullSemantics) {
        PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals});
 
   for (auto predicate_condition : predicate_conditions) {
-    const auto predicate = create_predicate_expression(
-        predicate_condition, get_column_expression(get_table_op_null(), ColumnID{0}), null_());
-    auto scan = std::make_shared<TableScan>(get_table_op_null(), predicate);
+    auto scan = create_table_scan(get_table_op_null(), ColumnID{0}, predicate_condition, NullValue{});
     scan->execute();
 
     EXPECT_EQ(scan->get_output()->row_count(), 0u);

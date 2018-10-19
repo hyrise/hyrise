@@ -22,7 +22,6 @@ bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes);
 
-  // TODO(moritz) Handle multiple outputs
   _pull_up_traversal(root_node, LQPInputSide::Left);
 
   // No easy way to tell whether the plan changed
