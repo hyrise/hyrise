@@ -142,8 +142,8 @@ void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
-  export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
-  export_value(ofstream, static_cast<ColumnID>(table->column_count()));
+  export_value(ofstream, static_cast<ChunkID::base_type>(table->chunk_count()));
+  export_value(ofstream, static_cast<ColumnID::base_type>(table->column_count()));
 
   std::vector<std::string> column_types(table->column_count());
   std::vector<std::string> column_names(table->column_count());
@@ -277,13 +277,13 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
     const auto& segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
     export_values(context->ofstream, *segment.dictionary());
   } else {
     const auto& segment = static_cast<const DictionarySegment<T>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
     export_values(context->ofstream, *segment.dictionary());
   }
 

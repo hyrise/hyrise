@@ -202,12 +202,14 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   auto chunk_offsets = std::vector<size_t>(in_table->chunk_count());
 
   // fill work queue
-  size_t output_offset = 0;
-  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-    auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
+  {
+    size_t output_offset = 0;
+    for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
+      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
-    chunk_offsets[chunk_id] = output_offset;
-    output_offset += segment->size();
+      chunk_offsets[chunk_id] = output_offset;
+      output_offset += segment->size();
+    }
   }
 
   // create histograms per chunk
@@ -386,7 +388,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
         // simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the left cluster
-        const size_t expected_output_size = std::max(10.0, std::ceil((partition_end - partition_begin) / 2));
+        const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil((partition_end - partition_begin) / 2)));
         pos_list_left_local.reserve(expected_output_size);
         pos_list_right_local.reserve(expected_output_size);
 
@@ -648,7 +650,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    _radix_bits = std::ceil(std::log2(cluster_count));
+    _radix_bits = static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
 
  protected:

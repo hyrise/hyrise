@@ -13,7 +13,9 @@
 
 namespace opossum {
 
-class BaseTableScanImpl;
+class BaseTableScanImpl {
+  public: virtual ~BaseTableScanImpl();
+};
 class Table;
 
 class TableScan : public AbstractReadOnlyOperator {

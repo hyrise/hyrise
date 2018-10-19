@@ -36,7 +36,7 @@ class BaseDictionarySegment : public BaseEncodedSegment {
   /**
    * @brief The size of the dictionary
    */
-  virtual size_t unique_values_count() const = 0;
+  virtual ValueID::base_type unique_values_count() const = 0;
 
   virtual std::shared_ptr<const BaseCompressedVector> attribute_vector() const = 0;
 
