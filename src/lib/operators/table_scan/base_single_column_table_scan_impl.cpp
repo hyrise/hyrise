@@ -73,24 +73,16 @@ void BaseSingleColumnTableScanImpl::handle_segment(const ReferenceSegment& segme
 
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, position_filter);
 
-    // std::cout << "before scan, matches_out.size() is " << matches_out.size() << std::endl;
     resolve_data_and_segment_type(*referenced_segment, [&](const auto data_type_t, const auto& resolved_segment) {
       static_cast<AbstractSegmentVisitor*>(this)->handle_segment(resolved_segment, new_context);
     });
-    // std::cout << "after scan, matches_out.size() is " << matches_out.size() << std::endl;
 
     // The scan has filled matches_out assuming that position_filter was the entire ReferenceSegment, so we need to fix
     // that:
 
-    // std::cout << ">>>>>>>>>>>>>>>>>>" << std::endl;
     for(auto match_idx = static_cast<ChunkOffset>(num_previous_matches); match_idx < matches_out.size(); ++match_idx) {
-      // std::cout << "match_idx == " << match_idx << std::endl;
-      // std::cout << "position_filter.size == " << splitted_pos_list.position_filter->size() << std::endl;
-      // std::cout << "original_positions.size == " << splitted_pos_list.original_positions.size() << std::endl;
-      // std::cout << "matches_out[match_idx].chunk_offset == " << matches_out[match_idx].chunk_offset << std::endl << std::endl;
-      matches_out[match_idx].chunk_offset = splitted_pos_list.original_positions.at(matches_out[match_idx].chunk_offset);  // TODO remove at
+      matches_out[match_idx].chunk_offset = splitted_pos_list.original_positions[matches_out[match_idx].chunk_offset];
     }
-    // std::cout << "<<<<<<<<<<<<<<<<<<" << std::endl;
   }
 }
 
