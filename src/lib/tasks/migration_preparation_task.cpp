@@ -141,7 +141,7 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
   double sum_temperature = 0.0;
   size_t lookback_samples = lookback.count() / counter_history_interval.count();
   for (const auto& [table_name, table] : storage_manager.tables()) {
-    const auto chunk_count = table.chunk_count();
+    const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
       const auto chunk = table->get_chunk(i);
       if (ChunkMigrationTask::chunk_is_completed(chunk, table->max_chunk_size()) && chunk->has_access_counter()) {
