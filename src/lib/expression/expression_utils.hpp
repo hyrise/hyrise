@@ -141,6 +141,6 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
  * @return  The value of a ParameterExpression or ValueExpression
  *          std::nullopt for other expression types
  */
-std::optional<AllTypeVariant> expression_get_value(const AbstractExpression& expression);
+std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
 
 }  // namespace opossum

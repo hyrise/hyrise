@@ -32,10 +32,11 @@ class PQPColumnExpression;
 
 /**
  * Computes the result of an Expression in three different ways
- *      - evaluate_expression_to_result(): result is a ExpressionResult<>
- *      - evaluate_expression_to_segment(): wraps evaluate_expression_to_result() into a Segment
+ *      - evaluate_expression_to_result(): result is a ExpressionResult<>, one entry per row in the input Chunk, or a
+ *                                         single row if no input chunk is specified
+ *      - evaluate_expression_to_segment(): wraps evaluate_expression_to_result() into a Segment.
  *      - evaluate_expression_to_pos_list(): Only for Expressions returning Bools; a PosList of the Rows where the
- *                                           Expression is True
+ *                                           Expression is True. Useful for, e.g., scans with complex predicates
  *
  * Operates either
  *      - ...on a Chunk, thus returning a value for each row in it

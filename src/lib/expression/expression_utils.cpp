@@ -228,7 +228,7 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   return placeholder_found;
 }
 
-std::optional<AllTypeVariant> expression_get_value(const AbstractExpression& expression) {
+std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
   if (expression.type == ExpressionType::Parameter) {
     const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
     DebugAssert(parameter_expression.value(), "ParameterExpression doesn't have a value set");
