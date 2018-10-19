@@ -95,10 +95,14 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/create_table_node.cpp
+    logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
+    logical_query_plan/drop_table_node.cpp
+    logical_query_plan/drop_table_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
@@ -187,8 +191,12 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/maintenance/create_table.cpp
+    operators/maintenance/create_table.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
+    operators/maintenance/drop_table.cpp
+    operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
     operators/maintenance/show_columns.cpp

@@ -61,11 +61,11 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->descripti
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_join_node->column_expressions().size(), 5u);
-  EXPECT_EQ(*_join_node->column_expressions().at(0), *column_(_t_a_a));
-  EXPECT_EQ(*_join_node->column_expressions().at(1), *column_(_t_a_b));
-  EXPECT_EQ(*_join_node->column_expressions().at(2), *column_(_t_a_c));
-  EXPECT_EQ(*_join_node->column_expressions().at(3), *column_(_t_b_x));
-  EXPECT_EQ(*_join_node->column_expressions().at(4), *column_(_t_b_y));
+  EXPECT_EQ(*_join_node->column_expressions().at(0), *lqp_column_(_t_a_a));
+  EXPECT_EQ(*_join_node->column_expressions().at(1), *lqp_column_(_t_a_b));
+  EXPECT_EQ(*_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
+  EXPECT_EQ(*_join_node->column_expressions().at(3), *lqp_column_(_t_b_x));
+  EXPECT_EQ(*_join_node->column_expressions().at(4), *lqp_column_(_t_b_y));
 }
 
 TEST_F(JoinNodeTest, Equals) {
@@ -94,16 +94,16 @@ TEST_F(JoinNodeTest, Copy) {
 
 TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
   ASSERT_EQ(_semi_join_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_semi_join_node->column_expressions().at(0), *column_(_t_a_a));
-  EXPECT_EQ(*_semi_join_node->column_expressions().at(1), *column_(_t_a_b));
-  EXPECT_EQ(*_semi_join_node->column_expressions().at(2), *column_(_t_a_c));
+  EXPECT_EQ(*_semi_join_node->column_expressions().at(0), *lqp_column_(_t_a_a));
+  EXPECT_EQ(*_semi_join_node->column_expressions().at(1), *lqp_column_(_t_a_b));
+  EXPECT_EQ(*_semi_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
 }
 
 TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
   ASSERT_EQ(_anti_join_node->column_expressions().size(), 3u);
-  EXPECT_EQ(*_anti_join_node->column_expressions().at(0), *column_(_t_a_a));
-  EXPECT_EQ(*_anti_join_node->column_expressions().at(1), *column_(_t_a_b));
-  EXPECT_EQ(*_anti_join_node->column_expressions().at(2), *column_(_t_a_c));
+  EXPECT_EQ(*_anti_join_node->column_expressions().at(0), *lqp_column_(_t_a_a));
+  EXPECT_EQ(*_anti_join_node->column_expressions().at(1), *lqp_column_(_t_a_b));
+  EXPECT_EQ(*_anti_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
 }
 
 }  // namespace opossum

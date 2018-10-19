@@ -9,6 +9,8 @@
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -74,6 +76,7 @@ class BaseTestWithParam
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 };
 

@@ -8,8 +8,10 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
+#include "create_table_node.hpp"
 #include "create_view_node.hpp"
 #include "delete_node.hpp"
+#include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
 #include "expression/abstract_expression.hpp"
@@ -36,7 +38,9 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
@@ -116,6 +120,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::ShowColumns: return _translate_show_columns_node(node);
     case LQPNodeType::CreateView:  return _translate_create_view_node(node);
     case LQPNodeType::DropView:    return _translate_drop_view_node(node);
+    case LQPNodeType::CreateTable: return _translate_create_table_node(node);
+    case LQPNodeType::DropTable:   return _translate_drop_table_node(node);
       // clang-format on
 
     default:
@@ -454,6 +460,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
   return std::make_shared<DropView>(drop_view_node->view_name());
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
+  return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->column_definitions);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
+  return std::make_shared<DropTable>(drop_table_node->table_name);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
