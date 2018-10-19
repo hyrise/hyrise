@@ -237,20 +237,26 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     RadixContainer<RightType> radix_right;
     std::vector<std::optional<HashTable<HashedType>>> hashtables;
 
-    // Parallelization of Hash Join:
-    // we have to data paths, one for left side and one for right side:
-    //          Relation Left          Relation Right
-    //                |                       |
-    //           Materialize              Materialize
-    //                |                       |
-    //         (Radix Partition).      (Radix Partition)
-    //                |                       |
-    //          Build Partition               |
-    //                  \_                  _/
-    //                    \_              _/
-    //                      \_          _/
-    //                        \        /
-    //                   Probing (actual Join)
+    // Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
+    // ===============================================================================================
+    // We have to data paths, one for left side and one for right input side. We can prepare (i.e.,
+    // materialize(), build(), etc.) both sides in parallel until the actual join takes place.
+    // All tasks might spawn concurrent tasks themselves. For example, materialize parallelizes over
+    // the input chunks and the following steps over the radix clusters.
+    //
+    //           Relation Left                       Relation Right
+    //                 |                                    |
+    //        materialize_input()                  materialize_input()
+    //                 |                                    |
+    //  ( partition_radix_parallel() )       ( partition_radix_parallel() )
+    //                 |                                    |
+    //               build()                                |
+    //                   \_                               _/
+    //                     \_                           _/
+    //                       \_                       _/
+    //                         \_                   _/
+    //                           \                 /
+    //                          Probing (actual Join)
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
