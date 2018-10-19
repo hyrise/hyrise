@@ -999,7 +999,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                 resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
                   using ExpressionFunctorType = typename decltype(functor)::type;
 
-                  if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType, RightDataType>::value) {
+                  if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+                                                                         RightDataType>::value) {
                     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
