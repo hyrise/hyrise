@@ -14,7 +14,7 @@ namespace opossum {
 
 void ChunkMetricsCollectionTask::_on_execute() {
   for (const auto& table_pair : StorageManager::get().tables()) {
-  	const auto& table = table_pair.second;
+    const auto& table = table_pair.second;
     for (ChunkID i = ChunkID(0); i < table->chunk_count(); i++) {
       const auto chunk = table->get_chunk(i);
       if (const auto access_counter = chunk->access_counter()) {
