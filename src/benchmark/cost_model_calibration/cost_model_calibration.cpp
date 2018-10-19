@@ -3,10 +3,13 @@
 #include <json.hpp>
 
 #include <algorithm>
+#include <boost/algorithm/string/join.hpp>
 #include <fstream>
 #include <iostream>
 
+#include "cost_model_calibration/feature/calibration_example.hpp"
 #include "cost_model_feature_extractor.hpp"
+#include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -68,7 +71,7 @@ void CostModelCalibration::run_tpch() const {
 
   for (size_t i = 0; i < 1; i++) {
     for (const auto& query : opossum::tpch_queries) {
-      std::map<std::string, nlohmann::json> operators{};
+      std::vector<CalibrationExample> examples{};
 
       SQLQueryCache<SQLQueryPlan>::get().clear();
 
@@ -83,19 +86,19 @@ void CostModelCalibration::run_tpch() const {
       auto query_plans = pipeline.get_query_plans();
       for (const auto& query_plan : query_plans) {
         for (const auto& root : query_plan->tree_roots()) {
-          _traverse(root, operators);
+          _traverse(root, examples);
         }
       }
       std::cout << "Finished TPCH " << query.first << std::endl;
 
       auto output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-      _write_result_json(output_path, _configuration, operators);
+      _write_result_csv(output_path, _configuration, examples);
     }
   }
 }
 
 void CostModelCalibration::calibrate() const {
-  std::map<std::string, nlohmann::json> operators{};
+  std::vector<CalibrationExample> examples{};
   auto number_of_iterations = _configuration.calibration_runs;
 
   const auto scheduler = std::make_shared<NodeQueueScheduler>();
@@ -120,42 +123,69 @@ void CostModelCalibration::calibrate() const {
       auto query_plans = pipeline.get_query_plans();
       for (const auto& query_plan : query_plans) {
         for (const auto& root : query_plan->tree_roots()) {
-          _traverse(root, operators);
+          _traverse(root, examples);
         }
       }
     }
     std::cout << "Finished iteration " << i << std::endl;
   }
 
-  _write_result_json(_configuration.output_path, _configuration, operators);
+  _write_result_csv(_configuration.output_path, _configuration, examples);
 }
 
-void CostModelCalibration::_write_result_json(const std::string output_path, const nlohmann::json& configuration,
-                                              const std::map<std::string, nlohmann::json>& operators) const {
-  nlohmann::json output_json{};
-  output_json["config"] = configuration;
-  output_json["operators"] = operators;
+void CostModelCalibration::_write_result_csv(const std::string output_path, const nlohmann::json& configuration,
+                                             const std::vector<CalibrationExample>& examples) const {
+  std::vector<std::string> columns{};
 
-  // output file per operator type
-  std::ofstream myfile;
-  myfile.open(output_path);
-  myfile << std::setw(2) << output_json << std::endl;
-  myfile.close();
+  const auto calibration_features = CalibrationFeatures::columns;
+  const auto hardware_features = CalibrationConstantHardwareFeatures::columns;
+  const auto runtime_features = CalibrationRuntimeHardwareFeatures::columns;
+  const auto join_features = CalibrationJoinFeatures::columns;
+  const auto projection_features = CalibrationProjectionFeatures::columns;
+  const auto table_scan_features = CalibrationTableScanFeatures::columns;
+
+  columns.insert(std::end(columns), std::begin(calibration_features), std::end(calibration_features));
+  columns.insert(std::end(columns), std::begin(hardware_features), std::end(hardware_features));
+  columns.insert(std::end(columns), std::begin(runtime_features), std::end(runtime_features));
+  columns.insert(std::end(columns), std::begin(join_features), std::end(join_features));
+  columns.insert(std::end(columns), std::begin(projection_features), std::end(projection_features));
+  columns.insert(std::end(columns), std::begin(table_scan_features), std::end(table_scan_features));
+
+  std::ofstream stream;
+  stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+  stream.open(output_path, std::ios::out);
+
+  const auto header = boost::algorithm::join(columns, ", ");
+  stream << header << '\n';
+  stream.close();
+
+  CsvWriter writer(output_path);
+
+  for (const auto& example : examples) {
+    const auto all_type_variants = serialize(example);
+
+    for (const auto& value : all_type_variants) {
+      writer.write(value);
+    }
+    writer.end_line();
+  }
+
+  // TODO(Sven): Append if file already exists.. incremental logging
+  std::cout << "Writing result CSV" << std::endl;
 }
 
 void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperator>& op,
-                                     std::map<std::string, nlohmann::json>& operators) const {
-  auto description = op->name();
-  auto operator_result = CostModelFeatureExtractor::extract_features(op);
-  operators[description].push_back(operator_result);
-
+                                     std::vector<CalibrationExample>& examples) const {
   if (op->input_left() != nullptr) {
-    _traverse(op->input_left(), operators);
+    _traverse(op->input_left(), examples);
   }
 
   if (op->input_right() != nullptr) {
-    _traverse(op->input_right(), operators);
+    _traverse(op->input_right(), examples);
   }
+
+  auto operator_result = CostModelFeatureExtractor::extract_features(op);
+  examples.push_back(operator_result);
 }
 
 }  // namespace opossum

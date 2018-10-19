@@ -1,33 +1,25 @@
 #pragma once
 
-#include <json.hpp>
+#include <vector>
 
-#include <string>
-
-#include "constant_mappings.hpp"
-#include "storage/encoding_type.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
-    // Hard-coded to test server
-    struct CalibrationRuntimeHardwareFeatures {
-        size_t current_memory_consumption_percentage = 0;
-        size_t running_queries = 0;
-        size_t remaining_transactions = 0;
-    };
+struct CalibrationRuntimeHardwareFeatures {
+  size_t current_memory_consumption_percentage = 0;
+  size_t running_queries = 0;
+  size_t remaining_transactions = 0;
 
-    inline void to_json(nlohmann::json& j, const CalibrationRuntimeHardwareFeatures& s) {
-        j = nlohmann::json{
-                {"current_memory_consumption_percentage", s.current_memory_consumption_percentage},
-                {"running_queries", s.running_queries},
-                {"remaining_transactions", s.remaining_transactions}
-        };
-    }
+  static const std::vector<std::string> columns;
+};
 
-    inline void from_json(const nlohmann::json& j, CalibrationRuntimeHardwareFeatures& s) {
-        s.current_memory_consumption_percentage = j.value("current_memory_consumption_percentage", 0);
-        s.running_queries = j.value("running_queries", 0);
-        s.remaining_transactions = j.value("remaining_transactions", 0);
-    }
+inline const std::vector<std::string> CalibrationRuntimeHardwareFeatures::columns(
+    {"current_memory_consumption_percentage", "running_queries", "remaining_transactions"});
+
+inline std::vector<AllTypeVariant> serialize(const CalibrationRuntimeHardwareFeatures& features) {
+  return {static_cast<int32_t>(features.current_memory_consumption_percentage),
+          static_cast<int32_t>(features.running_queries), static_cast<int32_t>(features.remaining_transactions)};
+}
 
 }  // namespace opossum

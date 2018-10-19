@@ -14,15 +14,15 @@
 
 namespace opossum {
 
-    class CostModelFeatureExtractorTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class CostModelFeatureExtractorTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
-    TEST_F(CostModelFeatureExtractorTest, ExtractFeatures) {
-        // set up some TableScanOperator
+TEST_F(CostModelFeatureExtractorTest, ExtractFeatures) {
+  // set up some TableScanOperator
 
-        auto result_json = CostModelFeatureExtractor::extract_features(op);
-    }
+  auto result_json = CostModelFeatureExtractor::extract_features(op);
+}
 
 }  // namespace opossum

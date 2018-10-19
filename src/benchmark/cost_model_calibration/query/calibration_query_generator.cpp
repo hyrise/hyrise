@@ -68,34 +68,38 @@ const std::optional<std::string> CalibrationQueryGenerator::_generate_join(
   auto select_columns = _generate_select_columns(columns);
 
   if (join_columns) {
-    return boost::str(boost::format(string_template) % select_columns % left_table->table_name % right_table->table_name %
-                      join_columns->first % join_columns->second % left_predicate % right_predicate);
+    return boost::str(boost::format(string_template) % select_columns % left_table->table_name %
+                      right_table->table_name % join_columns->first % join_columns->second % left_predicate %
+                      right_predicate);
   }
 
   // Missing potential join columns, will not produce cross join here.
   std::cout << "There are no join partners for query generation. "
-               "Check the table configuration, whether there are two columns with the same datatype." << std::endl;
+               "Check the table configuration, whether there are two columns with the same datatype."
+            << std::endl;
   return {};
 }
 
 const std::optional<std::pair<std::string, std::string>> CalibrationQueryGenerator::_generate_join_columns(
-        const std::map<std::string, CalibrationColumnSpecification>& left_column_definitions,
-        const std::map<std::string, CalibrationColumnSpecification>& right_column_definitions) {
+    const std::map<std::string, CalibrationColumnSpecification>& left_column_definitions,
+    const std::map<std::string, CalibrationColumnSpecification>& right_column_definitions) {
   std::random_device random_device;
   std::mt19937 engine(random_device());
 
-  std::vector<std::pair<std::string, CalibrationColumnSpecification>> left_columns(left_column_definitions.begin(), left_column_definitions.end());
-  std::vector<std::pair<std::string, CalibrationColumnSpecification>> right_columns(right_column_definitions.begin(), right_column_definitions.end());
+  std::vector<std::pair<std::string, CalibrationColumnSpecification>> left_columns(left_column_definitions.begin(),
+                                                                                   left_column_definitions.end());
+  std::vector<std::pair<std::string, CalibrationColumnSpecification>> right_columns(right_column_definitions.begin(),
+                                                                                    right_column_definitions.end());
 
   std::shuffle(left_columns.begin(), left_columns.end(), engine);
   std::shuffle(right_columns.begin(), right_columns.end(), engine);
 
-  for (const auto & left_column : left_columns) {
-    for (const auto & right_column : right_columns) {
+  for (const auto& left_column : left_columns) {
+    for (const auto& right_column : right_columns) {
       const auto left_type = data_type_to_string.right.at(left_column.second.type);
 
       if (left_column.second.type == right_column.second.type && left_type != DataType::String) {
-        return std::pair {left_column.first, right_column.first };
+        return std::pair{left_column.first, right_column.first};
       }
     }
   }

@@ -10,7 +10,7 @@ namespace opossum {
 
 CsvWriter::CsvWriter(const std::string& file, const ParseConfig& config) : _config(config) {
   _stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-  _stream.open(file);
+  _stream.open(file, std::ios::out | std::ios::app);
 }
 
 void CsvWriter::write(const AllTypeVariant& value) {

@@ -18,13 +18,14 @@ class CalibrationQueryGenerator {
  private:
   static const std::string _generate_table_scan(const CalibrationTableSpecification& table_definition);
   static const std::string _generate_aggregate(const CalibrationTableSpecification& table_definition);
-  static const std::optional<std::string> _generate_join(const std::vector<CalibrationTableSpecification>& table_definitions);
+  static const std::optional<std::string> _generate_join(
+      const std::vector<CalibrationTableSpecification>& table_definitions);
   static const std::string _generate_select_columns(
       const std::map<std::string, CalibrationColumnSpecification>& column_definitions);
 
   static const std::optional<std::pair<std::string, std::string>> _generate_join_columns(
-          const std::map<std::string, CalibrationColumnSpecification>& left_column_definitions,
-          const std::map<std::string, CalibrationColumnSpecification>& right_column_definitions);
+      const std::map<std::string, CalibrationColumnSpecification>& left_column_definitions,
+      const std::map<std::string, CalibrationColumnSpecification>& right_column_definitions);
 
   static const std::vector<std::string> _get_column_names(
       const std::map<std::string, CalibrationColumnSpecification>& column_definitions);

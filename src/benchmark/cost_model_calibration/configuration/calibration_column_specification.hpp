@@ -19,10 +19,8 @@ struct CalibrationColumnSpecification {
 
 inline void to_json(nlohmann::json& j, const CalibrationColumnSpecification& s) {
   j = nlohmann::json{
-      {"type", s.type},
-      {"value_distribution", s.value_distribution},
-      {"sorted", s.sorted},
-      {"distinct_values", s.distinct_values},
+      {"type", s.type},         {"value_distribution", s.value_distribution},
+      {"sorted", s.sorted},     {"distinct_values", s.distinct_values},
       {"encoding", s.encoding},
   };
 }

@@ -15,31 +15,31 @@
 
 namespace opossum {
 
-    const std::string CalibrationQueryGeneratorPredicates::generate_predicates(const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
-                                                                               const std::string column_name_prefix) {
-      std::random_device random_device;
-      std::mt19937 engine{random_device()};
+const std::string CalibrationQueryGeneratorPredicates::generate_predicates(
+    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const std::string column_name_prefix) {
+  std::random_device random_device;
+  std::mt19937 engine{random_device()};
 
-      std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 3);
-      auto number_of_predicates = number_of_predicates_dist(engine);
+  std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 3);
+  auto number_of_predicates = number_of_predicates_dist(engine);
 
-      std::stringstream predicate_stream;
+  std::stringstream predicate_stream;
 
-      auto remaining_column_definitions = column_definitions;
+  auto remaining_column_definitions = column_definitions;
 
-      for (size_t i = 0; i < number_of_predicates; i++) {
-        predicate_stream << _generate_predicate(remaining_column_definitions, column_name_prefix);
+  for (size_t i = 0; i < number_of_predicates; i++) {
+    predicate_stream << _generate_predicate(remaining_column_definitions, column_name_prefix);
 
-        if (i < number_of_predicates - 1) {
-          predicate_stream << " AND ";
-        }
-      }
-      return predicate_stream.str();
+    if (i < number_of_predicates - 1) {
+      predicate_stream << " AND ";
     }
+  }
+  return predicate_stream.str();
+}
 
 const std::string CalibrationQueryGeneratorPredicates::_generate_predicate(
-    std::map<std::string, CalibrationColumnSpecification>& column_definitions,
-    const std::string column_name_prefix) {
+    std::map<std::string, CalibrationColumnSpecification>& column_definitions, const std::string column_name_prefix) {
   std::random_device random_device;
   std::mt19937 engine{random_device()};
   std::uniform_int_distribution<u_int64_t> filter_column_dist(0, column_definitions.size() - 1);
@@ -95,11 +95,11 @@ const std::string CalibrationQueryGeneratorPredicates::_generate_predicate(
     auto first_filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
     auto second_filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
     if (first_filter_column_value < second_filter_column_value) {
-        return boost::str(boost::format(between_predicate_template) % filter_column_name % first_filter_column_value %
-                          second_filter_column_value);
+      return boost::str(boost::format(between_predicate_template) % filter_column_name % first_filter_column_value %
+                        second_filter_column_value);
     }
     return boost::str(boost::format(between_predicate_template) % filter_column_name % second_filter_column_value %
-    first_filter_column_value);
+                      first_filter_column_value);
   } else if (foo > 0.5 && second_column) {
     // Generate column to column
     auto second_column_name = column_name_prefix + second_column->first;
