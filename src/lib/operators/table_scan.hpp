@@ -48,7 +48,7 @@ class TableScan : public AbstractReadOnlyOperator {
   /**
    * Create the TableScanImpl based on the predicate type. Public for testing purposes.
    */
-  std::unique_ptr<AbstractTableScanImpl> get_impl() const;
+  std::unique_ptr<AbstractTableScanImpl> create_impl() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

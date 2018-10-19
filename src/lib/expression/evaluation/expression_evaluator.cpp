@@ -64,9 +64,10 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
 }
 
 std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExpression& expression) {
-  // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
-  // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
-  // combinations and thus lengthen compile time and increase binary size notably.
+  // `a BETWEEN b AND c` --> `a >= b AND a <= c`
+  //
+  // (This is desirable because three expression data types (from three arguments) generate many type
+  // combinations and thus lengthen compile time and increase binary size notably.)
 
   const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
   Assert(between_expression, "Expected BetweenExpression");
@@ -79,11 +80,10 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
 
 std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpression& in_expression) {
   /**
-   * To keep the code simple for now, transform the InExpression like this:
    * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
    * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
    *
-   * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
+   * Out of array_expression.elements(), pick those expressions whose type can be compared with
    * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
    * "5 IN (6, 5, "Hello")
    */
@@ -970,9 +970,9 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
   /**
    * Only Expressions returning a Bool can be evaluated to a PosList of matches.
    *
-   * In, Like and NotLike Expressions are evaluated by generating a Series of booleans
+   * (Not)In and (Not)Like Expressions are evaluated by generating an ExpressionResult of booleans
    * (evaluate_expression_to_result<>()) which is then scanned for positive entries.
-   * TODO(anybody) Add fast implementations for In, Like and NotLike as well.
+   * TODO(anybody) Add fast implementations for (Not)In and (Not)Like as well.
    *
    * All other Expression types have dedicated, hopefully fast implementations.
    */
@@ -999,11 +999,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                 resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
                   using ExpressionFunctorType = typename decltype(functor)::type;
 
-                  if constexpr (ExpressionFunctorType::template supports<Bool, LeftDataType, RightDataType>::value) {
+                  if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType, RightDataType>::value) {
                     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
-                      auto matches = Bool{0};
+                      auto matches = ExpressionEvaluator::Bool{0};
                       ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                               right_result.value(chunk_offset));
                       if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);

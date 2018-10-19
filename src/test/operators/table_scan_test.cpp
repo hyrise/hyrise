@@ -673,16 +673,23 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
 
   // clang-format off
-  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnComparisonTableScanImpl*>(TableScan{get_table_op(), equals_(column_b, column_a)}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<LikeTableScanImpl*>(TableScan{get_int_string_table_op(), like_(column_s, "%s%")}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_table_op(), like_("hello", "%s%")}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), in_(column_a, list_(1, 2, 3))}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), in_(column_a, list_(1, 2, 3))}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), and_(greater_than_(column_a, 5), less_than_(column_b, 6))}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.get_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.get_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnComparisonTableScanImpl*>(TableScan{get_table_op(),
+                                                                     equals_(column_b, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<LikeTableScanImpl*>(TableScan{get_int_string_table_op(),
+                                                         like_(column_s, "%s%")}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_table_op(),
+                                                                        like_("hello", "%s%")}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(),
+                                                                        in_(column_a, list_(1, 2, 3))}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(),
+                                                                        in_(column_a, list_(1, 2, 3))}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), and_(greater_than_(column_a, 5),
+                                                                                             less_than_(column_b,
+                                                                                                        6))}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
   // clang-format on
 }
 

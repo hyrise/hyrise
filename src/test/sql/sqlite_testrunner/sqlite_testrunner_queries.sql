@@ -95,7 +95,7 @@ SELECT * FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN 
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
 SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
 -- exists to semi join reformulation: query not rewriteable
-SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20;
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;

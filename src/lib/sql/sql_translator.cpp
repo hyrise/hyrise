@@ -1325,6 +1325,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
                    greater_than_(between_expression->value(), between_expression->upper_bound()));
       } else {
         const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
+        Assert(in_expression, "Expected InExpression");
         return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
                                               in_expression->value(), in_expression->set());
       }
@@ -1355,7 +1356,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
     } break;
 
     default:
-      Fail("Can't inverse non-boolean expression");
+      Fail("Can't invert non-boolean expression");
   }
 }
 

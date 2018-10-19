@@ -13,10 +13,10 @@
 
 namespace opossum {
 
-std::string PredicatePlacementRule::name() const { return "Predicate Pushdown Rule"; }
+std::string PredicatePlacementRule::name() const { return "Predicate Placement Rule"; }
 
 bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  // traverse() requires the existence of a root of the LQP, so make sure we have that
+  // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
@@ -81,7 +81,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Alias:
     case LQPNodeType::Sort:
     case LQPNodeType::Projection: {
-      // These nodes types we can push all predicates past
+      // We can push predicates past these nodes without further consideration
       _push_down_traversal(input_node, LQPInputSide::Left, push_down_nodes);
     } break;
 
@@ -108,8 +108,8 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   if (!input_node) return {};
 
   auto candidate_nodes = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Left);
-  auto candidate_nodes_right = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
-  candidate_nodes.insert(candidate_nodes.end(), candidate_nodes_right.begin(), candidate_nodes_right.end());
+  auto candidate_nodes_tmp = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
+  candidate_nodes.insert(candidate_nodes.end(), candidate_nodes_tmp.begin(), candidate_nodes_tmp.end());
 
   // Expensive PredicateNodes become candidates for a PullUp, but only IFF they have exactly one output connection.
   // If they have more, we cannot move them.
@@ -120,7 +120,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   }
 
   if (current_node->output_count() > 1) {
-    // No pull up past nodes with more than one output, because if we did, the other outputs would loose the
+    // No pull up past nodes with more than one output, because if we did, the other outputs would lose the
     // predicate we pulled up
     _insert_nodes(current_node, input_side, candidate_nodes);
     return {};
