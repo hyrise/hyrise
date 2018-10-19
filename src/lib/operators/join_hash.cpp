@@ -119,7 +119,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
   size_t _calculate_radix_bits() {
-      /*
+    /*
       Setting number of bits for radix clustering:
       The number of bits is used to create probe partitions with a size that can
       be expected to fit into the L2 cache.

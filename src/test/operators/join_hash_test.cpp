@@ -108,21 +108,21 @@ TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
   std::vector<std::vector<size_t>> histograms;
 
   // we materialize the table twice, once with keeping NULL values and once without
-  auto mat_with_nulls =
+  auto materialized_with_nulls =
       materialize_input<int, int>(_table_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, true);
-  auto mat_without_nulls =
+  auto materialized_without_nulls =
       materialize_input<int, int>(_table_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, false);
 
   // Note: due to initialization with empty Partition Elements, NULL values are not materialized but
   // size of materialized input does not shrink due to NULL values.
-  EXPECT_EQ(mat_with_nulls.elements->size(), mat_without_nulls.elements->size());
+  EXPECT_EQ(materialized_with_nulls.elements->size(), materialized_without_nulls.elements->size());
   // check if NULL values have been ignored
-  EXPECT_EQ(mat_without_nulls.elements->at(6).value, 9);
-  EXPECT_EQ(mat_with_nulls.elements->at(6).value, 13);
+  EXPECT_EQ(materialized_without_nulls.elements->at(6).value, 9);
+  EXPECT_EQ(materialized_with_nulls.elements->at(6).value, 13);
 
   // build phase: NULLs we be discarded
-  auto hash_map_with_nulls = build<int, int>(mat_with_nulls);
-  auto hash_map_without_nulls = build<int, int>(mat_without_nulls);
+  auto hash_map_with_nulls = build<int, int>(materialized_with_nulls);
+  auto hash_map_without_nulls = build<int, int>(materialized_without_nulls);
 
   // check for the expected number of hash maps
   EXPECT_EQ(hash_map_with_nulls.size(), pow(2, radix_bit_count));
