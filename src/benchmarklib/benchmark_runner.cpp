@@ -221,7 +221,9 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 }
 
 void BenchmarkRunner::_warmup_query(const NamedQuery& named_query) {
-  if (_config.warmup_duration == Duration{0}) { return; }
+  if (_config.warmup_duration == Duration{0}) {
+    return;
+  }
 
   const auto& name = named_query.first;
   _config.out << "- Warming up for Query " << name << std::endl;

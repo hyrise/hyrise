@@ -190,20 +190,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
-  return BenchmarkConfig{benchmark_mode,
-                         verbose,
-                         chunk_size,
-                         *encoding_config,
-                         max_runs,
-                         timeout_duration,
-                         warmup_duration,
-                         use_mvcc,
-                         output_file_path,
-                         enable_scheduler,
-                         cores,
-                         clients,
-                         enable_visualization,
-                         out};
+  return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,       *encoding_config, max_runs, timeout_duration,
+                         warmup_duration,      use_mvcc, output_file_path, enable_scheduler, cores,    clients,
+                         enable_visualization, out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
