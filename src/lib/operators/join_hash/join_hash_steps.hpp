@@ -4,7 +4,6 @@
 #include <boost/lexical_cast.hpp>
 
 #include "bytell_hash_map.hpp"
-#include "hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"

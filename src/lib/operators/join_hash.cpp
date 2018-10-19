@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "bytell_hash_map.hpp"
-#include "join_hash/hash_functions.hpp"
-#include "join_hash/hash_traits.hpp"
+#include "join_hash/join_hash_steps.hpp"
+#include "join_hash/join_hash_traits.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
