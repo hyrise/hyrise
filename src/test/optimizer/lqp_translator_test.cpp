@@ -14,6 +14,8 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -31,6 +33,8 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
@@ -262,8 +266,8 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
    * LQP resembles:
    *   SELECT (SELECT MIN(a + int_float5.d + int_float5.a) FROM int_float), a FROM int_float5;
    */
-  const auto parameter_a = parameter_(ParameterID{0}, int_float5_a);
-  const auto parameter_d = parameter_(ParameterID{1}, int_float5_d);
+  const auto parameter_a = correlated_parameter_(ParameterID{0}, int_float5_a);
+  const auto parameter_d = correlated_parameter_(ParameterID{1}, int_float5_d);
 
   const auto a_plus_a_plus_d = add_(int_float_a, add_(parameter_a, parameter_d));
 
@@ -273,7 +277,7 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
     ProjectionNode::make(expression_vector(a_plus_a_plus_d),
       int_float_node));
 
-  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a),
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a),
                                  std::make_pair(ParameterID{1}, int_float5_d));
 
   const auto lqp =
@@ -786,7 +790,7 @@ TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto a_plus_b_in_temporary_column = column_(ColumnID{1}, DataType::Float, false, "a + b");
+  const auto a_plus_b_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Float, false, "a + b");
 
   EXPECT_EQ(table_scan->predicate().column_id, ColumnID{0});
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(a_plus_b_in_temporary_column, 3));
@@ -801,8 +805,8 @@ TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
   ProjectionNode::make(expression_vector(add_(1, 2)),
     DummyTableNode::make());
 
-  const auto select_a = select_(select_lqp);
-  const auto select_b = select_(select_lqp);
+  const auto select_a = lqp_select_(select_lqp);
+  const auto select_b = lqp_select_(select_lqp);
 
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(select_a, 3)),
@@ -821,9 +825,38 @@ TEST_F(LQPTranslatorTest, ReuseSelectExpression) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto select_in_temporary_column = column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
+  const auto select_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBSELECT");
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(select_in_temporary_column, 3));
+}
+
+TEST_F(LQPTranslatorTest, CreateTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto lqp = CreateTableNode::make("t", column_definitions);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
+  EXPECT_EQ(pqp->input_left(), nullptr);
+
+  const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
+  EXPECT_EQ(create_table->table_name, "t");
+  EXPECT_EQ(create_table->column_definitions, column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, DropTable) {
+  const auto lqp = DropTableNode::make("t");
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::DropTable);
+  EXPECT_EQ(pqp->input_left(), nullptr);
+
+  const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
+  EXPECT_EQ(drop_table->table_name, "t");
 }
 
 }  // namespace opossum

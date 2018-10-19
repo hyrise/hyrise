@@ -39,14 +39,14 @@ TEST_F(MockNodeTest, Description) {
 
 TEST_F(MockNodeTest, OutputColumnExpression) {
   ASSERT_EQ(_mock_node_a->column_expressions().size(), 4u);
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(0), *column_({_mock_node_a, ColumnID{0}}));
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(1), *column_({_mock_node_a, ColumnID{1}}));
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(2), *column_({_mock_node_a, ColumnID{2}}));
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(3), *column_({_mock_node_a, ColumnID{3}}));
+  EXPECT_EQ(*_mock_node_a->column_expressions().at(0), *lqp_column_({_mock_node_a, ColumnID{0}}));
+  EXPECT_EQ(*_mock_node_a->column_expressions().at(1), *lqp_column_({_mock_node_a, ColumnID{1}}));
+  EXPECT_EQ(*_mock_node_a->column_expressions().at(2), *lqp_column_({_mock_node_a, ColumnID{2}}));
+  EXPECT_EQ(*_mock_node_a->column_expressions().at(3), *lqp_column_({_mock_node_a, ColumnID{3}}));
 
   ASSERT_EQ(_mock_node_b->column_expressions().size(), 2u);
-  EXPECT_EQ(*_mock_node_b->column_expressions().at(0), *column_({_mock_node_b, ColumnID{0}}));
-  EXPECT_EQ(*_mock_node_b->column_expressions().at(1), *column_({_mock_node_b, ColumnID{1}}));
+  EXPECT_EQ(*_mock_node_b->column_expressions().at(0), *lqp_column_({_mock_node_b, ColumnID{0}}));
+  EXPECT_EQ(*_mock_node_b->column_expressions().at(1), *lqp_column_({_mock_node_b, ColumnID{1}}));
 }
 
 TEST_F(MockNodeTest, Equals) {

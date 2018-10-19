@@ -32,8 +32,10 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
@@ -172,7 +174,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 2. WHERE clause
   // 3. GROUP BY clause
   // 4. HAVING clause
-  // 5. SELECT clause
+  // 5. SELECT clause (incl. DISTINCT)
   // 6. UNION clause
   // 7. ORDER BY clause
   // 8. LIMIT clause
@@ -180,7 +182,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   AssertInput(select.selectList != nullptr, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
   AssertInput(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
-  AssertInput(!select.selectDistinct, "DISTINCT is not yet supported");
 
   // Translate FROM
   if (select.fromTable) {
@@ -820,6 +821,18 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
       }
     }
   }
+
+  // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
+  //
+  // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
+  // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
+  // one that groups by both a and MIN(b) without calculating anything. Fixing this should be done by an optimizer rule
+  // that checks for each GROUP BY whether it guarantees the results to be unique or not. Doable, but no priority.
+  if (select.selectDistinct) {
+    _current_lqp = AggregateNode::make(_inflated_select_list_expressions,
+                                       std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
+  }
 }
 
 void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*>& order_list) {
@@ -865,40 +878,79 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
-    case hsql::CreateType::kCreateView: {
-      auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
-
-      std::unordered_map<ColumnID, std::string> column_names;
-
-      if (create_statement.viewColumns) {
-        // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-        AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
-                    "Number of Columns in CREATE VIEW does not match SELECT statement");
-
-        for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
-          column_names.emplace(column_id, (*create_statement.viewColumns)[column_id]);
-        }
-      } else {
-        for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-          const auto identifier =
-              _sql_identifier_resolver->get_expression_identifier(lqp->column_expressions()[column_id]);
-          if (identifier) {
-            column_names.emplace(column_id, identifier->column_name);
-          }
-        }
-      }
-
-      return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names));
-    }
+    case hsql::CreateType::kCreateView:
+      return _translate_create_view(create_statement);
+    case hsql::CreateType::kCreateTable:
+      return _translate_create_table(create_statement);
     default:
       FailInput("hsql::CreateType is not supported.");
   }
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsql::CreateStatement& create_statement) {
+  auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
+
+  std::unordered_map<ColumnID, std::string> column_names;
+
+  if (create_statement.viewColumns) {
+    // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
+    AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
+                "Number of Columns in CREATE VIEW does not match SELECT statement");
+
+    for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
+      column_names.emplace(column_id, (*create_statement.viewColumns)[column_id]);
+    }
+  } else {
+    for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+      const auto identifier = _sql_identifier_resolver->get_expression_identifier(lqp->column_expressions()[column_id]);
+      if (identifier) {
+        column_names.emplace(column_id, identifier->column_name);
+      }
+    }
+  }
+
+  return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names));
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
+  AssertInput(!create_statement.select, "CREATE TABLE ... (SELECT...) not supported");
+  Assert(create_statement.columns, "CREATE TABLE: No columns specified. Parser bug?");
+
+  auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
+
+  for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
+    const auto* parser_column_definition = create_statement.columns->at(column_id);
+    auto& column_definition = column_definitions[column_id];
+
+    // TODO(anybody) SQLParser is missing support for Hyrise's other types
+    switch (parser_column_definition->type) {
+      case hsql::ColumnDefinition::INT:
+        column_definition.data_type = DataType::Long;
+        break;
+      case hsql::ColumnDefinition::DOUBLE:
+        column_definition.data_type = DataType::Double;
+        break;
+      case hsql::ColumnDefinition::TEXT:
+        column_definition.data_type = DataType::String;
+        break;
+      default:
+        Fail("CREATE TABLE: Data type not supported");
+    }
+
+    column_definition.name = parser_column_definition->name;
+    column_definition.nullable = true;  // TODO(anybody) SQLParser doesn't support any syntax for this
+  }
+
+  return CreateTableNode::make(create_statement.tableName, column_definitions);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
       return DropViewNode::make(drop_statement.name);
+    case hsql::DropType::kDropTable:
+      return DropTableNode::make(drop_statement.name);
+
     default:
       FailInput("hsql::DropType is not supported.");
   }

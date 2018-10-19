@@ -140,10 +140,10 @@ TEST_F(ExistsReformulationRuleTest, QueryWithNotExists) {
 // Manually construct an exists query and apply the reformulation rule.
 // Compare with the manually created "optimal" plan and check for equality.
 TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
-  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
-  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),
@@ -166,10 +166,10 @@ TEST_F(ExistsReformulationRuleTest, ManualSemijoinLQPComparison) {
 }
 
 TEST_F(ExistsReformulationRuleTest, ManualAntijoinLQPComparison) {
-  const auto parameter = opossum::expression_functional::parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
 
   const auto subselect_lqp = PredicateNode::make(equals_(node_table_b_col_a, parameter), node_table_b);
-  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
 
   const auto input_lqp = ProjectionNode::make(
       expression_vector(node_table_a_col_a, node_table_a_col_b),

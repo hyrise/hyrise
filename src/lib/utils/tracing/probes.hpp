@@ -22,12 +22,14 @@ constexpr bool is_valid_name(const char* name) {
 
 // Construct the probe definition by provider and probe name. Because TSan has issues and throw false positives, we
 // don't use probes in TSan builds
-#ifndef __SANITIZE_THREAD__
+#if defined(__has_feature)
+#if !__has_feature(thread_sanitizer)
 #define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
   static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
   provider##_##probe(__VA_ARGS__);
 #else
 #define BUILD_PROBE_NAME(provider, probe, ...)
+#endif
 #endif
 
 #define DTRACE_PROBE(provider, probe) BUILD_PROBE_NAME(provider, probe);
@@ -57,4 +59,37 @@ constexpr bool is_valid_name(const char* name) {
                        param10, param11, param12)                                                                    \
   BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, \
                    param11, param12);
-#endif
+
+// If not MACOS
+#else
+
+// Because TSan has issues and throw false positives, we don't use probes in TSan builds
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+
+// We are redefining a macro here, we have to turn of the warning. Clang picks up that pragma as well
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmacro-redefined"
+
+#define DTRACE_PROBE(provider, probe)
+#define DTRACE_PROBE1(provider, probe, param1)
+#define DTRACE_PROBE2(provider, probe, param1, param2)
+#define DTRACE_PROBE3(provider, probe, param1, param2, param3)
+#define DTRACE_PROBE4(provider, probe, param1, param2, param3, param4)
+#define DTRACE_PROBE5(provider, probe, param1, param2, param3, param4, param5)
+#define DTRACE_PROBE6(provider, probe, param1, param2, param3, param4, param5, param6)
+#define DTRACE_PROBE7(provider, probe, param1, param2, param3, param4, param5, param6, param7)
+#define DTRACE_PROBE8(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8)
+#define DTRACE_PROBE9(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9)
+#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
+                      param10)
+#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+                       param10, param11)
+#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+                       param10, param11, param12)
+
+#pragma GCC diagnostic pop
+
+#endif  // defined(__has_feature)
+#endif  // __has_feature(thread_sanitizer)
+#endif  // else-branch of defined(__APPLE__) || defined(__MACOS__)

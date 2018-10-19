@@ -70,9 +70,9 @@ struct BenchmarkState {
 // View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+  EncodingConfig(const SegmentEncodingSpec& default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                  TableSegmentEncodingMapping encoding_mapping);
-  explicit EncodingConfig(SegmentEncodingSpec default_encoding_spec);
+  explicit EncodingConfig(const SegmentEncodingSpec& default_encoding_spec);
 
   static EncodingConfig unencoded();
 

@@ -111,6 +111,8 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_update(const hsql::UpdateStatement& update);
 
   std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& create_statement);
+  std::shared_ptr<AbstractLQPNode> _translate_create_view(const hsql::CreateStatement& create_statement);
+  std::shared_ptr<AbstractLQPNode> _translate_create_table(const hsql::CreateStatement& create_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& drop_statement);
 
@@ -145,7 +147,7 @@ class SQLTranslator final {
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
 
-  // "Inflated" because als wildcard will be inflated to the expressions they actually represent
+  // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
 };
 
