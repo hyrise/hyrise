@@ -479,10 +479,10 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               list_contains_null |= list.is_null(list_element_idx);
             }
 
-            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
-
             result_nulls[chunk_offset] =
                 (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
+
+            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
           }
 
         } else {
