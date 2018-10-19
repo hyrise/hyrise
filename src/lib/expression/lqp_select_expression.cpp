@@ -58,9 +58,7 @@ bool LQPSelectExpression::is_nullable() const {
   return lqp->column_expressions()[0]->is_nullable();
 }
 
-bool LQPSelectExpression::is_correlated() const {
-  return !arguments.empty();
-}
+bool LQPSelectExpression::is_correlated() const { return !arguments.empty(); }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& lqp_select_expression = static_cast<const LQPSelectExpression&>(expression);
