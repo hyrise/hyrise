@@ -25,10 +25,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
-    auto begin =
-        PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(), position_filter.cbegin(), position_filter.cbegin()};
-    auto end =
-        PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(), position_filter.cbegin(), position_filter.cend()};
+    auto begin = PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(),
+                                     position_filter.cbegin(), position_filter.cbegin()};
+    auto end = PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(),
+                                   position_filter.cbegin(), position_filter.cend()};
 
     functor(begin, end);
   }

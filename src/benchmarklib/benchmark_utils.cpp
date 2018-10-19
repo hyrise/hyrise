@@ -54,13 +54,9 @@ bool BenchmarkState::keep_running() {
   return true;
 }
 
-void BenchmarkState::set_done() {
-  state = State::Over;
-}
+void BenchmarkState::set_done() { state = State::Over; }
 
-bool BenchmarkState::is_done() {
-  return state == State::Over;
-}
+bool BenchmarkState::is_done() { return state == State::Over; }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,

@@ -108,14 +108,17 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
                         OffsetValueDecompressorT* attribute_decoder,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
-                                         SegmentIteratorValue<T>>{std::move(position_filter_begin), std::move(position_filter_it)},
+                                         SegmentIteratorValue<T>>{std::move(position_filter_begin),
+                                                                  std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
           _offset_value_decoder{attribute_decoder} {}
 
     // End Iterator
-    explicit PointAccessIterator(const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
-        : PointAccessIterator{nullptr, nullptr, nullptr, std::move(position_filter_begin), std::move(position_filter_it)} {}
+    explicit PointAccessIterator(const PosList::const_iterator position_filter_begin,
+                                 PosList::const_iterator position_filter_it)
+        : PointAccessIterator{nullptr, nullptr, nullptr, std::move(position_filter_begin),
+                              std::move(position_filter_it)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

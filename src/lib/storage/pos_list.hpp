@@ -44,7 +44,7 @@ struct PosList final : private pmr_vector<RowID> {
   /* (5 ) */  // PosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
   /* (6 ) */ PosList(PosList&& other) noexcept
       : Vector(std::move(other)), _references_single_chunk{other._references_single_chunk} {}
-  /* (6+) */ PosList(Vector&& other) noexcept : Vector(std::move(other)) {}
+  /* (6+) */ explicit PosList(Vector&& other) noexcept : Vector(std::move(other)) {}
   /* (7 ) */ PosList(PosList&& other, const allocator_type& alloc)
       : Vector(std::move(other), alloc), _references_single_chunk{other._references_single_chunk} {}
   /* (7+) */ PosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}

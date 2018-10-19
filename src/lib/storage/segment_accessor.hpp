@@ -33,15 +33,12 @@ class SegmentAccessor : public BaseSegmentAccessor<T> {
 template <typename T>
 std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
 
-// TODO Update doc
 /**
- * Partial template specialization for ReferenceSegments.
- * Since ReferenceSegments don't know their 'T', this uses the subscript operator as a fallback.
- *
- * Under normal circumstances, using a SegmentAccessor on a ReferenceSegment does not make sense, as
- * it is not faster (potentially even slower) than using operator[] directly on the ReferenceSegment.
- * However, this spezialization is still useful in the case that the underlying segment type
- * is not directly known to the calling code and extra code paths for ReferenceSegments should be avoided.
+ * For ReferenceSegments, we don't use the SegmentAccessor but either the MultipleChunkReferenceSegmentAccessor or the.
+ * SingleChunkReferenceSegmentAccessor. The first one is generally applicable. For each offset that is accessed, a new
+ * accessor has to be created. This is because we cannot be sure that two consecutive offsets reference the same chunk.
+ * In the SingleChunkReferenceSegmentAccessor, we know that the same chunk is referenced, so we create the accessor
+ * only once.
  */
 template <typename T>
 class MultipleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
@@ -64,8 +61,7 @@ class MultipleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
   const ReferenceSegment& _segment;
 };
 
-// TODO DOC
-
+// Accessor for ReferenceSegments that reference single chunks - see comment above
 template <typename T>
 class SingleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
  public:

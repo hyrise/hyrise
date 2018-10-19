@@ -194,16 +194,15 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators(
-          position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
-            for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-              EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+      encoded_segment_iterable.with_iterators(position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
-              if (!value_segment_it->is_null()) {
-                EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-              }
-            }
-          });
+          if (!value_segment_it->is_null()) {
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+          }
+        }
+      });
     });
   });
 }
@@ -221,16 +220,15 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators(
-          position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
-            for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-              EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+      encoded_segment_iterable.with_iterators(position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
-              if (!value_segment_it->is_null()) {
-                EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-              }
-            }
-          });
+          if (!value_segment_it->is_null()) {
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+          }
+        }
+      });
     });
   });
 }

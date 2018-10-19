@@ -80,7 +80,7 @@ void BaseSingleColumnTableScanImpl::handle_segment(const ReferenceSegment& segme
     // The scan has filled matches_out assuming that position_filter was the entire ReferenceSegment, so we need to fix
     // that:
 
-    for(auto match_idx = static_cast<ChunkOffset>(num_previous_matches); match_idx < matches_out.size(); ++match_idx) {
+    for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches); match_idx < matches_out.size(); ++match_idx) {
       matches_out[match_idx].chunk_offset = splitted_pos_list.original_positions[matches_out[match_idx].chunk_offset];
     }
   }

@@ -4,7 +4,8 @@ namespace opossum {
 
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList>& input_pos_list,
                                              const size_t number_of_chunks) {
-  DebugAssert (!input_pos_list->references_single_chunk() || input_pos_list->empty(), "No need to split a reference segment that references a single chunk");
+  DebugAssert(!input_pos_list->references_single_chunk() || input_pos_list->empty(),
+              "No need to split a reference segment that references a single chunk");
 
   // The input_pos_list references multiple chunks and we actually need to split it. Because we are supposed to return
   // shared_ptr<const PosList>, we first create regular PosLists, add the values to them, and then convert these.

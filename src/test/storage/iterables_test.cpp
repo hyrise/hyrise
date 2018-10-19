@@ -94,7 +94,8 @@ TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
   iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
@@ -126,7 +127,8 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
   iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 13'702u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
@@ -160,7 +162,8 @@ TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
   iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
@@ -227,7 +230,8 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
 
   EXPECT_EQ(sum, 24'825u);
-  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {

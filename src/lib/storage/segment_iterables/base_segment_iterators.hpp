@@ -55,8 +55,8 @@ class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost:
  * referenced value or dictionary segment.
  */
 struct ChunkOffsetMapping {
-  ChunkOffset into_referencing;  // chunk offset in reference segment
-  ChunkOffset into_referenced;   // chunk offset in referenced segment
+  ChunkOffset offset_in_poslist;           // chunk offset in reference segment
+  ChunkOffset offset_in_referenced_chunk;  // chunk offset in referenced segment
 };
 
 /**
