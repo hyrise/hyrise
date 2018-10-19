@@ -57,11 +57,7 @@ const std::string TableScan::description(DescriptionMode description_mode) const
   std::stringstream stream;
 
   stream << name() << separator;
-  if (_impl) {
-    stream << "Impl: " << _impl->description();
-  } else {
-    stream << "Impl unset";
-  }
+  stream << "Impl: " << _impl_description;
   stream << separator << _predicate->as_column_name();
 
   return stream.str();
@@ -87,6 +83,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   const auto output_table = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
 
   _impl = create_impl();
+  _impl_description = _impl->description();
 
   std::mutex output_mutex;
 
