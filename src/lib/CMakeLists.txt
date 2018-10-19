@@ -172,8 +172,8 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
-    operators/join_hash/hash_traits.hpp
-    operators/join_hash/hash_functions.hpp
+    operators/join_hash/join_hash_traits.hpp
+    operators/join_hash/join_hash_steps.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_mpsm.cpp
