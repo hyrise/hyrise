@@ -77,7 +77,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     SegmentIteratorNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      return SegmentIteratorNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
+      return SegmentIteratorNullValue{_null_values[chunk_offsets.offset_in_referenced_chunk], chunk_offsets.offset_in_poslist};
     }
 
    private:

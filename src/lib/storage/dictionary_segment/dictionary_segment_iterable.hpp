@@ -112,15 +112,15 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto value_id = _attribute_decoder.get(chunk_offsets.into_referenced);
+      const auto value_id = _attribute_decoder.get(chunk_offsets.offset_in_referenced_chunk);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
+      if (is_null) return SegmentIteratorValue<T>{T{}, true, chunk_offsets.offset_in_poslist};
 
       if constexpr (std::is_same_v<Dictionary, FixedStringVector>) {
-        return SegmentIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.into_referencing};
+        return SegmentIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.offset_in_poslist};
       } else {
-        return SegmentIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
+        return SegmentIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.offset_in_poslist};
       }
     }
 

@@ -90,10 +90,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     SegmentIteratorValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto value_id = static_cast<ValueID>(_attribute_decoder.get(chunk_offsets.into_referenced));
+      const auto value_id = static_cast<ValueID>(_attribute_decoder.get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
 
-      return {value_id, is_null, chunk_offsets.into_referencing};
+      return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:

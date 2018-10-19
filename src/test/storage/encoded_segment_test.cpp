@@ -76,9 +76,9 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
+    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count(); ++offset_in_referenced_chunk) {
       if (bernoulli_dist(engine)) {
-        list->push_back(RowID{ChunkID{0}, into_referenced});
+        list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
     }
 

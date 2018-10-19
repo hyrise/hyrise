@@ -113,7 +113,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto current_chunk_offset = chunk_offsets.into_referenced;
+      const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
       const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) { return offset < current; };
 
       auto end_position_it = _end_positions.cend();
@@ -134,7 +134,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
 
-      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
+      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:

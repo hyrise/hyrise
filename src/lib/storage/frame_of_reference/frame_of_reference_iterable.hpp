@@ -128,12 +128,12 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
       static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
-      const auto is_null = (*_null_values)[chunk_offsets.into_referenced];
-      const auto block_minimum = (*_block_minima)[chunk_offsets.into_referenced / block_size];
-      const auto offset_value = _offset_value_decoder->get(chunk_offsets.into_referenced);
+      const auto is_null = (*_null_values)[chunk_offsets.offset_in_referenced_chunk];
+      const auto block_minimum = (*_block_minima)[chunk_offsets.offset_in_referenced_chunk / block_size];
+      const auto offset_value = _offset_value_decoder->get(chunk_offsets.offset_in_referenced_chunk);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
-      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
+      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
