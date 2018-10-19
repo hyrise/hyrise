@@ -316,14 +316,14 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   }
 
   // Gather information on the (estimated) table size
-  auto footprint = 0ull;
+  auto table_size = 0ull;
   for (const auto& table_pair : StorageManager::get().tables()) {
-    footprint += table_pair.second->estimate_memory_usage();
+    table_size += table_pair.second->estimate_memory_usage();
   }
 
   const auto total_run_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(_total_run_duration).count();
 
-  nlohmann::json summary{{"footprint", footprint}, {"total_run_duration (s)", total_run_duration_seconds}};
+  nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_run_duration_in_s", total_run_duration_seconds}};
 
   nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}, {"summary", summary}};
 
@@ -504,7 +504,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
-      {"max_duration (s)", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
+      {"max_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
