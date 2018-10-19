@@ -60,7 +60,7 @@ bool BenchmarkState::is_done() { return state == State::Over; }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
-                                 const Duration& max_duration, const UseMvcc use_mvcc,
+                                 const Duration& max_duration, const Duration& warmup_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const uint cores, const uint clients, const bool enable_visualization,
                                  std::ostream& out)
@@ -70,6 +70,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       encoding_config(encoding_config),
       max_num_query_runs(max_num_query_runs),
       max_duration(max_duration),
+      warmup_duration(warmup_duration),
       use_mvcc(use_mvcc),
       output_file_path(output_file_path),
       enable_scheduler(enable_scheduler),
@@ -180,12 +181,22 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
+  const auto default_warmup_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.warmup_duration);
+  const auto warmup = json_config.value("warmup", default_warmup_seconds.count());
+  if (warmup > 0) {
+    out << "- Warmup duration per query is " << warmup << " seconds" << std::endl;
+  } else {
+    out << "- No warmup runs are performed" << std::endl;
+  }
+  const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
+
   return BenchmarkConfig{benchmark_mode,
                          verbose,
                          chunk_size,
                          *encoding_config,
                          max_runs,
                          timeout_duration,
+                         warmup_duration,
                          use_mvcc,
                          output_file_path,
                          enable_scheduler,
@@ -206,6 +217,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("runs", parse_result["runs"].as<size_t>());
   json_config.emplace("chunk_size", parse_result["chunk_size"].as<ChunkOffset>());
   json_config.emplace("time", parse_result["time"].as<size_t>());
+  json_config.emplace("warmup", parse_result["warmup"].as<size_t>());
   json_config.emplace("mode", parse_result["mode"].as<std::string>());
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
   json_config.emplace("compression", parse_result["compression"].as<std::string>());

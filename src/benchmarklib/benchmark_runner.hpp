@@ -39,7 +39,7 @@ class BenchmarkRunner {
   void _benchmark_individual_queries();
 
   // Execute warmup run of a query
-  void _warmup_individual_query(const NamedQuery& named_query);
+  void _warmup_query(const NamedQuery& named_query);
 
   // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
   std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const NamedQuery& named_query,

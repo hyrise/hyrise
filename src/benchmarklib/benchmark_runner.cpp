@@ -166,7 +166,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 
 void BenchmarkRunner::_benchmark_individual_queries() {
   for (const auto& named_query : _queries) {
-    _warmup_individual_query(named_query);
+    _warmup_query(named_query);
 
     const auto& name = named_query.first;
     _config.out << "- Benchmarking Query " << name << std::endl;
@@ -220,7 +220,9 @@ void BenchmarkRunner::_benchmark_individual_queries() {
   }
 }
 
-void BenchmarkRunner::_warmup_individual_query(const NamedQuery& named_query) {
+void BenchmarkRunner::_warmup_query(const NamedQuery& named_query) {
+  if (_config.warmup_duration == Duration{0}) { return; }
+
   const auto& name = named_query.first;
   _config.out << "- Warming up for Query " << name << std::endl;
 
@@ -494,6 +496,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("r,runs", "Maximum number of runs of a single query (set)", cxxopts::value<size_t>()->default_value("10000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value("100000")) // NOLINT
     ("t,time", "Maximum seconds that a query (set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
+    ("w,warmup", "Number of seconds that a query is being warmed up", cxxopts::value<size_t>()->default_value("10")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "IndividualQueries or PermutedQuerySet, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see below). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
@@ -524,6 +527,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
       {"max_duration (s)", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
+      {"warmup_duration (s)", std::chrono::duration_cast<std::chrono::seconds>(config.warmup_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
