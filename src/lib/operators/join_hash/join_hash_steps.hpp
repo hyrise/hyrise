@@ -156,21 +156,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     }));
     jobs.back()->schedule();
   }
-
   CurrentScheduler::wait_for_tasks(jobs);
-
-  const size_t table_size_considered_large = 100'000;
-  if (in_table->row_count() >= table_size_considered_large) {
-    size_t elements_written = 0;
-    for (const auto& histogram : histograms) {
-      elements_written += std::accumulate(histogram.begin(), histogram.end(), 0);
-    }
-    if (elements_written < 0.25 * in_table->row_count()) {
-      // Less than one quarter of the values materialized do store non-NULL values and table is rather large
-      PerformanceWarning(std::string("Sparse column materialization in Hash Join, potentially causing too much ") +
-                         std::string("memory being allocated and data being radix-clustered suboptimally."));
-    }
-  }
 
   return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}};
 }
