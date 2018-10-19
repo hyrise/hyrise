@@ -259,4 +259,26 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
+TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, false);
+
+  const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE, UseMvcc::Yes);
+  StorageManager::get().add_table("target_table", target_table);
+
+  const auto table_int_float = load_table("src/test/tables/int_float.tbl");
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_int_float);
+  table_wrapper->execute();
+
+  const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+  auto context = TransactionManager::get().new_transaction_context();
+  insert->set_transaction_context(context);
+  insert->execute();
+  context->commit();
+
+  EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float)
+}
+
 }  // namespace opossum
