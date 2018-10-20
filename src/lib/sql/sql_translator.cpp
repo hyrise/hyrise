@@ -1342,7 +1342,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
           return and_(_inverse_predicate(*logical_expression->left_operand()),
                       _inverse_predicate(*logical_expression->right_operand()));
       }
-    }
+    } break;
 
     case ExpressionType::Exists: {
       const auto* exists_expression = static_cast<const ExistsExpression*>(&expression);
@@ -1358,6 +1358,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
     default:
       Fail("Can't invert non-boolean expression");
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 SQLTranslator::TableSourceState::TableSourceState(
