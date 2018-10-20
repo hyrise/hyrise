@@ -25,8 +25,6 @@ class ReferenceSegment : public BaseSegment {
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
-  void append(const AllTypeVariant&) override;
-
   size_t size() const final;
 
   const std::shared_ptr<const PosList> pos_list() const;
