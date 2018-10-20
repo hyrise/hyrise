@@ -11,104 +11,139 @@
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
+#include "utils/assert.hpp"
 #include "types.hpp"
+
+namespace {
+
+template<typename T> std::map<T, size_t> value_counts() {
+  opossum::Fail("There should be a specialization for this");
+}
+
+template<>
+std::map<int32_t, size_t> value_counts<int32_t>() {
+  return {
+    {1, 54},
+    {12, 43},
+    {123, 32},
+    {1234, 21},
+    {12345, 8},
+    {123456, 6}
+  };
+}
+
+template<>
+std::map<int64_t, size_t> value_counts<int64_t>() {
+  return {
+    {100000ll, 54},
+    {1200000ll, 43},
+    {12300000ll, 32},
+    {123400000ll, 21},
+    {1234500000ll, 8},
+    {12345600000ll, 6}
+  };
+}
+
+template<>
+std::map<float, size_t> value_counts<float>() {
+  return {
+    {1.1f, 54},
+    {12.2f, 43},
+    {123.3f, 32},
+    {1234.4f, 21},
+    {12345.5f, 8},
+    {123456.6f, 6}
+  };
+}
+
+template<>
+std::map<double, size_t> value_counts<double>() {
+  return {
+    {1.1, 54},
+    {12.2, 43},
+    {123.3, 32},
+    {1234.4, 21},
+    {12345.5, 8},
+    {123456.6, 6}
+  };
+}
+
+template<>
+std::map<std::string, size_t> value_counts<std::string>() {
+  return {
+    {"hotel", 1},
+    {"delta", 6},
+    {"frank", 2},
+    {"apple", 9},
+    {"charlie", 3},
+    {"inbox", 1}
+  };
+}
+
+template<typename T> T get_test_value(size_t run) {
+  opossum::Fail("There should be a specialization for this");
+}
+
+template <> int32_t get_test_value<int32_t>(size_t run) { return 123457 + run; }
+template <> int64_t get_test_value<int64_t>(size_t run) { return 123457 + run; }
+template <> float get_test_value<float>(size_t run) { return 123457.0f + run; }
+template <> double get_test_value<double>(size_t run) { return 123457.0 + run; }
+template <> std::string get_test_value<std::string>(size_t run) { return std::string("test_value") + std::to_string(run); }
+
+}
 
 namespace opossum {
 
+template<typename T>
 class CountingQuotientFilterTest : public BaseTest {
  protected:
   void SetUp() override {
-    string_value_counts["hotel"] = 1;
-    string_value_counts["delta"] = 6;
-    string_value_counts["frank"] = 2;
-    string_value_counts["apple"] = 9;
-    string_value_counts["charlie"] = 3;
-    string_value_counts["inbox"] = 1;
-    string_segment = std::make_shared<ValueSegment<std::string>>();
-    for (auto value_and_count : string_value_counts) {
+    this->value_counts = ::value_counts<T>();
+
+    segment = std::make_shared<ValueSegment<T>>();
+    for (auto value_and_count : value_counts) {
       for (size_t i = 0; i < value_and_count.second; i++) {
-        string_segment->append(value_and_count.first);
+        segment->append(value_and_count.first);
       }
     }
 
-    int_value_counts[1] = 54;
-    int_value_counts[12] = 43;
-    int_value_counts[123] = 32;
-    int_value_counts[1234] = 21;
-    int_value_counts[12345] = 8;
-    int_value_counts[123456] = 6;
-    int_segment = std::make_shared<ValueSegment<int32_t>>();
-    for (auto value_and_count : int_value_counts) {
-      for (size_t i = 0; i < value_and_count.second; i++) {
-        int_segment->append(value_and_count.first);
-      }
-    }
-
-    string_cqf2 = std::make_shared<CountingQuotientFilter<std::string>>(4, 2);
-    string_cqf4 = std::make_shared<CountingQuotientFilter<std::string>>(4, 4);
-    string_cqf8 = std::make_shared<CountingQuotientFilter<std::string>>(4, 8);
-    string_cqf16 = std::make_shared<CountingQuotientFilter<std::string>>(4, 16);
-    string_cqf32 = std::make_shared<CountingQuotientFilter<std::string>>(4, 32);
-    string_cqf2->populate(string_segment);
-    string_cqf4->populate(string_segment);
-    string_cqf8->populate(string_segment);
-    string_cqf16->populate(string_segment);
-    string_cqf32->populate(string_segment);
-
-    int_cqf2 = std::make_shared<CountingQuotientFilter<int32_t>>(4, 2);
-    int_cqf4 = std::make_shared<CountingQuotientFilter<int32_t>>(4, 4);
-    int_cqf8 = std::make_shared<CountingQuotientFilter<int32_t>>(4, 8);
-    int_cqf16 = std::make_shared<CountingQuotientFilter<int32_t>>(4, 16);
-    int_cqf32 = std::make_shared<CountingQuotientFilter<int32_t>>(4, 32);
-    int_cqf2->populate(int_segment);
-    int_cqf4->populate(int_segment);
-    int_cqf8->populate(int_segment);
-    int_cqf16->populate(int_segment);
-    int_cqf32->populate(int_segment);
+    cqf2 = std::make_shared<CountingQuotientFilter<T>>(4, 2);
+    cqf4 = std::make_shared<CountingQuotientFilter<T>>(4, 4);
+    cqf8 = std::make_shared<CountingQuotientFilter<T>>(4, 8);
+    cqf16 = std::make_shared<CountingQuotientFilter<T>>(4, 16);
+    cqf32 = std::make_shared<CountingQuotientFilter<T>>(4, 32);
+    cqf2->populate(segment);
+    cqf4->populate(segment);
+    cqf8->populate(segment);
+    cqf16->populate(segment);
+    cqf32->populate(segment);
   }
 
-  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf2;
-  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf4;
-  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf8;
-  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf16;
-  std::shared_ptr<CountingQuotientFilter<std::string>> string_cqf32;
-  std::shared_ptr<CountingQuotientFilter<int32_t>> int_cqf2;
-  std::shared_ptr<CountingQuotientFilter<int32_t>> int_cqf4;
-  std::shared_ptr<CountingQuotientFilter<int32_t>> int_cqf8;
-  std::shared_ptr<CountingQuotientFilter<int32_t>> int_cqf16;
-  std::shared_ptr<CountingQuotientFilter<int32_t>> int_cqf32;
-  std::shared_ptr<ValueSegment<std::string>> string_segment;
-  std::shared_ptr<ValueSegment<int32_t>> int_segment;
-  std::map<std::string, size_t> string_value_counts;
-  std::map<int32_t, size_t> int_value_counts;
+  std::shared_ptr<CountingQuotientFilter<T>> cqf2;
+  std::shared_ptr<CountingQuotientFilter<T>> cqf4;
+  std::shared_ptr<CountingQuotientFilter<T>> cqf8;
+  std::shared_ptr<CountingQuotientFilter<T>> cqf16;
+  std::shared_ptr<CountingQuotientFilter<T>> cqf32;
+  std::shared_ptr<ValueSegment<T>> segment;
+  std::map<T, size_t> value_counts;
 
-  template <typename DataType>
-  void test_value_counts(const std::shared_ptr<CountingQuotientFilter<DataType>>& cqf,
-                         const std::map<DataType, size_t>& value_counts) {
+  void test_value_counts(const std::shared_ptr<CountingQuotientFilter<T>>& cqf) {
     for (const auto& value_and_count : value_counts) {
       EXPECT_TRUE(cqf->count(value_and_count.first) >= value_and_count.second);
     }
   }
 
-  template <typename DataType>
-  void test_can_not_prune(const std::shared_ptr<CountingQuotientFilter<DataType>>& cqf,
-                          const std::map<DataType, size_t>& value_counts) {
+  void test_can_not_prune(const std::shared_ptr<CountingQuotientFilter<T>>& cqf) {
     for (const auto& value_and_count : value_counts) {
       EXPECT_FALSE(cqf->can_prune(PredicateCondition::Equals, value_and_count.first));
     }
   }
 
-  template <typename DataType>
-  DataType get_test_value(size_t run) {
-    throw std::logic_error("specialize this method");
-  }
-
-  template <typename DataType>
-  void test_false_positive_rate(const std::shared_ptr<CountingQuotientFilter<DataType>>& cqf) {
+  void test_false_positive_rate(const std::shared_ptr<CountingQuotientFilter<T>>& cqf) {
     size_t runs = 1000;
     size_t false_positives = 0;
     for (size_t run = 0; run < runs; ++run) {
-      auto test_value = get_test_value<DataType>(run);
+      auto test_value = get_test_value<T>(run);
       if (!cqf->can_prune(PredicateCondition::Equals, test_value)) {
         ++false_positives;
       }
@@ -118,46 +153,23 @@ class CountingQuotientFilterTest : public BaseTest {
   }
 };
 
-template <>
-int32_t CountingQuotientFilterTest::get_test_value<int32_t>(size_t run) {
-  return 123457 + run;
+using Types = ::testing::Types<int32_t, int64_t, float, double, std::string>;
+TYPED_TEST_CASE(CountingQuotientFilterTest, Types);
+
+TYPED_TEST(CountingQuotientFilterTest, ValueCounts) {
+  this->test_value_counts(this->cqf2);
+  this->test_value_counts(this->cqf4);
+  this->test_value_counts(this->cqf8);
+  this->test_value_counts(this->cqf16);
+  this->test_value_counts(this->cqf32);
 }
 
-template <>
-std::string CountingQuotientFilterTest::get_test_value<std::string>(size_t run) {
-  return std::string("test_value") + std::to_string(run);
-}
-
-TEST_F(CountingQuotientFilterTest, NoUndercountsString) {
-  test_value_counts<std::string>(string_cqf2, string_value_counts);
-  test_value_counts<std::string>(string_cqf4, string_value_counts);
-  test_value_counts<std::string>(string_cqf8, string_value_counts);
-  test_value_counts<std::string>(string_cqf16, string_value_counts);
-  test_value_counts<std::string>(string_cqf32, string_value_counts);
-}
-
-TEST_F(CountingQuotientFilterTest, NoUndercountsInt) {
-  test_value_counts<int32_t>(int_cqf2, int_value_counts);
-  test_value_counts<int32_t>(int_cqf4, int_value_counts);
-  test_value_counts<int32_t>(int_cqf8, int_value_counts);
-  test_value_counts<int32_t>(int_cqf16, int_value_counts);
-  test_value_counts<int32_t>(int_cqf32, int_value_counts);
-}
-
-TEST_F(CountingQuotientFilterTest, CanNotPruneString) {
-  test_can_not_prune<std::string>(string_cqf2, string_value_counts);
-  test_can_not_prune<std::string>(string_cqf4, string_value_counts);
-  test_can_not_prune<std::string>(string_cqf8, string_value_counts);
-  test_can_not_prune<std::string>(string_cqf16, string_value_counts);
-  test_can_not_prune<std::string>(string_cqf32, string_value_counts);
-}
-
-TEST_F(CountingQuotientFilterTest, CanNotPruneInt) {
-  test_can_not_prune<int32_t>(int_cqf2, int_value_counts);
-  test_can_not_prune<int32_t>(int_cqf4, int_value_counts);
-  test_can_not_prune<int32_t>(int_cqf8, int_value_counts);
-  test_can_not_prune<int32_t>(int_cqf16, int_value_counts);
-  test_can_not_prune<int32_t>(int_cqf32, int_value_counts);
+TYPED_TEST(CountingQuotientFilterTest, CanNotPrune) {
+  this->test_can_not_prune(this->cqf2);
+  this->test_can_not_prune(this->cqf4);
+  this->test_can_not_prune(this->cqf8);
+  this->test_can_not_prune(this->cqf16);
+  this->test_can_not_prune(this->cqf32);
 }
 
 /**
@@ -165,20 +177,12 @@ TEST_F(CountingQuotientFilterTest, CanNotPruneInt) {
  * sanity checking, making sure the FPR is below a very lenient threshold. If these tests fail it is very likely,
  * however not absolutely certain, that there is a bug in the CQF.
  */
-TEST_F(CountingQuotientFilterTest, FalsePositiveRateInt) {
-  test_false_positive_rate<int32_t>(int_cqf2);
-  test_false_positive_rate<int32_t>(int_cqf4);
-  test_false_positive_rate<int32_t>(int_cqf8);
-  test_false_positive_rate<int32_t>(int_cqf16);
-  test_false_positive_rate<int32_t>(int_cqf32);
-}
-
-TEST_F(CountingQuotientFilterTest, FalsePositiveRateString) {
-  test_false_positive_rate<std::string>(string_cqf2);
-  test_false_positive_rate<std::string>(string_cqf4);
-  test_false_positive_rate<std::string>(string_cqf8);
-  test_false_positive_rate<std::string>(string_cqf16);
-  test_false_positive_rate<std::string>(string_cqf32);
+TYPED_TEST(CountingQuotientFilterTest, FalsePositiveRate) {
+  this->test_false_positive_rate(this->cqf2);
+  this->test_false_positive_rate(this->cqf4);
+  this->test_false_positive_rate(this->cqf8);
+  this->test_false_positive_rate(this->cqf16);
+  this->test_false_positive_rate(this->cqf32);
 }
 
 }  // namespace opossum
