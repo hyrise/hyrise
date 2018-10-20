@@ -94,7 +94,7 @@ class CountingQuotientFilterTest : public BaseTest {
   void test_can_not_prune(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
       value_counts) {
     for (auto value_and_count : value_counts) {
-        EXPECT_FALSE(cqf->can_prune(value_and_count.first, PredicateCondition::Equals));
+        EXPECT_FALSE(cqf->can_prune(PredicateCondition::Equals, value_and_count.first));
     }
   }
 
@@ -109,7 +109,7 @@ class CountingQuotientFilterTest : public BaseTest {
     size_t false_positives = 0;
     for (size_t run = 0; run < runs; run++) {
       auto test_value = get_test_value<DataType>(run);
-      if (!cqf->can_prune(test_value, PredicateCondition::Equals)) {
+      if (!cqf->can_prune(PredicateCondition::Equals, test_value)) {
         false_positives++;
       }
     }

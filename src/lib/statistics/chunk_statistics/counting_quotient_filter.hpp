@@ -46,15 +46,15 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
   double load_factor() const;
   bool is_full() const;
 
-  bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override;
+  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
  private:
+  uint64_t _hash(ElementType value) const;
+
   boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
   const uint8_t _remainder_size;
   const uint64_t _number_of_slots;
   const uint64_t _hash_bits;
-  uint64_t _hash(ElementType value) const;
-  const uint32_t _seed = std::rand();
 };
 
 }  // namespace opossum

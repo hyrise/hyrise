@@ -4,7 +4,6 @@
 #include <iostream>
 #include <string>
 
-#include "utils/murmur_hash.hpp"
 #include "resolve_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -63,9 +62,8 @@ uint64_t CountingQuotientFilter<ElementType>::count_all_type(AllTypeVariant valu
 }
 
 template <typename ElementType>
-bool CountingQuotientFilter<ElementType>::can_prune(const AllTypeVariant& value,
-    const PredicateCondition predicate_type) const {
-  DebugAssert(predicate_type == PredicateCondition::Equals, "CQF only supports equality predicates");
+bool CountingQuotientFilter<ElementType>::can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& variant_value2) const {
+  DebugAssert(predicate_type == PredicateCondition::Equals && !variant_value2, "CQF only supports equality predicates");
   return count_all_type(value) == 0;
 }
 
@@ -83,16 +81,7 @@ uint64_t CountingQuotientFilter<ElementType>::count(ElementType value) const {
 **/
 template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::_hash(ElementType value) const {
-  auto hash = murmur2<ElementType>(value, _seed);
-  return static_cast<uint64_t>(hash);
-}
-
-/**
-* Computes the hash for a string.
-**/
-template <>
-uint64_t CountingQuotientFilter<std::string>::_hash(std::string value) const {
-  auto hash = murmur_hash2(value.data(), value.length(), _seed);
+  auto hash = std::hash<ElementType>{}(value);
   return static_cast<uint64_t>(hash);
 }
 
