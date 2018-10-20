@@ -155,12 +155,12 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfExistsWithOrPredicate) {
   const auto subselect_lqp = PredicateNode::make(equals_(parameter, node_table_b_col_a), node_table_b);
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
-  expression_vector(node_table_a_col_a, node_table_a_col_b),
-  PredicateNode::make(
-  not_equals_(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)), 0),
-  ProjectionNode::make(expression_vector(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)),
-                                         node_table_a_col_a, node_table_a_col_b),
-                       node_table_a)));
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
+      PredicateNode::make(
+          not_equals_(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)), 0),
+          ProjectionNode::make(expression_vector(or_(exists_(subselect), less_than_(node_table_a_col_a, 17)),
+                                                 node_table_a_col_a, node_table_a_col_b),
+                               node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
 }
@@ -175,11 +175,11 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfInequalityJoinPredicates) {
   const auto subselect_lqp = PredicateNode::make(less_than_(parameter, node_table_b_col_a), node_table_b);
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
-  expression_vector(node_table_a_col_a, node_table_a_col_b),
-  PredicateNode::make(
-  equals_(exists_(subselect), 0),
-  ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
-                       node_table_a)));
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
+      PredicateNode::make(
+          equals_(exists_(subselect), 0),
+          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+                               node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
 }
@@ -192,11 +192,11 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfMultipleJoinPredicates) {
   const auto subselect_lqp2 = PredicateNode::make(equals_(parameter, node_table_b_col_a), subselect_lqp);
   const auto subselect = lqp_select_(subselect_lqp2, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
-  expression_vector(node_table_a_col_a, node_table_a_col_b),
-  PredicateNode::make(
-  equals_(exists_(subselect), 0),
-  ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
-                       node_table_a)));
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
+      PredicateNode::make(
+          equals_(exists_(subselect), 0),
+          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+                               node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
 }
@@ -209,11 +209,11 @@ TEST_F(ExistsReformulationRuleTest, NoRewriteOfExternalJoinPredicatesMoreThanOnc
   const auto subselect_lqp2 = PredicateNode::make(less_than_(parameter, 17), subselect_lqp);
   const auto subselect = lqp_select_(subselect_lqp2, std::make_pair(ParameterID{0}, node_table_a_col_a));
   const auto input_lqp = ProjectionNode::make(
-  expression_vector(node_table_a_col_a, node_table_a_col_b),
-  PredicateNode::make(
-  equals_(exists_(subselect), 0),
-  ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
-                       node_table_a)));
+      expression_vector(node_table_a_col_a, node_table_a_col_b),
+      PredicateNode::make(
+          equals_(exists_(subselect), 0),
+          ProjectionNode::make(expression_vector(exists_(subselect), node_table_a_col_a, node_table_a_col_b),
+                               node_table_a)));
 
   EXPECT_LQP_EQ(this->apply_exists_rule(input_lqp), input_lqp);
 }
