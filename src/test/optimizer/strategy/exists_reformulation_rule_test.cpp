@@ -12,7 +12,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/exists_reformulation_rule.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
