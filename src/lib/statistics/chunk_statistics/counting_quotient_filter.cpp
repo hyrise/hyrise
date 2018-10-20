@@ -25,15 +25,15 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
   Assert(_hash_bits <= 64u, "Hash length can not exceed 64 bits.");
 
   if (remainder_size == 2) {
-    _quotient_filter = gqf2::quotient_filter();
+    _quotient_filter = gqf2::quotient_filter{};
   } else if (remainder_size == 4) {
-    _quotient_filter = gqf4::quotient_filter();
+    _quotient_filter = gqf4::quotient_filter{};
   } else if (remainder_size == 8) {
-    _quotient_filter = gqf8::quotient_filter();
+    _quotient_filter = gqf8::quotient_filter{};
   } else if (remainder_size == 16) {
-    _quotient_filter = gqf16::quotient_filter();
+    _quotient_filter = gqf16::quotient_filter{};
   } else if (remainder_size == 32) {
-    _quotient_filter = gqf32::quotient_filter();
+    _quotient_filter = gqf32::quotient_filter{};
   } else {
     Fail("Invalid remainder remainder_size");
   }

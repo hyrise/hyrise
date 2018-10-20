@@ -71,7 +71,7 @@ target_include_directories(
     cqf
 
     PUBLIC
-    cqf/include
+    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
 )
 
 

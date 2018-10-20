@@ -61,7 +61,6 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
   uint64_t _hash(const ElementType& value) const;
 
   boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
-  const size_t _number_of_slots;
   const size_t _hash_bits;
 };
 
