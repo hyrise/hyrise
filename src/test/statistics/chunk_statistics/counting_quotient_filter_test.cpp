@@ -11,90 +11,72 @@
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
-#include "utils/assert.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
-template<typename T> std::map<T, size_t> value_counts() {
+template <typename T>
+std::map<T, size_t> value_counts() {
   opossum::Fail("There should be a specialization for this");
 }
 
-template<>
+template <>
 std::map<int32_t, size_t> value_counts<int32_t>() {
-  return {
-    {1, 54},
-    {12, 43},
-    {123, 32},
-    {1234, 21},
-    {12345, 8},
-    {123456, 6}
-  };
+  return {{1, 54}, {12, 43}, {123, 32}, {1234, 21}, {12345, 8}, {123456, 6}};
 }
 
-template<>
+template <>
 std::map<int64_t, size_t> value_counts<int64_t>() {
-  return {
-    {100000ll, 54},
-    {1200000ll, 43},
-    {12300000ll, 32},
-    {123400000ll, 21},
-    {1234500000ll, 8},
-    {12345600000ll, 6}
-  };
+  return {{100000ll, 54}, {1200000ll, 43}, {12300000ll, 32}, {123400000ll, 21}, {1234500000ll, 8}, {12345600000ll, 6}};
 }
 
-template<>
+template <>
 std::map<float, size_t> value_counts<float>() {
-  return {
-    {1.1f, 54},
-    {12.2f, 43},
-    {123.3f, 32},
-    {1234.4f, 21},
-    {12345.5f, 8},
-    {123456.6f, 6}
-  };
+  return {{1.1f, 54}, {12.2f, 43}, {123.3f, 32}, {1234.4f, 21}, {12345.5f, 8}, {123456.6f, 6}};
 }
 
-template<>
+template <>
 std::map<double, size_t> value_counts<double>() {
-  return {
-    {1.1, 54},
-    {12.2, 43},
-    {123.3, 32},
-    {1234.4, 21},
-    {12345.5, 8},
-    {123456.6, 6}
-  };
+  return {{1.1, 54}, {12.2, 43}, {123.3, 32}, {1234.4, 21}, {12345.5, 8}, {123456.6, 6}};
 }
 
-template<>
+template <>
 std::map<std::string, size_t> value_counts<std::string>() {
-  return {
-    {"hotel", 1},
-    {"delta", 6},
-    {"frank", 2},
-    {"apple", 9},
-    {"charlie", 3},
-    {"inbox", 1}
-  };
+  return {{"hotel", 1}, {"delta", 6}, {"frank", 2}, {"apple", 9}, {"charlie", 3}, {"inbox", 1}};
 }
 
-template<typename T> T get_test_value(size_t run) {
+template <typename T>
+T get_test_value(size_t run) {
   opossum::Fail("There should be a specialization for this");
 }
 
-template <> int32_t get_test_value<int32_t>(size_t run) { return 123457 + run; }
-template <> int64_t get_test_value<int64_t>(size_t run) { return 123457 + run; }
-template <> float get_test_value<float>(size_t run) { return 123457.0f + run; }
-template <> double get_test_value<double>(size_t run) { return 123457.0 + run; }
-template <> std::string get_test_value<std::string>(size_t run) { return std::string("test_value") + std::to_string(run); }
-
+template <>
+int32_t get_test_value<int32_t>(size_t run) {
+  return 123457 + run;
 }
+template <>
+int64_t get_test_value<int64_t>(size_t run) {
+  return 123457 + run;
+}
+template <>
+float get_test_value<float>(size_t run) {
+  return 123457.0f + run;
+}
+template <>
+double get_test_value<double>(size_t run) {
+  return 123457.0 + run;
+}
+template <>
+std::string get_test_value<std::string>(size_t run) {
+  return std::string("test_value") + std::to_string(run);
+}
+
+}  // namespace
 
 namespace opossum {
 
-template<typename T>
+template <typename T>
 class CountingQuotientFilterTest : public BaseTest {
  protected:
   void SetUp() override {
