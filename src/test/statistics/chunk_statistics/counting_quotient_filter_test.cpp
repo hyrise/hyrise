@@ -160,6 +160,11 @@ TEST_F(CountingQuotientFilterTest, CanNotPruneInt) {
   test_can_not_prune<int32_t>(int_cqf32, int_value_counts);
 }
 
+/**
+ * There is no guarantee on the False Positive Rate of CountingQuotientFilter::does_contain(). These tests perform some
+ * sanity checking, making sure the FPR is below a very lenient threshold. If these tests fail it is very likely,
+ * however not absolutely certain, that there is a bug in the CQF.
+ */
 TEST_F(CountingQuotientFilterTest, FalsePositiveRateInt) {
   test_false_positive_rate<int32_t>(int_cqf2);
   test_false_positive_rate<int32_t>(int_cqf4);
