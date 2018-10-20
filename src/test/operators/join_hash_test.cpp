@@ -40,11 +40,10 @@ class JoinHashTest : public BaseTest {
     _table_with_nulls->execute();
 
     // filters retains all rows
-    _table_tpch_orders_scanned = create_table_scan(
-        _table_tpch_orders, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    _table_tpch_orders_scanned = create_table_scan(_table_tpch_orders, ColumnID{0}, PredicateCondition::GreaterThan, 0);
     _table_tpch_orders_scanned->execute();
-    _table_tpch_lineitems_scanned = create_table_scan(
-        _table_tpch_lineitems, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    _table_tpch_lineitems_scanned =
+        create_table_scan(_table_tpch_lineitems, ColumnID{0}, PredicateCondition::GreaterThan, 0);
     _table_tpch_lineitems_scanned->execute();
   }
 
@@ -129,8 +128,8 @@ TEST_F(JoinHashTest, MaterializeAndBuildWithKeepNulls) {
   EXPECT_EQ(hash_map_without_nulls.size(), pow(2, radix_bit_count));
 
   // get count of non-NULL values in table
-  auto table_without_nulls_scanned = create_table_scan(
-      _table_with_nulls, ColumnID{0}, PredicateCondition::IsNotNull, 0);
+  auto table_without_nulls_scanned =
+      create_table_scan(_table_with_nulls, ColumnID{0}, PredicateCondition::IsNotNull, 0);
   table_without_nulls_scanned->execute();
 
   // now that build removed the unneeded init values, map sizes should differ

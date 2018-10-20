@@ -5,8 +5,8 @@
 #include "expression/expression_functional.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "table_generator.hpp"
 #include "storage/table.hpp"
+#include "table_generator.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -16,11 +16,13 @@ namespace opossum {
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,
                               const AllParameterVariant right_parameter) {
-  const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id), in->get_output()->column_is_nullable(left_column_id), "");
+  const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id),
+                                        in->get_output()->column_is_nullable(left_column_id), "");
   auto right_operand = std::shared_ptr<AbstractExpression>{};
   if (right_parameter.type() == typeid(ColumnID)) {
     const auto right_column_id = boost::get<ColumnID>(right_parameter);
-    right_operand = pqp_column_(right_column_id, in->get_output()->column_data_type(right_column_id), in->get_output()->column_is_nullable(right_column_id), "");
+    right_operand = pqp_column_(right_column_id, in->get_output()->column_data_type(right_column_id),
+                                in->get_output()->column_is_nullable(right_column_id), "");
 
   } else {
     right_operand = value_(boost::get<AllTypeVariant>(right_parameter));
@@ -28,12 +30,10 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 
   const auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
 
-  auto warm_up =
-      std::make_shared<TableScan>(in, predicate);
+  auto warm_up = std::make_shared<TableScan>(in, predicate);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan =
-        std::make_shared<TableScan>(in, predicate);
+    auto table_scan = std::make_shared<TableScan>(in, predicate);
     table_scan->execute();
   }
 }
