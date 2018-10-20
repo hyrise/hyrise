@@ -8,9 +8,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
-#include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -83,18 +83,18 @@ class CountingQuotientFilterTest : public BaseTest {
   std::map<int, size_t> int_value_counts;
 
   template <typename DataType>
-  void test_value_counts(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
-      value_counts) {
+  void test_value_counts(std::shared_ptr<CountingQuotientFilter<DataType>> cqf,
+                         std::map<DataType, size_t> value_counts) {
     for (auto value_and_count : value_counts) {
-        EXPECT_TRUE(cqf->count(value_and_count.first) >= value_and_count.second);
+      EXPECT_TRUE(cqf->count(value_and_count.first) >= value_and_count.second);
     }
   }
 
   template <typename DataType>
-  void test_can_not_prune(std::shared_ptr<CountingQuotientFilter<DataType>> cqf, std::map<DataType, size_t>
-      value_counts) {
+  void test_can_not_prune(std::shared_ptr<CountingQuotientFilter<DataType>> cqf,
+                          std::map<DataType, size_t> value_counts) {
     for (auto value_and_count : value_counts) {
-        EXPECT_FALSE(cqf->can_prune(PredicateCondition::Equals, value_and_count.first));
+      EXPECT_FALSE(cqf->can_prune(PredicateCondition::Equals, value_and_count.first));
     }
   }
 

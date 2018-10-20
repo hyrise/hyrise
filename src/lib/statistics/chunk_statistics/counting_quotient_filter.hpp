@@ -1,20 +1,17 @@
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
+#include "cqf16.hpp"
 #include "cqf2.hpp"
+#include "cqf32.hpp"
 #include "cqf4.hpp"
 #include "cqf8.hpp"
-#include "cqf16.hpp"
-#include "cqf32.hpp"
 #include "types.hpp"
 
-#include "storage/base_segment.hpp"
 #include "abstract_filter.hpp"
-
-
-
+#include "storage/base_segment.hpp"
 
 namespace opossum {
 
@@ -36,25 +33,30 @@ smallest number greater than `S` that is a power of 2 as the number of slots." -
 template <typename ElementType>
 class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
  public:
-  CountingQuotientFilter(uint8_t quotient_size, uint8_t remainder_size);
+  CountingQuotientFilter(const size_t quotient_size, const size_t remainder_size);
   virtual ~CountingQuotientFilter();
-  void insert(ElementType value, uint64_t count = 1);
+
+  void insert(ElementType value, size_t count = 1);
   void populate(const std::shared_ptr<const BaseSegment>& segment);
-  uint64_t count(ElementType value) const;
-  uint64_t count_all_type(AllTypeVariant value) const;
-  uint64_t memory_consumption() const;
-  double load_factor() const;
+
+  size_t count(const ElementType& value) const;
+  size_t count(const AllTypeVariant& value) const;
+
+  size_t memory_consumption() const;
+
+  float load_factor() const;
+
   bool is_full() const;
 
-  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value, const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value,
+                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
  private:
-  uint64_t _hash(ElementType value) const;
+  uint64_t _hash(const ElementType& value) const;
 
   boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
-  const uint8_t _remainder_size;
-  const uint64_t _number_of_slots;
-  const uint64_t _hash_bits;
+  const size_t _number_of_slots;
+  const size_t _hash_bits;
 };
 
 }  // namespace opossum
