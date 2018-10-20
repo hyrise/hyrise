@@ -20,7 +20,7 @@ namespace opossum {
 
 template <typename ElementType>
 CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotient_size, const size_t remainder_size)
-    : _number_of_slots(std::pow(2, quotient_size)), _hash_bits(quotient_size + remainder_size) {
+    : _hash_bits(quotient_size + remainder_size) {
   Assert(quotient_size > 0, "Quotient size can not be zero.");
   Assert(_hash_bits <= 64u, "Hash length can not exceed 64 bits.");
 
@@ -38,7 +38,8 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
     Fail("Invalid remainder remainder_size");
   }
 
-  boost::apply_visitor([&](auto& filter) { qf_init(&filter, _number_of_slots, _hash_bits, 0); }, _quotient_filter);
+  const auto number_of_slots = std::pow(2, quotient_size);
+  boost::apply_visitor([&](auto& filter) { qf_init(&filter, number_of_slots, _hash_bits, 0); }, _quotient_filter);
 }
 
 template <typename ElementType>
@@ -48,9 +49,9 @@ CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType value, size_t count) {
-  size_t bitmask = static_cast<size_t>(std::pow(2, _hash_bits)) - 1;
-  size_t hash = bitmask & _hash(value);
-  for (size_t idx = 0; idx < count; idx++) {
+  const auto bitmask = static_cast<size_t>(std::pow(2, _hash_bits)) - 1;
+  const auto hash = bitmask & _hash(value);
+  for (size_t idx = 0; idx < count; ++idx) {
     boost::apply_visitor([&](auto& filter) { qf_insert(&filter, hash, 0, 1); }, _quotient_filter);
   }
 }
@@ -79,9 +80,6 @@ size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) cons
   return count;
 }
 
-/**
-* Computes the hash for a value.
-**/
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::_hash(const ElementType& value) const {
   auto hash = std::hash<ElementType>{}(value);
@@ -91,8 +89,8 @@ size_t CountingQuotientFilter<ElementType>::_hash(const ElementType& value) cons
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const BaseSegment>& segment) {
   resolve_segment_type<ElementType>(*segment, [&](const auto& typed_segment) {
-    auto iterable_left = create_iterable_from_segment<ElementType>(typed_segment);
-    iterable_left.for_each([&](const auto& value) {
+    auto segment_iterable = create_iterable_from_segment<ElementType>(typed_segment);
+    segment_iterable.for_each([&](const auto& value) {
       if (value.is_null()) return;
       insert(value.value());
     });

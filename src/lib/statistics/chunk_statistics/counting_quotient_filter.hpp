@@ -34,7 +34,7 @@ template <typename ElementType>
 class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
  public:
   CountingQuotientFilter(const size_t quotient_size, const size_t remainder_size);
-  virtual ~CountingQuotientFilter();
+  ~CountingQuotientFilter() override;
 
   void insert(ElementType value, size_t count = 1);
   void populate(const std::shared_ptr<const BaseSegment>& segment);
@@ -50,6 +50,12 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
 
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+  // Can't copy CountingQuotientFilter
+  CountingQuotientFilter(CountingQuotientFilter&) = delete;
+  CountingQuotientFilter(CountingQuotientFilter&&) = delete;
+  CountingQuotientFilter operator=(CountingQuotientFilter&) = delete;
+  CountingQuotientFilter operator=(CountingQuotientFilter&&) = delete;
 
  private:
   uint64_t _hash(const ElementType& value) const;
