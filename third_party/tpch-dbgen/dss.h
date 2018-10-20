@@ -228,7 +228,6 @@ void		dbg_text PROTO((char * t, int min, int max, int s));
 
 
 EXTERN long scale;
-EXTERN int refresh;
 EXTERN int resume;
 EXTERN long verbose;
 EXTERN long force;

@@ -26,7 +26,8 @@ class SegmentStatistics final {
   /**
    * calls can_prune on each filter in this object
   */
-  bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const;
+  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
   std::vector<std::shared_ptr<AbstractFilter>> _filters;

@@ -24,9 +24,11 @@ const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 
 Topology::Topology() { _init_default_topology(); }
 
-void TopologyNode::print(std::ostream& stream) const {
+void TopologyNode::print(std::ostream& stream, size_t indent) const {
+  for (size_t i = 0; i < indent; ++i) stream << " ";
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
   for (size_t cpu_idx = 0; cpu_idx < cpus.size(); ++cpu_idx) {
+    for (size_t i = 0; i < indent; ++i) stream << " ";
     stream << cpus[cpu_idx].cpu_id;
     if (cpu_idx + 1 < cpus.size()) {
       stream << ", ";
@@ -35,7 +37,7 @@ void TopologyNode::print(std::ostream& stream) const {
   stream << "]";
 }
 
-void Topology::use_default_topology() { Topology::get()._init_default_topology(); }
+void Topology::use_default_topology(uint32_t max_num_cores) { Topology::get()._init_default_topology(max_num_cores); }
 
 void Topology::use_numa_topology(uint32_t max_num_cores) { Topology::get()._init_numa_topology(max_num_cores); }
 
@@ -45,11 +47,11 @@ void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers
   Topology::get()._init_fake_numa_topology(max_num_workers, workers_per_node);
 }
 
-void Topology::_init_default_topology() {
+void Topology::_init_default_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
-  _init_non_numa_topology();
+  _init_non_numa_topology(max_num_cores);
 #else
-  _init_numa_topology();
+  _init_numa_topology(max_num_cores);
 #endif
 }
 
@@ -101,12 +103,7 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
   _clear();
   _fake_numa_topology = false;
 
-  auto max_num_threads = std::thread::hardware_concurrency();
-
-  /**
-   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
-   */
-  _num_cpus = std::max<uint32_t>(1, max_num_threads - 1);
+  _num_cpus = std::thread::hardware_concurrency();
   if (max_num_cores != 0) {
     _num_cpus = std::min<uint32_t>(_num_cpus, max_num_cores);
   }
@@ -127,12 +124,7 @@ void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t worke
   _clear();
   _fake_numa_topology = true;
 
-  auto max_num_threads = std::thread::hardware_concurrency();
-
-  /**
-   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
-   */
-  auto num_workers = std::max<uint32_t>(1, max_num_threads - 1);
+  auto num_workers = std::thread::hardware_concurrency();
   if (max_num_workers != 0) {
     num_workers = std::min<uint32_t>(num_workers, max_num_workers);
   }
@@ -170,9 +162,11 @@ boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_i
   return &_memory_resources[static_cast<size_t>(node_id)];
 }
 
-void Topology::print(std::ostream& stream) const {
+void Topology::print(std::ostream& stream, size_t indent) const {
+  for (size_t i = 0; i < indent; ++i) stream << " ";
   stream << "Number of CPUs: " << _num_cpus << std::endl;
   for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
+    for (size_t i = 0; i < indent; ++i) stream << " ";
     stream << "Node #" << node_idx << " - ";
     _nodes[node_idx].print(stream);
     stream << std::endl;

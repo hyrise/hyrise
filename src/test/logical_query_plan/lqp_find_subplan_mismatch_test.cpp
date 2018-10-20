@@ -76,7 +76,7 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, ColumnID{1}};
 
     query_nodes.predicate_node_a = PredicateNode::make(less_than_(query_nodes.table_a_a, 41));
-    query_nodes.predicate_node_b = PredicateNode::make(between(query_nodes.table_a_a, 42, 45));
+    query_nodes.predicate_node_b = PredicateNode::make(between_(query_nodes.table_a_a, 42, 45));
     query_nodes.union_node = UnionNode::make(UnionMode::Positions);
     query_nodes.limit_node = LimitNode::make(to_expression(10));
     query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals_(query_nodes.table_a_a, query_nodes.table_c_b));
@@ -124,7 +124,7 @@ TEST_F(LQPFindSubplanMismatchTest, EqualsTest) {
 }
 
 TEST_F(LQPFindSubplanMismatchTest, SubplanMismatch) {
-  _query_nodes_rhs.predicate_node_b = PredicateNode::make(between(_query_nodes_rhs.table_a_a, 42, 46));
+  _query_nodes_rhs.predicate_node_b = PredicateNode::make(between_(_query_nodes_rhs.table_a_a, 42, 46));
 
   _build_query_lqps();
 
@@ -135,7 +135,7 @@ TEST_F(LQPFindSubplanMismatchTest, SubplanMismatch) {
 }
 
 TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
-  const auto additional_predicate_node = PredicateNode::make(between(_query_nodes_rhs.table_a_a, 42, 45));
+  const auto additional_predicate_node = PredicateNode::make(between_(_query_nodes_rhs.table_a_a, 42, 45));
 
   _build_query_lqps();
 
@@ -149,8 +149,8 @@ TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
 }
 
 TEST_F(LQPFindSubplanMismatchTest, TypeMismatch) {
-  const auto first_node = PredicateNode::make(between(_query_nodes_rhs.table_a_a, int32_t{42}, int32_t{45}));
-  const auto second_node = PredicateNode::make(between(_query_nodes_rhs.table_a_a, int64_t{42}, int64_t{45}));
+  const auto first_node = PredicateNode::make(between_(_query_nodes_rhs.table_a_a, int32_t{42}, int32_t{45}));
+  const auto second_node = PredicateNode::make(between_(_query_nodes_rhs.table_a_a, int64_t{42}, int64_t{45}));
 
   first_node->set_left_input(_query_nodes_rhs.stored_table_node_a);
   second_node->set_left_input(_query_nodes_rhs.stored_table_node_a);

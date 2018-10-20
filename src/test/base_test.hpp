@@ -9,6 +9,8 @@
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -28,8 +30,8 @@ class Table;
 extern std::string test_data_path;
 
 template <typename ParamType>
-class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
-                                                  ::testing::TestWithParam<ParamType>>::type {
+class BaseTestWithParam
+    : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
@@ -74,6 +76,7 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 };
 

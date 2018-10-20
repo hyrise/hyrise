@@ -22,3 +22,6 @@
 [submodule "third_party/cqf"]
 	path = third_party/cqf
 	url = https://github.com/ArneMayer/cqf.git
+[submodule "flat_hash_map"]
+	path = third_party/flat_hash_map
+	url = https://github.com/skarupke/flat_hash_map.git

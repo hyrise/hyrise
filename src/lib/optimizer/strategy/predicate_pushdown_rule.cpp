@@ -41,14 +41,15 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 
   while (input->type == LQPNodeType::Predicate) {
     // We gave the predicate nodes below us the chance to be pushed down, but they didn't want to. Now we ignore them.
-    // We only move past it if we can get past a non-predicate node.
+    // We only move past them if this gets us past a non-predicate node.
     input = input->left_input();
   }
 
   if (input->type == LQPNodeType::Join) {
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(input);
 
-    if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross) {
+    if (join_node->join_mode == JoinMode::Left || join_node->join_mode == JoinMode::Right ||
+        join_node->join_mode == JoinMode::Outer) {
       return _apply_to_inputs(node);
     }
 

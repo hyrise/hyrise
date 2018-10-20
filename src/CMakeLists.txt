@@ -72,6 +72,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
     ${PROJECT_SOURCE_DIR}/third_party/cqf/include
+    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
