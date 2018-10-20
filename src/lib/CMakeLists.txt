@@ -549,7 +549,6 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
-    utils/uninitialized_vector.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -557,6 +556,7 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
     ${TBB_LIBRARY}
 )

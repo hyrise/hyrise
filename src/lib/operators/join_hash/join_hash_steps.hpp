@@ -12,7 +12,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
-#include "utils/uninitialized_vector.hpp"
+#include "uninitialized_vector.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
