@@ -33,13 +33,14 @@ bool LogicalExpressionReducerRule::_apply_to_node(const std::shared_ptr<Abstract
 
   // We only deal with predicates and projections, as these are the only LQP node types that handle complex expressions
   if (node->type == LQPNodeType::Predicate) {
+    // First, see apply the rule to the predicate expression.
     const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
     auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{predicate_node->predicate};
 
     changed |= _apply_to_expressions(expressions, previously_reduced_expressions);
     DebugAssert(expressions.size() == 1, "A PredicateNode should not have more than one top-level expression");
 
-    // If we are working on a predicate, we can extract the elements from a top-level conjunctive chain and place them into their own predicate
+    // Second, as we are working on a predicate, we can extract the elements from a top-level conjunctive chain (a AND b ...) and place them into their own predicate. This enables other optimizations, such as independent predicate reordering or join detection. TPC-H Query 19 is a good example for this.
     ExpressionUnorderedSet and_expressions;
     _collect_chained_logical_expressions(expressions[0], LogicalOperator::And, and_expressions);
 
