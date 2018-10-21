@@ -97,9 +97,9 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
         _collect_chained_logical_expressions(subexpression, LogicalOperator::Or, or_expressions);
 
         // std::cout << "\t\tOr expressions: " << std::endl;
-        for (auto& subexpression : or_expressions) {
-          // std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
-        }
+        // for (auto& subexpression : or_expressions) {
+        //   std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
+        // }
 
         ExpressionUnorderedSet common_and_expressions;
         {
@@ -125,9 +125,9 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
           }
 
           // std::cout << "\t\tCommon expressions: " << std::endl;
-          for (const auto& subexpression : common_and_expressions) {  // TODO fix shadowing
-            // std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
-          }
+          // for (const auto& subexpression : common_and_expressions) {
+          //   std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
+          // }
 
           // Step 3: If there are no common_and_expressions, we are done.
           if (common_and_expressions.empty()) {
