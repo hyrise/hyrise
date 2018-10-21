@@ -44,7 +44,11 @@ std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doe
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression) {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<ExistsExpression>(select_expression);
+  return std::make_shared<ExistsExpression>(select_expression, ExistsExpressionType::Exists);
+}
+
+std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& select_expression) {  // NOLINT - clang-tidy doesn't like the suffix
+  return std::make_shared<ExistsExpression>(select_expression, ExistsExpressionType::NotExists);
 }
 // clang-format on
 

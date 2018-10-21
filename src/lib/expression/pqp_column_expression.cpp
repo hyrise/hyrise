@@ -13,6 +13,10 @@ std::shared_ptr<PQPColumnExpression> PQPColumnExpression::from_table(const Table
                                                table.column_is_nullable(column_id), column_name);
 }
 
+std::shared_ptr<PQPColumnExpression> PQPColumnExpression::from_table(const Table& table, const ColumnID column_id) {
+  return PQPColumnExpression::from_table(table, table.column_name(column_id));
+}
+
 PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
                                          const std::string& column_name)
     : AbstractExpression(ExpressionType::PQPColumn, {}),

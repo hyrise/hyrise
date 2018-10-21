@@ -20,6 +20,8 @@ IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_
               "Invalid PredicateCondition");
 }
 
+std::string IsNullTableScanImpl::description() const { return "IsNullScan"; }
+
 void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);

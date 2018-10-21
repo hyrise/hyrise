@@ -81,11 +81,10 @@ constexpr bool is_valid_name(const char* name) {
 #define DTRACE_PROBE7(provider, probe, param1, param2, param3, param4, param5, param6, param7)
 #define DTRACE_PROBE8(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8)
 #define DTRACE_PROBE9(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9)
-#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
-                      param10)
-#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10)
+#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
                        param10, param11)
-#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
                        param10, param11, param12)
 
 #pragma GCC diagnostic pop

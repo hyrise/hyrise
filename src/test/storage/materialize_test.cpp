@@ -1,11 +1,14 @@
 #include "gtest/gtest.h"
 
 #include "encoding_test.hpp"
+#include "expression/expression_functional.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/materialize.hpp"
 #include "storage/table.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -18,8 +21,9 @@ class MaterializeTest : public EncodingTest {
     const auto table_wrapper = std::make_shared<TableWrapper>(_data_table);
     table_wrapper->execute();
 
-    const auto table_scan = std::make_shared<TableScan>(
-        table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 0});
+    const auto a = PQPColumnExpression::from_table(*_data_table, "a");
+    const auto table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_(a, 0));
+
     table_scan->execute();
     _references_table = table_scan->get_output();
   }

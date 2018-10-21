@@ -4,12 +4,15 @@
 
 namespace opossum {
 
+enum class ExistsExpressionType { Exists, NotExists };
+
 /**
  * SQL's EXISTS()
  */
 class ExistsExpression : public AbstractExpression {
  public:
-  explicit ExistsExpression(const std::shared_ptr<AbstractExpression>& select);
+  ExistsExpression(const std::shared_ptr<AbstractExpression>& select,
+                   const ExistsExpressionType exists_expression_type);
 
   std::shared_ptr<AbstractExpression> select() const;
 
@@ -17,6 +20,8 @@ class ExistsExpression : public AbstractExpression {
   std::string as_column_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
+
+  const ExistsExpressionType exists_expression_type;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
