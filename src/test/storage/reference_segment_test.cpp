@@ -49,14 +49,6 @@ class ReferenceSegmentTest : public BaseTest {
   std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
 };
 
-TEST_F(ReferenceSegmentTest, IsImmutable) {
-  auto pos_list =
-      std::make_shared<PosList>(std::initializer_list<RowID>({{ChunkID{0}, 0}, {ChunkID{0}, 1}, {ChunkID{0}, 2}}));
-  auto ref_segment = ReferenceSegment(_test_table, ColumnID{0}, pos_list);
-
-  EXPECT_THROW(ref_segment.append(1), std::logic_error);
-}
-
 TEST_F(ReferenceSegmentTest, RetrievesValues) {
   // PosList with (0, 0), (0, 1), (0, 2)
   auto pos_list = std::make_shared<PosList>(
