@@ -13,7 +13,8 @@ set(
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     cost_model/cost_estimator_test.cpp
-    expression/expression_evaluator_test.cpp
+    expression/expression_evaluator_to_pos_list_test.cpp
+    expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp
     expression/expression_test.cpp
     expression/expression_utils_test.cpp
@@ -109,7 +110,7 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/predicate_pushdown_rule_test.cpp
+    optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp

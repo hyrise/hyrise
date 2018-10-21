@@ -78,11 +78,9 @@ TYPED_TEST(JoinFullTest, InnerJoinSingleChunk) {
 
 TYPED_TEST(JoinFullTest, InnerRefJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -104,11 +102,10 @@ TYPED_TEST(JoinFullTest, InnerDictValueJoin) {
 
 TYPED_TEST(JoinFullTest, InnerValueDictRefJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b =
+      this->create_table_scan(this->_table_wrapper_b_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -118,11 +115,10 @@ TYPED_TEST(JoinFullTest, InnerValueDictRefJoin) {
 
 TYPED_TEST(JoinFullTest, InnerDictValueRefJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a =
+      this->create_table_scan(this->_table_wrapper_a_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -131,11 +127,9 @@ TYPED_TEST(JoinFullTest, InnerDictValueRefJoin) {
 }
 
 TYPED_TEST(JoinFullTest, InnerRefJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 1000});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -151,11 +145,11 @@ TYPED_TEST(JoinFullTest, InnerDictJoin) {
 
 TYPED_TEST(JoinFullTest, InnerRefDictJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a =
+      this->create_table_scan(this->_table_wrapper_a_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b =
+      this->create_table_scan(this->_table_wrapper_b_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -164,11 +158,11 @@ TYPED_TEST(JoinFullTest, InnerRefDictJoin) {
 }
 
 TYPED_TEST(JoinFullTest, InnerRefDictJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 1000});
+  auto scan_a =
+      this->create_table_scan(this->_table_wrapper_a_dict, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b =
+      this->create_table_scan(this->_table_wrapper_b_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -183,11 +177,9 @@ TYPED_TEST(JoinFullTest, InnerJoinBig) {
 }
 
 TYPED_TEST(JoinFullTest, InnerRefJoinFilteredBig) {
-  auto scan_c = std::make_shared<TableScan>(
-      this->_table_wrapper_c, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_c = this->create_table_scan(this->_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
-  auto scan_d = std::make_shared<TableScan>(
-      this->_table_wrapper_d, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 6});
+  auto scan_d = this->create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
   scan_d->execute();
 
   this->template test_join_output<TypeParam>(scan_c, scan_d, ColumnIDPair(ColumnID{0}, ColumnID{1}),
@@ -392,8 +384,7 @@ TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionarySegments) {
 
 TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndValue) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -403,8 +394,7 @@ TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndValue) {
 
 TYPED_TEST(JoinFullTest, JoinOnValueAndReferenceSegment) {
   // scan that returns all rows
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 100});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -420,8 +410,7 @@ TYPED_TEST(JoinFullTest, JoinLessThanOnDictAndDict) {
 
 TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndDict) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b_dict,
@@ -431,8 +420,7 @@ TYPED_TEST(JoinFullTest, JoinOnReferenceSegmentAndDict) {
 
 TYPED_TEST(JoinFullTest, JoinOnDictAndReferenceSegment) {
   // scan that returns all rows
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 100});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThan, 100);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(

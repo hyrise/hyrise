@@ -94,6 +94,8 @@ SELECT * FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN 
 -- (not) exists to semi(/anti) join reformulation
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
 SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
+-- exists to semi join reformulation: query not rewriteable
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
 
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
@@ -153,6 +155,9 @@ SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30
 -- DELETE
 DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 4); SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a = 5 OR b = 6 OR (a > 2 AND b > 80) OR (a = (SELECT MIN(a) FROM id_int_int_int_100)); SELECT * FROM id_int_int_int_100;
 
 -- Update
 UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
@@ -196,6 +201,7 @@ SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
 
 -- Subqueries in WHERE statement
 SELECT a FROM id_int_int_int_100 AS r WHERE id + 1 = (SELECT MIN(b) + r.id FROM mixed)
+SELECT * FROM id_int_int_int_100 WHERE a = (SELECT MAX(b) FROM id_int_int_int_100)
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)

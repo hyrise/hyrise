@@ -745,9 +745,10 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
-  const std::string subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
+  const auto subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
 
   auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
+
   const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);

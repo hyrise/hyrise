@@ -20,6 +20,8 @@ SingleColumnTableScanImpl::SingleColumnTableScanImpl(const std::shared_ptr<const
                                                      const AllTypeVariant& right_value)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition}, _right_value{right_value} {}
 
+std::string SingleColumnTableScanImpl::description() const { return "SingleColumnScan"; }
+
 std::shared_ptr<PosList> SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   // early outs for specific NULL semantics
   if (variant_is_null(_right_value)) {

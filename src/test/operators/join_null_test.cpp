@@ -77,11 +77,9 @@ TYPED_TEST(JoinNullTest, InnerJoinWithNullDict2) {
 }
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNullRef2) {
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_m, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_m, ColumnID{1}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_n, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_n, ColumnID{1}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),

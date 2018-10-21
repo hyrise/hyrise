@@ -123,6 +123,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(lqp_select_expression->requires_computation());
   EXPECT_TRUE(exists_(lqp_select_expression)->requires_computation());
   EXPECT_TRUE(in_(5, lqp_select_expression)->requires_computation());
+  EXPECT_TRUE(not_in_(5, lqp_select_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
   const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(get_table);
@@ -159,6 +160,8 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(cast_("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
   EXPECT_EQ(uncorrelated_parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
   EXPECT_EQ(correlated_parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
+  EXPECT_EQ(in_(5, list_(1, 2, 3))->as_column_name(), "(5) IN (1, 2, 3)");
+  EXPECT_EQ(not_in_(5, list_(1, 2, 3))->as_column_name(), "(5) NOT IN (1, 2, 3)");
 }
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
@@ -219,6 +222,8 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(between_(1.5, 2, 3)->data_type(), DataType::Int);
   EXPECT_EQ(and_(1, 1)->data_type(), DataType::Int);
   EXPECT_EQ(or_(1, 1)->data_type(), DataType::Int);
+  EXPECT_EQ(in_(1, list_(1, 2, 3))->data_type(), DataType::Int);
+  EXPECT_EQ(not_in_(1, list_(1, 2, 3))->data_type(), DataType::Int);
   EXPECT_EQ(is_null_(5)->data_type(), DataType::Int);
 
   EXPECT_EQ(case_(1, int32_t{1}, int32_t{1})->data_type(), DataType::Int);
@@ -249,6 +254,8 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_FALSE(count_star_()->is_nullable());
   EXPECT_FALSE(count_(5)->is_nullable());
   EXPECT_FALSE(count_(null_())->is_nullable());
+  EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable());
+  EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable());
 
   // Division by zero could be nullable, thus division and modulo are always nullable
   EXPECT_TRUE(div_(1, 2)->is_nullable());
