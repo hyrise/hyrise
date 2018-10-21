@@ -142,34 +142,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto input_node = node->left_input();
   const auto input_operator = translate_node(input_node);
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-  const auto operator_scan_predicates =
-      OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
-
-  Assert(operator_scan_predicates,
-         "Couldn't translate to OperatorPredicate: "s + predicate_node->predicate->as_column_name());
-
-  auto output_operator = input_operator;
 
   switch (predicate_node->scan_type) {
     case ScanType::TableScan:
-      for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-        output_operator = _translate_predicate_node_to_table_scan(operator_scan_predicate, output_operator);
-      }
-      break;
+      return _translate_predicate_node_to_table_scan(predicate_node, input_operator);
     case ScanType::IndexScan:
-      output_operator = _translate_predicate_node_to_index_scan(predicate_node, output_operator);
-      break;
+      return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 
-  return output_operator;
-}
-
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(
-    const OperatorScanPredicate& operator_scan_predicate,
-    const std::shared_ptr<AbstractOperator>& input_operator) const {
-  Assert(operator_scan_predicate.predicate_condition != PredicateCondition::In, "TableScan doesn't support IN yet");
-
-  return std::make_shared<TableScan>(input_operator, operator_scan_predicate);
+  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
@@ -226,25 +207,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
-  // See explanation for BETWEEN handling in _translate_predicate_node above.
-  std::shared_ptr<TableScan> table_scan;
-  if (predicate->predicate_condition == PredicateCondition::Between) {
-    Assert(value2_variant, "Need value2 for Between");
-    auto table_scan_gt = std::make_shared<TableScan>(
-        input_operator, OperatorScanPredicate{column_id, PredicateCondition::GreaterThanEquals, value_variant});
-    table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
-
-    table_scan = std::make_shared<TableScan>(
-        table_scan_gt, OperatorScanPredicate{column_id, PredicateCondition::LessThanEquals, *value2_variant});
-  } else {
-    table_scan = std::make_shared<TableScan>(
-        input_operator, OperatorScanPredicate{column_id, predicate->predicate_condition, value_variant});
-  }
+  const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
   index_scan->set_included_chunk_ids(indexed_chunks);
   table_scan->set_excluded_chunk_ids(indexed_chunks);
 
   return std::make_shared<UnionPositions>(index_scan, table_scan);
+}
+
+std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
+    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate, node->left_input()));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
@@ -479,64 +452,71 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
   return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 
+std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
+    const std::shared_ptr<AbstractExpression>& lqp_expression, const std::shared_ptr<AbstractLQPNode>& node) const {
+  auto pqp_expression = lqp_expression->deep_copy();
+
+  /**
+    * Resolve Expressions to PQPColumnExpressions referencing columns from the input Operator. After this, no
+    * LQPColumnExpressions remain in the pqp_expression and it is a valid PQP expression.
+    */
+  visit_expression(pqp_expression, [&](auto& expression) {
+    // Try to resolve the Expression to a column from the input node
+    const auto column_id = node->find_column_id(*expression);
+    if (column_id) {
+      const auto referenced_expression = node->column_expressions()[*column_id];
+      expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
+                                                         referenced_expression->is_nullable(),
+                                                         referenced_expression->as_column_name());
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    // Resolve SubSelectExpression
+    if (expression->type == ExpressionType::LQPSelect) {
+      const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
+      Assert(lqp_select_expression, "Expected LQPSelectExpression");
+
+      const auto sub_select_pqp = LQPTranslator{}.translate_node(lqp_select_expression->lqp);
+
+      auto sub_select_parameters = PQPSelectExpression::Parameters{};
+      sub_select_parameters.reserve(lqp_select_expression->parameter_count());
+
+      for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count(); ++parameter_idx) {
+        const auto parameter_column_id =
+            node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
+        sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_column_id);
+      }
+
+      // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
+      // is undefined and obtaining it will result in a runtime error.
+      if (lqp_select_expression->lqp->column_expressions().size() == 1u) {
+        const auto sub_select_data_type = lqp_select_expression->data_type();
+        const auto sub_select_nullable = lqp_select_expression->is_nullable();
+
+        expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_data_type, sub_select_nullable,
+                                                           sub_select_parameters);
+      } else {
+        expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_parameters);
+      }
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    AssertInput(expression->type != ExpressionType::LQPColumn,
+                "Failed to resolve Column '"s + expression->as_column_name() + "', LQP is invalid");
+
+    return ExpressionVisitation::VisitArguments;
+  });
+
+  return pqp_expression;
+}
+
 std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  auto pqp_expressions = expressions_deep_copy(lqp_expressions);
+  auto pqp_expressions = std::vector<std::shared_ptr<AbstractExpression>>(lqp_expressions.size());
 
-  for (auto& pqp_expression : pqp_expressions) {
-    /**
-     * Resolve Expressions to PQPColumnExpressions referencing columns from the input Operator. After this, no
-     * LQPColumnExpressions remain in the pqp_expression and it is a valid PQP expression.
-     */
-
-    visit_expression(pqp_expression, [&](auto& expression) {
-      // Try to resolve the Expression to a column from the input node
-      const auto column_id = node->find_column_id(*expression);
-      if (column_id) {
-        const auto referenced_expression = node->column_expressions()[*column_id];
-        expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                           referenced_expression->is_nullable(),
-                                                           referenced_expression->as_column_name());
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      // Resolve SubSelectExpression
-      if (expression->type == ExpressionType::LQPSelect) {
-        const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
-        Assert(lqp_select_expression, "Expected LQPSelectExpression");
-
-        const auto sub_select_pqp = LQPTranslator{}.translate_node(lqp_select_expression->lqp);
-
-        auto sub_select_parameters = PQPSelectExpression::Parameters{};
-        sub_select_parameters.reserve(lqp_select_expression->parameter_count());
-
-        for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count();
-             ++parameter_idx) {
-          const auto parameter_column_id =
-              node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
-          sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_column_id);
-        }
-
-        // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
-        // is undefined and obtaining it will result in a runtime error.
-        if (lqp_select_expression->lqp->column_expressions().size() == 1u) {
-          const auto sub_select_data_type = lqp_select_expression->data_type();
-          const auto sub_select_nullable = lqp_select_expression->is_nullable();
-
-          expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_data_type, sub_select_nullable,
-                                                             sub_select_parameters);
-        } else {
-          expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_parameters);
-        }
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
-
-      AssertInput(expression->type != ExpressionType::LQPColumn,
-                  "Failed to resolve Column '"s + expression->as_column_name() + "', LQP is invalid");
-
-      return ExpressionVisitation::VisitArguments;
-    });
+  for (auto expression_idx = size_t{0}; expression_idx < pqp_expressions.size(); ++expression_idx) {
+    pqp_expressions[expression_idx] = _translate_expression(lqp_expressions[expression_idx], node);
   }
 
   return pqp_expressions;

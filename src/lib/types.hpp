@@ -171,6 +171,7 @@ enum class PredicateCondition {
   GreaterThanEquals,
   Between,
   In,
+  NotIn,
   Like,
   NotLike,
   IsNull,

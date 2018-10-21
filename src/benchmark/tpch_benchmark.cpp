@@ -68,7 +68,6 @@ int main(int argc, char* argv[]) {
       std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
       return 0;
     }
-
     if (cli_parse_result.count("queries")) {
       comma_separated_queries = cli_parse_result["queries"].as<std::string>();
     }

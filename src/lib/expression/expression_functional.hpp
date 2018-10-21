@@ -193,10 +193,16 @@ std::shared_ptr<ListExpression> list_(Args&&... args) {
 
 template <typename V, typename S>
 std::shared_ptr<InExpression> in_(const V& v, const S& s) {
-  return std::make_shared<InExpression>(to_expression(v), to_expression(s));
+  return std::make_shared<InExpression>(PredicateCondition::In, to_expression(v), to_expression(s));
+}
+
+template <typename V, typename S>
+std::shared_ptr<InExpression> not_in_(const V& v, const S& s) {
+  return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(v), to_expression(s));
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression);
+std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& select_expression);
 
 template <typename F>
 std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_component, const F& from) {

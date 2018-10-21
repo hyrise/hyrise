@@ -221,6 +221,7 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
@@ -228,6 +229,8 @@ set(
     operators/table_scan/between_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/expression_evaluator_table_scan_impl.cpp
+    operators/table_scan/expression_evaluator_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
@@ -272,8 +275,8 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/predicate_pushdown_rule.cpp
-    optimizer/strategy/predicate_pushdown_rule.hpp
+    optimizer/strategy/predicate_placement_rule.cpp
+    optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
@@ -364,6 +367,8 @@ set(
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
+    statistics/chunk_statistics/counting_quotient_filter.hpp
+    statistics/chunk_statistics/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.cpp
     statistics/generate_column_statistics.cpp
@@ -551,7 +556,6 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
-    utils/uninitialized_vector.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -559,6 +563,8 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    cqf
+    uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
     ${TBB_LIBRARY}
 )

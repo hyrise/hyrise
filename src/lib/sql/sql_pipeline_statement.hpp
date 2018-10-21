@@ -16,9 +16,9 @@ using PreparedStatementCache = SQLQueryCache<SQLQueryPlan>;
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
-  std::chrono::nanoseconds translate_time_nanos{};
+  std::chrono::nanoseconds sql_translate_time_nanos{};
   std::chrono::nanoseconds optimize_time_nanos{};
-  std::chrono::nanoseconds compile_time_nanos{};
+  std::chrono::nanoseconds lqp_translate_time_nanos{};
   std::chrono::nanoseconds execution_time_nanos{};
 
   bool query_plan_cache_hit = false;
