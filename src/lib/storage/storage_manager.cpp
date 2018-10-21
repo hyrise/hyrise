@@ -52,6 +52,8 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
+const std::map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const { return _tables; }
+
 void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");

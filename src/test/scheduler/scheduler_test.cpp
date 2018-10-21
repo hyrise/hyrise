@@ -4,6 +4,8 @@
 
 #include "base_test.hpp"
 
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -12,6 +14,8 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -190,11 +194,11 @@ TEST_F(SchedulerTest, MultipleOperators) {
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto test_table = load_table("src/test/tables/int_float.tbl", 2);
-  StorageManager::get().add_table("table", std::move(test_table));
+  StorageManager::get().add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
-  auto ts =
-      std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
+  auto a = PQPColumnExpression::from_table(*test_table, ColumnID{0});
+  auto ts = std::make_shared<TableScan>(gt, greater_than_equals_(a, 1234));
 
   auto gt_task = std::make_shared<OperatorTask>(gt, CleanupTemporaries::Yes);
   auto ts_task = std::make_shared<OperatorTask>(ts, CleanupTemporaries::Yes);

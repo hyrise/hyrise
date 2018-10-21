@@ -31,7 +31,13 @@ class IsNullExpression;
 class PQPColumnExpression;
 
 /**
- * Computes a result (i.e., a Column or an ExpressionResult<Result>) from an Expression.
+ * Computes the result of an Expression in three different ways
+ *      - evaluate_expression_to_result(): result is a ExpressionResult<>, one entry per row in the input Chunk, or a
+ *                                         single row if no input chunk is specified
+ *      - evaluate_expression_to_segment(): wraps evaluate_expression_to_result() into a Segment.
+ *      - evaluate_expression_to_pos_list(): Only for Expressions returning Bools; a PosList of the Rows where the
+ *                                           Expression is True. Useful for, e.g., scans with complex predicates
+ *
  * Operates either
  *      - ...on a Chunk, thus returning a value for each row in it
  *      - ...without a Chunk, thus returning a single value (and failing if Columns are encountered in the Expression)
@@ -60,12 +66,14 @@ class ExpressionEvaluator final {
                       const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results = {});
 
   std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
+  PosList evaluate_expression_to_pos_list(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
 
   // Utility to populate a cache of UncorrelatedSelectResults
-  std::shared_ptr<const Table> evaluate_uncorrelated_select_expression(const PQPSelectExpression& expression);
+  static std::shared_ptr<UncorrelatedSelectResults> populate_uncorrelated_select_results_cache(
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
  private:
   template <typename Result>
@@ -181,6 +189,7 @@ class ExpressionEvaluator final {
 
   std::shared_ptr<const Table> _table;
   std::shared_ptr<const Chunk> _chunk;
+  const ChunkID _chunk_id;
   size_t _output_row_count{1};
 
   // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized

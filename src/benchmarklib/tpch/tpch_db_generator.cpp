@@ -8,6 +8,10 @@ extern "C" {
 
 #include <utility>
 
+#include "boost/hana/for_each.hpp"
+#include "boost/hana/integral_constant.hpp"
+#include "boost/hana/zip_with.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 

@@ -140,12 +140,11 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
   std::vector<ChunkInfo> chunk_infos;
   double sum_temperature = 0.0;
   size_t lookback_samples = lookback.count() / counter_history_interval.count();
-  for (const auto& table_name : storage_manager.table_names()) {
-    const auto& table = *storage_manager.get_table(table_name);
-    const auto chunk_count = table.chunk_count();
+  for (const auto& [table_name, table] : storage_manager.tables()) {
+    const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
-      const auto chunk = table.get_chunk(i);
-      if (ChunkMigrationTask::chunk_is_completed(chunk, table.max_chunk_size()) && chunk->has_access_counter()) {
+      const auto chunk = table->get_chunk(i);
+      if (ChunkMigrationTask::chunk_is_completed(chunk, table->max_chunk_size()) && chunk->has_access_counter()) {
         const double temperature = static_cast<double>(chunk->access_counter()->history_sample(lookback_samples));
         sum_temperature += temperature;
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,

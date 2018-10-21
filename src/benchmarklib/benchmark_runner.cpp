@@ -305,21 +305,27 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                      return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
                    });
 
-    nlohmann::json benchmark{
-        {"name", name},
-        {"iterations", query_result.num_iterations.load()},
-        {"iteration_durations", iteration_durations},
-        {"avg_real_time_per_iteration", time_per_query},
-        {"items_per_second", items_per_second},
-        {"time_unit", "ns"},
-    };
+    nlohmann::json benchmark{{"name", name},
+                             {"iterations", query_result.num_iterations.load()},
+                             {"iteration_durations", iteration_durations},
+                             {"avg_real_time_per_iteration", time_per_query},
+                             {"items_per_second", items_per_second},
+                             {"time_unit", "ns"}};
 
     benchmarks.push_back(benchmark);
   }
 
+  // Gather information on the (estimated) table size
+  auto table_size = 0ull;
+  for (const auto& table_pair : StorageManager::get().tables()) {
+    table_size += table_pair.second->estimate_memory_usage();
+  }
+
   const auto total_run_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(_total_run_duration).count();
-  nlohmann::json report{
-      {"context", _context}, {"benchmarks", benchmarks}, {"total_run_duration (s)", total_run_duration_seconds}};
+
+  nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_run_duration_in_s", total_run_duration_seconds}};
+
+  nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}, {"summary", summary}};
 
   stream << std::setw(2) << report << std::endl;
 }
@@ -478,15 +484,27 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
+  std::stringstream compiler;
+// clang-format off
+  #if defined(__clang__)
+    compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
+  #elif defined(__GNUC__)
+    compiler << "gcc " << __GNUC__ << "." << __GNUC_MINOR__;
+  #else
+    compiler << "unknown";
+  #endif
+  // clang-format on
+
   return nlohmann::json{
       {"date", timestamp_stream.str()},
       {"chunk_size", config.chunk_size},
+      {"compiler", compiler.str()},
       {"build_type", IS_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
-      {"max_duration (s)", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
+      {"max_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
