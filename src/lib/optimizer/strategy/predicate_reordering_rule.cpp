@@ -44,13 +44,11 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     if (predicate_nodes.size() > 1) {
       reordered = _reorder_predicates(predicate_nodes);
       reordered |= _apply_to_inputs(predicate_nodes.back());
-    } else {
-      // No chain was found, continue with the current nodes inputren.
-      reordered = _apply_to_inputs(node);
+      return reordered;
     }
-  } else {
-    reordered = _apply_to_inputs(node);
   }
+
+  reordered |= _apply_to_inputs(node);
 
   return reordered;
 }

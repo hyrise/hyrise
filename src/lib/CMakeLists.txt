@@ -95,10 +95,14 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/create_table_node.cpp
+    logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
+    logical_query_plan/drop_table_node.cpp
+    logical_query_plan/drop_table_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
@@ -172,7 +176,8 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
-    operators/join_hash/hash_traits.hpp
+    operators/join_hash/join_hash_traits.hpp
+    operators/join_hash/join_hash_steps.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_mpsm.cpp
@@ -187,8 +192,12 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/maintenance/create_table.cpp
+    operators/maintenance/create_table.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
+    operators/maintenance/drop_table.cpp
+    operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
     operators/maintenance/show_columns.cpp
@@ -212,11 +221,16 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
+    operators/table_scan/between_table_scan_impl.cpp
+    operators/table_scan/between_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/expression_evaluator_table_scan_impl.cpp
+    operators/table_scan/expression_evaluator_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
@@ -249,10 +263,12 @@ set(
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp
     optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/constant_calculation_rule.cpp
+    optimizer/strategy/constant_calculation_rule.hpp
+    optimizer/strategy/exists_reformulation_rule.cpp
+    optimizer/strategy/exists_reformulation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
@@ -261,8 +277,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/logical_expression_reducer_rule.cpp
     optimizer/strategy/logical_expression_reducer_rule.hpp
-    optimizer/strategy/predicate_pushdown_rule.cpp
-    optimizer/strategy/predicate_pushdown_rule.hpp
+    optimizer/strategy/predicate_placement_rule.cpp
+    optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
@@ -339,10 +355,22 @@ set(
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_statistics.cpp
     statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/histograms/abstract_histogram.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram.hpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram.hpp
+    statistics/chunk_statistics/histograms/histogram_utils.cpp
+    statistics/chunk_statistics/histograms/histogram_utils.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
+    statistics/chunk_statistics/counting_quotient_filter.hpp
+    statistics/chunk_statistics/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.cpp
     statistics/generate_column_statistics.cpp
@@ -374,6 +402,7 @@ set(
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment/dictionary_encoder.hpp
     storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp
     storage/fixed_string_dictionary_segment.hpp
@@ -510,8 +539,6 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
-    utils/murmur_hash.cpp
-    utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp
@@ -529,7 +556,6 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
-    utils/uninitialized_vector.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -537,6 +563,8 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    cqf
+    uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
     ${TBB_LIBRARY}
 )

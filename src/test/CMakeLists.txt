@@ -13,7 +13,8 @@ set(
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     cost_model/cost_estimator_test.cpp
-    expression/expression_evaluator_test.cpp
+    expression/expression_evaluator_to_pos_list_test.cpp
+    expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp
     expression/expression_test.cpp
     expression/expression_utils_test.cpp
@@ -25,12 +26,16 @@ set(
     import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
+    lib/import_export/csv_parser_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
+    lib/utils/load_table_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
+    logical_query_plan/create_table_node_test.cpp
     logical_query_plan/delete_node_test.cpp
+    logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
     logical_query_plan/insert_node_test.cpp
@@ -63,13 +68,17 @@ set(
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
     operators/join_hash_test.cpp
+    operators/join_hash_types_test.cpp
+    operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
     operators/join_null_test.cpp
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
+    operators/maintenance/create_table_test.cpp
     operators/maintenance/drop_view_test.cpp
+    operators/maintenance/drop_table_test.cpp
     operators/maintenance/show_columns_test.cpp
     operators/maintenance/show_tables_test.cpp
     operators/operator_deep_copy_test.cpp
@@ -79,8 +88,10 @@ set(
     operators/product_test.cpp
     operators/projection_test.cpp
     operators/sort_test.cpp
+    operators/table_scan_between_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
+    operators/typed_operator_base_test.hpp
     operators/union_all_test.cpp
     operators/union_positions_test.cpp
     operators/update_test.cpp
@@ -93,13 +104,13 @@ set(
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
-    optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
+    optimizer/strategy/constant_calculation_rule_test.cpp
+    optimizer/strategy/exists_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/predicate_pushdown_rule_test.cpp
-    optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     scheduler/scheduler_test.cpp
@@ -116,8 +127,14 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
-    statistics/chunk_statistics/range_filter_test.cpp
+    statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
+    statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
+    statistics/chunk_statistics/histograms/histogram_utils_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
+    statistics/chunk_statistics/counting_quotient_filter_test.cpp
+    statistics/chunk_statistics/range_filter_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
     statistics/statistics_import_export_test.cpp

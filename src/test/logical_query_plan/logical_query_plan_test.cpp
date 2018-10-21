@@ -355,11 +355,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   // clang-format off
   const auto subselect_b_lqp =
   PredicateNode::make(equals_(a2, 5), node_int_int_int);
-  const auto subselect_b = select_(subselect_b_lqp);
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
 
   const auto subselect_a_lqp =
   PredicateNode::make(equals_(a2, subselect_b), node_int_int_int);
-  const auto subselect_a = select_(subselect_a_lqp);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
 
   const auto lqp =
   PredicateNode::make(greater_than_(a1, subselect_a), node_int_int);
@@ -389,14 +389,14 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
-  const auto parameter_a = parameter_(ParameterID{0}, b1);
+  const auto parameter_a = correlated_parameter_(ParameterID{0}, b1);
 
   // clang-format off
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(add_(a2, parameter_a))),
     ProjectionNode::make(expression_vector(a2, b2, add_(a2, parameter_a)),
       node_int_int_int));
-  const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
+  const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
 
   const auto lqp =
   ProjectionNode::make(expression_vector(a1, sub_select),

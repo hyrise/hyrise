@@ -13,6 +13,8 @@ namespace opossum {
  * referenced value or dictionary segment.
  */
 struct ChunkOffsetMapping {
+  ChunkOffsetMapping(ChunkOffset into_referencing, ChunkOffset into_referenced)
+      : into_referencing(into_referencing), into_referenced(into_referenced) {}
   ChunkOffset into_referencing;  // chunk offset into reference segment
   ChunkOffset into_referenced;   // used to access values in the referenced data segment
 };
@@ -23,8 +25,8 @@ struct ChunkOffsetMapping {
 using ChunkOffsetsList = std::vector<ChunkOffsetMapping>;
 
 using ChunkOffsetsIterator = ChunkOffsetsList::const_iterator;
-using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
+using ChunkOffsetsByChunkID = std::vector<ChunkOffsetsList>;
 
-ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list);
+ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list, const size_t number_of_chunks);
 
 }  // namespace opossum

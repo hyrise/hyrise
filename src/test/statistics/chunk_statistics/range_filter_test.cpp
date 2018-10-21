@@ -36,7 +36,7 @@ class RangeFilterTest : public ::testing::Test {
     auto filter = RangeFilter<T>::build_filter(_values, gap_count + 1);
 
     for (const auto& value : _values) {
-      EXPECT_FALSE(filter->can_prune({value}, PredicateCondition::Equals));
+      EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
     }
 
     // Find `gap_count` largest gaps. We use an std::{{set}} to discard repeated
@@ -58,21 +58,21 @@ class RangeFilterTest : public ::testing::Test {
       auto begin = gap.first;
       auto length = gap.second;
       auto end = begin + length;
-      EXPECT_FALSE(filter->can_prune({begin}, PredicateCondition::Equals));
-      EXPECT_FALSE(filter->can_prune({end}, PredicateCondition::Equals));
+      EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {begin}));
+      EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {end}));
       if constexpr (std::numeric_limits<T>::is_iec559) {
         auto value_in_gap = begin + 0.5 * length;
-        EXPECT_TRUE(filter->can_prune({value_in_gap}, PredicateCondition::Equals));
+        EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {value_in_gap}));
       } else if constexpr (std::is_integral_v<T>) {  // NOLINT
         if (length > 1) {
-          EXPECT_TRUE(filter->can_prune({++begin}, PredicateCondition::Equals));
+          EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {++begin}));
         }
       }
     }
 
     // _in_between should always prune if we have more than one range
     if (gap_count > 1) {
-      EXPECT_TRUE(filter->can_prune(_in_between, PredicateCondition::Equals));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, _in_between));
     }
 
     return filter;
@@ -101,18 +101,18 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
   auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);
 
   for (const auto& value : this->_values) {
-    EXPECT_FALSE(filter->can_prune({value}, PredicateCondition::Equals));
+    EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
   }
 
   // testing for interval bounds
-  EXPECT_TRUE(filter->can_prune({this->_min_value}, PredicateCondition::LessThan));
-  EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::GreaterThan));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThan, {this->_min_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_min_value}));
 
   // cannot prune values in between, even though non-existent
-  EXPECT_FALSE(filter->can_prune({this->_in_between}, PredicateCondition::Equals));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}));
 
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
-  EXPECT_TRUE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThan));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_max_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_max_value}));
 }
 
 // create range filters with varying number of ranges/gaps
@@ -127,15 +127,15 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
   auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 10'000);
 
   for (const auto& value : this->_values) {
-    EXPECT_FALSE(filter->can_prune({value}, PredicateCondition::Equals));
+    EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
   }
 
   // testing for interval bounds
-  EXPECT_TRUE(filter->can_prune({this->_min_value}, PredicateCondition::LessThan));
-  EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::GreaterThan));
-  EXPECT_TRUE(filter->can_prune({this->_in_between}, PredicateCondition::Equals));
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
-  EXPECT_TRUE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThan));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThan, {this->_min_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_min_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_max_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_max_value}));
 }
 
 // this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
@@ -144,38 +144,38 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   for (const auto& value : this->_values) {
-    EXPECT_FALSE(filter->can_prune({value}, PredicateCondition::Equals));
+    EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
   }
 
-  EXPECT_TRUE(filter->can_prune({this->_before_range}, PredicateCondition::LessThan));
-  EXPECT_TRUE(filter->can_prune({this->_min_value}, PredicateCondition::LessThan));
-  EXPECT_FALSE(filter->can_prune({this->_in_between}, PredicateCondition::LessThan));
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThan));
-  EXPECT_FALSE(filter->can_prune({this->_after_range}, PredicateCondition::LessThan));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThan, {this->_before_range}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThan, {this->_min_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThan, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThan, {this->_max_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThan, {this->_after_range}));
 
-  EXPECT_TRUE(filter->can_prune({this->_before_range}, PredicateCondition::LessThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::LessThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_in_between}, PredicateCondition::LessThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::LessThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_after_range}, PredicateCondition::LessThanEquals));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_before_range}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_min_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_max_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::LessThanEquals, {this->_after_range}));
 
-  EXPECT_TRUE(filter->can_prune({this->_before_range}, PredicateCondition::Equals));
-  EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::Equals));
-  EXPECT_TRUE(filter->can_prune({this->_in_between}, PredicateCondition::Equals));
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::Equals));
-  EXPECT_TRUE(filter->can_prune({this->_after_range}, PredicateCondition::Equals));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_before_range}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_min_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_max_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_after_range}));
 
-  EXPECT_FALSE(filter->can_prune({this->_before_range}, PredicateCondition::GreaterThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::GreaterThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_in_between}, PredicateCondition::GreaterThanEquals));
-  EXPECT_FALSE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThanEquals));
-  EXPECT_TRUE(filter->can_prune({this->_after_range}, PredicateCondition::GreaterThanEquals));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_before_range}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_min_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_max_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThanEquals, {this->_after_range}));
 
-  EXPECT_FALSE(filter->can_prune({this->_before_range}, PredicateCondition::GreaterThan));
-  EXPECT_FALSE(filter->can_prune({this->_min_value}, PredicateCondition::GreaterThan));
-  EXPECT_FALSE(filter->can_prune({this->_in_between}, PredicateCondition::GreaterThan));
-  EXPECT_TRUE(filter->can_prune({this->_max_value}, PredicateCondition::GreaterThan));
-  EXPECT_TRUE(filter->can_prune({this->_after_range}, PredicateCondition::GreaterThan));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_before_range}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_min_value}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::GreaterThan, {this->_in_between}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_max_value}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_after_range}));
 }
 
 // test larger value ranges
@@ -200,7 +200,7 @@ TYPED_TEST(RangeFilterTest, LargeValueDomain) {
 
     // additionally, test for further values
     for (auto i = size_t{0}; i < 100; ++i) {
-      EXPECT_TRUE(filter->can_prune({get_random_number<TypeParam>(rng, 1000, 1000)}, PredicateCondition::Equals));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {get_random_number<TypeParam>(rng, 1000, 1000)}));
     }
   }
 }

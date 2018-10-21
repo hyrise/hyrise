@@ -172,6 +172,7 @@ enum class PredicateCondition {
   GreaterThanEquals,
   Between,
   In,
+  NotIn,
   Like,
   NotLike,
   IsNull,
@@ -193,6 +194,8 @@ enum class UnionMode { Positions };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
+
+enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

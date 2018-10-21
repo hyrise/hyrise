@@ -29,15 +29,31 @@ bool LogicalExpressionReducerRule::_apply_to_node(const std::shared_ptr<Abstract
                                                   MapType& previously_reduced_expressions) const {
   auto changed = false;
 
-  std::cout << "\tLooking at node " << node->description() << std::endl;
+  // std::cout << "\tLooking at node " << node->description() << std::endl;
 
   // We only deal with predicates and projections, as these are the only LQP node types that handle complex expressions
   if (node->type == LQPNodeType::Predicate) {
     const auto& predicate_node = std::static_pointer_cast<PredicateNode>(node);
-    // It doesn't hurt to have a temporary vector here, because the top-level expression will not be changed anyway, only expressions further down are. This is verified below.
     auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{predicate_node->predicate};
+
     changed |= _apply_to_expressions(expressions, previously_reduced_expressions);
-    DebugAssert(expressions[0] == predicate_node->predicate, "Unexpected change in predicate");
+    DebugAssert(expressions.size() == 1, "A PredicateNode should not have more than one top-level expression");
+
+    // If we are working on a predicate, we can extract the elements from a top-level conjunctive chain and place them into their own predicate
+    ExpressionUnorderedSet and_expressions;
+    _collect_chained_logical_expressions(expressions[0], LogicalOperator::And, and_expressions);
+
+    if (and_expressions.size() > 1) {
+      // std::cout << "Found " << and_expressions.size() << " expressions" << std::endl;
+      for(const auto& predicate : and_expressions) {
+        // std::cout << "Extracting " << predicate->as_column_name() << std::endl;
+        auto new_predicate_node = PredicateNode::make(predicate);
+        // std::cout << "Created " << new_predicate_node->description() << std::endl;
+        lqp_insert_node(predicate_node, LQPInputSide::Left, new_predicate_node);
+      }
+      lqp_remove_node(predicate_node);
+    }
+
   } else if (node->type == LQPNodeType::Projection) {
     const auto& projection_node = std::static_pointer_cast<ProjectionNode>(node);
     changed |= _apply_to_expressions(projection_node->expressions, previously_reduced_expressions);
@@ -59,13 +75,13 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
   auto changed = false;
 
   for (auto& expression : expressions) {
-    std::cout << "\tLooking at expression " << expression->as_column_name() << std::endl;
+    // std::cout << "\tLooking at expression " << expression->as_column_name() << std::endl;
     visit_expression(expression, [&](auto& subexpression) {
       // Step 0: Check if we already reduced this expression previously, if yes, reuse it
       auto reduced_expression_it = previously_reduced_expressions.find(subexpression);
       if (reduced_expression_it != previously_reduced_expressions.cend()) {
         subexpression = reduced_expression_it->second;
-        std::cout << "\tReused." << std::endl;
+        // std::cout << "\tReused." << std::endl;
         return ExpressionVisitation::DoNotVisitArguments;
       }
 
@@ -80,9 +96,9 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
         ExpressionUnorderedSet or_expressions;
         _collect_chained_logical_expressions(subexpression, LogicalOperator::Or, or_expressions);
 
-        std::cout << "\t\tOr expressions: " << std::endl;
-        for (const auto& subexpression : or_expressions) {
-          std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
+        // std::cout << "\t\tOr expressions: " << std::endl;
+        for (auto& subexpression : or_expressions) {
+          // std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
         }
 
         ExpressionUnorderedSet common_and_expressions;
@@ -93,12 +109,12 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
           _collect_chained_logical_expressions(*or_expression_it, LogicalOperator::And, common_and_expressions);
           ++or_expression_it;
           while (or_expression_it != or_expressions.end()) {
-            std::cout << "\t\tLooking in next OR: " << (*or_expression_it)->as_column_name() << std::endl;
+            // std::cout << "\t\tLooking in next OR: " << (*or_expression_it)->as_column_name() << std::endl;
             ExpressionUnorderedSet current_and_expressions;
             _collect_chained_logical_expressions(*or_expression_it, LogicalOperator::And, current_and_expressions);
             for (auto and_expression_it = common_and_expressions.begin();
                  and_expression_it != common_and_expressions.end();) {
-              std::cout << "\t\t\tTesting: " << (*and_expression_it)->as_column_name() << std::endl;
+              // std::cout << "\t\t\tTesting: " << (*and_expression_it)->as_column_name() << std::endl;
               if (!current_and_expressions.count(*and_expression_it)) {
                 and_expression_it = common_and_expressions.erase(and_expression_it);
               } else {
@@ -108,9 +124,9 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
             ++or_expression_it;
           }
 
-          std::cout << "\t\tCommon expressions: " << std::endl;
-          for (const auto& subexpression : common_and_expressions) {
-            std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
+          // std::cout << "\t\tCommon expressions: " << std::endl;
+          for (const auto& subexpression : common_and_expressions) {  // TODO fix shadowing
+            // std::cout << "\t\t\t- " << subexpression->as_column_name() << std::endl;
           }
 
           // Step 3: If there are no common_and_expressions, we are done.
@@ -139,7 +155,7 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
             new_chain = and_(subexpression, new_chain);
           }
 
-          std::cout << "New expression: " << new_chain->as_column_name() << std::endl;
+          // std::cout << "New expression: " << new_chain->as_column_name() << std::endl;
 
           // Step 4.3: Store the result and replace it in the node that is to be optimized
           previously_reduced_expressions.emplace(subexpression, new_chain);

@@ -20,7 +20,10 @@
 #include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
 #include "optimizer/optimizer.hpp"
@@ -112,6 +115,7 @@ Console::Console()
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
+  register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
@@ -353,7 +357,12 @@ int Console::_help(const std::string&) {
   out("Available commands:\n");
   out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  load FILE TABLENAME                     - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");  // NOLINT
+  out("  load FILEPATH TABLENAME                 - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("                                               The import type is chosen by the type of FILEPATH.\n");
+  out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
+  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
+  out("                                               The export type is chosen by the type of FILEPATH.\n");
+  out("                                                 Supported types: '.bin', '.csv'\n");
   out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
   out("  print TABLENAME                         - Fully print the given table (including MVCC data)\n");
   out("  visualize [options] [SQL]               - Visualize a SQL query\n");
@@ -480,8 +489,61 @@ int Console::_load_table(const std::string& args) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
+  } else if (extension == "bin") {
+    auto importer = std::make_shared<ImportBinary>(filepath, tablename);
+    try {
+      importer->execute();
+    } catch (const std::exception& exception) {
+      out("Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
   } else {
     out("Error: Unsupported file extension '" + extension + "'\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
+}
+
+int Console::_export_table(const std::string& args) {
+  std::vector<std::string> arguments = trim_and_split(args);
+
+  if (arguments.size() != 2) {
+    out("Usage:\n");
+    out("  export TABLENAME FILEPATH\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& tablename = arguments[0];
+  const std::string& filepath = arguments[1];
+
+  auto& storage_manager = StorageManager::get();
+  if (!storage_manager.has_table(tablename)) {
+    out("Table does not exist in StorageManager");
+    return ReturnCode::Error;
+  }
+
+  std::vector<std::string> file_parts;
+  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
+  const std::string& extension = file_parts.back();
+
+  out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  auto gt = std::make_shared<GetTable>(tablename);
+  gt->execute();
+
+  try {
+    if (extension == "bin") {
+      auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
+      ex->execute();
+    } else if (extension == "csv") {
+      auto ex = std::make_shared<opossum::ExportCsv>(gt, filepath);
+      ex->execute();
+    } else {
+      out("Exporting to extension \"" + extension + "\" is not supported.\n");
+      return ReturnCode::Error;
+    }
+  } catch (const std::exception& exception) {
+    out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
@@ -523,11 +585,11 @@ int Console::_visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  const std::string EXEC = "exec";
-  const std::string NOEXEC = "noexec";
-  const std::string PQP = "pqp";
-  const std::string LQP = "lqp";
-  const std::string UNOPTLQP = "unoptlqp";
+  constexpr char EXEC[] = "exec";
+  constexpr char NOEXEC[] = "noexec";
+  constexpr char PQP[] = "pqp";
+  constexpr char LQP[] = "lqp";
+  constexpr char UNOPTLQP[] = "unoptlqp";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default

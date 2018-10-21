@@ -134,7 +134,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   TableColumnDefinitions _output_column_definitions;
   Segments _output_segments;
 
-  Segments _groupby_segments;
+  pmr_vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
 };
 

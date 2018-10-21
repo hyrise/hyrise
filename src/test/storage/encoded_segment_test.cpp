@@ -234,11 +234,4 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
   });
 }
 
-TEST_P(EncodedSegmentTest, IsImmutable) {
-  auto value_segment = this->create_int_w_null_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
-
-  EXPECT_THROW(base_encoded_segment->append(AllTypeVariant{}), std::logic_error);
-}
-
 }  // namespace opossum
