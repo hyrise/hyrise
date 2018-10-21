@@ -367,6 +367,8 @@ set(
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
+    statistics/chunk_statistics/counting_quotient_filter.hpp
+    statistics/chunk_statistics/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.cpp
     statistics/generate_column_statistics.cpp
@@ -559,6 +561,7 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    cqf
     uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
     ${TBB_LIBRARY}
