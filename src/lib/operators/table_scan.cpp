@@ -151,7 +151,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       } else {
         matches_out->guarantee_single_chunk();
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
-          auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, matches_out);
           out_segments.push_back(ref_segment_out);
         }
       }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "storage/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {

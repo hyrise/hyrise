@@ -51,11 +51,7 @@ struct PosList final : private pmr_vector<RowID> {
   /* (8 ) */ PosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
-  PosList& operator=(PosList&& other) {
-    _references_single_chunk = other._references_single_chunk;
-    Vector::operator=(std::move(other));
-    return *this;
-  }
+  PosList& operator=(PosList&& other) = default;
 
   void guarantee_single_chunk() { _references_single_chunk = true; }
 

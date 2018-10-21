@@ -35,8 +35,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList
     mapping.original_positions.emplace_back(original_position++);
   }
 
-  // Convert the shared_ptr<PosList> to shared_ptr<const PosList> :/
-  return PosListsByChunkID{pos_lists_by_chunk_id.begin(), pos_lists_by_chunk_id.end()};
+  return pos_lists_by_chunk_id;
 }
 
 }  // namespace opossum
