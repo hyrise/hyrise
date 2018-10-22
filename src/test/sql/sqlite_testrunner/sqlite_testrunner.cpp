@@ -55,7 +55,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       _sqlite->create_table_from_tbl(table_file, table_name);
 
-      std::shared_ptr<Table> table = load_table(table_file);
+      std::shared_ptr<Table> table = load_table(table_file, 10);
       StorageManager::get().add_table(table_name, std::move(table));
     }
 

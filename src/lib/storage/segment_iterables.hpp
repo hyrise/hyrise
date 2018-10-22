@@ -92,9 +92,8 @@ class SegmentIterable {
    */
   template <typename Container>
   void materialize_values(Container& container) const {
-    DebugAssert(container.empty(), "Trying to materialize into a non-empty container");
-    container.resize(_self()._on_size());
-    size_t index = 0;
+    size_t index = container.size();
+    container.resize(container.size() + _self()._on_size());
     for_each([&](const auto& value) { container[index++] = value.value(); });
   }
 
@@ -107,9 +106,8 @@ class SegmentIterable {
    */
   template <typename Container>
   void materialize_values_and_nulls(Container& container) const {
-    DebugAssert(container.empty(), "Trying to materialize into a non-empty container");
-    container.resize(_self()._on_size());
-    size_t index = 0;
+    size_t index = container.size();
+    container.resize(container.size() + _self()._on_size());
     for_each([&](const auto& value) { container[index++] = std::make_pair(value.is_null(), value.value()); });
   }
 
@@ -119,9 +117,8 @@ class SegmentIterable {
    */
   template <typename Container>
   void materialize_nulls(Container& container) const {
-    DebugAssert(container.empty(), "Trying to materialize into a non-empty container");
-    container.resize(_self()._on_size());
-    size_t index = 0;
+    size_t index = container.size();
+    container.resize(container.size() + _self()._on_size());
     for_each([&](const auto& value) { container[index++] = value.is_null(); });
   }
 

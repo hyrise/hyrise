@@ -82,8 +82,7 @@ size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) cons
 
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::_hash(const ElementType& value) const {
-  auto hash = std::hash<ElementType>{}(value);
-  return static_cast<size_t>(hash);
+  return std::hash<ElementType>{}(value);
 }
 
 template <typename ElementType>
