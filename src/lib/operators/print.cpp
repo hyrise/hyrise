@@ -68,7 +68,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       continue;
     }
 
-    _out << "=== Chunk " << chunk_id << " === " << std::endl;
+    _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
     if (chunk->size() == 0) {
       _out << "Empty chunk." << std::endl;
