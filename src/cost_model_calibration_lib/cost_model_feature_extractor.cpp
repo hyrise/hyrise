@@ -3,6 +3,8 @@
 #include <sys/resource.h>
 
 #include "all_parameter_variant.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "feature/calibration_constant_hardware_features.hpp"
 #include "feature/calibration_example.hpp"
 #include "feature/calibration_runtime_hardware_features.hpp"
@@ -72,9 +74,9 @@ const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
 
   if (left_input_row_count > 0 && right_input_row_count > 0) {
     if (left_input_row_count > right_input_row_count) {
-      operator_features.input_table_size_ratio = left_input_row_count / right_input_row_count;
+      operator_features.input_table_size_ratio = left_input_row_count / static_cast<float>(right_input_row_count);
     } else {
-      operator_features.input_table_size_ratio = right_input_row_count / left_input_row_count;
+      operator_features.input_table_size_ratio = right_input_row_count / static_cast<float>(left_input_row_count);
     }
   }
 
@@ -120,34 +122,62 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
 
   // TODO(Sven): is this necessary? TableScans on empty table should still be predicted, right?
   if (chunk_count <= ChunkID{0}) {
-    return std::nullopt;
+    return {};
   }
 
-  //  features.scan_operator_type = table_scan_op->predicate().predicate_condition;
+  const auto& table_condition = table_scan_op->predicate();
+  if (table_condition->type == ExpressionType::Predicate) {
+    const auto & casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
 
-  //  const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
-  //  features.scan_segment_data_type = segment->data_type();
+    features.scan_operator_type = casted_predicate->predicate_condition;
 
-  //  const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-  //  features.scan_segment_encoding = encoding_reference_pair.first;
-  //  features.is_scan_segment_reference_segment = encoding_reference_pair.second;
-  //  features.scan_segment_memory_usage_bytes =
-  //      _get_memory_usage_for_column(left_input_table, table_scan_op->predicate().column_id);
-  //
-  //  if (is_column_id(table_scan_op->predicate().value)) {
-  //    // Facing table scan with column_id left and right of operator
-  //    const auto second_scan_id = boost::get<ColumnID>(table_scan_op->predicate().value);
-  //    const auto second_scan_segment = left_input_table->get_chunk(ChunkID{0})->get_segment(second_scan_id);
-  //    const auto second_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(second_scan_segment);
-  //
-  //    features.uses_second_segment = true;
-  //
-  //    const auto second_encoding_reference_pair = _get_encoding_type_for_segment(segment);
-  //    features.is_second_scan_segment_reference_segment = second_encoding_reference_pair.second;
-  //    features.second_scan_segment_encoding = second_encoding_reference_pair.first;
-  //    features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, second_scan_id);
-  //    features.second_scan_segment_data_type = second_scan_segment->data_type();
-  //  }
+    const auto& predicate_arguments = casted_predicate->arguments;
+
+    // TODO(Sven): for now, only column expressions are evaluated as they are expected to be expensive
+
+    // TODO(Sven): This expects a binary expression, or between
+    if (predicate_arguments.size() == 2 || predicate_arguments.size() == 3) {
+        // Handling first argument
+        const auto &first_argument = predicate_arguments[0];
+
+        if (first_argument->type == ExpressionType::PQPColumn) {
+            const auto &column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(first_argument);
+            const auto &column_id = column_expression->column_id;
+
+            features.scan_segment_data_type = column_expression->data_type();
+
+            // TODO(Sven): What should we do when there are different encodings across different chunks?
+            if (chunk_count > ChunkID{0}) {
+                const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
+
+                const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
+                features.scan_segment_encoding = encoding_reference_pair.first;
+                features.is_scan_segment_reference_segment = encoding_reference_pair.second;
+                features.scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
+            }
+        }
+        // Handling second argument
+        const auto &second_argument = predicate_arguments[1];
+
+        if (second_argument->type == ExpressionType::PQPColumn) {
+            const auto &column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(second_argument);
+            const auto &column_id = column_expression->column_id;
+
+            features.uses_second_segment = true;
+            features.second_scan_segment_data_type = column_expression->data_type();
+
+            // TODO(Sven): What should we do when there are different encodings across different chunks?
+            if (chunk_count > ChunkID{0}) {
+                const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
+
+                const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
+                features.second_scan_segment_encoding = encoding_reference_pair.first;
+                features.is_second_scan_segment_reference_segment = encoding_reference_pair.second;
+                features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
+            }
+        }
+    }
+  }
 
   // Mainly for debugging purposes
   features.scan_operator_description = op->description(DescriptionMode::SingleLine);
@@ -188,9 +218,6 @@ std::pair<EncodingType, bool> CostModelFeatureExtractor::_get_encoding_type_for_
     }
     return std::make_pair(EncodingType::Unencoded, false);
   }
-
-  //
-  //    return std::make_pair(EncodingType::Unencoded, false);
 }
 
 const std::optional<CalibrationProjectionFeatures> CostModelFeatureExtractor::_extract_features_for_operator(

@@ -152,7 +152,6 @@ const std::optional<std::pair<std::pair<std::string, CalibrationColumnSpecificat
 const std::optional<std::string> CalibrationQueryGenerator::_generate_aggregate(
     const CalibrationTableSpecification& table_definition) {
   auto string_template = "SELECT COUNT(*) FROM %1% WHERE %2%;";
-
   auto table_name = table_definition.table_name;
 
   auto column_definitions = table_definition.columns;
