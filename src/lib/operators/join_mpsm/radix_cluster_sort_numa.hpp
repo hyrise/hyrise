@@ -219,8 +219,7 @@ class RadixClusterSortNUMA {
               (*output_cluster)[insert_position] = entry;
               ++insert_position;
             }
-          },
-          true);
+          });
       cluster_jobs.push_back(job);
       job->schedule(node_id);
     }
@@ -253,8 +252,7 @@ class RadixClusterSortNUMA {
           [&output, &input_chunks, node_id, radix_bitmask, this]() {
             (*output)[node_id] = _cluster((*input_chunks)[node_id],
                                           [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
-          },
-          true);
+          });
 
       cluster_jobs.push_back(job);
       job->schedule(node_id);
@@ -301,8 +299,7 @@ class RadixClusterSortNUMA {
 
               std::copy(src->begin(), src->end(), std::back_inserter(*materialized_segment));
             }
-          },
-          true);
+          });
 
       repartition_jobs.push_back(job);
       job->schedule(numa_node);
@@ -325,8 +322,7 @@ class RadixClusterSortNUMA {
             [cluster]() {
               std::sort(cluster->begin(), cluster->end(),
                         [](auto& left, auto& right) { return left.value < right.value; });
-            },
-            true);
+            });
 
         sort_jobs.push_back(job);
         job->schedule(partition._node_id);

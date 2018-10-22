@@ -109,7 +109,7 @@ void AbstractTask::_on_predecessor_done() {
       auto worker = Worker::get_this_thread_worker();
       DebugAssert(static_cast<bool>(worker), "No worker");
 
-      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::Highest));
+      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"
