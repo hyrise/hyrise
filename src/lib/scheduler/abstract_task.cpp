@@ -92,8 +92,7 @@ void AbstractTask::_join_without_replacement_worker() {
 }
 
 void AbstractTask::execute() {
-  const auto id = _id.load();
-  DTRACE_PROBE3(HYRISE, JOB_START, id, _description.c_str(), reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE3(HYRISE, JOB_START, _id.load(), _description.c_str(), reinterpret_cast<uintptr_t>(this));
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 

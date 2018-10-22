@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -11,6 +12,13 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -21,6 +29,7 @@
 #include "storage/table.hpp"
 #include "table_scan/between_table_scan_impl.hpp"
 #include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
 #include "table_scan/single_column_table_scan_impl.hpp"
@@ -30,59 +39,64 @@
 
 namespace opossum {
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in, const OperatorScanPredicate& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate{predicate} {}
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
+                     const std::shared_ptr<AbstractExpression>& predicate)
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
 
 TableScan::~TableScan() = default;
 
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
+const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
+
 const std::string TableScan::name() const { return "TableScan"; }
 
 const std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-  return name() + separator + _predicate.to_string(input_table_left());
+
+  std::stringstream stream;
+
+  stream << name() << separator;
+  stream << "Impl: " << _impl_description;
+  stream << separator << _predicate->as_column_name();
+
+  return stream.str();
 }
 
-const OperatorScanPredicate& TableScan::predicate() const { return _predicate; }
+void TableScan::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
+  expressions_set_transaction_context({_predicate}, transaction_context);
+}
 
 void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  if (is_parameter_id(_predicate.value)) {
-    const auto value_iter = parameters.find(boost::get<ParameterID>(_predicate.value));
-    if (value_iter != parameters.end()) _predicate.value = value_iter->second;
-  }
-
-  if (_predicate.value2 && is_parameter_id(*_predicate.value2)) {
-    const auto value_iter = parameters.find(boost::get<ParameterID>(*_predicate.value2));
-    if (value_iter != parameters.end()) _predicate.value2 = value_iter->second;
-  }
+  expression_set_parameters(_predicate, parameters);
 }
 
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<TableScan>(copied_input_left, _predicate);
+  return std::make_shared<TableScan>(copied_input_left, _predicate->deep_copy());
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {
-  _in_table = input_table_left();
+  const auto in_table = input_table_left();
 
-  _init_scan();
+  const auto output_table = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
 
-  _output_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
+  _impl = create_impl();
+  _impl_description = _impl->description();
 
   std::mutex output_mutex;
 
   const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_in_table->chunk_count() - excluded_chunk_set.size());
+  jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
 
-  for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
 
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-      const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
+      const auto chunk_guard = in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
@@ -101,12 +115,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        * (b) the reference segments of the input table point to the same positions in the same order
        *     (i.e. they share their position list).
        */
-      if (_in_table->type() == TableType::References) {
-        const auto chunk_in = _in_table->get_chunk(chunk_id);
+      if (in_table->type() == TableType::References) {
+        const auto chunk_in = in_table->get_chunk(chunk_id);
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
-        for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
+        for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
           auto segment_in = chunk_in->get_segment(column_id);
 
           auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
@@ -133,14 +147,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           out_segments.push_back(ref_segment_out);
         }
       } else {
-        for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
-          auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
+        for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, matches_out);
           out_segments.push_back(ref_segment_out);
         }
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      _output_table->append_chunk(out_segments, chunk_guard->get_allocator(), chunk_guard->access_counter());
+      output_table->append_chunk(out_segments, chunk_guard->get_allocator(), chunk_guard->access_counter());
     });
 
     jobs.push_back(job_task);
@@ -149,57 +163,98 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return _output_table;
+  return output_table;
+}
+
+std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
+  /**
+   * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
+   * closely examine the predicate expression.
+   * Use the ExpressionEvaluator as a fallback if no dedicated scanning implementation exists for an expression.
+   */
+
+  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate)) {
+    const auto predicate_condition = binary_predicate_expression->predicate_condition;
+
+    const auto left_operand = binary_predicate_expression->left_operand();
+    const auto right_operand = binary_predicate_expression->right_operand();
+
+    const auto left_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(left_operand);
+    const auto right_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(right_operand);
+
+    auto left_value = std::optional<AllTypeVariant>{};
+    auto right_value = std::optional<AllTypeVariant>{};
+
+    if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(left_operand)) {
+      left_value = left_value_expression->value;
+    }
+    if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(left_operand)) {
+      left_value = left_parameter_expression->value();
+    }
+    if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(right_operand)) {
+      right_value = right_value_expression->value;
+    }
+    if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(right_operand)) {
+      right_value = right_parameter_expression->value();
+    }
+
+    if (left_value && left_value->type() == typeid(NullValue)) left_value.reset();
+    if (right_value && right_value->type() == typeid(NullValue)) right_value.reset();
+
+    const auto is_like_predicate =
+        predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike;
+
+    // Predicate pattern: <column> LIKE <non-null value>
+    if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
+        right_value) {
+      return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                 predicate_condition, type_cast<std::string>(*right_value));
+    }
+
+    // Predicate pattern: <column> <binary predicate_condition> <non-null value>
+    if (left_column_expression && right_value) {
+      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                         predicate_condition, *right_value);
+    }
+    if (right_column_expression && left_value) {
+      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), right_column_expression->column_id,
+                                                         flip_predicate_condition(predicate_condition), *left_value);
+    }
+
+    // Predicate pattern: <column> <binary predicate_condition> <column>
+    if (left_column_expression && right_column_expression) {
+      return std::make_unique<ColumnComparisonTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                             predicate_condition, right_column_expression->column_id);
+    }
+  }
+
+  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(_predicate)) {
+    // Predicate pattern: <column> IS NULL
+    if (const auto left_column_expression =
+            std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
+      return std::make_unique<IsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                   is_null_expression->predicate_condition);
+    }
+  }
+
+  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(_predicate)) {
+    const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
+
+    const auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
+    const auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
+
+    // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
+    if (left_column && lower_bound_value && upper_bound_value &&
+        lower_bound_value->type() == upper_bound_value->type()) {
+      return std::make_unique<BetweenTableScanImpl>(input_table_left(), left_column->column_id, *lower_bound_value,
+                                                    *upper_bound_value);
+    }
+  }
+
+  // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), _predicate);
 }
 
 void TableScan::_on_cleanup() { _impl.reset(); }
-
-void TableScan::_init_scan() {
-  const auto column_id = _predicate.column_id;
-  const auto condition = _predicate.predicate_condition;
-  const auto parameter = _predicate.value;
-
-  if (condition == PredicateCondition::Like || condition == PredicateCondition::NotLike) {
-    const auto left_column_type = _in_table->column_data_type(column_id);
-    Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
-
-    Assert(is_variant(parameter), "Right parameter must be variant.");
-
-    const auto right_value = boost::get<AllTypeVariant>(parameter);
-
-    Assert(!variant_is_null(right_value), "Right value must not be NULL.");
-
-    const auto right_wildcard = type_cast<std::string>(right_value);
-
-    _impl = std::make_unique<LikeTableScanImpl>(_in_table, column_id, condition, right_wildcard);
-
-    return;
-  } else if (condition == PredicateCondition::IsNull || condition == PredicateCondition::IsNotNull) {
-    _impl = std::make_unique<IsNullTableScanImpl>(_in_table, column_id, condition);
-    return;
-  } else if (condition == PredicateCondition::Between) {
-    const auto left_value = boost::get<AllTypeVariant>(parameter);
-
-    Assert(_predicate.value2, "Expected right value for BETWEEN");
-    const auto right_value = boost::get<AllTypeVariant>(*_predicate.value2);
-
-    Assert(left_value.which() == right_value.which(),
-                "Expected left and right value to be of the same type (see operator_scan_predicate.cpp)");
-    Assert(!variant_is_null(left_value) && !variant_is_null(right_value),
-                "Expected BETWEEN values to be non-null");
-
-    _impl = std::make_unique<BetweenTableScanImpl>(_in_table, column_id, left_value, right_value);
-  } else if (is_variant(parameter)) {
-    const auto right_value = boost::get<AllTypeVariant>(parameter);
-
-    _impl = std::make_unique<SingleColumnTableScanImpl>(_in_table, column_id, condition, right_value);
-  } else if (is_column_id(parameter)) {
-    const auto right_column_id = boost::get<ColumnID>(parameter);
-
-    _impl = std::make_unique<ColumnComparisonTableScanImpl>(_in_table, column_id, condition, right_column_id);
-  } else {
-    Fail("Never expected to end up here...");
-  }
-}
 
 }  // namespace opossum

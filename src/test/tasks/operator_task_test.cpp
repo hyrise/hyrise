@@ -5,6 +5,7 @@
 
 #include "base_test.hpp"
 
+#include "expression/expression_functional.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -12,6 +13,8 @@
 #include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -40,7 +43,8 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto ts = std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 1234});
+  auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
+  auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
 
   auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
@@ -77,12 +81,11 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto gt_a = std::make_shared<GetTable>("table_a");
-  auto scan_a = std::make_shared<TableScan>(
-      gt_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
-  auto scan_b =
-      std::make_shared<TableScan>(scan_a, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 1000});
-  auto scan_c =
-      std::make_shared<TableScan>(scan_a, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThan, 2000});
+  auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
+  auto b = PQPColumnExpression::from_table(*_test_table_a, "b");
+  auto scan_a = std::make_shared<TableScan>(gt_a, greater_than_equals_(a, 1234));
+  auto scan_b = std::make_shared<TableScan>(scan_a, less_than_(b, 1000));
+  auto scan_c = std::make_shared<TableScan>(scan_a, greater_than_(b, 2000));
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
   auto tasks = OperatorTask::make_tasks_from_operator(union_positions, CleanupTemporaries::Yes);

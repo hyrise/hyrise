@@ -585,11 +585,11 @@ int Console::_visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  const std::string EXEC = "exec";
-  const std::string NOEXEC = "noexec";
-  const std::string PQP = "pqp";
-  const std::string LQP = "lqp";
-  const std::string UNOPTLQP = "unoptlqp";
+  constexpr char EXEC[] = "exec";
+  constexpr char NOEXEC[] = "noexec";
+  constexpr char PQP[] = "pqp";
+  constexpr char LQP[] = "lqp";
+  constexpr char UNOPTLQP[] = "unoptlqp";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default

@@ -158,4 +158,51 @@ TEST_F(HistogramUtilsTest, CommonPrefixLength) {
   EXPECT_EQ(common_prefix_length("abcd", "abce"), 3ul);
 }
 
+TEST_F(HistogramUtilsTest, NumberToStringBruteForce) {
+  const std::string supported_characters{"abcd"};
+  constexpr size_t prefix_length{3u};
+  constexpr auto max = 84ul;
+
+  EXPECT_EQ(convert_string_to_number_representation("", supported_characters, prefix_length), 0ul);
+  EXPECT_EQ(convert_string_to_number_representation("ddd", supported_characters, prefix_length), max);
+
+  for (auto number = 0u; number < max; number++) {
+    EXPECT_LT(convert_number_representation_to_string(number, supported_characters, prefix_length),
+              convert_number_representation_to_string(number + 1, supported_characters, prefix_length));
+  }
+}
+
+TEST_F(HistogramUtilsTest, StringToNumberBruteForce) {
+  const std::string supported_characters{"abcd"};
+  constexpr size_t prefix_length{3u};
+  constexpr auto max = 84ul;
+
+  EXPECT_EQ(convert_string_to_number_representation("", supported_characters, prefix_length), 0ul);
+  EXPECT_EQ(convert_string_to_number_representation("ddd", supported_characters, prefix_length), max);
+
+  for (auto number = 0u; number < max; number++) {
+    EXPECT_EQ(convert_string_to_number_representation(
+                  convert_number_representation_to_string(number, supported_characters, prefix_length),
+                  supported_characters, prefix_length),
+              number);
+  }
+}
+
+TEST_F(HistogramUtilsTest, NextValueBruteForce) {
+  const std::string supported_characters{"abcd"};
+  constexpr size_t prefix_length{3u};
+  constexpr auto max = 84ul;
+
+  EXPECT_EQ(convert_string_to_number_representation("", supported_characters, prefix_length), 0ul);
+  EXPECT_EQ(convert_string_to_number_representation("ddd", supported_characters, prefix_length), max);
+
+  for (auto number = 1u; number <= max; number++) {
+    const auto number_string = convert_number_representation_to_string(number, supported_characters, prefix_length);
+    const auto next_value_of_previous_number =
+        next_value(convert_number_representation_to_string(number - 1, supported_characters, prefix_length),
+                   supported_characters, prefix_length);
+    EXPECT_EQ(number_string, next_value_of_previous_number);
+  }
+}
+
 }  // namespace opossum

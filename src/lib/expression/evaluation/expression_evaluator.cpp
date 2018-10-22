@@ -15,6 +15,7 @@
 #include "expression/cast_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/extract_expression.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
@@ -37,12 +38,104 @@
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+template <typename Functor>
+void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
+  /**
+   * Instantiate @param functor for each PredicateCondition
+   */
+
+  // clang-format off
+  switch (predicate_condition) {
+    case PredicateCondition::Equals:            functor(boost::hana::type<EqualsEvaluator>{});            break;
+    case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
+    case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator >{});         break;
+    case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
+    case PredicateCondition::GreaterThan:       functor(boost::hana::type<GreaterThanEvaluator>{});       break;
+    case PredicateCondition::GreaterThanEquals: functor(boost::hana::type<GreaterThanEqualsEvaluator>{}); break;
+
+    default:
+      Fail("PredicateCondition should be handled in different function");
+  }
+  // clang-format on
+}
+
+std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExpression& expression) {
+  // `a BETWEEN b AND c` --> `a >= b AND a <= c`
+  //
+  // (This is desirable because three expression data types (from three arguments) generate many type
+  // combinations and thus lengthen compile time and increase binary size notably.)
+
+  const auto* between_expression = dynamic_cast<const BetweenExpression*>(&expression);
+  Assert(between_expression, "Expected BetweenExpression");
+
+  const auto gte_expression = greater_than_equals_(between_expression->value(), between_expression->lower_bound());
+  const auto lte_expression = less_than_equals_(between_expression->value(), between_expression->upper_bound());
+
+  return and_(gte_expression, lte_expression);
+}
+
+std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpression& in_expression) {
+  /**
+   * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+   * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
+   *
+   * Out of array_expression.elements(), pick those expressions whose type can be compared with
+   * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+   * "5 IN (6, 5, "Hello")
+   */
+
+  const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression.set());
+  Assert(list_expression, "Expected ListExpression");
+
+  const auto left_is_string = in_expression.value()->data_type() == DataType::String;
+  std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+  for (const auto& element : list_expression->elements()) {
+    if ((element->data_type() == DataType::String) == left_is_string) {
+      type_compatible_elements.emplace_back(element);
+    }
+  }
+
+  if (type_compatible_elements.empty()) {
+    // `5 IN ()` is FALSE as is `NULL IN ()`
+    return value_(0);
+  }
+
+  std::shared_ptr<AbstractExpression> rewritten_expression;
+
+  if (in_expression.is_negated()) {
+    // a NOT IN (1,2,3) --> a != 1 AND a != 2 AND a != 3
+    rewritten_expression = not_equals_(in_expression.value(), type_compatible_elements.front());
+    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+      const auto equals_element = not_equals_(in_expression.value(), type_compatible_elements[element_idx]);
+      rewritten_expression = and_(rewritten_expression, equals_element);
+    }
+  } else {
+    // a IN (1,2,3) --> a == 1 OR a == 2 OR a == 3
+    rewritten_expression = equals_(in_expression.value(), type_compatible_elements.front());
+    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+      const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
+      rewritten_expression = or_(rewritten_expression, equals_element);
+    }
+  }
+
+  return rewritten_expression;
+}
+
+}  // namespace
+
 namespace opossum {
 
 ExpressionEvaluator::ExpressionEvaluator(
     const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
     const std::shared_ptr<const UncorrelatedSelectResults>& uncorrelated_select_results)
-    : _table(table), _chunk(_table->get_chunk(chunk_id)), _uncorrelated_select_results(uncorrelated_select_results) {
+    : _table(table),
+      _chunk(_table->get_chunk(chunk_id)),
+      _chunk_id(chunk_id),
+      _uncorrelated_select_results(uncorrelated_select_results) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
 }
@@ -128,18 +221,15 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
-  // clang-format off
-  switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, EqualsEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, NotEqualsEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEqualsEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEvaluator>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEqualsEvaluator>(left, right);  // NOLINT
+  auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
 
-    default:
-      Fail("PredicateCondition should be handled in different function");
-  }
+  // clang-format off
+  resolve_binary_predicate_evaluator(expression.predicate_condition, [&](const auto evaluator_t) {
+    using Evaluator = typename decltype(evaluator_t)::type;
+    result = _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Evaluator>(left, right);  // NOLINT
+  });
+
+  return result;
   // clang-format on
 }
 
@@ -252,15 +342,16 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
   std::vector<bool> result_nulls;
 
   if (right_expression.type == ExpressionType::List) {
-    const auto& array_expression = static_cast<const ListExpression&>(right_expression);
+    const auto& list_expression = static_cast<const ListExpression&>(right_expression);
 
-    if (array_expression.elements().empty()) {
-      // `x IN ()` is false, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
+    if (list_expression.elements().empty()) {
+      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     if (left_expression.data_type() == DataType::Null) {
-      // `NULL IN ...` is NULL
+      // `NULL [NOT] IN ...` is NULL
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
                                                                            std::vector<bool>{true});
     }
@@ -276,7 +367,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     resolve_data_type(left_expression.data_type(), [&](const auto left_data_type_t) {
       using LeftDataType = typename decltype(left_data_type_t)::type;
 
-      for (const auto& element : array_expression.elements()) {
+      for (const auto& element : list_expression.elements()) {
         if ((element->data_type() == DataType::String) == left_is_string) {
           type_compatible_elements.emplace_back(element);
         }
@@ -291,8 +382,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     });
 
     if (type_compatible_elements.empty()) {
-      // `5 IN ()` is FALSE
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
+      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
@@ -317,7 +409,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           }
           std::sort(right_values.begin(), right_values.end());
 
-          result_values.resize(left_view.size());
+          result_values.resize(left_view.size(), in_expression.is_negated());
           if (left_view.is_nullable()) {
             result_nulls.resize(left_view.size());
           }
@@ -329,7 +421,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             }
             if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
                 it != right_values.cend() && *it == left_view.value(chunk_offset)) {
-              result_values[chunk_offset] = true;
+              result_values[chunk_offset] = !in_expression.is_negated();
             }
           }
         } else {
@@ -342,15 +434,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     }
     PerformanceWarning("Using slow path for IN expression");
 
-    // Nope, it is a more complicated list - falling back to series of ORs:
-    std::shared_ptr<AbstractExpression> predicate_disjunction =
-        equals_(in_expression.value(), type_compatible_elements.front());
-    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
-      const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
-      predicate_disjunction = or_(predicate_disjunction, equals_element);
-    }
-
-    return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*predicate_disjunction);
+    // Nope, it is a list with diverse types - falling back to rewrite of expression:
+    return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
 
   } else if (right_expression.type == ExpressionType::PQPSelect) {
     const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
@@ -396,6 +481,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
             result_nulls[chunk_offset] =
                 (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
+
+            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
           }
 
         } else {
@@ -413,7 +500,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
      */
 
-    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*in_(in_expression.value(), list_(in_expression.set())));
+    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
+        in_expression.predicate_condition, in_expression.value(), list_(in_expression.set())));
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
@@ -431,7 +519,7 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     const AbstractPredicateExpression& predicate_expression) {
   /**
-   * NOTE: This is evaluates predicates, but typical predicates in the WHERE clause of an SQL query will not take this
+   * NOTE: This evaluates predicates, but typical predicates in the WHERE clause of an SQL query will not take this
    * path and go through a dedicates scan operator (e.g. TableScan)
    */
 
@@ -445,21 +533,12 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
-    case PredicateCondition::Between: {
-      // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
-      // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
-      // combinations and thus lengthen compile time and increase binary size notably.
-
-      const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
-      const auto gte_expression = greater_than_equals_(between_expression.value(), between_expression.lower_bound());
-      const auto lte_expression = less_than_equals_(between_expression.value(), between_expression.upper_bound());
-
-      const auto gte_lte_expression = and_(gte_expression, lte_expression);
-
-      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*gte_lte_expression);
-    }
+    case PredicateCondition::Between:
+      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(
+          *rewrite_between_expression(predicate_expression));
 
     case PredicateCondition::In:
+    case PredicateCondition::NotIn:
       return _evaluate_in_expression<ExpressionEvaluator::Bool>(static_cast<const InExpression&>(predicate_expression));
 
     case PredicateCondition::Like:
@@ -593,8 +672,19 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
 
   std::vector<ExpressionEvaluator::Bool> result_values(select_result_tables.size());
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-    result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
+
+  switch (exists_expression.exists_expression_type) {
+    case ExistsExpressionType::Exists:
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+        result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
+      }
+      break;
+
+    case ExistsExpressionType::NotExists:
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+        result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() == 0;
+      }
+      break;
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
@@ -765,7 +855,8 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
                   "All uncorrelated PQPSelectExpression should be cached, if cache is present");
       return {table_iter->second};
     } else {
-      return {evaluate_uncorrelated_select_expression(expression)};
+      // If a select is uncorrelated, it has the same result for all rows, so we just execute it for the first row
+      return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
     }
   }
 
@@ -783,10 +874,25 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_
   return results;
 }
 
-std::shared_ptr<const Table> ExpressionEvaluator::evaluate_uncorrelated_select_expression(
-    const PQPSelectExpression& expression) {
-  DebugAssert(!expression.is_correlated(), "called with correlated select expression");
-  return _evaluate_select_expression_for_row(expression, ChunkOffset{0});
+std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults>
+ExpressionEvaluator::populate_uncorrelated_select_results_cache(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+  auto uncorrelated_select_results = std::make_shared<ExpressionEvaluator::UncorrelatedSelectResults>();
+  auto evaluator = ExpressionEvaluator{};
+  for (const auto& expression : expressions) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+      if (pqp_select_expression && !pqp_select_expression->is_correlated()) {
+        // Uncorrelated select expressions have the same result for every row, so executing them for row 0 is fine.
+        auto result = evaluator._evaluate_select_expression_for_row(*pqp_select_expression, ChunkOffset{0});
+        uncorrelated_select_results->emplace(pqp_select_expression->pqp, std::move(result));
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
+  return uncorrelated_select_results;
 }
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_for_row(
@@ -858,6 +964,152 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
   });
 
   return segment;
+}
+
+PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpression& expression) {
+  /**
+   * Only Expressions returning a Bool can be evaluated to a PosList of matches.
+   *
+   * (Not)In and (Not)Like Expressions are evaluated by generating an ExpressionResult of booleans
+   * (evaluate_expression_to_result<>()) which is then scanned for positive entries.
+   * TODO(anybody) Add fast implementations for (Not)In and (Not)Like as well.
+   *
+   * All other Expression types have dedicated, hopefully fast implementations.
+   */
+
+  auto result_pos_list = PosList{};
+
+  switch (expression.type) {
+    case ExpressionType::Predicate: {
+      const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
+
+      switch (predicate_expression.predicate_condition) {
+        case PredicateCondition::Equals:
+        case PredicateCondition::LessThanEquals:
+        case PredicateCondition::GreaterThanEquals:
+        case PredicateCondition::GreaterThan:
+        case PredicateCondition::NotEquals:
+        case PredicateCondition::LessThan: {
+          _resolve_to_expression_results(
+              *predicate_expression.arguments[0], *predicate_expression.arguments[1],
+              [&](const auto& left_result, const auto& right_result) {
+                using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
+                using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
+
+                resolve_binary_predicate_evaluator(predicate_expression.predicate_condition, [&](const auto functor) {
+                  using ExpressionFunctorType = typename decltype(functor)::type;
+
+                  if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+                                                                         RightDataType>::value) {
+                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+                      if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+
+                      auto matches = ExpressionEvaluator::Bool{0};
+                      ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
+                                              right_result.value(chunk_offset));
+                      if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                    }
+                  } else {
+                    Fail("Argument types not compatible");
+                  }
+                });
+              });
+        } break;
+
+        case PredicateCondition::Between:
+          return evaluate_expression_to_pos_list(*rewrite_between_expression(expression));
+
+        case PredicateCondition::IsNull:
+        case PredicateCondition::IsNotNull: {
+          const auto& is_null_expression = static_cast<const IsNullExpression&>(expression);
+
+          _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
+            if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
+                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            } else {  // PredicateCondition::IsNotNull
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
+                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            }
+          });
+        } break;
+
+        case PredicateCondition::In:
+        case PredicateCondition::NotIn:
+        case PredicateCondition::Like:
+        case PredicateCondition::NotLike: {
+          // Evaluating (Not)In and (Not)Like to PosLists uses evaluate_expression_to_result() and scans the Series
+          // it returns for matches. This is probably slower than a dedicated evaluate-to-PosList implementation
+          // for these ExpressionTypes could be. But
+          // a) such implementations would require lots of code, there is little potential for code sharing between the
+          //    evaluate-to-PosList and evaluate-to-Result implementations
+          // b) Like/In are on the slower end anyway
+          const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
+          result->as_view([&](const auto& result_view) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_view.size(); ++chunk_offset) {
+              if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
+                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+              }
+            }
+          });
+        } break;
+      }
+    } break;
+
+    case ExpressionType::Logical: {
+      const auto& logical_expression = static_cast<const LogicalExpression&>(expression);
+
+      const auto left_pos_list = evaluate_expression_to_pos_list(*logical_expression.arguments[0]);
+      const auto right_pos_list = evaluate_expression_to_pos_list(*logical_expression.arguments[1]);
+
+      switch (logical_expression.logical_operator) {
+        case LogicalOperator::And:
+          std::set_intersection(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(),
+                                right_pos_list.end(), std::back_inserter(result_pos_list));
+          break;
+
+        case LogicalOperator::Or:
+          std::set_union(left_pos_list.begin(), left_pos_list.end(), right_pos_list.begin(), right_pos_list.end(),
+                         std::back_inserter(result_pos_list));
+          break;
+      }
+
+      return result_pos_list;
+    }
+
+    case ExpressionType::Exists: {
+      const auto& exists_expression = static_cast<const ExistsExpression&>(expression);
+      const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
+      Assert(select_expression, "Expected PQPSelectExpression");
+
+      const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+
+      switch (exists_expression.exists_expression_type) {
+        case ExistsExpressionType::Exists:
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+            if (select_result_tables[chunk_offset]->row_count() > 0) {
+              result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            }
+          }
+          break;
+
+        case ExistsExpressionType::NotExists:
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+            if (select_result_tables[chunk_offset]->row_count() == 0) {
+              result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            }
+          }
+          break;
+      }
+    } break;
+
+    default:
+      Fail("Expression type cannot be evaluated to PosList");
+  }
+
+  return result_pos_list;
 }
 
 template <>

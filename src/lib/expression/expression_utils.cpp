@@ -9,6 +9,7 @@
 #include "lqp_select_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "pqp_select_expression.hpp"
+#include "value_expression.hpp"
 
 namespace opossum {
 
@@ -225,6 +226,18 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   });
 
   return placeholder_found;
+}
+
+std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
+  if (expression.type == ExpressionType::Parameter) {
+    const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
+    DebugAssert(parameter_expression.value(), "ParameterExpression doesn't have a value set");
+    return *parameter_expression.value();
+  } else if (expression.type == ExpressionType::Value) {
+    return static_cast<const ValueExpression&>(expression).value;
+  } else {
+    return std::nullopt;
+  }
 }
 
 }  // namespace opossum
