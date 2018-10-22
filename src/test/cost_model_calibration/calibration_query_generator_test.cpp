@@ -22,8 +22,6 @@ class CalibrationQueryGeneratorTest : public BaseTest {
 };
 
 TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
-  // set up some TableScanOperator
-
   std::map<std::string, CalibrationColumnSpecification> columns = {
       {"columnA", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
       {"columnB", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},

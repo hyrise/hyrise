@@ -27,6 +27,8 @@ class CalibrationQueryGeneratorPredicates {
   static const std::optional<std::string> generate_predicates(
       const PredicateGeneratorFunctor& predicate_generator,
       const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+      const size_t number_of_predicates,
+      const std::string& predicate_join_keyword = "AND",
       const std::string& column_name_prefix = "");
 
   /*
@@ -51,6 +53,11 @@ class CalibrationQueryGeneratorPredicates {
       const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
       const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
       const std::string& column_name_prefix);
+
+    static const std::optional<std::string> generate_predicate_like(
+            const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
+            const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+            const std::string& column_name_prefix);
 
 private:
   static const std::string _generate_table_scan_predicate_value(

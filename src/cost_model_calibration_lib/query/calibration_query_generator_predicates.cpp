@@ -18,11 +18,12 @@ namespace opossum {
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicates(
     const PredicateGeneratorFunctor& predicate_generator,
     const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const size_t number_of_predicates,
+    const std::string& predicate_join_keyword,
     const std::string& column_name_prefix) {
   std::random_device random_device;
   std::mt19937 engine{random_device()};
 
-  size_t number_of_predicates = 2;
   std::vector<std::string> predicates {};
 
   auto column_definitions_copy = column_definitions;
@@ -41,7 +42,7 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
   }
 
   if (predicates.empty()) return {};
-  return boost::algorithm::join(predicates, " AND ");
+  return boost::algorithm::join(predicates, " " + predicate_join_keyword + " ");
 }
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::_generate_between(
@@ -200,6 +201,26 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
   };
 
   return _generate_column_predicate(filter_column_column, filter_column, column_definitions, column_name_prefix);
+}
+
+    const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicate_like(
+            const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
+            const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+            const std::string& column_name_prefix) {
+
+      const auto predicate_template = "%1% %2% %3%";
+      const auto filter_column_name = column_name_prefix + filter_column.first;
+      const auto predicate_sign = "LIKE";
+
+      if (filter_column.second.type != "string") return {};
+
+      auto filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
+      // remove trailing apostroph
+      filter_column_value.pop_back();
+
+      const auto modified = filter_column_value + "*'";
+
+      return boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % modified);
 }
 
 const std::string CalibrationQueryGeneratorPredicates::_generate_table_scan_predicate_value(
