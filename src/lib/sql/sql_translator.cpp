@@ -697,7 +697,9 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
      * but it's the best solution I can come up with right now.
      */
     if (_current_lqp->find_column_id(*sub_expression)) {
-      pre_aggregate_expressions.emplace_back(sub_expression);
+      if (pre_aggregate_expression_set.emplace(sub_expression).second) {
+        pre_aggregate_expressions.emplace_back(sub_expression);
+      }
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
@@ -757,11 +759,23 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
 
   const auto is_aggregate = !aggregate_expressions.empty() || !group_by_expressions.empty();
 
+  const auto pre_aggregate_lqp = _current_lqp;
+
   // Build Aggregate
   if (is_aggregate) {
     // Build pre_aggregate_projection, i.e. evaluate all Expression required for GROUP BY/Aggregates
-    if (pre_aggregate_expressions.size() != _current_lqp->column_expressions().size()) {
-      _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
+    if (!pre_aggregate_expressions.empty()) {
+      bool any_expression_not_yet_available = false;
+      for (const auto& expression : pre_aggregate_expressions) {
+        if (!_current_lqp->find_column_id(*expression)) {
+          any_expression_not_yet_available = true;
+          break;
+        }
+      }
+
+      if (any_expression_not_yet_available) {
+        _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
+      }
     }
     _current_lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, _current_lqp);
   }
@@ -779,6 +793,18 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
 
     if (hsql_expr->type == hsql::kExprStar) {
       AssertInput(_from_clause_result, "Can't SELECT with wildcards since there are no FROM tables specified");
+
+      if (is_aggregate) {
+        // SELECT * is only valid if every input column in named in the GROUP BY clause
+        for (const auto& pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
+          AssertInput(std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
+                                   [&](const auto& group_by_expression) {
+                                     return *pre_aggregate_expression == *group_by_expression;
+                                   }) != group_by_expressions.end(),
+                      std::string("Expression ") + pre_aggregate_expression->as_column_name() +
+                          " was added to SELECT list when resolving *, but it is not part of the GROUP BY clause");
+        }
+      }
 
       if (hsql_expr->table) {
         if (is_aggregate) {

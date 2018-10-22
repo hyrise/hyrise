@@ -421,7 +421,7 @@ TEST_F(SQLTranslatorTest, WhereWithCorrelatedSelect) {
   // clang-format off
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(add_(int_float2_a, parameter_b))),
-    ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, add_(int_float2_a, parameter_b)),
+    ProjectionNode::make(expression_vector(add_(int_float2_a, parameter_b)),
       stored_table_node_int_float2));
   const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_b));
 
@@ -473,7 +473,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(mul_(sum_(a_times_3), int_float_b)),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_times_3),
+      ProjectionNode::make(expression_vector(a_times_3, int_float_b),
       stored_table_node_int_float)));
   // clang-format on
 
@@ -526,7 +526,7 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
   const auto expected_lqp =
   AggregateNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)), expression_vector(),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_times_3),
+      ProjectionNode::make(expression_vector(int_float_b, a_times_3),
       stored_table_node_int_float)));
   // clang-format on
 
@@ -578,7 +578,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
 }
 
 TEST_F(SQLTranslatorTest, GroupByOnly) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, b");
+  const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, a, b");
 
   const auto b_plus_3 = add_(int_float_b, 3);
   const auto a_divided_by_b = div_(int_float_a, int_float_b);
@@ -586,8 +586,8 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 
   // clang-format off
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_b), expression_vector(),
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, a_divided_by_b),
+  AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_a, int_float_b), expression_vector(),
+    ProjectionNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_a, int_float_b),
       stored_table_node_int_float));
   // clang-format on
 
@@ -595,22 +595,21 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
-  // - "int_float.*" will select only "b", because a is not in GROUP BY
   // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
-  const auto actual_lqp = compile_query("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY y, b");
+  const auto actual_lqp = compile_query("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY a, y, b");
 
   const auto sum_a_plus_b = sum_(add_(int_float_a, int_float_b));
   const auto b_plus_3 = add_(int_float_b, 3);
 
-  const auto aliases = std::vector<std::string>({"b", "y", "SUM(a + b)"});
-  const auto select_list_expressions = expression_vector(int_float_b, b_plus_3, sum_(add_(int_float_a, int_float_b)));
+  const auto aliases = std::vector<std::string>({"a", "b", "y", "SUM(a + b)"});
+  const auto select_list_expressions = expression_vector(int_float_a, int_float_b, b_plus_3, sum_(add_(int_float_a, int_float_b)));
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(select_list_expressions, aliases,
     ProjectionNode::make(select_list_expressions,
-      AggregateNode::make(expression_vector(b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
-        ProjectionNode::make(expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b), b_plus_3),
+      AggregateNode::make(expression_vector(int_float_a, b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
+        ProjectionNode::make(expression_vector(int_float_b, add_(int_float_a, int_float_b), int_float_a, b_plus_3),
           stored_table_node_int_float))));
   // clang-format on
 
@@ -662,7 +661,7 @@ TEST_F(SQLTranslatorTest, SubSelectSelectList) {
   const auto a_plus_d = add_(int_float_a, parameter_d);
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_d)),
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_plus_d), stored_table_node_int_float));
+    ProjectionNode::make(expression_vector(a_plus_d), stored_table_node_int_float));
   // clang-format on
 
   const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float5_d));
@@ -1459,6 +1458,7 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
