@@ -127,8 +127,7 @@ class ColumnMaterializerNUMA {
             _materialize_segment(typed_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
           });
         },
-        SchedulePriority::Default,
-        false);
+        SchedulePriority::Default, false);
   }
 
   /**

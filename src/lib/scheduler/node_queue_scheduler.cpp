@@ -8,9 +8,9 @@
 
 #include "abstract_task.hpp"
 #include "current_scheduler.hpp"
-#include "worker.hpp"
 #include "task_queue.hpp"
 #include "topology.hpp"
+#include "worker.hpp"
 
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
@@ -39,8 +39,7 @@ void NodeQueueScheduler::begin() {
     auto& topology_node = Topology::get().nodes()[node_id];
 
     for (auto& topology_cpu : topology_node.cpus) {
-      _workers.emplace_back(
-          std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
+      _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
     }
   }
 

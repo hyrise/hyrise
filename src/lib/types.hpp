@@ -157,7 +157,7 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 // The Scheduler currently supports just these 3 priorities, subject to change.
 enum class SchedulePriority {
   Default = 1,  // Schedule task at the end of the queue
-  High = 0     // Schedule task at the beginning of the queue
+  High = 0      // Schedule task at the beginning of the queue
 };
 
 enum class PredicateCondition {

@@ -84,13 +84,9 @@ void Worker::_work() {
   _num_finished_tasks++;
 }
 
-void Worker::start() {
-  _thread = std::thread(&Worker::operator(), this);
-}
+void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
-void Worker::join() {
-  _thread.join();
-}
+void Worker::join() { _thread.join(); }
 
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 

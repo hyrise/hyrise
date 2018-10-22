@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #include "types.hpp"
 #include "utils/assert.hpp"
