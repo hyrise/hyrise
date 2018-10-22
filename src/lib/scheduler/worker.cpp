@@ -79,7 +79,7 @@ void Worker::_work() {
 
   task->execute();
 
-  // This is part of the Scheduler shutdown system. Count the number of tasks a ProcessingUnit executed to allow the
+  // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished
   _num_finished_tasks++;
 }

@@ -71,22 +71,6 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 void AbstractTask::join() {
   DebugAssert((_is_scheduled), "Task must be scheduled before it can be waited for");
 
-  /**
-   * When join() is called from a Task, i.e. from a Worker Thread, let the worker handle the join()-ing (via
-   * _wait_for_tasks()), otherwise just join right here
-   */
-  if (CurrentScheduler::is_set()) {
-    auto worker = Worker::get_this_thread_worker();
-    if (worker) {
-      worker->_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>({shared_from_this()}));
-      return;
-    }
-  }
-
-  _join_without_replacement_worker();
-}
-
-void AbstractTask::_join_without_replacement_worker() {
   std::unique_lock<std::mutex> lock(_done_mutex);
   _done_condition_variable.wait(lock, [&]() { return static_cast<bool>(_done); });
 }
