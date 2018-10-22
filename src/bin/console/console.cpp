@@ -18,6 +18,7 @@
 
 #include "SQLParser.h"
 #include "benchmark_utils.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/export_binary.hpp"
@@ -26,10 +27,11 @@
 #include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "planviz/lqp_visualizer.hpp"
-#include "planviz/sql_query_plan_visualizer.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -54,6 +56,8 @@
 #define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
 
 namespace {
+
+using namespace opossum;  // NOLINT
 
 /**
  * Buffer for program state
@@ -92,6 +96,8 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   std::regex expression{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
+
+std::vector<JoinGraph> find_
 }  // namespace
 
 namespace opossum {
@@ -369,8 +375,9 @@ int Console::_help(const std::string&) {
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
   out("                                                                 Default: noexec\n");
-  out("                                                - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
-  out("                                                                       unoptimized lqp. Default: pqp\n");
+  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
+  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");
+  out("                                                                       Default: pqp\n");
   out("                                              SQL\n");
   out("                                                - Optional, a query to visualize. If not specified, the last\n");
   out("                                                  previously executed query is visualized.\n");
@@ -578,7 +585,7 @@ int Console::_visualize(const std::string& input) {
   /**
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
-   *    - "lqp", "unoptlqp"; or implicit "pqp"
+   *    - "lqp", "unoptlqp", "joins"; or implicit "pqp"
    *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
    */
 
@@ -590,6 +597,7 @@ int Console::_visualize(const std::string& input) {
   constexpr char PQP[] = "pqp";
   constexpr char LQP[] = "lqp";
   constexpr char UNOPTLQP[] = "unoptlqp";
+  constexpr char JOINS[] = "joins";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default
@@ -599,14 +607,18 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize
-  enum class PlanType { LQP, UnoptLQP, PQP };
+  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
-  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP) {
-    if (input_words.front() == LQP)
+  if (input_words.front() == LQP ||
+  input_words.front() == UNOPTLQP || input_words.front() == PQP || input_words.front() == JOINS) {
+    if (input_words.front() == LQP) {
       plan_type = PlanType::LQP;
-    else if (input_words.front() == UNOPTLQP)
+    } else if (input_words.front() == UNOPTLQP) {
       plan_type = PlanType::UnoptLQP;
+    } else if (input_words.front() == JOINS) {
+      plan_type = PlanType::Joins;
+    }
 
     plan_type_str = input_words.front();
     input_words.erase(input_words.begin());
@@ -636,51 +648,61 @@ int Console::_visualize(const std::string& input) {
   const auto img_filename = plan_type_str + ".png";
 
   // Visualize the Logical Query Plan
-  if (plan_type == PlanType::LQP || plan_type == PlanType::UnoptLQP) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+  switch (plan_type) {
+    case PlanType::LQP:
+    case PlanType::UnoptLQP: {
+      std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
-    try {
-      if (!no_execute) {
-        // Run the query and then collect the LQPs
-        _sql_pipeline->get_result_table();
+      try {
+        if (!no_execute) {
+          // Run the query and then collect the LQPs
+          _sql_pipeline->get_result_table();
+        }
+
+        const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                        : _sql_pipeline->get_unoptimized_logical_plans();
+        for (const auto& lqp : lqps) {
+          lqp_roots.push_back(lqp);
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        _handle_rollback();
+        return ReturnCode::Error;
       }
 
-      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
-                                                      : _sql_pipeline->get_unoptimized_logical_plans();
-      for (const auto& lqp : lqps) {
-        lqp_roots.push_back(lqp);
+      LQPVisualizer visualizer;
+      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+    } break;
+
+    case PlanType::PQP: {
+      // Visualize the Physical Query Plan
+      SQLQueryPlan query_plan{CleanupTemporaries::No};
+
+      try {
+        if (!no_execute) {
+          _sql_pipeline->get_result_table();
+        }
+
+        // Create plan with all roots
+        const auto& plans = _sql_pipeline->get_query_plans();
+        for (const auto& plan : plans) {
+          query_plan.append_plan(*plan);
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        _handle_rollback();
+        return ReturnCode::Error;
       }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
 
-    LQPVisualizer visualizer;
-    visualizer.visualize(lqp_roots, graph_filename, img_filename);
+      SQLQueryPlanVisualizer visualizer;
+      visualizer.visualize(query_plan, graph_filename, img_filename);
 
-  } else {
-    // Visualize the Physical Query Plan
-    SQLQueryPlan query_plan{CleanupTemporaries::No};
+    } break;
 
-    try {
-      if (!no_execute) {
-        _sql_pipeline->get_result_table();
-      }
+    case PlanType::Joins: {
 
-      // Create plan with all roots
-      const auto& plans = _sql_pipeline->get_query_plans();
-      for (const auto& plan : plans) {
-        query_plan.append_plan(*plan);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
+    } break;
 
-    SQLQueryPlanVisualizer visualizer;
-    visualizer.visualize(query_plan, graph_filename, img_filename);
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");
