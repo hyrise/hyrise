@@ -97,7 +97,27 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   return std::regex_replace(input, expression, "");
 }
 
-std::vector<JoinGraph> find_
+void find_all_join_graphs(const std::shared_ptr<AbstractLQPNode>& lqp,
+                      std::vector<JoinGraph>& join_graphs,
+std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+
+  if (!lqp) return;
+  if (!visited_nodes.emplace(lqp).second) return;
+
+  const auto join_graph = JoinGraph::from_lqp(lqp);
+  if (!join_graph) {
+    find_join_graphs(lqp->left_input(), join_graphs, visited_nodes);
+    find_join_graphs(lqp->right_input(), join_graphs, visited_nodes);
+    return;
+  }
+
+  join_graphs.emplace_back(join_graph);
+
+  for (const auto& vertex : join_graph->vertices) {
+    find_join_graphs(vertex, join_graphs, visited_nodes);
+  }
+}
+
 }  // namespace
 
 namespace opossum {
@@ -700,6 +720,11 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::Joins: {
+      out("NOTE: Only Inner and Cross-Joins are visualized at the moment.\n");
+
+      const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
+      find_sub_plan_roots()
+
 
     } break;
 

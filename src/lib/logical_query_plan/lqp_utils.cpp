@@ -61,12 +61,12 @@ const std::shared_ptr<AbstractLQPNode>& lqp) {
   root_nodes.emplace_back(lqp);
 
   visit_lqp(lqp, [&](const auto& sub_node) {
-    if (!visited_nodes.emplace(sub_node)) return LQPVisitation::DoNotVisitInputs;
+    if (!visited_nodes.emplace(sub_node).second) return LQPVisitation::DoNotVisitInputs;
 
     for (const auto& expression : sub_node->node_expressions()) {
       visit_expression(expression, [&](const auto sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-          find_sub_plan_roots_impl(root_nodes, select_expression->lqp);
+          find_sub_plan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
         }
 
         return ExpressionVisitation::VisitArguments;

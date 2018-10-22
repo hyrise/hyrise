@@ -7,12 +7,12 @@
 
 namespace opossum {
 
-class JoinGraphVisualizer : public AbstractVisualizer<std::shared_ptr<const JoinGraph>> {
+class JoinGraphVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<JoinGraph>>> {
  public:
-  using AbstractVisualizer<std::shared_ptr<const JoinGraph>>::AbstractVisualizer;
+  using AbstractVisualizer<std::vector<std::shared_ptr<JoinGraph>>>::AbstractVisualizer;
 
  protected:
-  void _build_graph(const std::shared_ptr<const JoinGraph>& graph) override;
+  void _build_graph(const std::vector<std::shared_ptr<JoinGraph>>& graphs) override;
 };
 
 }  // namespace opossum
