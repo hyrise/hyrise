@@ -3,10 +3,10 @@
 #include <sys/resource.h>
 
 #include "all_parameter_variant.hpp"
-#include "cost_model_calibration/feature/calibration_constant_hardware_features.hpp"
-#include "cost_model_calibration/feature/calibration_example.hpp"
-#include "cost_model_calibration/feature/calibration_runtime_hardware_features.hpp"
-#include "cost_model_calibration/feature/calibration_table_scan_features.hpp"
+#include "feature/calibration_constant_hardware_features.hpp"
+#include "feature/calibration_example.hpp"
+#include "feature/calibration_runtime_hardware_features.hpp"
+#include "feature/calibration_table_scan_features.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/projection.hpp"
@@ -123,31 +123,31 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
     return std::nullopt;
   }
 
-  features.scan_operator_type = table_scan_op->predicate().predicate_condition;
+  //  features.scan_operator_type = table_scan_op->predicate().predicate_condition;
 
-  const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
-  features.scan_segment_data_type = segment->data_type();
+  //  const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(table_scan_op->predicate().column_id);
+  //  features.scan_segment_data_type = segment->data_type();
 
-  const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-  features.scan_segment_encoding = encoding_reference_pair.first;
-  features.is_scan_segment_reference_segment = encoding_reference_pair.second;
-  features.scan_segment_memory_usage_bytes =
-      _get_memory_usage_for_column(left_input_table, table_scan_op->predicate().column_id);
-
-  if (is_column_id(table_scan_op->predicate().value)) {
-    // Facing table scan with column_id left and right of operator
-    const auto second_scan_id = boost::get<ColumnID>(table_scan_op->predicate().value);
-    const auto second_scan_segment = left_input_table->get_chunk(ChunkID{0})->get_segment(second_scan_id);
-    const auto second_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(second_scan_segment);
-
-    features.uses_second_segment = true;
-
-    const auto second_encoding_reference_pair = _get_encoding_type_for_segment(segment);
-    features.is_second_scan_segment_reference_segment = second_encoding_reference_pair.second;
-    features.second_scan_segment_encoding = second_encoding_reference_pair.first;
-    features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, second_scan_id);
-    features.second_scan_segment_data_type = second_scan_segment->data_type();
-  }
+  //  const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
+  //  features.scan_segment_encoding = encoding_reference_pair.first;
+  //  features.is_scan_segment_reference_segment = encoding_reference_pair.second;
+  //  features.scan_segment_memory_usage_bytes =
+  //      _get_memory_usage_for_column(left_input_table, table_scan_op->predicate().column_id);
+  //
+  //  if (is_column_id(table_scan_op->predicate().value)) {
+  //    // Facing table scan with column_id left and right of operator
+  //    const auto second_scan_id = boost::get<ColumnID>(table_scan_op->predicate().value);
+  //    const auto second_scan_segment = left_input_table->get_chunk(ChunkID{0})->get_segment(second_scan_id);
+  //    const auto second_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(second_scan_segment);
+  //
+  //    features.uses_second_segment = true;
+  //
+  //    const auto second_encoding_reference_pair = _get_encoding_type_for_segment(segment);
+  //    features.is_second_scan_segment_reference_segment = second_encoding_reference_pair.second;
+  //    features.second_scan_segment_encoding = second_encoding_reference_pair.first;
+  //    features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, second_scan_id);
+  //    features.second_scan_segment_data_type = second_scan_segment->data_type();
+  //  }
 
   // Mainly for debugging purposes
   features.scan_operator_description = op->description(DescriptionMode::SingleLine);

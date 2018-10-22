@@ -7,8 +7,8 @@
 #include <fstream>
 #include <iostream>
 
-#include "cost_model_calibration/feature/calibration_example.hpp"
 #include "cost_model_feature_extractor.hpp"
+#include "feature/calibration_example.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "scheduler/current_scheduler.hpp"

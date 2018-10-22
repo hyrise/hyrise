@@ -28,30 +28,6 @@ target_link_libraries(
 )
 
 add_executable(
-    hyriseCostModelCalibration
-
-    cost_model_calibration/cost_model_calibration_main.cpp
-
-    cost_model_calibration/configuration/calibration_column_specification.hpp
-    cost_model_calibration/configuration/calibration_configuration.hpp
-    cost_model_calibration/configuration/calibration_table_specification.hpp
-    cost_model_calibration/cost_model_calibration.cpp
-    cost_model_calibration/cost_model_calibration.hpp
-    cost_model_calibration/cost_model_feature_extractor.cpp
-    cost_model_calibration/cost_model_feature_extractor.hpp
-    cost_model_calibration/query/calibration_query_generator.cpp
-    cost_model_calibration/query/calibration_query_generator.hpp
-    cost_model_calibration/query/calibration_query_generator_predicates.cpp
-    cost_model_calibration/query/calibration_query_generator_predicates.hpp
-)
-
-target_link_libraries(
-    hyriseCostModelCalibration
-    hyrise
-    hyriseBenchmarkLib
-)
-
-add_executable(
     hyriseBenchmarkPlayground
 
     benchmark_playground.cpp

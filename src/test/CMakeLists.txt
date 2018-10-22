@@ -260,6 +260,14 @@ set (
     gtest_main.cpp
 )
 
+set (
+    HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES
+    ${SHARED_SOURCES}
+
+    cost_model_calibration/calibration_query_generator_test.cpp
+    cost_model_calibration/cost_model_feature_extractor_test.cpp
+    gtest_main.cpp
+)
 
 # Both hyriseTest and hyriseSystemTest link against these
 set(
@@ -285,6 +293,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest TestPlugin TestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+
+# Configure hyriseCalibratinCostModelTest
+add_executable(hyriseCostModelCalibrationTest ${HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES})
+add_dependencies(hyriseCostModelCalibrationTest TestPlugin TestNonInstantiablePlugin)
+target_link_libraries(hyriseCostModelCalibrationTest hyrise hyriseCostModelCalibrationLib ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

@@ -75,6 +75,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
+    ${PROJECT_SOURCE_DIR}/src/cost_model_calibration_lib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugin/
 
@@ -100,6 +101,7 @@ if (ENABLE_CLANG_TIDY)
 endif()
 
 add_subdirectory(benchmarklib)
+add_subdirectory(cost_model_calibration_lib)
 add_subdirectory(bin)
 add_subdirectory(lib)
 add_subdirectory(plugins)
@@ -107,4 +109,5 @@ add_subdirectory(plugins)
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")
 add_subdirectory(benchmark)
+add_subdirectory(cost_model_calibration)
 add_subdirectory(test)

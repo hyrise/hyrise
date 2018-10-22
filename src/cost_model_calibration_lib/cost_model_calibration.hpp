@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "cost_model_calibration/configuration/calibration_configuration.hpp"
-#include "cost_model_calibration/feature/calibration_example.hpp"
+#include "configuration/calibration_configuration.hpp"
+#include "feature/calibration_example.hpp"
 #include "operators/abstract_operator.hpp"
 
 namespace opossum {
