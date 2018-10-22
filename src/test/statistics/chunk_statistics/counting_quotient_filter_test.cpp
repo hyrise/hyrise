@@ -159,7 +159,7 @@ TYPED_TEST(CountingQuotientFilterTest, CanNotPrune) {
  * sanity checking, making sure the FPR is below a very lenient threshold. If these tests fail it is very likely,
  * however not absolutely certain, that there is a bug in the CQF.
  */
-TYPED_TEST(CountingQuotientFilterTest, FalsePositiveRate) {
+TYPED_TEST(CountingQuotientFilterTest, DISABLED_FalsePositiveRate /* #1220 */) {
   this->test_false_positive_rate(this->cqf2);
   this->test_false_positive_rate(this->cqf4);
   this->test_false_positive_rate(this->cqf8);
