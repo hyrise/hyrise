@@ -20,9 +20,10 @@ class CostModelCalibration {
 
  private:
   void _traverse(const std::shared_ptr<const AbstractOperator>& op, std::vector<CalibrationExample>& examples) const;
-  void _write_result_csv(const std::string output_path, const nlohmann::json& configuration,
-                         const std::vector<CalibrationExample>& examples) const;
-  CalibrationConfiguration _configuration;
+  void _write_csv_header(const std::string& output_path) const;
+  void _append_to_result_csv(const std::string& output_path, const std::vector<CalibrationExample>& examples) const;
+
+  const CalibrationConfiguration _configuration;
 };
 
 }  // namespace opossum

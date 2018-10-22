@@ -92,19 +92,22 @@ void CostModelCalibration::run_tpch() const {
       std::cout << "Finished TPCH " << query.first << std::endl;
 
       auto output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-      _write_result_csv(output_path, _configuration, examples);
+      _append_to_result_csv(output_path, examples);
     }
   }
 }
 
 void CostModelCalibration::calibrate() const {
-  std::vector<CalibrationExample> examples{};
   auto number_of_iterations = _configuration.calibration_runs;
 
   const auto scheduler = std::make_shared<NodeQueueScheduler>();
   CurrentScheduler::set(scheduler);
 
+  _write_csv_header(_configuration.output_path);
+
   for (size_t i = 0; i < number_of_iterations; i++) {
+    std::vector<CalibrationExample> examples{};
+
     // Regenerate Queries for each iteration...
     auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
@@ -127,14 +130,14 @@ void CostModelCalibration::calibrate() const {
         }
       }
     }
+
+    _append_to_result_csv(_configuration.output_path, examples);
+
     std::cout << "Finished iteration " << i << std::endl;
   }
-
-  _write_result_csv(_configuration.output_path, _configuration, examples);
 }
 
-void CostModelCalibration::_write_result_csv(const std::string output_path, const nlohmann::json& configuration,
-                                             const std::vector<CalibrationExample>& examples) const {
+void CostModelCalibration::_write_csv_header(const std::string& output_path) const {
   std::vector<std::string> columns{};
 
   const auto calibration_features = CalibrationFeatures::columns;
@@ -158,7 +161,10 @@ void CostModelCalibration::_write_result_csv(const std::string output_path, cons
   const auto header = boost::algorithm::join(columns, ", ");
   stream << header << '\n';
   stream.close();
+}
 
+void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
+        const std::vector<CalibrationExample>& examples) const {
   CsvWriter writer(output_path);
 
   for (const auto& example : examples) {
@@ -169,9 +175,6 @@ void CostModelCalibration::_write_result_csv(const std::string output_path, cons
     }
     writer.end_line();
   }
-
-  // TODO(Sven): Append if file already exists.. incremental logging
-  std::cout << "Writing result CSV" << std::endl;
 }
 
 void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperator>& op,
