@@ -62,8 +62,8 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
 
         _add_edge(first_vertex, second_vertex, edge_info);
       } else {
-        // More than two vertices, i.e. we have a hyperedge. Render a diamond vertex that contains all the Predicates
-        // and connect all hyperedge vertices to that vertex.
+        // More than two vertices, i.e. we have a hyperedge (think `SELECT * FROM x, y, z WHERE x.a + y.b + z.c = x.d`.)
+        // Render a diamond vertex that contains all the Predicates and connect all hyperedge vertices to that vertex.
 
         std::stringstream vertex_label_stream;
         for (size_t predicate_idx{0}; predicate_idx < edge.predicates.size(); ++predicate_idx) {

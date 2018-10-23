@@ -694,13 +694,13 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::Joins: {
-      out("NOTE: Only Inner and Cross-Joins are visualized at the moment.\n");
+      out("NOTE: Join graphs will show only Cross and Inner joins, not Outer joins.\n");
 
       auto join_graphs = std::vector<JoinGraph>{};
 
       const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
       for (const auto& lqp : lqps) {
-        const auto sub_lqps = find_sub_plan_roots(lqp);
+        const auto sub_lqps = lqp_find_subplan_roots(lqp);
 
         for (const auto& sub_lqp : sub_lqps) {
           const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);

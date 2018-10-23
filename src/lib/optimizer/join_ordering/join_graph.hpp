@@ -53,8 +53,8 @@ class JoinGraph final {
 
   void print(std::ostream& stream = std::cout) const;
 
-  const std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
-  const std::vector<JoinGraphEdge> edges;
+  std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
+  std::vector<JoinGraphEdge> edges;
 };
 
 }  // namespace opossum
