@@ -44,7 +44,7 @@ class JoinGraph final {
    * Find all predicates that reference to only the vertex at @param vertex_idx
    */
   std::vector<std::shared_ptr<AbstractExpression>> find_local_predicates(const size_t vertex_idx) const;
-bin
+
   /**
    * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them and nowhere else
    */
