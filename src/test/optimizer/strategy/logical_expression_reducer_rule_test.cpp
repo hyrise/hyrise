@@ -43,7 +43,7 @@ class LogicalExpressionReducerRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(LogicalExpressionReducerRuleTest, CollectChainedAndExpressions) {
-  // a = 0 AND b = 1 AND (c = 2 OR d = 3)
+  // a = 0 AND b = 1 AND (c = 2 OR d = 3) AND e = 4
   auto or_expression = or_(_c, _d);
   auto expression = and_(_a, and_(_b, and_(or_expression, _e)));
 
