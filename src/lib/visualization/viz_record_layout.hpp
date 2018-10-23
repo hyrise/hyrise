@@ -15,7 +15,11 @@ struct VizRecordLayout {
   VizRecordLayout& add_sublayout();
 
   std::string to_label_string() const;
-  
+
+  // "Braces, vertical bars and angle brackets must be escaped with a backslash character"
+  // http://www.graphviz.org/doc/info/shapes.html#record
+  static std::string escape(const std::string& input);
+
   std::vector<boost::variant<std::string, VizRecordLayout>> content;
 };
 

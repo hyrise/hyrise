@@ -18,9 +18,9 @@
 
 #include "SQLParser.h"
 #include "benchmark_utils.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/get_table.hpp"
@@ -30,9 +30,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
-#include "visualization/join_graph_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -47,6 +44,9 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/string_utils.hpp"
+#include "visualization/join_graph_visualizer.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -98,10 +98,8 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   return std::regex_replace(input, expression, "");
 }
 
-void find_all_join_graphs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                      std::vector<JoinGraph>& join_graphs,
-std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-
+void find_all_join_graphs(const std::shared_ptr<AbstractLQPNode>& lqp, std::vector<JoinGraph>& join_graphs,
+                          std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!lqp) return;
   if (!visited_nodes.emplace(lqp).second) return;
 
@@ -110,7 +108,8 @@ std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
     join_graphs.emplace_back(*join_graph);
 
     for (const auto& vertex : join_graph->vertices) {
-      find_all_join_graphs(vertex, join_graphs, visited_nodes);
+      find_all_join_graphs(vertex->left_input(), join_graphs, visited_nodes);
+      find_all_join_graphs(vertex->right_input(), join_graphs, visited_nodes);
     }
   } else {
     find_all_join_graphs(lqp->left_input(), join_graphs, visited_nodes);
@@ -396,7 +395,7 @@ int Console::_help(const std::string&) {
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
   out("                                                                 Default: noexec\n");
   out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
-  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");
+  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                       Default: pqp\n");
   out("                                              SQL\n");
   out("                                                - Optional, a query to visualize. If not specified, the last\n");
@@ -630,8 +629,8 @@ int Console::_visualize(const std::string& input) {
   enum class PlanType { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
-  if (input_words.front() == LQP ||
-  input_words.front() == UNOPTLQP || input_words.front() == PQP || input_words.front() == JOINS) {
+  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
+      input_words.front() == JOINS) {
     if (input_words.front() == LQP) {
       plan_type = PlanType::LQP;
     } else if (input_words.front() == UNOPTLQP) {
@@ -716,7 +715,6 @@ int Console::_visualize(const std::string& input) {
 
       SQLQueryPlanVisualizer visualizer;
       visualizer.visualize(query_plan, graph_filename, img_filename);
-
     } break;
 
     case PlanType::Joins: {
@@ -736,9 +734,7 @@ int Console::_visualize(const std::string& input) {
 
       JoinGraphVisualizer visualizer;
       visualizer.visualize(join_graphs, graph_filename, img_filename);
-
     } break;
-
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");

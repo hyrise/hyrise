@@ -10,18 +10,17 @@ namespace opossum {
 
 void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
   for (const auto& graph : graphs) {
-    std::cout << "Vertices: " << graph.vertices.size() << std::endl;
     for (auto vertex_idx = size_t{0}; vertex_idx < graph.vertices.size(); ++vertex_idx) {
-      const auto &vertex = graph.vertices[vertex_idx];
+      const auto& vertex = graph.vertices[vertex_idx];
       const auto predicates = graph.find_local_predicates(vertex_idx);
 
       VizRecordLayout layout;
       layout.add_label(_create_vertex_description(vertex));
 
       if (!predicates.empty()) {
-        auto &predicates_layout = layout.add_sublayout();
+        auto& predicates_layout = layout.add_sublayout();
 
-        for (const auto &predicate : predicates) {
+        for (const auto& predicate : predicates) {
           predicates_layout.add_label(predicate->as_column_name());
         }
       }
@@ -30,10 +29,12 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
       vertex_info.label = layout.to_label_string();
       vertex_info.shape = "record";
 
-      _add_vertex(vertex, vertex_info);
+      // Don't wrap the label, we're using the record layout, which has internal formatting. Randomly inserted newlines
+      // wouldn't help here
+      _add_vertex(vertex, vertex_info, WrapLabel::Off);
     }
 
-    for (const auto &edge : graph.edges) {
+    for (const auto& edge : graph.edges) {
       const auto vertex_count = edge.vertex_set.count();
 
       // Single-vertex edges are local predicates. We already visualized those above
@@ -48,7 +49,7 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
         const auto second_vertex = graph.vertices[second_vertex_idx];
 
         std::stringstream edge_label_stream;
-        for (const auto &predicate : edge.predicates) {
+        for (const auto& predicate : edge.predicates) {
           edge_label_stream << predicate->as_column_name();
           edge_label_stream << "\n";
         }
@@ -61,12 +62,12 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
 
         _add_edge(first_vertex, second_vertex, edge_info);
       } else {
-        // More than two vertices, i.e. we have a hyperedge. Render a diamond vertex that contains all the Predicates and
-        // connect all hyperedge vertices to that vertex.
+        // More than two vertices, i.e. we have a hyperedge. Render a diamond vertex that contains all the Predicates
+        // and connect all hyperedge vertices to that vertex.
 
         std::stringstream vertex_label_stream;
         for (size_t predicate_idx{0}; predicate_idx < edge.predicates.size(); ++predicate_idx) {
-          const auto &predicate = edge.predicates[predicate_idx];
+          const auto& predicate = edge.predicates[predicate_idx];
           vertex_label_stream << predicate->as_column_name();
           if (predicate_idx + 1 < edge.predicates.size()) {
             vertex_label_stream << "\n";

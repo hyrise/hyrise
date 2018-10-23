@@ -9,8 +9,8 @@
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "visualization/abstract_visualizer.hpp"
 #include "statistics/table_statistics.hpp"
+#include "visualization/abstract_visualizer.hpp"
 
 namespace opossum {
 

@@ -12,8 +12,6 @@
 #include "benchmark_runner.hpp"
 #include "cxxopts.hpp"
 #include "json.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -23,6 +21,8 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the

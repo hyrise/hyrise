@@ -5,8 +5,6 @@
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "import_export/csv_parser.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -16,6 +14,8 @@
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "version.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 namespace opossum {
 
@@ -485,7 +485,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-// clang-format off
+  // clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

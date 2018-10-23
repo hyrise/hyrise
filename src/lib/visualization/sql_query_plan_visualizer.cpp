@@ -7,10 +7,10 @@
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
-#include "visualization/abstract_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "utils/format_duration.hpp"
+#include "visualization/abstract_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 namespace opossum {
 

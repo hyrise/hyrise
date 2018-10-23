@@ -32,6 +32,8 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
 
   edges.insert(edges.end(), cross_edges.begin(), cross_edges.end());
 
+  if (_vertices.size() <= 1u && edges.empty()) return std::nullopt;
+
   return JoinGraph{_vertices, edges};
 }
 
