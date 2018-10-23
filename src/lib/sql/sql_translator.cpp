@@ -795,7 +795,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
       AssertInput(_from_clause_result, "Can't SELECT with wildcards since there are no FROM tables specified");
 
       if (is_aggregate) {
-        // SELECT * is only valid if every input column in named in the GROUP BY clause
+        // SELECT * is only valid if every input column is named in the GROUP BY clause
         for (const auto& pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
           AssertInput(std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
                                    [&](const auto& group_by_expression) {
