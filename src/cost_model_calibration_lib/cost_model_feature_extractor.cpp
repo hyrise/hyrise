@@ -47,12 +47,14 @@ const CalibrationExample CostModelFeatureExtractor::extract_features(
 const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
     const std::shared_ptr<const AbstractOperator>& op) {
   CalibrationFeatures operator_features{};
-  auto time = op->performance_data().walltime;
-  auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
+  const auto time = op->performance_data().walltime;
+  const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
   operator_features.execution_time_ns = execution_time_ns;
   const auto operator_type = op->name();
   operator_features.operator_type = operator_type;
+  // Mainly for debug purposes
+  operator_features.operator_description = op->description(DescriptionMode::SingleLine);
   // Inputs
   if (op->input_left()) {
     const auto left_input = op->input_left()->get_output();
@@ -113,6 +115,7 @@ const CalibrationRuntimeHardwareFeatures CostModelFeatureExtractor::_extract_run
   return runtime_features;
 }
 
+// TODO(Sven): Add feature that covers BETWEEN colA AND colB as well as OR
 const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
     const std::shared_ptr<const TableScan>& op) {
   CalibrationTableScanFeatures features{};
@@ -180,8 +183,6 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
     }
   }
 
-  // Mainly for debugging purposes
-  features.scan_operator_description = op->description(DescriptionMode::SingleLine);
   return features;
 }
 

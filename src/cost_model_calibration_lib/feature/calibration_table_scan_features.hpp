@@ -21,7 +21,6 @@ struct CalibrationTableScanFeatures {
   size_t second_scan_segment_memory_usage_bytes = 0;
   size_t second_scan_segment_distinct_value_count = 0;
   std::string scan_operator_type = "=";
-  std::string scan_operator_description = "";
 
   static const std::vector<std::string> columns;
 };
@@ -30,8 +29,7 @@ inline const std::vector<std::string> CalibrationTableScanFeatures::columns(
     {"scan_segment_encoding", "is_scan_segment_reference_segment", "scan_segment_data_type",
      "scan_segment_memory_usage_bytes", "scan_segment_distinct_value_count", "uses_second_segment",
      "second_scan_segment_encoding", "is_second_scan_segment_reference_segment", "second_scan_segment_data_type",
-     "second_scan_segment_memory_usage_bytes", "second_scan_segment_distinct_value_count", "scan_operator_type",
-     "scan_operator_description"});
+     "second_scan_segment_memory_usage_bytes", "second_scan_segment_distinct_value_count", "scan_operator_type"});
 
 inline std::vector<AllTypeVariant> serialize(const std::optional<CalibrationTableScanFeatures>& features) {
   if (!features) {
@@ -49,8 +47,7 @@ inline std::vector<AllTypeVariant> serialize(const std::optional<CalibrationTabl
           features->second_scan_segment_data_type,
           static_cast<int32_t>(features->second_scan_segment_memory_usage_bytes),
           static_cast<int32_t>(features->second_scan_segment_distinct_value_count),
-          features->scan_operator_type,
-          features->scan_operator_description};
+          features->scan_operator_type};
 }
 
 }  // namespace opossum

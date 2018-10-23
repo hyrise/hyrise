@@ -27,6 +27,8 @@ struct CalibrationFeatures {
   size_t output_chunk_size = 0;
   float output_selectivity = 0.0;
 
+  std::string operator_description;
+
   static const std::vector<std::string> columns;
 };
 
@@ -34,7 +36,7 @@ inline const std::vector<std::string> CalibrationFeatures::columns(
     {"operator_type", "input_table_size_ratio", "left_input_row_count", "left_input_chunk_count",
      "left_input_memory_usage_bytes", "left_input_chunk_size", "right_input_row_count", "right_input_chunk_count",
      "right_input_memory_usage_bytes", "right_input_chunk_size", "output_row_count", "output_chunk_count",
-     "output_memory_usage_bytes", "output_chunk_size", "output_selectivity", "execution_time_ns"});
+     "output_memory_usage_bytes", "output_chunk_size", "output_selectivity", "operator_description", "execution_time_ns"});
 
 inline std::vector<AllTypeVariant> serialize(const CalibrationFeatures& features) {
   return {features.operator_type,
@@ -52,6 +54,7 @@ inline std::vector<AllTypeVariant> serialize(const CalibrationFeatures& features
           static_cast<int32_t>(features.output_memory_usage_bytes),
           static_cast<int32_t>(features.output_chunk_size),
           features.output_selectivity,
+          features.operator_description,
           static_cast<int64_t>(features.execution_time_ns)};
 }
 
