@@ -196,9 +196,9 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
   wrap->execute();
 
   // Flags = 0 is the default. As such, empty chunks will be printed.
-  auto print_wrap_withempty = PrintWrapper(wrap, output, 0);
+  std::ostringstream output_withempty;
+  auto print_wrap_withempty = PrintWrapper(wrap, output_withempty, 0);
   print_wrap_withempty.execute();
-  auto output_string_withempty = output.str();
 
   auto expected_output_withempty =
       "=== Columns\n"
@@ -208,17 +208,14 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
       "=== Chunk 0 ===\n"
       "Empty chunk.\n";
 
-  EXPECT_EQ(output_string_withempty, expected_output_withempty);
+  EXPECT_EQ(output_withempty.str(), expected_output_withempty);
   EXPECT_TRUE(print_wrap_withempty.is_printing_empty_chunks());
   EXPECT_FALSE(print_wrap_withempty.is_printing_mvcc_information());
 
-  // reset output
-  output.str("");
-
   // And now skip empty chunks.
-  auto print_wrap_noempty = PrintWrapper(wrap, output, 1);
+  std::ostringstream output_noempty;
+  auto print_wrap_noempty = PrintWrapper(wrap, output_noempty, 1);
   print_wrap_noempty.execute();
-  auto output_string_noempty = output.str();
 
   auto expected_output_noempty =
       "=== Columns\n"
@@ -226,7 +223,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
       "|     int|  string|\n"
       "|not null|not null|\n";
 
-  EXPECT_EQ(output_string_noempty, expected_output_noempty);
+  EXPECT_EQ(output_noempty.str(), expected_output_noempty);
   EXPECT_FALSE(print_wrap_noempty.is_printing_empty_chunks());
   EXPECT_FALSE(print_wrap_noempty.is_printing_mvcc_information());
 }
@@ -234,7 +231,6 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
 TEST_F(OperatorsPrintTest, MVCCFlag) {
   auto print_wrap = PrintWrapper(_gt, output, 2);
   print_wrap.execute();
-  auto output_string = output.str();
 
   auto expected_output =
       "=== Columns\n"
@@ -242,7 +238,7 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
       "|     int|  string||_BEGIN|_END  |_TID  |\n"
       "|not null|not null||      |      |      |\n";
 
-  EXPECT_EQ(output_string, expected_output);
+  EXPECT_EQ(output.str(), expected_output);
   EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
   EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
 }
@@ -262,7 +258,6 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   table->execute();
 
   Print::print(table, 2, output);
-  auto output_string = output.str();
 
   auto expected_output =
       "=== Columns\n"
@@ -274,34 +269,24 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
       "|     123|   456.7||     0|      |      |\n"
       "=== Chunk 1 ===\n"
       "|    1234|   457.7||     0|      |      |\n";
-
-  EXPECT_EQ(output_string, expected_output);
+  EXPECT_EQ(output.str(), expected_output);
 }
 
 TEST_F(OperatorsPrintTest, DirectInstantiations) {
-  Print::print(_gt, 0, output);
-  auto output_op_inst = output.str();
-  auto expected_op_inst =
+  // We expect the same output from both instantiations.
+  auto expected_output =
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
       "|not null|not null|\n";
 
-  EXPECT_EQ(output_op_inst, expected_op_inst);
+  std::ostringstream output_ss_op_inst;
+  Print::print(_gt, 0, output_ss_op_inst);
+  EXPECT_EQ(output_ss_op_inst.str(), expected_output);
 
-  Print::print(_t, 0, output);
-  auto output_tab_inst = output.str();
-  auto expected_tab_inst =
-      "=== Columns\n"
-      "|column_1|column_2|\n"
-      "|     int|  string|\n"
-      "|not null|not null|\n"
-      "=== Columns\n"
-      "|column_1|column_2|\n"
-      "|     int|  string|\n"
-      "|not null|not null|\n";
-
-  EXPECT_EQ(output_tab_inst, expected_tab_inst);
+  std::ostringstream output_ss_tab_inst;
+  Print::print(_t, 0, output_ss_tab_inst);
+  EXPECT_EQ(output_ss_tab_inst.str(), expected_output);
 }
 
 }  // namespace opossum
