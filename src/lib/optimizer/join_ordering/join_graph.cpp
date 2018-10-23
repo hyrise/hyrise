@@ -8,9 +8,8 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
-                          std::vector<JoinGraph>& join_graphs,
-                          std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vector<JoinGraph>& join_graphs,
+                           std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!lqp) return;
   if (!visited_nodes.emplace(lqp).second) return;
 

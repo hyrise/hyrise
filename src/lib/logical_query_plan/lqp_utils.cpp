@@ -56,8 +56,8 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
 }
 
 void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
-                              std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes,
-                              const std::shared_ptr<AbstractLQPNode>& lqp) {
+                                 std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes,
+                                 const std::shared_ptr<AbstractLQPNode>& lqp) {
   root_nodes.emplace_back(lqp);
 
   visit_lqp(lqp, [&](const auto& sub_node) {
