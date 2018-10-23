@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_column.hpp"
+#include "base_segment.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
@@ -87,21 +87,21 @@ class Table : private Noncopyable {
 
   /**
    * Creates a new Chunk and appends it to this table.
-   * Makes sure the @param columns match with the TableType (only ReferenceColumns or only data containing columns)
+   * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
    * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
-   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of columns.
+   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
    * @param alloc
    */
-  void append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                     const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
   /**
    * Appends an existing chunk to this table.
-   * Makes sure the columns in the chunk match with the TableType and the MVCC setting is the same as for the table.
+   * Makes sure the segments in the chunk match with the TableType and the MVCC setting is the same as for the table.
    */
   void append_chunk(const std::shared_ptr<Chunk>& chunk);
 
-  // Create and append a Chunk consisting of ValueColumns.
+  // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
 
   /** @} */
@@ -130,7 +130,7 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk->get_column(column_id))[row_number + current_size - row_counter]);
+        return get<T>((*chunk->get_segment(column_id))[row_number + current_size - row_counter]);
       }
     }
     Fail("Row does not exist.");
@@ -149,7 +149,7 @@ class Table : private Noncopyable {
 
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    ColumnIndexType index_type = get_index_type_of<Index>();
+    SegmentIndexType index_type = get_index_type_of<Index>();
 
     for (auto& chunk : _chunks) {
       chunk->create_index<Index>(column_ids);
@@ -159,7 +159,7 @@ class Table : private Noncopyable {
   }
 
   /**
-   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
+   * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t estimate_memory_usage() const;
 

@@ -10,11 +10,11 @@
 #include <utility>
 #include <vector>
 
-#include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/create_iterable_from_column.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
-#include "storage/value_column.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/create_iterable_from_segment.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -24,33 +24,35 @@ LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_tabl
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
-void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                      std::shared_ptr<ColumnVisitorContext> base_context) {
+std::string LikeTableScanImpl::description() const { return "LikeScan"; }
+
+void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
+                                       std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
-  auto& left_column = static_cast<const ValueColumn<std::string>&>(base_column);
-  auto left_iterable = ValueColumnIterable<std::string>{left_column};
+  auto& left_segment = static_cast<const ValueSegment<std::string>&>(base_segment);
+  auto left_iterable = ValueSegmentIterable<std::string>{left_segment};
 
   _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
 }
 
-void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                      std::shared_ptr<ColumnVisitorContext> base_context) {
+void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
+                                       std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  resolve_encoded_column_type<std::string>(base_column, [&](const auto& typed_column) {
-    auto left_iterable = create_iterable_from_column(typed_column);
+  resolve_encoded_segment_type<std::string>(base_segment, [&](const auto& typed_segment) {
+    auto left_iterable = create_iterable_from_segment(typed_segment);
     _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
   });
 }
 
-void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitorContext> base_context) {
+void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
+                                       std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -58,18 +60,18 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
 
   std::pair<size_t, std::vector<bool>> result;
 
-  if (base_column.encoding_type() == EncodingType::Dictionary) {
-    const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
-    result = _find_matches_in_dictionary(*left_column.dictionary());
+  if (base_segment.encoding_type() == EncodingType::Dictionary) {
+    const auto& left_segment = static_cast<const DictionarySegment<std::string>&>(base_segment);
+    result = _find_matches_in_dictionary(*left_segment.dictionary());
   } else {
-    const auto& left_column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
-    result = _find_matches_in_dictionary(*left_column.dictionary());
+    const auto& left_segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
+    result = _find_matches_in_dictionary(*left_segment.dictionary());
   }
 
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = create_iterable_from_attribute_vector(base_column);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(base_segment);
 
   // LIKE matches all rows
   if (match_count == dictionary_matches.size()) {

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "utils/assert.hpp"
+#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 namespace opossum {
@@ -15,7 +16,7 @@ class AbstractScheduler;
  */
 class CurrentScheduler {
  public:
-  static const std::shared_ptr<AbstractScheduler>& get();
+  inline static const std::shared_ptr<AbstractScheduler>& get() { return _instance; }
   static void set(const std::shared_ptr<AbstractScheduler>& instance);
 
   /**
@@ -67,7 +68,9 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType
 
 template <typename TaskType>
 void CurrentScheduler::schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
+  DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
   for (auto& task : tasks) {
+    DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
     task->schedule();
   }
 }
@@ -75,6 +78,7 @@ void CurrentScheduler::schedule_tasks(const std::vector<std::shared_ptr<TaskType
 template <typename TaskType>
 void CurrentScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   schedule_tasks(tasks);
+  DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS_AND_WAIT, tasks.size());
   wait_for_tasks(tasks);
 }
 

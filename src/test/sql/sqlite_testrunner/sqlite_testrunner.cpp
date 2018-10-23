@@ -55,7 +55,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       _sqlite->create_table_from_tbl(table_file, table_name);
 
-      std::shared_ptr<Table> table = load_table(table_file);
+      std::shared_ptr<Table> table = load_table(table_file, 10);
       StorageManager::get().add_table(table_name, std::move(table));
     }
 
@@ -95,7 +95,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 
-  // The problem is that we can only infer columns from sqlite if they have at least one row.
+  // The problem is that we can only infer column types from sqlite if they have at least one row.
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
       << "The SQLiteTestRunner cannot handle queries without results";
@@ -115,12 +115,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       << "Query failed: " << query;
 }
 
-auto formatter = [](const testing::TestParamInfo<std::string>) {
-  // stupid, but otherwise Wextra complains about the unused macro parameter
-  static int test = 1;
-  return std::to_string(test++);
-};
-INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner,
+                        testing::ValuesIn(read_queries_from_file()), );  // NOLINT
 
 }  // namespace opossum

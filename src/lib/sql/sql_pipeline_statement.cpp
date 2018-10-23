@@ -15,6 +15,7 @@
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
+#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 
@@ -102,7 +103,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   _unoptimized_logical_plan = lqp_roots.front();
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->translate_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+  _metrics->sql_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _unoptimized_logical_plan;
 }
@@ -119,7 +120,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimize_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+  _metrics->optimize_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
@@ -226,7 +227,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
   }
 
-  _metrics->compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+  _metrics->lqp_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _query_plan;
 }
@@ -259,10 +260,12 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   if (statement->isType(hsql::kStmtPrepare)) {
     _query_has_output = false;
     const auto done = std::chrono::high_resolution_clock::now();
-    _metrics->execution_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+    _metrics->execution_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
     return _result_table;
   }
 
+  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
+                reinterpret_cast<uintptr_t>(this));
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   if (_auto_commit) {
@@ -270,12 +273,16 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->execution_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+  _metrics->execution_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get output from the last task
   _result_table = tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
+  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translate_time_nanos.count(),
+                _metrics->optimize_time_nanos.count(), _metrics->lqp_translate_time_nanos.count(),
+                _metrics->execution_time_nanos.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
+                reinterpret_cast<uintptr_t>(this));
   return _result_table;
 }
 

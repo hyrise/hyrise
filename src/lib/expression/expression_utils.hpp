@@ -57,7 +57,7 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
                                                                                const LQPNodeMapping& node_mapping);
 
 /**
- * Makes all ColumnExpressions points to their equivalent in a copied LQP
+ * Makes all column references points to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);
@@ -136,5 +136,11 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
                                          const std::weak_ptr<TransactionContext>& transaction_context);
 
 bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
+
+/**
+ * @return  The value of a ParameterExpression or ValueExpression
+ *          std::nullopt for other expression types
+ */
+std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
 
 }  // namespace opossum

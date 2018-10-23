@@ -17,20 +17,11 @@
 
 namespace opossum {
 
-// singleton
-NUMAPlacementManager& NUMAPlacementManager::get() {
-  // Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory
-  // resources. Without those, all destructors of all PMR vectors out there will fail.
-
-  static NUMAPlacementManager instance;
-  return instance;
-}
-
 NUMAPlacementManager::NUMAPlacementManager() : _current_node_id(0) {
   // The NUMAPlacementManager must exist before any table is stored in the storage manager. Otherwise, we might migrate
   // parts of that table. On termination of the program, the NUMAPlacementManager would be destroyed first, taking the
   // memory sources with it. This means that the destructors of those tables would fail.
-  Assert(StorageManager::get().table_names().empty(), "NUMAPlacementManager must be created before any table");
+  Assert(StorageManager::get().tables().empty(), "NUMAPlacementManager must be created before any table");
 
   _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval,
                                                            [](size_t) { ChunkMetricsCollectionTask().execute(); });

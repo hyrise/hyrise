@@ -3,9 +3,9 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 
 #include "all_type_variant.hpp"
-#include "storage/base_value_column.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
-#include "storage/column_iterables/base_column_iterators.hpp"
+#include "storage/segment_iterables/base_segment_iterators.hpp"
 
 namespace opossum {
 
@@ -98,8 +98,8 @@ class JitVariantVector {
   std::vector<bool> _is_null;
 };
 
-class BaseJitColumnReader;
-class BaseJitColumnWriter;
+class BaseJitSegmentReader;
+class BaseJitSegmentWriter;
 
 // The JitAggregate operator (and possibly future hashing based operators) require an efficient way to hash tuples
 // across multiple columns (i.e., the key-type of the hashmap spans multiple columns).
@@ -118,10 +118,10 @@ struct JitRuntimeContext {
   uint32_t chunk_size;
   ChunkOffset chunk_offset;
   JitVariantVector tuple;
-  std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
-  std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
+  std::vector<std::shared_ptr<BaseJitSegmentReader>> inputs;
+  std::vector<std::shared_ptr<BaseJitSegmentWriter>> outputs;
   JitRuntimeHashmap hashmap;
-  ChunkColumns out_chunk;
+  Segments out_chunk;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.

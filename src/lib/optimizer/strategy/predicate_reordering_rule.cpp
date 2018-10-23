@@ -20,18 +20,19 @@ std::string PredicateReorderingRule::name() const { return "Predicate Reordering
 bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   auto reordered = false;
 
-  if (node->type == LQPNodeType::Predicate) {
-    std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
+  // Validate can be seen as a Predicate on the MVCC column
+  if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
+    std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (current_node->type == LQPNodeType::Predicate) {
+    while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate) {
       // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
       if (current_node->outputs().size() > 1) {
         break;
       }
 
-      predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
+      predicate_nodes.emplace_back(current_node);
       current_node = current_node->left_input();
     }
 
@@ -43,18 +44,16 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     if (predicate_nodes.size() > 1) {
       reordered = _reorder_predicates(predicate_nodes);
       reordered |= _apply_to_inputs(predicate_nodes.back());
-    } else {
-      // No chain was found, continue with the current nodes inputren.
-      reordered = _apply_to_inputs(node);
+      return reordered;
     }
-  } else {
-    reordered = _apply_to_inputs(node);
   }
+
+  reordered |= _apply_to_inputs(node);
 
   return reordered;
 }
 
-bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();

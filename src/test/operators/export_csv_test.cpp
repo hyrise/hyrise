@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "import_export/csv_meta.hpp"
@@ -109,7 +109,7 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
+TEST_F(OperatorsExportCsvTest, DictionarySegmentFixedSizeByteAligned) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
@@ -129,7 +129,7 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
                            "1,\"Hallo3\",3.55\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, FixedStringDictionaryColumnFixedSizeByteAligned) {
+TEST_F(OperatorsExportCsvTest, FixedStringDictionarySegmentFixedSizeByteAligned) {
   const auto filename_string_table = test_data_path + "string.tbl";
   const auto meta_filename_string_table = filename_string_table + CsvMeta::META_FILE_EXTENSION;
 
@@ -169,14 +169,14 @@ TEST_F(OperatorsExportCsvTest, FixedStringDictionaryColumnFixedSizeByteAligned) 
   std::remove(meta_filename_string_table.c_str());
 }
 
-TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
+TEST_F(OperatorsExportCsvTest, ReferenceSegment) {
   table->append({1, "abc", 1.1f});
   table->append({2, "asdf", 2.2f});
   table->append({3, "hello", 3.3f});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 5);
+  auto scan = create_table_scan(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 5);
   scan->execute();
   auto ex = std::make_shared<opossum::ExportCsv>(scan, filename);
   ex->execute();

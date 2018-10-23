@@ -7,20 +7,20 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/scheduler/current_scheduler.hpp"
-#include "../lib/scheduler/node_queue_scheduler.hpp"
-#include "../lib/scheduler/topology.hpp"
-#include "../lib/storage/chunk.hpp"
-#include "../lib/storage/chunk_encoder.hpp"
-#include "../lib/storage/numa_placement_manager.hpp"
-#include "../lib/storage/storage_manager.hpp"
-#include "../lib/storage/table.hpp"
-#include "../lib/storage/value_column.hpp"
-#include "../lib/tasks/migration_preparation_task.hpp"
-#include "../lib/types.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
+#include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/numa_placement_manager.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
+#include "tasks/migration_preparation_task.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -54,17 +54,17 @@ class NUMAPlacementTest : public BaseTest {
                                          num_rows_per_chunk, UseMvcc::Yes);
 
     for (size_t i = 0; i < num_chunks; i++) {
-      ChunkColumns columns;
+      Segments segments;
 
       const auto alloc = PolymorphicAllocator<Chunk>(Topology::get().get_memory_resource(0));
-      auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
-      auto& values = value_column->values();
+      auto value_segment = std::allocate_shared<ValueSegment<int>>(alloc, alloc);
+      auto& values = value_segment->values();
       values.reserve(num_rows_per_chunk);
       for (size_t row = 0; row < num_rows_per_chunk; row++) {
         values.push_back(static_cast<int>(row % 1000));
       }
-      columns.push_back(value_column);
-      table->append_chunk(columns, alloc, std::make_shared<ChunkAccessCounter>(alloc));
+      segments.push_back(value_segment);
+      table->append_chunk(segments, alloc, std::make_shared<ChunkAccessCounter>(alloc));
     }
     ChunkEncoder::encode_all_chunks(table);
     return table;

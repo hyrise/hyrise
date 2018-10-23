@@ -6,7 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-#include "chunk_column_statistics.hpp"
+#include "segment_statistics.hpp"
 
 namespace opossum {
 
@@ -15,17 +15,18 @@ namespace opossum {
  */
 class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistics> {
  public:
-  explicit ChunkStatistics(std::vector<std::shared_ptr<ChunkColumnStatistics>> statistics) : _statistics(statistics) {}
+  explicit ChunkStatistics(std::vector<std::shared_ptr<SegmentStatistics>> statistics) : _statistics(statistics) {}
 
-  const std::vector<std::shared_ptr<ChunkColumnStatistics>>& statistics() const { return _statistics; }
+  const std::vector<std::shared_ptr<SegmentStatistics>>& statistics() const { return _statistics; }
 
   /**
-   * calls can_prune on the ChunkColumnStatistics corresponding to column_id
+   * calls can_prune on the SegmentStatistics corresponding to column_id
    */
-  bool can_prune(const ColumnID column_id, const AllTypeVariant& value,
-                 const PredicateCondition predicate_condition) const;
+  bool can_prune(const ColumnID column_id, const PredicateCondition predicate_condition,
+                 const AllTypeVariant& variant_value,
+                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
  protected:
-  std::vector<std::shared_ptr<ChunkColumnStatistics>> _statistics;
+  std::vector<std::shared_ptr<SegmentStatistics>> _statistics;
 };
 }  // namespace opossum

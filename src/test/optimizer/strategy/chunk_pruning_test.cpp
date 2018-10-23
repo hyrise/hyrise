@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
@@ -65,6 +65,21 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{1}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
+  EXPECT_EQ(excluded, expected);
+}
+
+TEST_F(ChunkPruningTest, BetweenPruningTest) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+
+  auto predicate_node =
+      std::make_shared<PredicateNode>(between_(LQPColumnReference(stored_table_node, ColumnID{1}), 350, 351));
+  predicate_node->set_left_input(stored_table_node);
+
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = {ChunkID{0}};
   std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
@@ -190,7 +205,7 @@ TEST_F(ChunkPruningTest, LotsOfRangesFilterTest) {
   EXPECT_EQ(excluded, expected);
 }
 
-TEST_F(ChunkPruningTest, RunLengthColumnPruningTest) {
+TEST_F(ChunkPruningTest, RunLengthSegmentPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("run_length_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(LQPColumnReference(stored_table_node, ColumnID{0}), 2));

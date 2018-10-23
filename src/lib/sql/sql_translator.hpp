@@ -61,7 +61,7 @@ class SQLTranslator final {
  private:
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
-  // Also ensures the correct Columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
+  // Also ensures the correct columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
   // columns from input tables
   struct TableSourceState final {
     TableSourceState() = default;
@@ -111,6 +111,8 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_update(const hsql::UpdateStatement& update);
 
   std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& create_statement);
+  std::shared_ptr<AbstractLQPNode> _translate_create_view(const hsql::CreateStatement& create_statement);
+  std::shared_ptr<AbstractLQPNode> _translate_create_table(const hsql::CreateStatement& create_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& drop_statement);
 
@@ -136,6 +138,8 @@ class SQLTranslator final {
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
 
+  std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
+
  private:
   const UseMvcc _use_mvcc;
 
@@ -145,7 +149,7 @@ class SQLTranslator final {
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
 
-  // "Inflated" because als wildcard will be inflated to the expressions they actually represent
+  // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
 };
 

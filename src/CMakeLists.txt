@@ -60,7 +60,9 @@ endif()
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 # Global flags and include directories
-add_compile_options(-std=c++17 -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter)
+# When generating a dtrace header file, symbols containing dollar-signs are created This file needs to be compiled as well.
+# Hence, the `-Wno-dollar-in-identifier-extension` flag is required.
+add_compile_options(-std=c++17 -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
@@ -69,9 +71,12 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
+    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
+    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
+    ${PROJECT_SOURCE_DIR}/src/plugin/
 
     ${TBB_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
@@ -97,6 +102,7 @@ endif()
 add_subdirectory(benchmarklib)
 add_subdirectory(bin)
 add_subdirectory(lib)
+add_subdirectory(plugins)
 
 # No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")

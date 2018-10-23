@@ -30,60 +30,40 @@ std::ostream& get_out_stream(const bool verbose) {
   return null_stream;
 }
 
-BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {
-  iteration_durations.reserve(max_num_iterations);
-}
+BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
 
 bool BenchmarkState::keep_running() {
-  bool is_first_iteration = false;
-
   switch (state) {
     case State::NotStarted:
       benchmark_begin = std::chrono::high_resolution_clock::now();
       state = State::Running;
-      is_first_iteration = true;
       break;
     case State::Over:
       return false;
     default: {}
   }
 
-  const auto now = std::chrono::high_resolution_clock::now();
-
-  if (!is_first_iteration) {
-    // "Finish" the current iteration, i.e. get its duration
-    const auto iteration_duration = now - iteration_begin;
-    iteration_durations.push_back(iteration_duration);
-  }
-
-  // "Start" new iteration
-  benchmark_end = now;
-  iteration_begin = now;
-
-  // Stop execution if we reached the maximum number of iterations
-  if (num_iterations >= max_num_iterations) {
-    state = State::Over;
-    return false;
-  }
+  benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;
 
   // Stop execution if we reached the time limit
-  const auto benchmark_duration = now - benchmark_begin;
   if (benchmark_duration >= max_duration) {
-    state = State::Over;
+    set_done();
     return false;
   }
-
-  num_iterations++;
 
   return true;
 }
+
+void BenchmarkState::set_done() { state = State::Over; }
+
+bool BenchmarkState::is_done() { return state == State::Over; }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
-                                 const bool enable_visualization, std::ostream& out)
+                                 const uint cores, const uint clients, const bool enable_visualization,
+                                 std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
@@ -93,6 +73,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       use_mvcc(use_mvcc),
       output_file_path(output_file_path),
       enable_scheduler(enable_scheduler),
+      cores(cores),
+      clients(clients),
       enable_visualization(enable_visualization),
       out(out) {}
 
@@ -140,15 +122,28 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
-  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << std::endl;
+  const auto cores = json_config.value("cores", default_config.cores);
+  const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
+  const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
+  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
+      << std::endl;
+
+  const auto clients = json_config.value("clients", default_config.clients);
+  out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
+
+  if (cores != default_config.cores || clients != default_config.clients) {
+    if (!enable_scheduler) {
+      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false")
+    }
+  }
 
   // Determine benchmark and display it
   const auto benchmark_mode_str = json_config.value("mode", "IndividualQueries");
   auto benchmark_mode = BenchmarkMode::IndividualQueries;  // Just to init it deterministically
   if (benchmark_mode_str == "IndividualQueries") {
     benchmark_mode = BenchmarkMode::IndividualQueries;
-  } else if (benchmark_mode_str == "PermutedQuerySets") {
-    benchmark_mode = BenchmarkMode::PermutedQuerySets;
+  } else if (benchmark_mode_str == "PermutedQuerySet") {
+    benchmark_mode = BenchmarkMode::PermutedQuerySet;
   } else {
     throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
   }
@@ -185,9 +180,19 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
-  return BenchmarkConfig{
-      benchmark_mode, verbose,          chunk_size,       *encoding_config,     max_runs, timeout_duration,
-      use_mvcc,       output_file_path, enable_scheduler, enable_visualization, out};
+  return BenchmarkConfig{benchmark_mode,
+                         verbose,
+                         chunk_size,
+                         *encoding_config,
+                         max_runs,
+                         timeout_duration,
+                         use_mvcc,
+                         output_file_path,
+                         enable_scheduler,
+                         cores,
+                         clients,
+                         enable_visualization,
+                         out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -205,6 +210,8 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
+  json_config.emplace("cores", parse_result["cores"].as<uint>());
+  json_config.emplace("clients", parse_result["clients"].as<uint>());
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
@@ -220,7 +227,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   json_file >> encoding_config_json;
 
   const auto encoding_spec_from_json = [](const nlohmann::json& json_spec) {
-    Assert(json_spec.count("encoding"), "Need to specify encoding type for column.");
+    Assert(json_spec.count("encoding"), "Need to specify encoding type.");
     const auto encoding_str = json_spec["encoding"];
     const auto compression_str = json_spec.value("compression", "");
     return EncodingConfig::encoding_spec_from_strings(encoding_str, compression_str);
@@ -248,7 +255,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     }
   }
 
-  TableColumnEncodingMapping custom_encoding_mapping;
+  TableSegmentEncodingMapping custom_encoding_mapping;
   const auto has_custom_encoding = encoding_config_json.find("custom") != encoding_config_json.end();
 
   if (has_custom_encoding) {
@@ -259,13 +266,14 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       const auto& table_name = table.key();
       const auto& columns = table.value();
 
-      Assert(columns.is_object(), "The custom column encoding needs to be specified as a json object.");
-      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, ColumnEncodingSpec>());
+      Assert(columns.is_object(), "The custom encoding for column types needs to be specified as a json object.");
+      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, SegmentEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
         const auto& column_name = column.key();
         const auto& encoding_info = column.value();
-        Assert(encoding_info.is_object(), "The custom encoding info needs to be specified as a json object.");
+        Assert(encoding_info.is_object(),
+               "The custom encoding for column types needs to be specified as a json object.");
         custom_encoding_mapping[table_name][column_name] = encoding_spec_from_json(encoding_info);
       }
     }
@@ -278,25 +286,26 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
   return options.help() + BenchmarkConfig::description + EncodingConfig::description;
 }
 
-EncodingConfig::EncodingConfig() : EncodingConfig{ColumnEncodingSpec{EncodingType::Dictionary}} {}
+EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec)
-    : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec)
+    : EncodingConfig{default_encoding_spec, {}, {}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
-                               TableColumnEncodingMapping encoding_mapping)
-    : default_encoding_spec{std::move(default_encoding_spec)},
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec,
+                               DataTypeEncodingMapping type_encoding_mapping,
+                               TableSegmentEncodingMapping encoding_mapping)
+    : default_encoding_spec{default_encoding_spec},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
-EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{ColumnEncodingSpec{EncodingType::Unencoded}}; }
+EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}; }
 
-ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
-                                                              const std::string& compression_str) {
+SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
+                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
 
-  return compression ? ColumnEncodingSpec{encoding, *compression} : ColumnEncodingSpec{encoding};
+  return compression ? SegmentEncodingSpec{encoding, *compression} : SegmentEncodingSpec{encoding};
 }
 
 EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
@@ -315,7 +324,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
 }
 
 nlohmann::json EncodingConfig::to_json() const {
-  const auto encoding_spec_to_string_map = [](const ColumnEncodingSpec& spec) {
+  const auto encoding_spec_to_string_map = [](const SegmentEncodingSpec& spec) {
     nlohmann::json mapping{};
     mapping["encoding"] = encoding_type_to_string.left.at(spec.encoding_type);
     if (spec.vector_compression_type) {
@@ -367,10 +376,10 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (table_has_custom_encoding) {
       const auto& column_name = table->column_name(column_id);
       const auto& encoding_by_column_name = column_mapping_it->second;
-      const auto& column_encoding = encoding_by_column_name.find(column_name);
-      if (column_encoding != encoding_by_column_name.end()) {
-        // The column has a custom encoding
-        chunk_spec.push_back(column_encoding->second);
+      const auto& segment_encoding = encoding_by_column_name.find(column_name);
+      if (segment_encoding != encoding_by_column_name.end()) {
+        // The column type has a custom encoding
+        chunk_spec.push_back(segment_encoding->second);
         continue;
       }
     }
@@ -420,11 +429,11 @@ const char* EncodingConfig::description = R"(
 ======================
 Encoding Configuration
 ======================
-The encoding config represents the column encodings specified for a benchmark.
+The encoding config represents the segment encodings specified for a benchmark.
+All segments of a given share column the same encoding.
 If encoding (and vector compression) were specified via command line args,
-this will contain no custom encoding mapping but only the column default.
-This will lead to each column in each chunk to be encoded/compressed by this
-default. If a JSON config was provided, a column- and/or type-specific
+all segments are compressed using the default encoding.
+If a JSON config was provided, a column- and/or type-specific
 encoding/compression can be chosen (same in each chunk). The JSON config must
 look like this:
 
@@ -450,16 +459,16 @@ The encoding is always required, the compression is optional.
 
   "custom": {
     <TABLE_NAME>: {
-      <COLUMN_NAME>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       },
-      <COLUMN_NAME>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>
       }
     },
     <TABLE_NAME>: {
-      <COLUMN_NAME>: {
+      <column_name>: {
         "encoding": <ENCODING_TYPE_STRING>,
         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
       }

@@ -22,19 +22,17 @@ enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStrin
 /**
  * @brief Maps each encoding type to its supported data types
  *
- * This map ensures that column and encoder templates are only
+ * This map ensures that segment and encoder templates are only
  * instantiated for supported types and not for all data types.
  *
  * Use data_types if the encoding supports all data types.
  */
 constexpr auto supported_data_types_for_encoding_type = hana::make_map(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<std::string>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
-
-//  Example for an encoding that doesn’t support all data types:
-//  hana::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)
 
 /**
  * @return an integral constant implicitly convertible to bool
@@ -42,9 +40,12 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
  * Hint: Use hana::value() if you want to use the result
  *       in a constant expression such as constexpr-if.
  */
-template <typename ColumnEncodingType, typename ColumnDataType>
-constexpr auto encoding_supports_data_type(ColumnEncodingType encoding_type, ColumnDataType data_type) {
+template <typename SegmentEncodingType, typename ColumnDataType>
+constexpr auto encoding_supports_data_type(SegmentEncodingType encoding_type, ColumnDataType data_type) {
   return hana::contains(hana::at_key(supported_data_types_for_encoding_type, encoding_type), data_type);
 }
+
+// Version for when EncodingType and DataType are only known at runtime
+bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type);
 
 }  // namespace opossum

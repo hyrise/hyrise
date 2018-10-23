@@ -29,7 +29,8 @@ TransactionContext::~TransactionContext() {
                 const auto is_rolled_back = _phase == TransactionPhase::RolledBack;
                 return (!an_operator_failed || is_rolled_back);
               }()),
-              "A registered operator failed but transaction has not been rolled back.");
+              "A registered operator failed but the transaction has not been rolled back. You may also see this "
+              "exception if an operator threw an uncaught exception.");
 
   DebugAssert(([this]() {
                 const auto has_registered_operators = !_rw_operators.empty();

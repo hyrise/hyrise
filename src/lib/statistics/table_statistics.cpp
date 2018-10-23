@@ -16,6 +16,8 @@ TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
+uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
+
 const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
 }
@@ -23,7 +25,7 @@ const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics:
 TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
                                                     const PredicateCondition predicate_condition,
                                                     const AllParameterVariant& value,
-                                                    const std::optional<AllTypeVariant>& value2) const {
+                                                    const std::optional<AllParameterVariant>& value2) const {
   // Early out, the code below would fail for _row_count == 0
   if (_row_count == 0) return {*this};
 
@@ -33,6 +35,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
 
   // Estimate "a BETWEEN 5 and 6" by combining "a >= 5" with "a <= 6"
   if (predicate_condition == PredicateCondition::Between) {
+    DebugAssert(value2, "Expected second value to be passed in for BETWEEN");
     auto table_statistics = estimate_predicate(column_id, PredicateCondition::GreaterThanEquals, value);
     return table_statistics.estimate_predicate(column_id, PredicateCondition::LessThanEquals, *value2);
   }
@@ -50,14 +53,19 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
 
   const auto left_operand_column_statistics = _column_statistics[column_id];
 
-  if (is_column_id(value)) {
-    const auto value_column_id = boost::get<ColumnID>(value);
-
+  if (predicate_condition == PredicateCondition::IsNotNull) {
+    predicated_column_statistics[column_id] = left_operand_column_statistics->without_null_values();
+    predicated_row_count *= 1.0 - left_operand_column_statistics->non_null_value_ratio();
+  } else if (predicate_condition == PredicateCondition::IsNull) {
+    predicated_column_statistics[column_id] = left_operand_column_statistics->only_null_values();
+    predicated_row_count *= left_operand_column_statistics->non_null_value_ratio();
+  } else if (is_column_id(value)) {
+    const auto column_id_of_value = boost::get<ColumnID>(value);
     const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(
-        predicate_condition, *_column_statistics[value_column_id]);
+        predicate_condition, *_column_statistics[column_id_of_value]);
 
     predicated_column_statistics[column_id] = estimation.left_column_statistics;
-    predicated_column_statistics[value_column_id] = estimation.right_column_statistics;
+    predicated_column_statistics[column_id_of_value] = estimation.right_column_statistics;
     predicated_row_count *= estimation.selectivity;
   } else if (is_variant(value)) {
     const auto variant_value = boost::get<AllTypeVariant>(value);
@@ -167,10 +175,10 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   auto join_table_stats = estimate_cross_join(right_table_statistics);
 
   // retrieve the two column statistics which are used by the join predicate
-  auto& left_col_stats = _column_statistics[column_ids.first];
-  auto& right_col_stats = right_table_statistics._column_statistics[column_ids.second];
+  auto& left_column_stats = _column_statistics[column_ids.first];
+  auto& right_column_stats = right_table_statistics._column_statistics[column_ids.second];
 
-  auto stats_container = left_col_stats->estimate_predicate_with_column(predicate_condition, *right_col_stats);
+  auto stats_container = left_column_stats->estimate_predicate_with_column(predicate_condition, *right_column_stats);
 
   // apply predicate selectivity to cross join
   join_table_stats._row_count *= stats_container.selectivity;
@@ -178,40 +186,41 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   auto calculate_added_null_values_for_outer_join = [&](const float row_count,
-                                                        const std::shared_ptr<const BaseColumnStatistics> col_stats,
+                                                        const std::shared_ptr<const BaseColumnStatistics> column_stats,
                                                         const float predicate_column_distinct_count) {
-    float null_value_no = col_stats->null_value_ratio() * row_count;
-    if (col_stats->distinct_count() != 0.f) {
-      null_value_no += (1.f - predicate_column_distinct_count / col_stats->distinct_count()) * row_count;
+    float null_value_no = column_stats->null_value_ratio() * row_count;
+    if (column_stats->distinct_count() != 0.f) {
+      null_value_no += (1.f - predicate_column_distinct_count / column_stats->distinct_count()) * row_count;
     }
     return null_value_no;
   };
 
   auto adjust_null_value_ratio_for_outer_join =
-      [&](const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
-          const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
+      [&](const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator column_begin,
+          const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator column_end, const float row_count,
           const float null_value_no, const float new_row_count) {
         if (null_value_no == 0) {
           return;
         }
         // adjust null value ratios in columns from the right table
-        for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
+        for (auto column_itr = column_begin; column_itr != column_end; ++column_itr) {
           // columns need to be copied before changed, somebody else could use it
-          *col_itr = (*col_itr)->clone();
-          float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
+          *column_itr = (*column_itr)->clone();
+          float column_null_value_no = (*column_itr)->null_value_ratio() * row_count;
           float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
 
           // We just created these column statistics and are therefore qualified to modify them
-          std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
+          std::const_pointer_cast<BaseColumnStatistics>(*column_itr)->set_null_value_ratio(right_null_value_ratio);
         }
       };
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
-  auto left_null_value_no = calculate_added_null_values_for_outer_join(
-      right_table_statistics.row_count(), right_col_stats, stats_container.right_column_statistics->distinct_count());
+  auto left_null_value_no =
+      calculate_added_null_values_for_outer_join(right_table_statistics.row_count(), right_column_stats,
+                                                 stats_container.right_column_statistics->distinct_count());
   // calculate how many null values need to be added to columns from the right table for left/outer joins
   auto right_null_value_no = calculate_added_null_values_for_outer_join(
-      row_count(), left_col_stats, stats_container.left_column_statistics->distinct_count());
+      row_count(), left_column_stats, stats_container.left_column_statistics->distinct_count());
 
   // prepare two _adjust_null_value_ratio_for_outer_join calls, executed in the switch statement below
 
@@ -230,6 +239,27 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   switch (mode) {
+    case JoinMode::Semi:
+      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+      // remove column statistics from right table
+      join_table_stats._column_statistics.resize(_column_statistics.size());
+
+      // Simple heuristic: we assume that three quarters of the elements in the smaller relation
+      // (we are upper-bound by number of non-null values in both relations) will match.
+      join_table_stats._row_count =
+          0.75 * std::min(row_count() * stats_container.left_column_statistics->non_null_value_ratio(),
+                          right_table_statistics.row_count() *
+                              stats_container.right_column_statistics->non_null_value_ratio());
+      break;
+    case JoinMode::Anti:
+      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+
+      // For anti join, we assume that all values qualify when we have a small "other" relations.
+      // In case we have a large right table, we take the maximum of the left table and a tenth of the right.
+      join_table_stats._row_count =
+          std::max(row_count(), right_table_statistics.row_count() *
+                                    stats_container.right_column_statistics->non_null_value_ratio() / 10);
+      break;
     case JoinMode::Inner: {
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
       join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;
@@ -259,6 +289,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
 
   return join_table_stats;
 }
+
+void TableStatistics::increase_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
 TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
   // TODO(anybody) this is just a dummy implementation

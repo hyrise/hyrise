@@ -11,7 +11,7 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "value_column.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 
@@ -94,14 +94,14 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 }
 
 void Table::append_mutable_chunk() {
-  ChunkColumns columns;
+  Segments segments;
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      columns.push_back(std::make_shared<ValueColumn<ColumnDataType>>(column_definition.nullable));
+      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable));
     });
   }
-  append_chunk(columns);
+  append_chunk(segments);
 }
 
 uint64_t Table::row_count() const {
@@ -140,50 +140,50 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+void Table::append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
                          const std::shared_ptr<ChunkAccessCounter>& access_counter) {
-  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+  const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if IS_DEBUG
-  for (const auto& column : columns) {
-    DebugAssert(column->size() == chunk_size, "Columns don't have the same length");
-    const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column) != nullptr;
+  for (const auto& segment : segments) {
+    DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
+    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {
       case TableType::References:
-        DebugAssert(is_reference_column, "Invalid column type");
+        DebugAssert(is_reference_segment, "Invalid segment type");
         break;
       case TableType::Data:
-        DebugAssert(!is_reference_column, "Invalid column type");
+        DebugAssert(!is_reference_segment, "Invalid segment type");
         break;
     }
   }
 #endif
 
-  std::shared_ptr<MvccColumns> mvcc_columns;
+  std::shared_ptr<MvccData> mvcc_data;
 
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_columns = std::make_shared<MvccColumns>(chunk_size);
+    mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_columns, alloc, access_counter));
+  _chunks.emplace_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 #if IS_DEBUG
-  for (const auto& column : chunk->columns()) {
-    const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column) != nullptr;
+  for (const auto& segment : chunk->segments()) {
+    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {
       case TableType::References:
-        DebugAssert(is_reference_column, "Invalid column type");
+        DebugAssert(is_reference_segment, "Invalid segment type");
         break;
       case TableType::Data:
-        DebugAssert(!is_reference_column, "Invalid column type");
+        DebugAssert(!is_reference_segment, "Invalid segment type");
         break;
     }
   }
 #endif
 
-  DebugAssert(chunk->has_mvcc_columns() == (_use_mvcc == UseMvcc::Yes),
+  DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
               "Chunk does not have the same MVCC setting as the table.");
 
   _chunks.emplace_back(chunk);

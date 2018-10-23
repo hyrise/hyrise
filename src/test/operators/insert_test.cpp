@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
@@ -45,13 +45,13 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
 
   // Check that row has been inserted.
   EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 6u);
-  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{0}))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{1}))[3], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_column(ColumnID{0}))[3], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[3], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[3], AllTypeVariant(458.7f));
 
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_column(ColumnID{0})->size(), 6u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_column(ColumnID{1})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 6u);
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
@@ -180,7 +180,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   EXPECT_EQ(t->chunk_count(), 2u);
   EXPECT_EQ(t->row_count(), 8u);
 
-  auto null_val = (*(t->get_chunk(ChunkID{1})->get_column(ColumnID{0})))[2];
+  auto null_val = (*(t->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[2];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
@@ -206,10 +206,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   EXPECT_EQ(t->chunk_count(), 3u);
   EXPECT_EQ(t->row_count(), 8u);
 
-  auto null_val_int = (*(t->get_chunk(ChunkID{2})->get_column(ColumnID{0})))[0];
+  auto null_val_int = (*(t->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[0];
   EXPECT_TRUE(variant_is_null(null_val_int));
 
-  auto null_val_float = (*(t->get_chunk(ChunkID{1})->get_column(ColumnID{1})))[2];
+  auto null_val_float = (*(t->get_chunk(ChunkID{1})->get_segment(ColumnID{1})))[2];
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
@@ -255,8 +255,30 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   EXPECT_EQ(t->chunk_count(), 2u);
   EXPECT_EQ(t->row_count(), 5u);
 
-  auto null_val = (*(t->get_chunk(ChunkID{1})->get_column(ColumnID{0})))[0];
+  auto null_val = (*(t->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[0];
   EXPECT_TRUE(variant_is_null(null_val));
+}
+
+TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, false);
+
+  const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE, UseMvcc::Yes);
+  StorageManager::get().add_table("target_table", target_table);
+
+  const auto table_int_float = load_table("src/test/tables/int_float.tbl");
+
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_int_float);
+  table_wrapper->execute();
+
+  const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
+  auto context = TransactionManager::get().new_transaction_context();
+  insert->set_transaction_context(context);
+  insert->execute();
+  context->commit();
+
+  EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float)
 }
 
 }  // namespace opossum

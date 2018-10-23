@@ -24,6 +24,8 @@
 | tbb/libtbb-dev   | any              |    All   |                                    No |
 | valgrind         | any              |    All   |            Yes, memory checking in CI |
 | libpq-dev        | >= 9             |    All   |                                    No |
+| systemtap        | any              |    Linux |                                    No |
+| systemtap-sdt-dev| any              |    Linux |                                    No |
 
 
 ## Dependencies that are integrated in our build process via git submodules
@@ -34,3 +36,4 @@
 - sql-parser (https://github.com/hyrise/sql-parser)
 - pgasus (https://github.com/kateyy/pgasus)
 - cpp-btree (https://github.com/algorithm-ninja/cpp-btree)
+- cqf (https://github.com/ArneMayer/cqf)

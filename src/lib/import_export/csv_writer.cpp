@@ -14,17 +14,17 @@ CsvWriter::CsvWriter(const std::string& file, const ParseConfig& config) : _conf
 }
 
 void CsvWriter::write(const AllTypeVariant& value) {
-  if (_current_col_count > 0) {
+  if (_current_column_count > 0) {
     _stream << _config.separator;
   }
 
   _write_value(value);
-  ++_current_col_count;
+  ++_current_column_count;
 }
 
 void CsvWriter::end_line() {
   _stream << _config.delimiter;
-  _current_col_count = 0;
+  _current_column_count = 0;
 }
 
 void CsvWriter::_write_value(const AllTypeVariant& value) {

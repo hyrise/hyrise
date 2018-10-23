@@ -21,17 +21,17 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
 
     // Add indicator to where the error is
     if (line_number == error_line) {
-      const uint32_t error_col = result.errorColumn();
+      const uint32_t error_column = result.errorColumn();
       const auto& line = sql_lines[line_number];
 
       // Keep indentation of tab characters
-      auto num_tabs = std::count(line.begin(), line.begin() + error_col, '\t');
+      auto num_tabs = std::count(line.begin(), line.begin() + error_column, '\t');
       error_msg << std::string(num_tabs, '\t');
 
       // Use some color to highlight the error
       const auto color_red = "\x1B[31m";
       const auto color_reset = "\x1B[0m";
-      error_msg << std::string(error_col - num_tabs, ' ') << color_red << "^=== ERROR HERE!" << color_reset << "\n";
+      error_msg << std::string(error_column - num_tabs, ' ') << color_red << "^=== ERROR HERE!" << color_reset << "\n";
     }
   }
 

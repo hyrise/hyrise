@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/reference_column.hpp"
+#include "storage/reference_segment.hpp"
 
 namespace opossum {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,
@@ -58,7 +58,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
-  ChunkColumns output_columns;
+  Segments output_segments;
   auto is_left_side = true;
 
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
@@ -68,16 +68,17 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
       std::shared_ptr<const Table> referenced_table;
-      ColumnID referenced_column;
+      ColumnID referenced_segment;
       std::shared_ptr<const PosList> pos_list_in;
 
-      if (auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(column_id))) {
-        referenced_table = ref_col_in->referenced_table();
-        referenced_column = ref_col_in->referenced_column_id();
-        pos_list_in = ref_col_in->pos_list();
+      if (auto reference_segment_in =
+              std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id))) {
+        referenced_table = reference_segment_in->referenced_table();
+        referenced_segment = reference_segment_in->referenced_column_id();
+        pos_list_in = reference_segment_in->pos_list();
       } else {
         referenced_table = is_left_side ? input_table_left() : input_table_right();
-        referenced_column = column_id;
+        referenced_segment = column_id;
       }
 
       // see if we can reuse a PosList that we already calculated - important to use a reference here so that the map
@@ -97,13 +98,13 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
           }
         }
       }
-      output_columns.push_back(std::make_shared<ReferenceColumn>(referenced_table, referenced_column, pos_list_out));
+      output_segments.push_back(std::make_shared<ReferenceSegment>(referenced_table, referenced_segment, pos_list_out));
     }
 
     is_left_side = false;
   }
 
-  output->append_chunk(output_columns);
+  output->append_chunk(output_segments);
 }
 std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

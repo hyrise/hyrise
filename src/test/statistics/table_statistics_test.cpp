@@ -6,12 +6,15 @@
 
 #include "all_parameter_variant.hpp"
 #include "base_test.hpp"
+#include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/base_column_statistics.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -42,16 +45,25 @@ class TableStatisticsTest : public BaseTest {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
 
+    auto column = PQPColumnExpression::from_table(*table_with_statistics.table,
+                                                  table_with_statistics.table->column_name(column_id));
+
+    auto left_operand = std::shared_ptr<AbstractExpression>{};
+    if (is_parameter_id(value)) {
+      left_operand = uncorrelated_parameter_(boost::get<ParameterID>(value));
+    } else {
+      left_operand = value_(boost::get<AllTypeVariant>(value));
+    }
+
     std::shared_ptr<TableScan> table_scan;
     if (predicate_condition == PredicateCondition::Between) {
-      auto first_table_scan =
-          std::make_shared<TableScan>(table_wrapper, column_id, PredicateCondition::GreaterThanEquals, value);
+      auto first_table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_equals_(column, left_operand));
       first_table_scan->execute();
 
-      table_scan =
-          std::make_shared<TableScan>(first_table_scan, column_id, PredicateCondition::LessThanEquals, *value2);
+      table_scan = std::make_shared<TableScan>(first_table_scan, less_than_equals_(column, *value2));
     } else {
-      table_scan = std::make_shared<TableScan>(table_wrapper, column_id, predicate_condition, value);
+      table_scan = std::make_shared<TableScan>(
+          table_wrapper, std::make_shared<BinaryPredicateExpression>(predicate_condition, column, left_operand));
     }
     table_scan->execute();
 
@@ -218,9 +230,9 @@ TEST_F(TableStatisticsTest, DirectlyAccessColumnStatistics) {
      */
   auto column_statistics = _table_a_with_statistics.statistics->column_statistics();
   EXPECT_EQ(column_statistics.size(), 4u);
-  for (auto col = ColumnID{0}; col < column_statistics.size(); ++col) {
-    EXPECT_TRUE(column_statistics.at(col));
-    EXPECT_FLOAT_EQ(column_statistics.at(col)->distinct_count(), 6.f);
+  for (auto column_id = ColumnID{0}; column_id < column_statistics.size(); ++column_id) {
+    EXPECT_TRUE(column_statistics.at(column_id));
+    EXPECT_FLOAT_EQ(column_statistics.at(column_id)->distinct_count(), 6.f);
   }
 }
 
@@ -236,6 +248,35 @@ TEST_F(TableStatisticsTest, TableType) {
 
   EXPECT_EQ(post_predicate_statistics->table_type(), TableType::References);
   EXPECT_EQ(post_join_statistics->table_type(), TableType::References);
+}
+
+TEST_F(TableStatisticsTest, TwoColumnScan) {
+  const auto int_int_float = load_table("src/test/tables/int_int_float.tbl");
+  const auto int_int_float_statistics = generate_table_statistics(*int_int_float);
+
+  // Make sure that the distinct counts are as expected, mainly that they are different. We compare them later.
+  EXPECT_EQ(int_int_float_statistics.column_statistics()[0]->distinct_count(), 3.f);
+  EXPECT_EQ(int_int_float_statistics.column_statistics()[1]->distinct_count(), 1.f);
+
+  const auto post_predicate_statistics = std::make_shared<TableStatistics>(
+      int_int_float_statistics.estimate_predicate(ColumnID{0}, PredicateCondition::NotEquals, ColumnID{1}));
+
+  // Make sure that row count decreased according to NotEquals logic.
+  EXPECT_FLOAT_EQ(post_predicate_statistics->row_count(), int_int_float_statistics.row_count() * 2.f / 3.f);
+
+  // Make sure that the column statistics for both columns have been updated.
+  EXPECT_NE(int_int_float_statistics.column_statistics()[0], post_predicate_statistics->column_statistics()[0]);
+  EXPECT_NE(int_int_float_statistics.column_statistics()[1], post_predicate_statistics->column_statistics()[1]);
+
+  // Sanity check that the third column's statistics have not been updated, since the predicate does not concern them.
+  EXPECT_EQ(int_int_float_statistics.column_statistics()[2], post_predicate_statistics->column_statistics()[2]);
+
+  // Make sure that the distinct counts are still the same, because we don't know better for NotEquals predicates.
+  // This test is intended to make sure that the correct statistics for the column are at the correct index.
+  EXPECT_EQ(int_int_float_statistics.column_statistics()[0]->distinct_count(),
+            post_predicate_statistics->column_statistics()[0]->distinct_count());
+  EXPECT_EQ(int_int_float_statistics.column_statistics()[1]->distinct_count(),
+            post_predicate_statistics->column_statistics()[1]->distinct_count());
 }
 
 }  // namespace opossum

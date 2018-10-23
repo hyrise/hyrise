@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
