@@ -923,14 +923,23 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     auto& column_definition = column_definitions[column_id];
 
     // TODO(anybody) SQLParser is missing support for Hyrise's other types
-    switch (parser_column_definition->type) {
-      case hsql::ColumnDefinition::INT:
+    switch (parser_column_definition->type.data_type) {
+      case hsql::DataType::INT:
+        column_definition.data_type = DataType::Int;
+        break;
+      case hsql::DataType::LONG:
         column_definition.data_type = DataType::Long;
         break;
-      case hsql::ColumnDefinition::DOUBLE:
+      case hsql::DataType::FLOAT:
+        column_definition.data_type = DataType::Float;
+        break;
+      case hsql::DataType::DOUBLE:
         column_definition.data_type = DataType::Double;
         break;
-      case hsql::ColumnDefinition::TEXT:
+      case hsql::DataType::CHAR:
+      case hsql::DataType::VARCHAR:
+      case hsql::DataType::TEXT:
+        // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
         column_definition.data_type = DataType::String;
         break;
       default:
@@ -938,7 +947,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     }
 
     column_definition.name = parser_column_definition->name;
-    column_definition.nullable = true;  // TODO(anybody) SQLParser doesn't support any syntax for this
+    column_definition.nullable = parser_column_definition->nullable;
   }
 
   return CreateTableNode::make(create_statement.tableName, column_definitions);
