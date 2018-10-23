@@ -96,7 +96,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
 
   // check the line count of the output string
   size_t line_count = std::count(output_string.begin(), output_string.end(), '\n');
-  size_t expected_line_count = 3 + 11 * chunk_count;  // 3 header lines + all 10-line chunks with chunk header
+  size_t expected_line_count = 4 + 11 * chunk_count;  // 4 header lines + all 10-line chunks with chunk header
   EXPECT_EQ(line_count, expected_line_count);
 
   EXPECT_TRUE(output_string.find("Chunk 0") != std::string::npos);
@@ -204,6 +204,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
+      "|not null|not null|\n"
       "=== Chunk 0 ===\n"
       "Empty chunk.\n";
 
@@ -222,7 +223,8 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
   auto expected_output_noempty =
       "=== Columns\n"
       "|column_1|column_2|\n"
-      "|     int|  string|\n";
+      "|     int|  string|\n"
+      "|not null|not null|\n";
 
   EXPECT_EQ(output_string_noempty, expected_output_noempty);
   EXPECT_FALSE(print_wrap_noempty.is_printing_empty_chunks());
@@ -237,7 +239,8 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
   auto expected_output =
       "=== Columns\n"
       "|column_1|column_2||        MVCC        |\n"
-      "|     int|  string||_BEGIN|_END  |_TID  |\n";
+      "|     int|  string||_BEGIN|_END  |_TID  |\n"
+      "|not null|not null||      |      |      |\n";
 
   EXPECT_EQ(output_string, expected_output);
   EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
@@ -265,6 +268,7 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
       "=== Columns\n"
       "|       a|       b||        MVCC        |\n"
       "|     int|   float||_BEGIN|_END  |_TID  |\n"
+      "|not null|not null||      |      |      |\n"
       "=== Chunk 0 ===\n"
       "|   12345|   458.7||     0|      |      |\n"
       "|     123|   456.7||     0|      |      |\n"
@@ -280,7 +284,8 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
   auto expected_op_inst =
       "=== Columns\n"
       "|column_1|column_2|\n"
-      "|     int|  string|\n";
+      "|     int|  string|\n"
+      "|not null|not null|\n";
 
   EXPECT_EQ(output_op_inst, expected_op_inst);
 
@@ -290,9 +295,11 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
+      "|not null|not null|\n"
       "=== Columns\n"
       "|column_1|column_2|\n"
-      "|     int|  string|\n";
+      "|     int|  string|\n"
+      "|not null|not null|\n";
 
   EXPECT_EQ(output_tab_inst, expected_tab_inst);
 }
