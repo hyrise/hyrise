@@ -55,7 +55,7 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
   return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
 }
 
-void find_sub_plan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
+void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
                               std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes,
                               const std::shared_ptr<AbstractLQPNode>& lqp) {
   root_nodes.emplace_back(lqp);
@@ -66,7 +66,7 @@ void find_sub_plan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& roo
     for (const auto& expression : sub_node->node_expressions()) {
       visit_expression(expression, [&](const auto sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-          find_sub_plan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
+          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
         }
 
         return ExpressionVisitation::VisitArguments;
@@ -211,10 +211,10 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
   }
 }
 
-std::vector<std::shared_ptr<AbstractLQPNode>> find_sub_plan_roots(const std::shared_ptr<AbstractLQPNode>& lqp) {
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp) {
   auto root_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  find_sub_plan_roots_impl(root_nodes, visited_nodes, lqp);
+  lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
 

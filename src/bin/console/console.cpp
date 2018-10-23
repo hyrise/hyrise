@@ -98,25 +98,6 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   return std::regex_replace(input, expression, "");
 }
 
-void find_all_join_graphs(const std::shared_ptr<AbstractLQPNode>& lqp, std::vector<JoinGraph>& join_graphs,
-                          std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!lqp) return;
-  if (!visited_nodes.emplace(lqp).second) return;
-
-  const auto join_graph = JoinGraph::from_lqp(lqp);
-  if (join_graph) {
-    join_graphs.emplace_back(*join_graph);
-
-    for (const auto& vertex : join_graph->vertices) {
-      find_all_join_graphs(vertex->left_input(), join_graphs, visited_nodes);
-      find_all_join_graphs(vertex->right_input(), join_graphs, visited_nodes);
-    }
-  } else {
-    find_all_join_graphs(lqp->left_input(), join_graphs, visited_nodes);
-    find_all_join_graphs(lqp->right_input(), join_graphs, visited_nodes);
-  }
-}
-
 }  // namespace
 
 namespace opossum {
@@ -673,11 +654,6 @@ int Console::_visualize(const std::string& input) {
       std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
       try {
-        if (!no_execute) {
-          // Run the query and then collect the LQPs
-          _sql_pipeline->get_result_table();
-        }
-
         const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
                                                         : _sql_pipeline->get_unoptimized_logical_plans();
         for (const auto& lqp : lqps) {
@@ -721,14 +697,14 @@ int Console::_visualize(const std::string& input) {
       out("NOTE: Only Inner and Cross-Joins are visualized at the moment.\n");
 
       auto join_graphs = std::vector<JoinGraph>{};
-      auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
       const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
       for (const auto& lqp : lqps) {
         const auto sub_lqps = find_sub_plan_roots(lqp);
 
         for (const auto& sub_lqp : sub_lqps) {
-          find_all_join_graphs(sub_lqp, join_graphs, visited_nodes);
+          const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
+          join_graphs.insert(join_graphs.end(), sub_lqp_join_graphs.begin(), sub_lqp_join_graphs.end());
         }
       }
 
