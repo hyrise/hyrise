@@ -32,6 +32,7 @@
 #include "pagination.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/join_graph_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -105,16 +106,15 @@ std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!visited_nodes.emplace(lqp).second) return;
 
   const auto join_graph = JoinGraph::from_lqp(lqp);
-  if (!join_graph) {
-    find_join_graphs(lqp->left_input(), join_graphs, visited_nodes);
-    find_join_graphs(lqp->right_input(), join_graphs, visited_nodes);
-    return;
-  }
+  if (join_graph) {
+    join_graphs.emplace_back(*join_graph);
 
-  join_graphs.emplace_back(join_graph);
-
-  for (const auto& vertex : join_graph->vertices) {
-    find_join_graphs(vertex, join_graphs, visited_nodes);
+    for (const auto& vertex : join_graph->vertices) {
+      find_all_join_graphs(vertex, join_graphs, visited_nodes);
+    }
+  } else {
+    find_all_join_graphs(lqp->left_input(), join_graphs, visited_nodes);
+    find_all_join_graphs(lqp->right_input(), join_graphs, visited_nodes);
   }
 }
 
@@ -722,9 +722,20 @@ int Console::_visualize(const std::string& input) {
     case PlanType::Joins: {
       out("NOTE: Only Inner and Cross-Joins are visualized at the moment.\n");
 
-      const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
-      find_sub_plan_roots()
+      auto join_graphs = std::vector<JoinGraph>{};
+      auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
+      const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
+      for (const auto& lqp : lqps) {
+        const auto sub_lqps = find_sub_plan_roots(lqp);
+
+        for (const auto& sub_lqp : sub_lqps) {
+          find_all_join_graphs(sub_lqp, join_graphs, visited_nodes);
+        }
+      }
+
+      JoinGraphVisualizer visualizer;
+      visualizer.visualize(join_graphs, graph_filename, img_filename);
 
     } break;
 

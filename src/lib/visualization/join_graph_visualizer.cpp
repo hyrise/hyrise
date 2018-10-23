@@ -2,18 +2,21 @@
 
 #include <sstream>
 
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "viz_record_layout.hpp"
 
 namespace opossum {
 
-void JoinGraphVisualizer::_build_graph(const std::vector<std::shared_ptr<JoinGraph>>& graphs) {
+void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
   for (const auto& graph : graphs) {
-    for (auto vertex_idx = size_t{0}; vertex_idx < graph->vertices.size(); ++vertex_idx) {
-      const auto &vertex = graph->vertices[vertex_idx];
-      const auto predicates = graph->find_local_predicates(vertex_idx);
+    std::cout << "Vertices: " << graph.vertices.size() << std::endl;
+    for (auto vertex_idx = size_t{0}; vertex_idx < graph.vertices.size(); ++vertex_idx) {
+      const auto &vertex = graph.vertices[vertex_idx];
+      const auto predicates = graph.find_local_predicates(vertex_idx);
 
       VizRecordLayout layout;
-      layout.add_label(vertex->description());
+      layout.add_label(_create_vertex_description(vertex));
 
       if (!predicates.empty()) {
         auto &predicates_layout = layout.add_sublayout();
@@ -30,10 +33,10 @@ void JoinGraphVisualizer::_build_graph(const std::vector<std::shared_ptr<JoinGra
       _add_vertex(vertex, vertex_info);
     }
 
-    for (const auto &edge : graph->edges) {
+    for (const auto &edge : graph.edges) {
       const auto vertex_count = edge.vertex_set.count();
 
-      // Single-vertex edges are local predicates. We already visualized those aboce
+      // Single-vertex edges are local predicates. We already visualized those above
       if (vertex_count <= 1) continue;
 
       // Binary vertex edges: render a simple edge between the two vertices with the predicates as the edge label
@@ -41,12 +44,12 @@ void JoinGraphVisualizer::_build_graph(const std::vector<std::shared_ptr<JoinGra
         const auto first_vertex_idx = edge.vertex_set.find_first();
         const auto second_vertex_idx = edge.vertex_set.find_next(first_vertex_idx);
 
-        const auto first_vertex = graph->vertices[first_vertex_idx];
-        const auto second_vertex = graph->vertices[second_vertex_idx];
+        const auto first_vertex = graph.vertices[first_vertex_idx];
+        const auto second_vertex = graph.vertices[second_vertex_idx];
 
         std::stringstream edge_label_stream;
         for (const auto &predicate : edge.predicates) {
-          edge_label_stream << predicate;
+          edge_label_stream << predicate->as_column_name();
           edge_label_stream << "\n";
         }
 
@@ -83,11 +86,40 @@ void JoinGraphVisualizer::_build_graph(const std::vector<std::shared_ptr<JoinGra
           edge_info.dir = "none";
           edge_info.font_color = vertex_info.color;
           edge_info.color = vertex_info.color;
-          _add_edge(graph->vertices[current_vertex_idx], edge, edge_info);
+          _add_edge(graph.vertices[current_vertex_idx], edge, edge_info);
         }
       }
     }
   }
+}
+
+std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_ptr<AbstractLQPNode>& vertex) {
+  auto stored_table_nodes = std::vector<std::shared_ptr<StoredTableNode>>{};
+
+  std::ostringstream stream;
+
+  visit_lqp(vertex, [&](const auto& sub_node) {
+    if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(sub_node)) {
+      stored_table_nodes.emplace_back(stored_table_node);
+    }
+
+    return LQPVisitation::VisitInputs;
+  });
+
+  if (stored_table_nodes.empty()) {
+    stream << "No Tables";
+  } else if (stored_table_nodes.size() == 1) {
+    stream << "Table: ";
+  } else {
+    stream << "Tables: ";
+  }
+
+  for (auto node_idx = size_t{0}; node_idx < stored_table_nodes.size(); ++node_idx) {
+    stream << stored_table_nodes[node_idx]->table_name;
+    if (node_idx + 1u < stored_table_nodes.size()) stream << ", ";
+  }
+
+  return stream.str();
 }
 
 }  // namespace opossum
