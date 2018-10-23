@@ -602,7 +602,8 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
   const auto b_plus_3 = add_(int_float_b, 3);
 
   const auto aliases = std::vector<std::string>({"a", "b", "y", "SUM(a + b)"});
-  const auto select_list_expressions = expression_vector(int_float_a, int_float_b, b_plus_3, sum_(add_(int_float_a, int_float_b)));
+  const auto select_list_expressions =
+      expression_vector(int_float_a, int_float_b, b_plus_3, sum_(add_(int_float_a, int_float_b)));
 
   // clang-format off
   const auto expected_lqp =
