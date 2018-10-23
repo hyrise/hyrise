@@ -33,22 +33,22 @@ const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
     add_query_if_present(queries, CalibrationQueryGenerator::_generate_aggregate(table_definition));
 
     add_query_if_present(queries, _generate_table_scan(table_definition,
-                                           CalibrationQueryGeneratorPredicates::generate_predicate_column_value));
-
-      add_query_if_present(queries, _generate_table_scan(table_definition,
-                                              CalibrationQueryGeneratorPredicates::generate_predicate_column_column));
-
-      add_query_if_present(queries, _generate_table_scan(table_definition,
-                                              CalibrationQueryGeneratorPredicates::generate_between_predicate_value));
-
-      add_query_if_present(queries, _generate_table_scan(table_definition,
-                                              CalibrationQueryGeneratorPredicates::generate_between_predicate_column));
+            CalibrationQueryGeneratorPredicates::generate_predicate_column_value));
 
     add_query_if_present(queries, _generate_table_scan(table_definition,
-                                                       CalibrationQueryGeneratorPredicates::generate_predicate_like));
+            CalibrationQueryGeneratorPredicates::generate_predicate_column_column));
 
     add_query_if_present(queries, _generate_table_scan(table_definition,
-                                                       CalibrationQueryGeneratorPredicates::generate_predicate_column_value, "OR"));
+            CalibrationQueryGeneratorPredicates::generate_between_predicate_value));
+
+    add_query_if_present(queries, _generate_table_scan(table_definition,
+            CalibrationQueryGeneratorPredicates::generate_between_predicate_column));
+
+    add_query_if_present(queries, _generate_table_scan(table_definition,
+            CalibrationQueryGeneratorPredicates::generate_predicate_like));
+
+    add_query_if_present(queries, _generate_table_scan(table_definition,
+            CalibrationQueryGeneratorPredicates::generate_predicate_column_value, "OR"));
   }
 
   add_query_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
@@ -57,14 +57,16 @@ const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
 }
 
 const std::optional<std::string> CalibrationQueryGenerator::_generate_table_scan(
-    const CalibrationTableSpecification& table_definition, const PredicateGeneratorFunctor& predicate_generator, const std::string& predicate_join_keyword) {
+    const CalibrationTableSpecification& table_definition, const PredicateGeneratorFunctor& predicate_generator,
+    const std::string& predicate_join_keyword) {
   auto string_template = "SELECT %1% FROM %2% WHERE %3%;";
 
   auto select_columns = _generate_select_columns(table_definition.columns);
   auto table_name = table_definition.table_name;
 
   auto column_definitions = table_definition.columns;
-  auto predicates = CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, column_definitions, 2, predicate_join_keyword);
+  auto predicates = CalibrationQueryGeneratorPredicates::generate_predicates(
+          predicate_generator, column_definitions, 2, predicate_join_keyword);
 
   if (!predicates) {
     return {};

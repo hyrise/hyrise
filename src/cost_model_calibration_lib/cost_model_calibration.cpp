@@ -71,6 +71,7 @@ void CostModelCalibration::run_tpch() const {
 
   for (size_t i = 0; i < 1; i++) {
     for (const auto& query : opossum::tpch_queries) {
+      std::cout << query.second << std::endl;
       std::vector<CalibrationExample> examples{};
 
       SQLQueryCache<SQLQueryPlan>::get().clear();
@@ -158,7 +159,7 @@ void CostModelCalibration::_write_csv_header(const std::string& output_path) con
   stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   stream.open(output_path, std::ios::out);
 
-  const auto header = boost::algorithm::join(columns, ", ");
+  const auto header = boost::algorithm::join(columns, ",");
   stream << header << '\n';
   stream.close();
 }

@@ -3,6 +3,7 @@
 #include <sys/resource.h>
 
 #include "all_parameter_variant.hpp"
+#include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "feature/calibration_constant_hardware_features.hpp"
@@ -129,7 +130,7 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   if (table_condition->type == ExpressionType::Predicate) {
     const auto & casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
 
-    features.scan_operator_type = casted_predicate->predicate_condition;
+    features.scan_operator_type = predicate_condition_to_string.left.at(casted_predicate->predicate_condition);
 
     const auto& predicate_arguments = casted_predicate->arguments;
 
@@ -144,14 +145,14 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
             const auto &column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(first_argument);
             const auto &column_id = column_expression->column_id;
 
-            features.scan_segment_data_type = column_expression->data_type();
+            features.scan_segment_data_type = data_type_to_string.left.at(column_expression->data_type());
 
             // TODO(Sven): What should we do when there are different encodings across different chunks?
             if (chunk_count > ChunkID{0}) {
                 const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
 
                 const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-                features.scan_segment_encoding = encoding_reference_pair.first;
+                features.scan_segment_encoding = encoding_type_to_string.left.at(encoding_reference_pair.first);
                 features.is_scan_segment_reference_segment = encoding_reference_pair.second;
                 features.scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
             }
@@ -164,14 +165,14 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
             const auto &column_id = column_expression->column_id;
 
             features.uses_second_segment = true;
-            features.second_scan_segment_data_type = column_expression->data_type();
+            features.second_scan_segment_data_type = data_type_to_string.left.at(column_expression->data_type());
 
             // TODO(Sven): What should we do when there are different encodings across different chunks?
             if (chunk_count > ChunkID{0}) {
                 const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
 
                 const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-                features.second_scan_segment_encoding = encoding_reference_pair.first;
+                features.second_scan_segment_encoding = encoding_type_to_string.left.at(encoding_reference_pair.first);
                 features.is_second_scan_segment_reference_segment = encoding_reference_pair.second;
                 features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
             }
@@ -202,6 +203,7 @@ std::pair<EncodingType, bool> CostModelFeatureExtractor::_get_encoding_type_for_
 
   // Dereference ReferenceSegment for encoding feature
   // TODO(Sven): add test for empty referenced table
+  // TODO(Sven): add test to check for encoded, referenced column
   if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
     auto underlying_segment = reference_segment->referenced_table()
                                   ->get_chunk(ChunkID{0})
