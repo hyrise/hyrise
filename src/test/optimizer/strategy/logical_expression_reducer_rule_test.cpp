@@ -61,7 +61,7 @@ TEST_F(LogicalExpressionReducerRuleTest, CollectChainedAndExpressions) {
 }
 
 TEST_F(LogicalExpressionReducerRuleTest, CollectChainedOrExpressions) {
-  // a = 0 OR b = 1 OR (c = 2 AND d = 3)
+  // a = 0 OR b = 1 OR (c = 2 AND d = 3) OR e = 4
   auto and_expression = and_(_c, _d);
   auto expression = or_(_a, or_(_b, or_(and_expression, _e)));
 
