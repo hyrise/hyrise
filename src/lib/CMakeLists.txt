@@ -568,6 +568,8 @@ set(
     cqf
     uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
 )
 
