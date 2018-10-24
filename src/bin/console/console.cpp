@@ -702,7 +702,7 @@ int Console::_visualize(const std::string& input) {
         for (const auto& sub_lqp : sub_lqps) {
           const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
           for (auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
-            join_graphs.emplace_back(std::move(sub_lqp_join_graph));
+            join_graphs.emplace_back(sub_lqp_join_graph);
           }
         }
       }
