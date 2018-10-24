@@ -28,8 +28,15 @@ int main(int argc, char* argv[]) {
   nlohmann::json json_config;
   std::ifstream json_file{argv[1]};
   json_file >> json_config;
+  json_file.close();
 
-  const opossum::CalibrationConfiguration calibration_config = json_config;
+  opossum::CalibrationConfiguration calibration_config = json_config;
+
+  if (argc == 3) {
+    calibration_config.output_path = argv[2];
+  }
+
+  std::cout << calibration_config.output_path << std::endl;
   const auto cost_model_calibration = opossum::CostModelCalibration(calibration_config);
   cost_model_calibration.calibrate();
   //  cost_model_calibration.run_tpch();
