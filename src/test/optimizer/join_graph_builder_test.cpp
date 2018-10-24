@@ -233,6 +233,20 @@ TEST_F(JoinGraphBuilderTest, MultipleComponents) {
   EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 0u);
 }
 
+TEST_F(JoinGraphBuilderTest, NonJoinGraphJoin) {
+  // Non-Inner/Cross Joins are not represented in the JoinGraph
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Left, equals_(a_a, b_a),
+    node_a,
+    node_b);
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+  ASSERT_FALSE(join_graph);
+}
+
 TEST_F(JoinGraphBuilderTest, BuildAllInLQP) {
   // clang-format off
   const auto sub_lqp =
