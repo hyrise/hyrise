@@ -25,12 +25,12 @@ struct CalibrationExample {
 inline std::vector<AllTypeVariant> serialize(const CalibrationExample& example) {
   std::vector<AllTypeVariant> all_type_variants{};
 
-  const auto calibration_features = serialize(example.calibration_features);
-  const auto hardware_features = serialize(example.hardware_features);
-  const auto runtime_features = serialize(example.runtime_features);
-  const auto join_features = serialize(example.join_features);
-  const auto projection_features = serialize(example.projection_features);
-  const auto table_scan_features = serialize(example.table_scan_features);
+  const auto calibration_features = CalibrationFeatures::serialize(example.calibration_features);
+  const auto hardware_features = CalibrationConstantHardwareFeatures::serialize(example.hardware_features);
+  const auto runtime_features = CalibrationRuntimeHardwareFeatures::serialize(example.runtime_features);
+  const auto join_features = CalibrationJoinFeatures::serialize(example.join_features);
+  const auto projection_features = CalibrationProjectionFeatures::serialize(example.projection_features);
+  const auto table_scan_features = CalibrationTableScanFeatures::serialize(example.table_scan_features);
 
   all_type_variants.insert(std::end(all_type_variants), std::begin(calibration_features),
                            std::end(calibration_features));

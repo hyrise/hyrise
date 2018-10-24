@@ -229,14 +229,14 @@ const std::string CalibrationQueryGeneratorPredicates::_generate_table_scan_pred
   std::random_device random_device;
   std::mt19937 engine{random_device()};
   std::uniform_int_distribution<u_int16_t> int_dist(0, column_definition.distinct_values - 1);
-  std::uniform_real_distribution<> float_dist(0, column_definition.distinct_values - 1);
+  std::uniform_real_distribution<> float_dist(0, 1);
   //      std::uniform_int_distribution<> char_dist(0, UCHAR_MAX);
 
   // Initialize with some random seed
   u_int32_t seed = int_dist(engine);
 
   if (column_type == "int") return std::to_string(int_dist(engine));
-  if (column_type == "string") return "'" + std::string(1, 'a' + rand_r(&seed) % 26) + "'";
+  if (column_type == "string") return "'" + std::string(1, 'A' + rand_r(&seed) % 26) + "'";
   if (column_type == "float") return std::to_string(float_dist(engine));
 
   Fail("Unsupported data type in CalibrationQueryGenerator, found " + column_type);

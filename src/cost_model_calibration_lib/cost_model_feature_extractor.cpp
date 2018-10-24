@@ -125,9 +125,9 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   auto chunk_count = left_input_table->chunk_count();
 
   // TODO(Sven): is this necessary? TableScans on empty table should still be predicted, right?
-  if (chunk_count <= ChunkID{0}) {
-    return {};
-  }
+//  if (chunk_count <= ChunkID{0}) {
+//    return {};
+//  }
 
   const auto& table_condition = table_scan_op->predicate();
   if (table_condition->type == ExpressionType::Predicate) {

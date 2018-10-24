@@ -8,10 +8,12 @@ namespace opossum {
 
 struct CalibrationJoinFeatures {
   static const std::vector<std::string> columns;
+
+  static const std::vector<AllTypeVariant> serialize(const std::optional<CalibrationJoinFeatures>& features);
 };
 
 inline const std::vector<std::string> CalibrationJoinFeatures::columns({});
 
-inline std::vector<AllTypeVariant> serialize(const std::optional<CalibrationJoinFeatures>& features) { return {}; }
+inline const std::vector<AllTypeVariant> CalibrationJoinFeatures::serialize(const std::optional<CalibrationJoinFeatures>& features) { return {}; }
 
 }  // namespace opossum
