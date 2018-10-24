@@ -111,7 +111,7 @@ struct BenchmarkConfig {
   const EncodingConfig encoding_config = EncodingConfig{};
   const size_t max_num_query_runs = 1000;
   const Duration max_duration = std::chrono::seconds(60);
-  const Duration warmup_duration = std::chrono::seconds(5);
+  const Duration warmup_duration = std::chrono::seconds(0);
   const UseMvcc use_mvcc = UseMvcc::No;
   const std::optional<std::string> output_file_path = std::nullopt;
   const bool enable_scheduler = false;
