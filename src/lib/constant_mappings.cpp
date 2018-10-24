@@ -87,6 +87,11 @@ const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bim
     {EncodingType::Unencoded, "Unencoded"},
 });
 
+const boost::bimap<LogicalOperator, std::string> logical_operator_to_string = make_bimap<LogicalOperator, std::string>({
+    {LogicalOperator::And, "And"},
+    {LogicalOperator::Or, "Or"},
+});
+
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},

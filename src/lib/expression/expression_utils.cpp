@@ -240,4 +240,21 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
   }
 }
 
+size_t count_expensive_child_expressions(const std::shared_ptr<AbstractExpression>& expression) {
+  auto count_recursive_impl = [](const std::shared_ptr<AbstractExpression>& expression, size_t counter, auto& count_recursive) -> size_t {
+      for (const auto& argument : expression->arguments) {
+        counter = count_recursive(argument, counter, count_recursive);
+      }
+
+      if (expression->requires_computation() || expression->type == ExpressionType::PQPColumn) {
+        return counter + 1;
+      }
+      return counter;
+  };
+
+  return count_recursive_impl(expression, 0, count_recursive_impl);
+
+
+}
+
 }  // namespace opossum

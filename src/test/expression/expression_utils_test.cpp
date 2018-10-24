@@ -47,4 +47,11 @@ TEST_F(ExpressionUtilsTest, ExpressionCommonType) {
   EXPECT_EQ(expression_common_type(DataType::String, DataType::String), DataType::String);
 }
 
+TEST_F(ExpressionUtilsTest, CountExpensiveChildExpressions) {
+  EXPECT_EQ(count_expensive_child_expressions(equals_(a_a, 5)), 1);
+  EXPECT_EQ(count_expensive_child_expressions(equals_(a_a, value_(5))), 1);
+  EXPECT_EQ(count_expensive_child_expressions(or_(5, 6)), 1);
+  EXPECT_EQ(count_expensive_child_expressions(or_(equals_(a_a, 5), equals_(a_a, 5))), 3);
+}
+
 }  // namespace opossum

@@ -7,6 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
+#include "expression/logical_expression.hpp"
 #include "operators/jit_operator/jit_types.hpp"
 #include "types.hpp"
 
@@ -16,6 +17,7 @@ enum class EncodingType : uint8_t;
 enum class VectorCompressionType : uint8_t;
 enum class AggregateFunction;
 enum class ExpressionType;
+enum class LogicalOperator;
 enum class TableType;
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
@@ -28,6 +30,7 @@ extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
 extern const boost::bimap<EncodingType, std::string> encoding_type_to_string;
+extern const boost::bimap<LogicalOperator, std::string> logical_operator_to_string;
 extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
 extern const boost::bimap<TableType, std::string> table_type_to_string;
 extern const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string;

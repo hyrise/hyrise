@@ -14,14 +14,14 @@ struct CalibrationTableScanFeatures {
   std::string scan_segment_data_type = "undefined";
   size_t scan_segment_memory_usage_bytes = 0;
   size_t scan_segment_distinct_value_count = 0;
-  bool uses_second_segment = false;
+  bool isColumnComparison = false;
   std::string second_scan_segment_encoding = "undefined";
   bool is_second_scan_segment_reference_segment = false;
   std::string second_scan_segment_data_type = "undefined";
   size_t second_scan_segment_memory_usage_bytes = 0;
   size_t second_scan_segment_distinct_value_count = 0;
   std::string scan_operator_type = "undefined";
-  bool is_complex_expression = false;
+  size_t number_of_computable_or_column_expressions = 0;
 
   static const std::vector<std::string> columns;
 
@@ -30,9 +30,10 @@ struct CalibrationTableScanFeatures {
 
 inline const std::vector<std::string> CalibrationTableScanFeatures::columns(
     {"scan_segment_encoding", "is_scan_segment_reference_segment", "scan_segment_data_type",
-     "scan_segment_memory_usage_bytes", "scan_segment_distinct_value_count", "uses_second_segment",
+     "scan_segment_memory_usage_bytes", "scan_segment_distinct_value_count", "isColumnComparison",
      "second_scan_segment_encoding", "is_second_scan_segment_reference_segment", "second_scan_segment_data_type",
-     "second_scan_segment_memory_usage_bytes", "second_scan_segment_distinct_value_count", "scan_operator_type", "is_complex_expression"});
+     "second_scan_segment_memory_usage_bytes", "second_scan_segment_distinct_value_count", "scan_operator_type",
+     "number_of_computable_or_column_expressions"});
 
 inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize(
         const std::optional<CalibrationTableScanFeatures>& features) {
@@ -45,14 +46,15 @@ inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize
           features->scan_segment_data_type,
           static_cast<int32_t>(features->scan_segment_memory_usage_bytes),
           static_cast<int32_t>(features->scan_segment_distinct_value_count),
-          features->uses_second_segment,
+          features->isColumnComparison,
           features->second_scan_segment_encoding,
           features->is_second_scan_segment_reference_segment,
           features->second_scan_segment_data_type,
           static_cast<int32_t>(features->second_scan_segment_memory_usage_bytes),
           static_cast<int32_t>(features->second_scan_segment_distinct_value_count),
           features->scan_operator_type,
-          features->is_complex_expression};
+          static_cast<int32_t>(features->number_of_computable_or_column_expressions)
+  };
 }
 
 }  // namespace opossum

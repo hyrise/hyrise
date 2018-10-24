@@ -143,4 +143,9 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
  */
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
 
+/**
+ * Count expression that either need computation or represent a column
+ */
+size_t count_expensive_child_expressions(const std::shared_ptr<AbstractExpression>& expression);
+
 }  // namespace opossum

@@ -19,6 +19,7 @@ class CostModelCalibration {
   void run_tpch() const;
 
  private:
+  const std::vector<CalibrationExample> _calibrate_query(const std::string& query) const;
   void _traverse(const std::shared_ptr<const AbstractOperator>& op, std::vector<CalibrationExample>& examples) const;
   void _write_csv_header(const std::string& output_path) const;
   void _append_to_result_csv(const std::string& output_path, const std::vector<CalibrationExample>& examples) const;

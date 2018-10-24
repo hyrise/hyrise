@@ -218,7 +218,8 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
       // remove trailing apostroph
       filter_column_value.pop_back();
 
-      const auto modified = filter_column_value + "*'";
+      // Append wildcard and apostroph
+      const auto modified = filter_column_value + "%'";
 
       return boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % modified);
 }

@@ -5,7 +5,9 @@
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/logical_expression.hpp"
 #include "feature/calibration_constant_hardware_features.hpp"
 #include "feature/calibration_example.hpp"
 #include "feature/calibration_runtime_hardware_features.hpp"
@@ -130,6 +132,8 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
 //  }
 
   const auto& table_condition = table_scan_op->predicate();
+  features.number_of_computable_or_column_expressions = count_expensive_child_expressions(table_condition);
+
   if (table_condition->type == ExpressionType::Predicate) {
     const auto & casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
 
@@ -167,7 +171,7 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
             const auto &column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(second_argument);
             const auto &column_id = column_expression->column_id;
 
-            features.uses_second_segment = true;
+            features.isColumnComparison = true;
             features.second_scan_segment_data_type = data_type_to_string.left.at(column_expression->data_type());
 
             // TODO(Sven): What should we do when there are different encodings across different chunks?
@@ -181,6 +185,13 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
             }
         }
     }
+  } else if (table_condition->type == ExpressionType::Logical) {
+      const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
+      if (logical_expression->logical_operator == LogicalOperator::Or) {
+          const auto & casted_predicate = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
+          features.scan_operator_type = logical_operator_to_string.left.at(casted_predicate->logical_operator);
+//          const auto& predicate_arguments = casted_predicate->arguments;
+      }
   }
 
   return features;

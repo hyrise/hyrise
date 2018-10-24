@@ -30,13 +30,13 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
 
   for (const auto& table_specification : table_specifications) {
     std::cout << "Loading table " << table_specification.table_name << std::endl;
-    auto table = load_table(table_specification.table_path, 100000);
+    const auto table = load_table(table_specification.table_path, 100000);
     std::cout << "Loaded table " << table_specification.table_name << " successfully." << std::endl;
 
     ChunkEncodingSpec chunk_spec;
 
     for (const auto& column_specification : table_specification.columns) {
-      auto column = column_specification.second;
+      const auto column = column_specification.second;
       chunk_spec.push_back(column.encoding);
     }
 
@@ -50,7 +50,7 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
 
   for (auto& tpch_table : tables) {
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
-    auto& table = tpch_table.second;
+    const auto& table = tpch_table.second;
 
     ChunkEncodingSpec chunk_spec;
 
@@ -65,74 +65,63 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
   }
 }
 
-void CostModelCalibration::run_tpch() const {
-  const auto scheduler = std::make_shared<NodeQueueScheduler>();
-  CurrentScheduler::set(scheduler);
+const std::vector<CalibrationExample> CostModelCalibration::_calibrate_query(const std::string& query) const {
+  std::cout << query << std::endl;
+  std::vector<CalibrationExample> examples{};
 
+  SQLQueryCache<SQLQueryPlan>::get().clear();
+
+  auto pipeline_builder = SQLPipelineBuilder{query};
+  pipeline_builder.disable_mvcc();
+  pipeline_builder.dont_cleanup_temporaries();
+  auto pipeline = pipeline_builder.create_pipeline();
+
+  // Execute the query, we don't care about the results
+  pipeline.get_result_table();
+
+  const auto query_plans = pipeline.get_query_plans();
+  for (const auto& query_plan : query_plans) {
+    for (const auto& root : query_plan->tree_roots()) {
+      _traverse(root, examples);
+    }
+  }
+
+  return examples;
+}
+
+void CostModelCalibration::run_tpch() const {
+//  const auto scheduler = std::make_shared<NodeQueueScheduler>();
+//  CurrentScheduler::set(scheduler);
+
+  // Run just a single iteration for TPCH
   for (size_t i = 0; i < 1; i++) {
     for (const auto& query : opossum::tpch_queries) {
-      std::cout << query.second << std::endl;
-      std::vector<CalibrationExample> examples{};
+      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
+      _write_csv_header(tpch_file_output_path);
 
-      SQLQueryCache<SQLQueryPlan>::get().clear();
+      const auto examples = _calibrate_query(query.second);
 
-      auto pipeline_builder = SQLPipelineBuilder{query.second};
-      pipeline_builder.disable_mvcc();
-      pipeline_builder.dont_cleanup_temporaries();
-      auto pipeline = pipeline_builder.create_pipeline();
-
-      // Execute the query, we don't care about the results
-      pipeline.get_result_table();
-
-      auto query_plans = pipeline.get_query_plans();
-      for (const auto& query_plan : query_plans) {
-        for (const auto& root : query_plan->tree_roots()) {
-          _traverse(root, examples);
-        }
-      }
-      std::cout << "Finished TPCH " << query.first << std::endl;
-
-      auto output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-      _append_to_result_csv(output_path, examples);
+      _append_to_result_csv(tpch_file_output_path, examples);
     }
   }
 }
 
 void CostModelCalibration::calibrate() const {
-  auto number_of_iterations = _configuration.calibration_runs;
+  const auto number_of_iterations = _configuration.calibration_runs;
 
-  const auto scheduler = std::make_shared<NodeQueueScheduler>();
-  CurrentScheduler::set(scheduler);
+//  const auto scheduler = std::make_shared<NodeQueueScheduler>();
+//  CurrentScheduler::set(scheduler);
 
   _write_csv_header(_configuration.output_path);
 
   for (size_t i = 0; i < number_of_iterations; i++) {
-    std::vector<CalibrationExample> examples{};
-
     // Regenerate Queries for each iteration...
-    auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
+    const auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
     for (const auto& query : queries) {
-      std::cout << query << std::endl;
-      SQLQueryCache<SQLQueryPlan>::get().clear();
-
-      auto pipeline_builder = SQLPipelineBuilder{query};
-      pipeline_builder.disable_mvcc();
-      pipeline_builder.dont_cleanup_temporaries();
-      auto pipeline = pipeline_builder.create_pipeline();
-
-      // Execute the query, we don't care about the results
-      pipeline.get_result_table();
-
-      auto query_plans = pipeline.get_query_plans();
-      for (const auto& query_plan : query_plans) {
-        for (const auto& root : query_plan->tree_roots()) {
-          _traverse(root, examples);
-        }
-      }
+      const auto examples = _calibrate_query(query);
+      _append_to_result_csv(_configuration.output_path, examples);
     }
-
-    _append_to_result_csv(_configuration.output_path, examples);
 
     std::cout << "Finished iteration " << i << std::endl;
   }
