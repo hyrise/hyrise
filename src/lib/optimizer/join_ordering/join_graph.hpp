@@ -31,9 +31,9 @@ class JoinGraph final {
   static std::optional<JoinGraph> build_from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 
   /**
-   * Traverse for subgraphs from which JoinGraphs can be built with build_from_lqp(). Once one is found, continue
-   * the traversal recursively from this JoinGraphs vertices.
-   * @return All JoinGraphs that can be built from subgraphs in this LQP
+   * Traverse a plan for subgraphs from which JoinGraphs can be built with JoinGraph::build_from_lqp().
+   * Once one is found, continue the traversal recursively from this JoinGraphs vertices.
+   * @return All JoinGraphs that can be built from subgraphs in the specified LQP
    */
   static std::vector<JoinGraph> build_all_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 
@@ -53,8 +53,8 @@ class JoinGraph final {
 
   void print(std::ostream& stream = std::cout) const;
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
-  std::vector<JoinGraphEdge> edges;
+  const std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
+  const std::vector<JoinGraphEdge> edges;
 };
 
 }  // namespace opossum

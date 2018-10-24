@@ -58,8 +58,6 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
-
 /**
  * Buffer for program state
  *
@@ -97,7 +95,6 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   std::regex expression{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
-
 }  // namespace
 
 namespace opossum {
@@ -694,7 +691,7 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::Joins: {
-      out("NOTE: Join graphs will show only Cross and Inner joins, not Outer joins.\n");
+      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Outer and Anti joins.\n");
 
       auto join_graphs = std::vector<JoinGraph>{};
 
@@ -704,7 +701,9 @@ int Console::_visualize(const std::string& input) {
 
         for (const auto& sub_lqp : sub_lqps) {
           const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
-          join_graphs.insert(join_graphs.end(), sub_lqp_join_graphs.begin(), sub_lqp_join_graphs.end());
+          for (auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
+            join_graphs.emplace_back(std::move(sub_lqp_join_graph));
+          }
         }
       }
 
@@ -722,7 +721,7 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Ok;
   }
 
-  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
+  auto cmd = std::string("./scripts/planviz/imgcat.sh") + img_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 

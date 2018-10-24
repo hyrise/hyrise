@@ -17,11 +17,14 @@ void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vec
   if (join_graph) {
     join_graphs.emplace_back(*join_graph);
 
+    // A JoinGraph could be built from the subgraph rooted at `lqp`. Continue the search for more JoinGraphs from
+    // the JoinGraph's vertices inputs.
     for (const auto& vertex : join_graph->vertices) {
       build_all_in_lqp_impl(vertex->left_input(), join_graphs, visited_nodes);
       build_all_in_lqp_impl(vertex->right_input(), join_graphs, visited_nodes);
     }
   } else {
+    // No JoinGraph could be built from the subgraph rooted at `lqp`. Continue the search from the inputs of `lqp`.
     build_all_in_lqp_impl(lqp->left_input(), join_graphs, visited_nodes);
     build_all_in_lqp_impl(lqp->right_input(), join_graphs, visited_nodes);
   }
