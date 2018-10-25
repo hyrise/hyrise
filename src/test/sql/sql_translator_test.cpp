@@ -605,9 +605,18 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(count_distinct_(add_(int_float_a, int_float_b))),  // NOLINT
     ProjectionNode::make(expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b)),
       stored_table_node_int_float));
-
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
+
+  const auto actual_lqp_count_1 =
+      compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
+  // clang-format off
+  const auto expected_lqp_count_1 =
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
+    ProjectionNode::make(expression_vector(int_float_a, value_(1)),
+      stored_table_node_int_float));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_count_1, expected_lqp_count_1);
 }
 
 TEST_F(SQLTranslatorTest, GroupByOnly) {
