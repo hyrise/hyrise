@@ -524,7 +524,6 @@ set(
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
-    utils/div_with_rounding.hpp
     utils/enum_constant.hpp
     utils/filesystem.hpp
     utils/format_bytes.cpp
