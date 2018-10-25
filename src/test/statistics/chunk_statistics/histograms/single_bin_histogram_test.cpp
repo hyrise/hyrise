@@ -93,4 +93,16 @@ TEST_F(SingleBinHistogramTest, Basic) {
   }
 }
 
+TEST_F(SingleBinHistogramTest, FromSegment) {
+  const auto table = load_table("src/test/tables/int_int4.tbl");
+  ASSERT_EQ(table->chunk_count(), 1u);
+
+  const auto hist = SingleBinHistogram<int32_t>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
+  EXPECT_EQ(hist->bin_count(), 1u);
+  EXPECT_EQ(hist->minimum(), 0);
+  EXPECT_EQ(hist->maximum(), 18);
+  EXPECT_EQ(hist->total_count(), 11u);
+  EXPECT_EQ(hist->total_distinct_count(), 7u);
+}
+
 }  // namespace opossum
