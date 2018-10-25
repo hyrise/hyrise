@@ -233,4 +233,25 @@ TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
   CurrentScheduler::get()->finish();
 }
 
+TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
+  Topology::use_default_topology(1);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto task_done = false;
+  auto task = std::make_shared<JobTask>([&task_done]() {
+    auto subtask = std::make_shared<JobTask>([&task_done]() {
+      task_done = true;
+    });
+
+    subtask->schedule();
+    CurrentScheduler::wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
+  });
+
+  task->schedule();
+  CurrentScheduler::wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+  EXPECT_TRUE(task_done);
+
+  CurrentScheduler::get()->finish();
+}
+
 }  // namespace opossum
