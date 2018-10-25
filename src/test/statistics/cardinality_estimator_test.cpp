@@ -111,7 +111,7 @@ TEST_F(CardinalityEstimatorTest, TwoPredicates) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
 }
 
-TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerJoinWithNumericHistograms) {
+TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerEquiJoinWithArithmeticHistograms) {
   const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
       std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
@@ -120,9 +120,25 @@ TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerJoinWithNumericHistog
       std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59}, std::vector<HistogramCountType>{10, 5, 10},
       std::vector<HistogramCountType>{7, 2, 10});
 
-  EXPECT_FLOAT_EQ(CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_numeric_histograms<int32_t>(
-                      histogram_left, histogram_right),
-                  (10.f * 10.f * (1.f / 7.f)) + (20.f * 5.f * (1.f / 8.f)) + (15.f * 10.f * (1.f / 10.f)));
+  const auto join_histogram = CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms<int32_t>(
+    histogram_left, histogram_right);
+
+  ASSERT_EQ(join_histogram->bin_count(), 3u);
+
+  EXPECT_EQ(join_histogram->bin_minimum(0), 20);
+  EXPECT_EQ(join_histogram->bin_maximum(0), 29);
+  EXPECT_EQ(join_histogram->bin_height(0), std::ceil(10.f * 10.f * (1.f / 7.f)));
+  EXPECT_EQ(join_histogram->bin_distinct_count(0), 3u);
+
+  EXPECT_EQ(join_histogram->bin_minimum(1), 30);
+  EXPECT_EQ(join_histogram->bin_maximum(1), 39);
+  EXPECT_EQ(join_histogram->bin_height(1), std::ceil(20.f * 5.f * (1.f / 8.f)));
+  EXPECT_EQ(join_histogram->bin_distinct_count(1), 2u);
+
+  EXPECT_EQ(join_histogram->bin_minimum(2), 50);
+  EXPECT_EQ(join_histogram->bin_maximum(2), 59);
+  EXPECT_EQ(join_histogram->bin_height(2), std::ceil(15.f * 10.f * (1.f / 10.f)));
+  EXPECT_EQ(join_histogram->bin_distinct_count(2), 5u);
 }
 
 }  // namespace opossum

@@ -1,3 +1,4 @@
+#include <logical_query_plan/join_node.hpp>
 #include "operator_join_predicate.hpp"
 
 #include "expression/abstract_predicate_expression.hpp"
@@ -42,6 +43,10 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   }
 
   return std::nullopt;
+}
+
+std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_join_node(const JoinNode& join_node) {
+  return from_expression(*join_node.join_predicate, *join_node.left_input(), *join_node.right_input());
 }
 
 OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids,

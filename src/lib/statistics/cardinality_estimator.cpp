@@ -6,10 +6,12 @@
 #include "chunk_statistics/histograms/generic_histogram.hpp"
 #include "chunk_statistics2.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "resolve_type.hpp"
 #include "segment_statistics2.hpp"
 #include "storage/storage_manager.hpp"
@@ -70,14 +72,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
           const auto segment_statistics =
               std::static_pointer_cast<SegmentStatistics2<SegmentDataType>>(base_segment_statistics);
 
-          auto primary_scan_statistics_object = std::shared_ptr<AbstractHistogram<SegmentDataType>>{};
-          if (segment_statistics->equal_distinct_count_histogram) {
-            primary_scan_statistics_object = segment_statistics->equal_distinct_count_histogram;
-          } else if (segment_statistics->generic_histogram) {
-            primary_scan_statistics_object = segment_statistics->generic_histogram;
-          } else {
-            Fail("");
-          }
+          auto primary_scan_statistics_object = this->get_best_available_histogram(*segment_statistics);
 
           Assert(operator_scan_predicate.value.type() == typeid(AllTypeVariant),
                  "Histogram can't handle column-to-column scans right now");
@@ -135,7 +130,106 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     return output_table_statistics;
   }
 
+  if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp)) {
+    switch (join_node->join_mode) {
+      case JoinMode::Inner: {
+        const auto left_input_table_statistics = estimate_statistics(lqp->left_input());
+        const auto right_input_table_statistics = estimate_statistics(lqp->right_input());
+        const auto output_table_statistics = std::make_shared<TableStatistics2>();
+        output_table_statistics->chunk_statistics.reserve(
+          left_input_table_statistics->chunk_statistics.size() *
+          right_input_table_statistics->chunk_statistics.size());
+
+        const auto operator_join_predicate = OperatorJoinPredicate::from_join_node(*join_node);
+        Assert(operator_join_predicate, "");
+        Assert(operator_join_predicate->predicate_condition == PredicateCondition::Equals, "NYI");
+
+        const auto left_column_id = operator_join_predicate->column_ids.first;
+        const auto right_column_id = operator_join_predicate->column_ids.second;
+        const auto left_data_type = join_node->left_input()->column_expressions().at(left_column_id)->data_type();
+        const auto right_data_type = join_node->right_input()->column_expressions().at(right_column_id)->data_type();
+        Assert(left_data_type == right_data_type, "NYI");
+
+        resolve_data_type(left_data_type, [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+
+          // TODO(anybody) For many Chunks on both sides this nested loop will be inefficient.
+          //               Consider approaches to merge statistic objects on each side.
+
+          for (const auto& left_input_chunk_statistics : left_input_table_statistics->chunk_statistics) {
+            for (const auto& right_input_chunk_statistics : right_input_table_statistics->chunk_statistics) {
+              const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
+                left_input_chunk_statistics->segment_statistics[left_column_id]);
+              const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
+                right_input_chunk_statistics->segment_statistics[right_column_id]);
+
+              const auto left_histogram = this->get_best_available_histogram(*left_input_segment_statistics);
+              const auto right_histogram = this->get_best_available_histogram(*right_input_segment_statistics);
+              Assert(left_histogram && right_histogram, "NYI");
+
+              const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
+              const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
+              const auto join_histogram = estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms(unified_left_histogram, unified_right_histogram);
+              const auto cardinality = join_histogram->total_count();
+
+              const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);
+              output_chunk_statistics->segment_statistics.reserve(
+                left_input_chunk_statistics->segment_statistics.size() +
+                right_input_chunk_statistics->segment_statistics.size()
+              );
+
+              const auto left_selectivity = cardinality / left_input_chunk_statistics->row_count;
+              const auto right_selectivity = cardinality / right_input_chunk_statistics->row_count;
+
+              for (auto column_id = ColumnID{0}; column_id < left_input_chunk_statistics->segment_statistics.size(); ++column_id) {
+                if (column_id == left_column_id) {
+                  const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+                  segment_statistics->set_statistics_object(join_histogram);
+                  output_chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+                } else {
+                  const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
+                  output_chunk_statistics->segment_statistics.emplace_back(left_segment_statistics->scale_with_selectivity(left_selectivity));
+                }
+              }
+
+              for (auto column_id = ColumnID{0}; column_id < right_input_chunk_statistics->segment_statistics.size(); ++column_id) {
+                if (column_id == right_column_id) {
+                  const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+                  segment_statistics->set_statistics_object(join_histogram);
+                  output_chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+                } else {
+                  const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
+                  output_chunk_statistics->segment_statistics.emplace_back(right_segment_statistics->scale_with_selectivity(right_selectivity));
+                }
+              }
+
+              output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
+            }
+          }
+        });
+
+        return output_table_statistics;
+      } break;
+
+      default:
+        Fail("JoinMode not implemented");
+    }
+
+  }
+
   Fail("NYI");
 }
+
+template<typename T>
+std::shared_ptr<AbstractHistogram<T>> CardinalityEstimator::get_best_available_histogram(const SegmentStatistics2<T>& segment_statistics) {
+  if (segment_statistics.equal_distinct_count_histogram) {
+    return segment_statistics.equal_distinct_count_histogram;
+  } else if (segment_statistics.generic_histogram) {
+    return segment_statistics.generic_histogram;
+  } else {
+    Fail("");
+  }
+}
+
 
 }  // namespace opossum

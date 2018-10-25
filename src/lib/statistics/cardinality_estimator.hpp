@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <statistics/chunk_statistics/histograms/abstract_histogram.hpp>
 
 #include "abstract_cardinality_estimator.hpp"
 
@@ -8,6 +9,10 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogram;
+template <typename T>
+class GenericHistogram;
+template <typename T>
+class SegmentStatistics2;
 
 class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
@@ -15,9 +20,12 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 
   template <typename T>
-  static Cardinality estimate_cardinality_of_inner_equi_join_with_numeric_histograms(
+  static std::shared_ptr<GenericHistogram<T>> estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms(
       const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
       const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
+
+  template<typename T>
+  static std::shared_ptr<AbstractHistogram<T>> get_best_available_histogram(const SegmentStatistics2<T>& segment_statistics);
 };
 
 }  // namespace opossum

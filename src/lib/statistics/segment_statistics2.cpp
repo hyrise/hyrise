@@ -49,6 +49,27 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_select
   return segment_statistics;
 }
 
+template <typename T>
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predicate(
+const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
+
+  if (generic_histogram) {
+    segment_statistics->set_statistics_object(generic_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+  }
+
+  if (equal_width_histogram) {
+    segment_statistics->set_statistics_object(equal_width_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+  }
+
+  if (equal_distinct_count_histogram) {
+    segment_statistics->set_statistics_object(equal_distinct_count_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+  }
+
+  return segment_statistics;
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(SegmentStatistics2);
 
 }  // namespace opossum

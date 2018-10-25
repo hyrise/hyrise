@@ -9,6 +9,7 @@ namespace opossum {
 
 class AbstractExpression;
 class AbstractLQPNode;
+class JoinNode;
 
 // Predicate representation for Join operators consists of one column of each input side and a join predicate.
 struct OperatorJoinPredicate {
@@ -20,6 +21,7 @@ struct OperatorJoinPredicate {
   static std::optional<OperatorJoinPredicate> from_expression(const AbstractExpression& predicate,
                                                               const AbstractLQPNode& left_input,
                                                               const AbstractLQPNode& right_input);
+  static std::optional<OperatorJoinPredicate> from_join_node(const JoinNode& join_node);
 
   OperatorJoinPredicate(const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
