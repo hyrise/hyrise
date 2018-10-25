@@ -16,9 +16,7 @@ class TaskQueue;
  * Ideally there should be one Worker actively doing work per CPU, but multiple might be active occasionally
  */
 class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable {
-  friend class AbstractTask;
   friend class CurrentScheduler;
-  friend class NodeQueueScheduler;
 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();
@@ -32,8 +30,6 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::shared_ptr<TaskQueue> queue() const;
   CpuID cpu_id() const;
 
-  void operator()();
-
   void start();
   void join();
 
@@ -43,6 +39,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator=(Worker&&) = delete;
 
  protected:
+  void operator()();
   void _work();
 
   template <typename TaskType>

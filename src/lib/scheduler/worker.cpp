@@ -38,7 +38,7 @@ std::shared_ptr<TaskQueue> Worker::queue() const { return _queue; }
 CpuID Worker::cpu_id() const { return _cpu_id; }
 
 void Worker::operator()() {
-  DebugAssert((this_thread_worker.expired()), "Thread already has a worker");
+  Assert(this_thread_worker.expired(), "Thread already has a worker");
 
   this_thread_worker = shared_from_this();
 
@@ -86,7 +86,10 @@ void Worker::_work() {
 
 void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
-void Worker::join() { _thread.join(); }
+void Worker::join() {
+  Assert(!CurrentScheduler::get()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  _thread.join();
+}
 
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 
