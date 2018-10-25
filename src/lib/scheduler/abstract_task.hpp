@@ -20,6 +20,8 @@ class Worker;
  * Derive and implement logic in _on_execute()
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
+  friend class CurrentScheduler;
+
  public:
   explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
   virtual ~AbstractTask() = default;
@@ -89,11 +91,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
   /**
-   * Blocks the calling thread until the Task finished executing
-   */
-  void join();
-
-  /**
    * @return The Task was scheduled
    */
   bool is_scheduled() const;
@@ -123,6 +120,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Called by a dependency when it finished execution
    */
   void _on_predecessor_done();
+
+  /**
+   * Blocks the calling thread until the Task finished executing.
+   * This is only called from non-Worker threads and from CurrentScheduler::wait_for_tasks().
+   */
+  void _join();
 
   std::atomic<TaskID> _id{INVALID_TASK_ID};
   std::atomic<NodeID> _node_id = INVALID_NODE_ID;

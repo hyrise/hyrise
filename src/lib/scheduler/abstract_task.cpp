@@ -68,7 +68,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   }
 }
 
-void AbstractTask::join() {
+void AbstractTask::_join() {
   DebugAssert((_is_scheduled), "Task must be scheduled before it can be waited for");
 
   std::unique_lock<std::mutex> lock(_done_mutex);

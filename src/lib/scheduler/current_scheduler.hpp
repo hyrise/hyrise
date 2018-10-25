@@ -62,7 +62,7 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType
   if (worker) {
     worker->_wait_for_tasks(tasks);
   } else {
-    for (auto& task : tasks) task->join();
+    for (auto& task : tasks) task->_join();
   }
 }
 
