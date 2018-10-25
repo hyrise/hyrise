@@ -721,7 +721,7 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Ok;
   }
 
-  auto cmd = std::string("./scripts/planviz/imgcat.sh") + img_filename;
+  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 
