@@ -457,6 +457,11 @@ get_prunable_for_filters(
           const auto& value = std::get<1>(filter);
           const auto t_value = type_cast<T>(value);
 
+          if (segment_distinct_values.empty()) {
+            prunable_by_filter[column_id][predicate_type][value]++;
+            continue;
+          }
+
           switch (predicate_type) {
             case PredicateCondition::Equals: {
               const auto it = std::find(segment_distinct_values.cbegin(), segment_distinct_values.cend(), t_value);
