@@ -483,11 +483,14 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
   const auto actual_lqp = compile_query("SELECT b, SUM(a) AS s FROM int_float GROUP BY b HAVING s > 1000");
 
+  const auto select_list_expressions = expression_vector(int_float_b, sum_(int_float_a));
+  const auto aliases = std::vector<std::string>({"b", "s"});
+
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
-    AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(int_float_a)),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+  AliasNode::make(select_list_expressions, aliases,
+    PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
+      AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(int_float_a)),
       stored_table_node_int_float)));
   // clang-format on
 
@@ -495,16 +498,16 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndUnrelatedHaving) {
-  const auto actual_lqp = compile_query("SELECT b, COUNT(1) FROM int_float GROUP BY b HAVING SUM(a) > 1000");
+  const auto actual_lqp = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b HAVING SUM(a) > 1000");
 
   const auto a_times_3 = mul_(int_float_a, 3);
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(mul_(sum_(a_times_3), int_float_b)),
-    AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(a_times_3, int_float_b),
-      stored_table_node_int_float)));
+  ProjectionNode::make(expression_vector(int_float_b, count_(int_float_a)),
+    PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
+      AggregateNode::make(expression_vector(int_float_b), expression_vector(count_(int_float_a), sum_(int_float_a)),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -649,7 +652,8 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
 
 TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcardTwoTables) {
   // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
-  const auto actual_lqp = compile_query("SELECT t1.*, t2.a, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a");
+  const auto actual_lqp =
+      compile_query("SELECT t1.*, t2.a, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a");
 
   // clang-format off
   const auto expected_lqp =
@@ -1507,8 +1511,9 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"), InvalidInputException);
+  // EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);  TODO(anyone): #1238
+  EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
+               InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
