@@ -268,8 +268,6 @@ set(
     gmock
     sqlite3
     ${FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
     ${CMAKE_DL_LIBS}
 )
 
