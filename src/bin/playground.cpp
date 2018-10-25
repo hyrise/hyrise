@@ -754,21 +754,42 @@ void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uin
               [&](uint64_t a,
                   const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) { return a + std::get<0>(b)->can_prune(predicate_condition, value); });
+                      b) {
+                const auto hist = std::get<0>(b);
+                // hist is a nullptr if the segment has only null values.
+                if (!hist) {
+                  return a + 1;
+                }
+                return a + hist->can_prune(predicate_condition, value);
+              });
 
           const auto equal_height_hist_prunable = std::accumulate(
               histograms.cbegin(), histograms.cend(), uint64_t{0},
               [&](uint64_t a,
                   const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) { return a + std::get<1>(b)->can_prune(predicate_condition, value); });
+                      b) {
+                const auto hist = std::get<1>(b);
+                // hist is a nullptr if the segment has only null values.
+                if (!hist) {
+                  return a + 1;
+                }
+                return a + hist->can_prune(predicate_condition, value);
+              });
 
           const auto equal_width_hist_prunable = std::accumulate(
               histograms.cbegin(), histograms.cend(), uint64_t{0},
               [&](uint64_t a,
                   const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) { return a + std::get<2>(b)->can_prune(predicate_condition, value); });
+                      b) {
+                const auto hist = std::get<2>(b);
+                // hist is a nullptr if the segment has only null values.
+                if (!hist) {
+                  return a + 1;
+                }
+                return a + hist->can_prune(predicate_condition, value);
+              });
 
           result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
                      << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
@@ -828,21 +849,42 @@ void run_estimation(const std::shared_ptr<const Table> table, const std::vector<
               [&](float a,
                   const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) { return a + std::get<0>(b)->estimate_cardinality(predicate_condition, value); });
+                      b) {
+                const auto hist = std::get<0>(b);
+                // hist is a nullptr if segment only contains null values.
+                if (!hist) {
+                  return a;
+                }
+                return a + hist->estimate_cardinality(predicate_condition, value);
+              });
 
           const auto equal_height_hist_count = std::accumulate(
               histograms.cbegin(), histograms.cend(), float{0},
               [&](float a,
                   const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) { return a + std::get<1>(b)->estimate_cardinality(predicate_condition, value); });
+                      b) {
+                const auto hist = std::get<1>(b);
+                // hist is a nullptr if segment only contains null values.
+                if (!hist) {
+                  return a;
+                }
+                return a + hist->estimate_cardinality(predicate_condition, value);
+              });
 
           const auto equal_width_hist_count = std::accumulate(
               histograms.cbegin(), histograms.cend(), float{0},
               [&](float a,
                   const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                    std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) { return a + std::get<2>(b)->estimate_cardinality(predicate_condition, value); });
+                      b) {
+                const auto hist = std::get<2>(b);
+                // hist is a nullptr if segment only contains null values.
+                if (!hist) {
+                  return a;
+                }
+                return a + hist->estimate_cardinality(predicate_condition, value);
+              });
 
           result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
                      << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
