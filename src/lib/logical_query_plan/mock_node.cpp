@@ -52,9 +52,7 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
 
 void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _table_statistics = statistics; }
 
-const std::shared_ptr<TableStatistics2>& MockNode::table_statistics2() const {
-  return _table_statistics2;
-}
+const std::shared_ptr<TableStatistics2>& MockNode::table_statistics2() const { return _table_statistics2; }
 
 void MockNode::set_table_statistics2(const std::shared_ptr<TableStatistics2>& table_statistics2) {
   _table_statistics2 = table_statistics2;

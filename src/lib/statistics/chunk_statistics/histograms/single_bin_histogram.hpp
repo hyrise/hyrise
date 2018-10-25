@@ -1,0 +1,68 @@
+#pragma once
+
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "abstract_histogram.hpp"
+#include "statistics/selectivity.hpp"
+#include "types.hpp"
+
+namespace opossum {
+
+/**
+ * Histogram with a single bin.
+ * This histogram type is intended for statistics where only minimal information is known or required.
+ */
+template <typename T>
+class SingleBinHistogram : public AbstractHistogram<T> {
+ public:
+  using AbstractHistogram<T>::AbstractHistogram;
+  SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
+                     HistogramCountType distinct_count);
+  SingleBinHistogram(const std::string& minimum, const std::string& maximum, HistogramCountType total_count,
+                     HistogramCountType distinct_count, const std::string& supported_characters,
+                     const size_t string_prefix_length);
+
+  /**
+   * Create a histogram based on the data in a given segment.
+   * @param segment The segment containing the data.
+   * @param supported_characters A sorted, consecutive string of characters supported in case of string histograms.
+   * Can be omitted and will be filled with default value.
+   * @param string_prefix_length The prefix length used to calculate string ranges.
+   * * Can be omitted and will be filled with default value.
+   */
+  static std::shared_ptr<SingleBinHistogram<T>> from_segment(
+      const std::shared_ptr<const BaseSegment>& segment,
+      const std::optional<std::string>& supported_characters = std::nullopt,
+      const std::optional<uint32_t>& string_prefix_length = std::nullopt);
+
+  HistogramType histogram_type() const override;
+  std::string histogram_name() const override;
+  std::shared_ptr<AbstractHistogram<T>> clone() const override;
+  HistogramCountType total_distinct_count() const override;
+  HistogramCountType total_count() const override;
+
+  BinID bin_count() const override;
+
+  T bin_minimum(const BinID index) const override;
+  T bin_maximum(const BinID index) const override;
+  HistogramCountType bin_height(const BinID index) const override;
+  HistogramCountType bin_distinct_count(const BinID index) const override;
+
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
+
+ protected:
+  BinID _bin_for_value(const T& value) const override;
+
+  BinID _next_bin_for_value(const T& value) const override;
+
+ private:
+  T _minimum;
+  T _maximum;
+  HistogramCountType _total_count;
+  HistogramCountType _distinct_count;
+};
+
+}  // namespace opossum

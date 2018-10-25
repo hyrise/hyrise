@@ -120,8 +120,9 @@ TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerEquiJoinWithArithmeti
       std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59}, std::vector<HistogramCountType>{10, 5, 10},
       std::vector<HistogramCountType>{7, 2, 10});
 
-  const auto join_histogram = CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms<int32_t>(
-    histogram_left, histogram_right);
+  const auto join_histogram =
+      CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms<int32_t>(
+          histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);
 

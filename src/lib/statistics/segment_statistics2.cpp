@@ -10,8 +10,7 @@
 namespace opossum {
 
 template <typename T>
-void SegmentStatistics2<T>::set_statistics_object(
-  const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
+void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
   const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object);
   Assert(histogram_object, "Can only handle histograms for now.");
 
@@ -31,7 +30,8 @@ void SegmentStatistics2<T>::set_statistics_object(
 }
 
 template <typename T>
-std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_selectivity(const Selectivity selectivity) const {
+std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_selectivity(
+    const Selectivity selectivity) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
   if (generic_histogram) {
@@ -51,20 +51,23 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_select
 
 template <typename T>
 std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predicate(
-const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-const std::optional<AllTypeVariant>& variant_value2) const {
+    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();
 
   if (generic_histogram) {
-    segment_statistics->set_statistics_object(generic_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+    segment_statistics->set_statistics_object(
+        generic_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   if (equal_width_histogram) {
-    segment_statistics->set_statistics_object(equal_width_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+    segment_statistics->set_statistics_object(
+        equal_width_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   if (equal_distinct_count_histogram) {
-    segment_statistics->set_statistics_object(equal_distinct_count_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+    segment_statistics->set_statistics_object(
+        equal_distinct_count_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   return segment_statistics;

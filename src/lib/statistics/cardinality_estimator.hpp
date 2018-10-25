@@ -1,9 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <statistics/chunk_statistics/histograms/abstract_histogram.hpp>
 
 #include "abstract_cardinality_estimator.hpp"
+#include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
 
 namespace opossum {
 
@@ -24,8 +24,9 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
       const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
 
-  template<typename T>
-  static std::shared_ptr<AbstractHistogram<T>> get_best_available_histogram(const SegmentStatistics2<T>& segment_statistics);
+  template <typename T>
+  static std::shared_ptr<AbstractHistogram<T>> get_best_available_histogram(
+      const SegmentStatistics2<T>& segment_statistics);
 };
 
 }  // namespace opossum
