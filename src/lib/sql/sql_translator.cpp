@@ -763,15 +763,11 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
 
   // Build Aggregate
   if (is_aggregate) {
-    // Build pre_aggregate_projection, i.e. evaluate all Expression required for GROUP BY/Aggregates
+    // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates
     if (!pre_aggregate_expressions.empty()) {
-      bool any_expression_not_yet_available = false;
-      for (const auto& expression : pre_aggregate_expressions) {
-        if (!_current_lqp->find_column_id(*expression)) {
-          any_expression_not_yet_available = true;
-          break;
-        }
-      }
+      const auto any_expression_not_yet_available =
+          std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
+                      [&](const auto& expression) { return !_current_lqp->find_column_id(*expression); });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
@@ -797,6 +793,16 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
       if (is_aggregate) {
         // SELECT * is only valid if every input column is named in the GROUP BY clause
         for (const auto& pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
+          if (hsql_expr->table) {
+            // Dealing with SELECT t.* here
+            if (auto identifier = _sql_identifier_resolver->get_expression_identifier(pre_aggregate_expression);
+                identifier && identifier->table_name != hsql_expr->table) {
+              // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
+              // different table, it is not included in the `SELECT t.*`.
+              continue;
+            }
+          }
+
           AssertInput(std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
                                    [&](const auto& group_by_expression) {
                                      return *pre_aggregate_expression == *group_by_expression;
