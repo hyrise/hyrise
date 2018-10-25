@@ -281,11 +281,6 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
-    planviz/abstract_visualizer.hpp
-    planviz/lqp_visualizer.cpp
-    planviz/lqp_visualizer.hpp
-    planviz/sql_query_plan_visualizer.cpp
-    planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -556,6 +551,15 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
+    visualization/abstract_visualizer.hpp
+    visualization/lqp_visualizer.cpp
+    visualization/lqp_visualizer.hpp
+    visualization/join_graph_visualizer.cpp
+    visualization/join_graph_visualizer.hpp
+    visualization/sql_query_plan_visualizer.cpp
+    visualization/sql_query_plan_visualizer.hpp
+    visualization/viz_record_layout.cpp
+    visualization/viz_record_layout.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -566,6 +570,8 @@ set(
     cqf
     uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
 )
 

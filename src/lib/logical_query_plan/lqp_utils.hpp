@@ -80,4 +80,10 @@ void visit_lqp(LQP& lqp, Visitor visitor) {
   }
 }
 
+/**
+ * @return The node @param lqp as well as the root nodes of all LQPs in subselects and, recursively, LQPs in their
+ *         subselects
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
 }  // namespace opossum
