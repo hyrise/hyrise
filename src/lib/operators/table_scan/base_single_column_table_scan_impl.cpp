@@ -62,8 +62,8 @@ void BaseSingleColumnTableScanImpl::handle_segment(const ReferenceSegment& segme
 
   // Visit each referenced segment
   for (auto referenced_chunk_id = ChunkID{0}; referenced_chunk_id < referenced_chunk_count; ++referenced_chunk_id) {
-    auto& splitted_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_id];
-    auto& position_filter = splitted_pos_list.position_filter;
+    const auto& splitted_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_id];
+    const auto& position_filter = splitted_pos_list.row_ids;
     if (!position_filter || position_filter->empty()) continue;
 
     const auto chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);

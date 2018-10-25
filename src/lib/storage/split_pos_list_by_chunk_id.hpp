@@ -13,7 +13,7 @@ namespace opossum {
 // of which references only a single chunk. For each entry in that SubPosList, we need to keep its position in the
 // original PosList so that we can reassemble that PosList if needed.
 struct SubPosList {
-  std::shared_ptr<PosList> position_filter;
+  std::shared_ptr<PosList> row_ids;
   std::vector<ChunkOffset> original_positions;
 };
 
