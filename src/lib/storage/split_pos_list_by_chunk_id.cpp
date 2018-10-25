@@ -14,6 +14,7 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList
   auto pos_lists_by_chunk_id = PosListsByChunkID{number_of_chunks};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < number_of_chunks; ++chunk_id) {
+    DebugAssert(chunk_id < number_of_chunks, "Inconsistent number_of_chunks passed");
     auto& mapping = pos_lists_by_chunk_id[chunk_id];
     mapping.position_filter = std::make_shared<PosList>();
     mapping.position_filter->guarantee_single_chunk();

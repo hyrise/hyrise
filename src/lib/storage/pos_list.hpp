@@ -53,8 +53,11 @@ struct PosList final : private pmr_vector<RowID> {
 
   PosList& operator=(PosList&& other) = default;
 
+  // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
+  // to enable some optimizations.
   void guarantee_single_chunk() { _references_single_chunk = true; }
 
+  // Returns whether the single ChunkID has been given (not necessarily, if it has been met)
   bool references_single_chunk() const {
     if (_references_single_chunk) {
       DebugAssert(
@@ -67,6 +70,14 @@ struct PosList final : private pmr_vector<RowID> {
           "Chunk was marked as referencing only a single chunk, but references more");
     }
     return _references_single_chunk;
+  }
+
+  // For chunks that share a common ChunkID, returns that ID.
+  ChunkID common_chunk_id() const {
+    DebugAssert(references_single_chunk(),
+                "Can only retrieve the common_chunk_id if the PosList is guaranteed to reference a single chunk.");
+    Assert(!empty(), "Cannot retrieve common_chunk_id of an empty chunk");
+    return (*this)[0].chunk_id;
   }
 
   using Vector::assign;
@@ -117,15 +128,15 @@ struct PosList final : private pmr_vector<RowID> {
 };
 
 inline bool operator==(const PosList& lhs, const PosList& rhs) {
-  return static_cast<pmr_vector<RowID>>(lhs) == static_cast<pmr_vector<RowID>>(rhs);
+  return static_cast<const pmr_vector<RowID>&>(lhs) == static_cast<const pmr_vector<RowID>&>(rhs);
 }
 
 inline bool operator==(const PosList& lhs, const pmr_vector<RowID>& rhs) {
-  return static_cast<pmr_vector<RowID>>(lhs) == rhs;
+  return static_cast<const pmr_vector<RowID>&>(lhs) == rhs;
 }
 
 inline bool operator==(const pmr_vector<RowID>& lhs, const PosList& rhs) {
-  return lhs == static_cast<pmr_vector<RowID>>(rhs);
+  return lhs == static_cast<const pmr_vector<RowID>&>(rhs);
 }
 
 }  // namespace opossum

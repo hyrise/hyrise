@@ -44,7 +44,7 @@ void BaseSingleColumnTableScanImpl::handle_segment(const ReferenceSegment& segme
   if (pos_list->references_single_chunk() && !pos_list->empty()) {
     // Fast path :)
 
-    const auto chunk = segment.referenced_table()->get_chunk((*pos_list)[0].chunk_id);
+    const auto chunk = segment.referenced_table()->get_chunk(pos_list->common_chunk_id());
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, pos_list);
