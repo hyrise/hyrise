@@ -169,7 +169,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
               const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
               const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
-              const auto join_histogram = estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms(unified_left_histogram, unified_right_histogram);
+              const auto join_histogram = estimate_histogram_of_inner_equi_join_with_arithmetic_histograms(unified_left_histogram, unified_right_histogram);
               const auto cardinality = join_histogram->total_count();
 
               const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);

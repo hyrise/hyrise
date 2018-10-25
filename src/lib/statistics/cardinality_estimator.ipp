@@ -7,7 +7,7 @@
 namespace opossum {
 
 template <typename T>
-std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms(
+std::shared_ptr<GenericHistogram<T>> CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_arithmetic_histograms(
     const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
     const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
   auto left_idx = BinID{0};

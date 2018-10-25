@@ -23,6 +23,9 @@ namespace opossum {
 class CardinalityEstimatorTest : public ::testing::Test {
  public:
   void SetUp() override {
+    /**
+     * node_a
+     */
     const auto segment_statistics_a_0_a = std::make_shared<SegmentStatistics2<int32_t>>();
     const auto segment_statistics_a_0_b = std::make_shared<SegmentStatistics2<int32_t>>();
 
@@ -52,11 +55,71 @@ class CardinalityEstimatorTest : public ::testing::Test {
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
+
+    /**
+     * node_b
+     *  Uses the same ChunkStatistics (chunk_statistics_b) for all three Chunks
+     */
+    const auto chunk_statistics_b = std::make_shared<ChunkStatistics2>(32);
+    const auto segment_statistics_b_a = std::make_shared<SegmentStatistics2<int32_t>>();
+    const auto segment_statistics_b_b = std::make_shared<SegmentStatistics2<int32_t>>();
+
+    // clang-format off
+    segment_statistics_b_a->generic_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 15},
+      std::vector<HistogramCountType>{10, 10, 12}, std::vector<HistogramCountType>{5, 5, 6});
+
+    segment_statistics_b_b->generic_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{0}, std::vector<int32_t>{9},
+      std::vector<HistogramCountType>{32}, std::vector<HistogramCountType>{10});
+    // clang-format on
+
+    chunk_statistics_b->segment_statistics.emplace_back(segment_statistics_b_a);
+    chunk_statistics_b->segment_statistics.emplace_back(segment_statistics_b_b);
+
+    const auto table_statistics_b = std::make_shared<TableStatistics2>();
+    table_statistics_b->chunk_statistics.emplace_back(chunk_statistics_b);
+    table_statistics_b->chunk_statistics.emplace_back(chunk_statistics_b);
+    table_statistics_b->chunk_statistics.emplace_back(chunk_statistics_b);
+
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+    node_b->set_table_statistics2(table_statistics_b);
+
+    b_a = node_b->get_column("a");
+
+    /**
+     * node_c
+     *  Uses the same ChunkStatistics (chunk_statistics_c) for both Chunks
+     */
+    const auto chunk_statistics_c = std::make_shared<ChunkStatistics2>(64);
+    const auto segment_statistics_c_x = std::make_shared<SegmentStatistics2<int32_t>>();
+    const auto segment_statistics_c_y = std::make_shared<SegmentStatistics2<int32_t>>();
+
+    // clang-format off
+    segment_statistics_c_x->equal_distinct_count_histogram = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
+      std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15},
+      std::vector<HistogramCountType>{32, 32}, 8, 0);
+
+    segment_statistics_c_y->equal_width_histogram = std::make_shared<EqualWidthHistogram<int32_t>>(
+      0, 9, std::vector<HistogramCountType>{64}, std::vector<HistogramCountType>{10}, 0);
+    // clang-format on
+
+    chunk_statistics_c->segment_statistics.emplace_back(segment_statistics_c_x);
+    chunk_statistics_c->segment_statistics.emplace_back(segment_statistics_c_y);
+
+    const auto table_statistics_c = std::make_shared<TableStatistics2>();
+    table_statistics_c->chunk_statistics.emplace_back(chunk_statistics_c);
+    table_statistics_c->chunk_statistics.emplace_back(chunk_statistics_c);
+
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    node_c->set_table_statistics2(table_statistics_c);
+
+    c_x = node_c->get_column("x");
   }
 
   CardinalityEstimator estimator;
-  LQPColumnReference a_a, a_b;
-  std::shared_ptr<MockNode> node_a;
+  LQPColumnReference a_a, a_b, b_a, c_x;
+  std::shared_ptr<MockNode> node_a, node_b, node_c;
 };
 
 TEST_F(CardinalityEstimatorTest, SinglePredicate) {
@@ -111,7 +174,42 @@ TEST_F(CardinalityEstimatorTest, TwoPredicates) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
 }
 
-TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerEquiJoinWithArithmeticHistograms) {
+TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
+  // clang-format off
+  const auto input_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(b_a, c_x),
+    node_b,
+    node_c);
+  // clang-format on
+
+  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(result_statistics->chunk_statistics.size(), 6u);
+  ASSERT_EQ(result_statistics->row_count(), 6u * 128u);
+
+  for (auto& chunk_statistics : result_statistics->chunk_statistics) {
+    ASSERT_EQ(chunk_statistics->segment_statistics.size(), 4u);
+
+    const auto segment_statistics_b_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[0]);
+    const auto join_histogram_b_a = std::dynamic_pointer_cast<GenericHistogram<int32_t>>(segment_statistics_b_a->generic_histogram);
+    EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
+
+    const auto segment_statistics_b_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[1]);
+    const auto scaled_histogram_b_b = std::dynamic_pointer_cast<GenericHistogram<int32_t>>(segment_statistics_b_b->generic_histogram);
+    EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
+
+    const auto segment_statistics_c_x = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[2]);
+    const auto join_histogram_c_x = std::dynamic_pointer_cast<GenericHistogram<int32_t>>(segment_statistics_c_x->generic_histogram);
+    EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
+
+    const auto segment_statistics_c_y = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[3]);
+    const auto scaled_histogram_c_y = std::dynamic_pointer_cast<EqualWidthHistogram<int32_t>>(segment_statistics_c_y->equal_width_histogram);
+    EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
+  }
+}
+
+
+TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithArithmeticHistograms) {
   const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
       std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
@@ -120,7 +218,7 @@ TEST_F(CardinalityEstimatorTest, EstimateCardinalityOfInnerEquiJoinWithArithmeti
       std::vector<int32_t>{20, 30, 50}, std::vector<int32_t>{29, 39, 59}, std::vector<HistogramCountType>{10, 5, 10},
       std::vector<HistogramCountType>{7, 2, 10});
 
-  const auto join_histogram = CardinalityEstimator::estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms<int32_t>(
+  const auto join_histogram = CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_arithmetic_histograms<int32_t>(
     histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);

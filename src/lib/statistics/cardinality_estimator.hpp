@@ -20,7 +20,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
   std::shared_ptr<TableStatistics2> estimate_statistics(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 
   template <typename T>
-  static std::shared_ptr<GenericHistogram<T>> estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms(
+  static std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_arithmetic_histograms(
       const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
       const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
 
