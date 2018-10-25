@@ -1416,12 +1416,16 @@ TEST_F(SQLTranslatorTest, DropView) {
 }
 
 TEST_F(SQLTranslatorTest, CreateTable) {
-  const auto actual_lqp = compile_query("CREATE TABLE a_table (a_int INTEGER, a_double DOUBLE, a_string TEXT)");
+  const auto actual_lqp = compile_query(
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
+      "NULL)");
 
   auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a_int", DataType::Long, true);
+  column_definitions.emplace_back("a_int", DataType::Int, false);
+  column_definitions.emplace_back("a_long", DataType::Long, false);
+  column_definitions.emplace_back("a_float", DataType::Float, false);
   column_definitions.emplace_back("a_double", DataType::Double, true);
-  column_definitions.emplace_back("a_string", DataType::String, true);
+  column_definitions.emplace_back("a_string", DataType::String, false);
 
   const auto expected_lqp = CreateTableNode::make("a_table", column_definitions);
 

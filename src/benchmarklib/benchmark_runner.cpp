@@ -172,6 +172,8 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 
 void BenchmarkRunner::_benchmark_individual_queries() {
   for (const auto& named_query : _queries) {
+    _warmup_query(named_query);
+
     const auto& name = named_query.first;
     _config.out << "- Benchmarking Query " << name << std::endl;
 
@@ -222,6 +224,45 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     CurrentScheduler::wait_for_tasks(tasks);
     Assert(currently_running_clients == 0, "All query runs must be finished at this point");
   }
+}
+
+void BenchmarkRunner::_warmup_query(const NamedQuery& named_query) {
+  if (_config.warmup_duration == Duration{0}) {
+    return;
+  }
+
+  const auto& name = named_query.first;
+  _config.out << "- Warming up for Query " << name << std::endl;
+
+  // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
+  // let a simulated client schedule the next query, as well as the total number of finished queries so far
+  auto currently_running_clients = std::atomic_uint{0};
+
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto state = BenchmarkState{_config.warmup_duration};
+
+  while (state.keep_running()) {
+    // We want to only schedule as many queries simultaneously as we have simulated clients
+    if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
+      currently_running_clients++;
+
+      // The on_query_done callback will be appended to the last Task of the query,
+      // to signal that the query was finished
+      auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
+
+      auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
+      tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  }
+  state.set_done();
+
+  // Wait for the rest of the tasks that didn't make it in time
+  // TODO(leander/anyone): To be replaced with something like CurrentScheduler::abort(),
+  // that properly removes all remaining tasks from all queues, without having to wait for them
+  CurrentScheduler::wait_for_tasks(tasks);
+  Assert(currently_running_clients == 0, "All query runs must be finished at this point");
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
@@ -469,6 +510,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("r,runs", "Maximum number of runs of a single query (set)", cxxopts::value<size_t>()->default_value("10000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value("100000")) // NOLINT
     ("t,time", "Maximum seconds that a query (set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
+    ("w,warmup", "Number of seconds that each query is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "IndividualQueries or PermutedQuerySet, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see below). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
@@ -511,6 +553,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},
       {"max_runs", config.max_num_query_runs},
       {"max_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
+      {"warmup_duration_in_s", std::chrono::duration_cast<std::chrono::seconds>(config.warmup_duration).count()},
       {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
       {"using_visualization", config.enable_visualization},
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
