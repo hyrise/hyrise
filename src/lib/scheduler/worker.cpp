@@ -52,8 +52,6 @@ void Worker::operator()() {
 void Worker::_work() {
   auto task = _queue->pull();
 
-  // TODO(all): this might shutdown the worker and leave non-ready tasks in the queue.
-  // Figure out how we want to deal with that later.
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
     auto work_stealing_successful = false;
