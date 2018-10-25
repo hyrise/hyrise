@@ -41,7 +41,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
                                                std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto& position_filter = context->_position_filter;
   const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_data_type(_left_column_id);
@@ -53,7 +53,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
 
     auto left_segment_iterable = create_iterable_from_segment(left_segment);
 
-    left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    left_segment_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       with_comparator(_predicate_condition, [&](auto comparator) {
         _unary_scan_with_value(comparator, left_it, left_end, type_cast<ColumnDataType>(_right_value), chunk_id,
                                matches_out);
@@ -66,7 +66,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_se
                                                std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto& position_filter = context->_position_filter;
   const auto chunk_id = context->_chunk_id;
 
   const auto left_column_type = _in_table->column_data_type(_left_column_id);
@@ -77,7 +77,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_se
     resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {
       auto left_segment_iterable = create_iterable_from_segment(typed_segment);
 
-      left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+      left_segment_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
         with_comparator(_predicate_condition, [&](auto comparator) {
           _unary_scan_with_value(comparator, left_it, left_end, type_cast<Type>(_right_value), chunk_id, matches_out);
         });
@@ -91,7 +91,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseDictionarySegment& base
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto& position_filter = context->_position_filter;
 
   /**
    * ValueID value_id; // left value id
@@ -125,7 +125,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseDictionarySegment& base
   auto left_iterable = create_iterable_from_attribute_vector(base_segment);
 
   if (_right_value_matches_all(base_segment, search_value_id)) {
-    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    left_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
     });
@@ -137,7 +137,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseDictionarySegment& base
     return;
   }
 
-  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+  left_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
     this->_with_operator_for_dict_segment_scan(_predicate_condition, [&](auto comparator) {
       this->_unary_scan_with_value(comparator, left_it, left_end, search_value_id, chunk_id, matches_out);
     });
