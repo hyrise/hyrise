@@ -683,32 +683,34 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
 }
 
 void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStatement& select) {
-  auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
-  auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  const auto& input_expressions = _current_lqp->column_expressions();
+
+  auto pre_aggregate_expression_set = ExpressionUnorderedSet{input_expressions.begin(), input_expressions.end()};
+  auto pre_aggregate_expressions =
+      std::vector<std::shared_ptr<AbstractExpression>>{input_expressions.begin(), input_expressions.end()};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   // Visitor that identifies aggregates and their arguments
   const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
+    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
+
     /**
      * If the AggregateExpression has already been computed in a previous node (consider "x" in
      * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
      * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
      * but it's the best solution I can come up with right now.
      */
-    if (_current_lqp->find_column_id(*sub_expression)) {
-      pre_aggregate_expressions.emplace_back(sub_expression);
-      return ExpressionVisitation::DoNotVisitArguments;
-    }
-
-    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
+    if (_current_lqp->find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
 
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
       aggregate_expressions.emplace_back(aggregate_expression);
       for (const auto& argument : aggregate_expression->arguments) {
-        if (pre_aggregate_expression_set.emplace(argument).second) {
-          pre_aggregate_expressions.emplace_back(argument);
+        if (argument->requires_computation()) {
+          if (pre_aggregate_expression_set.emplace(argument).second) {
+            pre_aggregate_expressions.emplace_back(argument);
+          }
         }
       }
     }
@@ -755,14 +757,14 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     visit_expression(having_expression, find_aggregates_and_arguments);
   }
 
-  const auto is_aggregate = !aggregate_expressions.empty() || !group_by_expressions.empty();
+  // Build pre_aggregate_projection, i.e. evaluate all Expression required for GROUP BY/Aggregates
+  if (pre_aggregate_expressions.size() != _current_lqp->column_expressions().size()) {
+    _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
+  }
 
   // Build Aggregate
+  const auto is_aggregate = !aggregate_expressions.empty() || !group_by_expressions.empty();
   if (is_aggregate) {
-    // Build pre_aggregate_projection, i.e. evaluate all Expression required for GROUP BY/Aggregates
-    if (pre_aggregate_expressions.size() != _current_lqp->column_expressions().size()) {
-      _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
-    }
     _current_lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, _current_lqp);
   }
 
