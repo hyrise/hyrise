@@ -1511,7 +1511,6 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
-  // EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);  TODO(anyone): #1238
   EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
                InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
@@ -1519,6 +1518,9 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
                InvalidInputException);  // NOLINT
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
+
+  // TODO(anyone): #1238
+  // EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
 }
 
 }  // namespace opossum
