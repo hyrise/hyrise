@@ -719,9 +719,9 @@ void print_histograms_to_csv(
     const auto equal_height_hist = std::get<1>(histograms[idx]);
     const auto equal_width_hist = std::get<2>(histograms[idx]);
 
-    bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins, idx);
-    bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins, idx);
-    bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins, idx);
+    bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins, ChunkID{idx});
+    bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins, ChunkID{idx});
+    bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins, ChunkID{idx});
     bin_log.flush();
   }
 }
