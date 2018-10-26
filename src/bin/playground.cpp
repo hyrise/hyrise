@@ -709,7 +709,7 @@ void print_histograms_to_csv(
                                  std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
         histograms,
     const std::string& column_name, const uint64_t num_bins, std::ofstream& bin_log) {
-  for (auto idx = size_t{0}; idx < histograms.size(); ++idx) {
+  for (auto idx = ChunkID{0}; idx < histograms.size(); ++idx) {
     const auto equal_distinct_count_hist = std::get<0>(histograms[idx]);
 
     if (!equal_distinct_count_hist) {
@@ -719,9 +719,9 @@ void print_histograms_to_csv(
     const auto equal_height_hist = std::get<1>(histograms[idx]);
     const auto equal_width_hist = std::get<2>(histograms[idx]);
 
-    bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins, ChunkID{idx});
-    bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins, ChunkID{idx});
-    bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins, ChunkID{idx});
+    bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins, idx);
+    bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins, idx);
+    bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins, idx);
     bin_log.flush();
   }
 }
