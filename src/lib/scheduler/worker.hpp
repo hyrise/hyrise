@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -69,7 +70,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   WorkerID _id;
   CpuID _cpu_id;
   std::thread _thread;
-  uint64_t _num_finished_tasks{0};
+  std::atomic<uint64_t> _num_finished_tasks{0};
 };
 
 }  // namespace opossum
