@@ -61,5 +61,6 @@ def prepare_df_table_scan(source):
 	df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment'].astype('category', categories=[False, True])
 	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=['null', 'int', 'long', 'float', 'double', 'string'])
 	df['second_scan_segment_data_type'] = df['second_scan_segment_data_type'].astype('category', categories=['null', 'int', 'long', 'float', 'double', 'string'])
+	df['scan_operator_type'] = df['scan_operator_type'].astype('category', categories=['<=', 'BETWEEN', 'Or', 'undefined'])
 
 	return df
