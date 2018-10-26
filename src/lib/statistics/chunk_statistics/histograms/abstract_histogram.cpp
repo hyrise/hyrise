@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include "boost/algorithm/string/replace.hpp"
+
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -52,6 +54,74 @@ std::string AbstractHistogram<T>::description() const {
   for (BinID bin = 0u; bin < bin_count(); bin++) {
     stream << "              [" << _bin_minimum(bin) << ", " << _bin_maximum(bin) << "]: ";
     stream << _bin_height(bin) << std::endl;
+  }
+
+  return stream.str();
+}
+
+template <typename T>
+std::string AbstractHistogram<T>::bins_to_csv(const bool print_header, const std::optional<std::string>& column_name,
+                                              const std::optional<uint64_t>& requested_num_bins) const {
+  std::stringstream stream;
+
+  if (print_header) {
+    stream << "histogram_type";
+
+    if (column_name) {
+      stream << ",column_name";
+    }
+
+    stream << ",actual_num_bins";
+
+    if (requested_num_bins) {
+      stream << ",requested_num_bins";
+    }
+
+    stream << ",bin_id,bin_min,bin_max,bin_min_repr,bin_max_repr,bin_width,bin_count,bin_count_distinct";
+    stream << std::endl;
+  }
+
+  for (auto bin = 0u; bin < num_bins(); bin++) {
+    stream << histogram_type_to_string.at(histogram_type());
+
+    if (column_name) {
+      stream << "," << *column_name;
+    }
+
+    stream << "," << num_bins();
+
+    if (requested_num_bins) {
+      stream << "," << *requested_num_bins;
+    }
+
+    stream << "," << bin;
+
+    if constexpr (std::is_same_v<T, std::string>) {
+      constexpr auto patterns = std::array<std::pair<const char*, const char*>, 2u>{{{"\\", "\\\\"}, {"\"", "\\\""}}};
+      auto min = _bin_min(bin);
+      auto max = _bin_max(bin);
+
+      for (const auto& pair : patterns) {
+        boost::replace_all(min, pair.first, pair.second);
+        boost::replace_all(max, pair.first, pair.second);
+      }
+
+      stream << ",\"" << min << "\"";
+      stream << ",\"" << max << "\"";
+      stream << "," << _convert_string_to_number_representation(_bin_min(bin));
+      stream << "," << _convert_string_to_number_representation(_bin_max(bin));
+      stream << "," << _string_bin_width(bin);
+    } else {
+      stream << "," << _bin_min(bin);
+      stream << "," << _bin_max(bin);
+      stream << "," << _bin_min(bin);
+      stream << "," << _bin_max(bin);
+      stream << "," << _bin_width(bin);
+    }
+
+    stream << "," << _bin_count(bin);
+    stream << "," << _bin_count_distinct(bin);
+    stream << std::endl;
   }
 
   return stream.str();

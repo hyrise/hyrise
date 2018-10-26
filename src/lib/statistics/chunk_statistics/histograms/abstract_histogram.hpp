@@ -76,6 +76,19 @@ class AbstractHistogram : public AbstractFilter {
   std::string description() const;
 
   /**
+   * Returns a CSV formatted string with information about the bins.
+   *
+   * @param print_header Whether a header should be printed or not.
+   * @param column_name The histogram does not know the column name of the data it represents.
+   * If this is to be included it has to be passed as an argument.
+   * @param requested_num_bins The histogram might create fewer bins than requested because, e.g., there are fewer
+   * distinct values, and it does not store the originally requested number. That number is useful for comparison
+   * and can thus be provided to be included.
+   */
+  std::string bins_to_csv(const bool print_header = true, const std::optional<std::string>& column_name = std::nullopt,
+                          const std::optional<uint64_t>& requested_num_bins = std::nullopt) const;
+
+  /**
    * Returns the estimated selectivity, given a predicate type and its parameter(s).
    * It will always be between 0 and 1.
    */

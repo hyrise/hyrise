@@ -733,10 +733,10 @@ void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uin
 
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
 
-        // bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
-        // bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
-        // bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
-        // bin_log.flush();
+        bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
+        bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
+        bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
+        bin_log.flush();
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
@@ -754,47 +754,44 @@ void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uin
             }
           }
 
-          const auto equal_distinct_count_hist_prunable = std::accumulate(
-              histograms.cbegin(), histograms.cend(), uint64_t{0},
-              [&](uint64_t a,
-                  const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
-                                   std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) {
-                const auto hist = std::get<0>(b);
-                // hist is a nullptr if the segment has only null values.
-                if (!hist) {
-                  return a + 1;
-                }
-                return a + hist->can_prune(predicate_condition, value);
-              });
+          const auto equal_distinct_count_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
 
-          const auto equal_height_hist_prunable = std::accumulate(
-              histograms.cbegin(), histograms.cend(), uint64_t{0},
-              [&](uint64_t a,
-                  const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
-                                   std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) {
-                const auto hist = std::get<1>(b);
-                // hist is a nullptr if the segment has only null values.
-                if (!hist) {
-                  return a + 1;
-                }
-                return a + hist->can_prune(predicate_condition, value);
-              });
+          const auto equal_height_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
 
-          const auto equal_width_hist_prunable = std::accumulate(
-              histograms.cbegin(), histograms.cend(), uint64_t{0},
-              [&](uint64_t a,
-                  const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
-                                   std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) {
-                const auto hist = std::get<2>(b);
-                // hist is a nullptr if the segment has only null values.
-                if (!hist) {
-                  return a + 1;
-                }
-                return a + hist->can_prune(predicate_condition, value);
-              });
+          const auto equal_width_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
 
           result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
                      << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
@@ -839,57 +836,54 @@ void run_estimation(const std::shared_ptr<const Table> table, const std::vector<
 
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
 
-        // bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
-        // bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
-        // bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
-        // bin_log.flush();
+        bin_log << equal_height_hist->bins_to_csv(false, column_name, num_bins);
+        bin_log << equal_distinct_count_hist->bins_to_csv(false, column_name, num_bins);
+        bin_log << equal_width_hist->bins_to_csv(false, column_name, num_bins);
+        bin_log.flush();
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
           const auto value = pair.second;
 
           const auto actual_count = row_count_by_filter.at(column_id).at(predicate_condition).at(value);
-          const auto equal_distinct_count_hist_count = std::accumulate(
-              histograms.cbegin(), histograms.cend(), float{0},
-              [&](float a,
-                  const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
-                                   std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) {
-                const auto hist = std::get<0>(b);
-                // hist is a nullptr if segment only contains null values.
-                if (!hist) {
-                  return a;
-                }
-                return a + hist->estimate_cardinality(predicate_condition, value);
-              });
+          const auto equal_distinct_count_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
 
-          const auto equal_height_hist_count = std::accumulate(
-              histograms.cbegin(), histograms.cend(), float{0},
-              [&](float a,
-                  const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
-                                   std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) {
-                const auto hist = std::get<1>(b);
-                // hist is a nullptr if segment only contains null values.
-                if (!hist) {
-                  return a;
-                }
-                return a + hist->estimate_cardinality(predicate_condition, value);
-              });
+          const auto equal_height_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
 
-          const auto equal_width_hist_count = std::accumulate(
-              histograms.cbegin(), histograms.cend(), float{0},
-              [&](float a,
-                  const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
-                                   std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>&
-                      b) {
-                const auto hist = std::get<2>(b);
-                // hist is a nullptr if segment only contains null values.
-                if (!hist) {
-                  return a;
-                }
-                return a + hist->estimate_cardinality(predicate_condition, value);
-              });
+          const auto equal_width_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
 
           result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
                      << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
@@ -920,7 +914,8 @@ int main(int argc, char** argv) {
   } else if (cmd_option_exists(argv, argv_end, "--binary")) {
     empty_table = ImportBinary{table_path}.create_table_from_header();
     Assert(chunk_sizes.size() == 1u, "Cannot vary chunk size for binary files.");
-    Assert(empty_table->max_chunk_size() == chunk_sizes[0], "Chunk size of binary table does not match specified chunk size.");
+    Assert(empty_table->max_chunk_size() == chunk_sizes[0],
+           "Chunk size of binary table does not match specified chunk size.");
   } else {
     empty_table = create_table_from_header(table_path);
   }
