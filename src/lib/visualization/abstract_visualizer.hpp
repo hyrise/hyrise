@@ -40,6 +40,7 @@ struct VizEdgeInfo {
   std::string color = "white";
   std::string font_color = "white";
   double pen_width = 1.0;
+  std::string dir = "forward";
   std::string style = "solid";
 };
 
@@ -81,6 +82,7 @@ class AbstractVisualizer {
     _add_property("label", &VizEdgeInfo::label);
     _add_property("penwidth", &VizEdgeInfo::pen_width);
     _add_property("style", &VizEdgeInfo::style);
+    _add_property("dir", &VizEdgeInfo::dir);
   }
 
   void visualize(const GraphBase& graph_base, const std::string& graph_filename, const std::string& img_filename) {
@@ -104,16 +106,28 @@ class AbstractVisualizer {
   virtual void _build_graph(const GraphBase& graph_base) = 0;
 
   template <typename T>
-  void _add_vertex(const T& vertex, const std::string& label = "") {
-    VizVertexInfo info = _default_vertex;
-    info.id = reinterpret_cast<uintptr_t>(vertex.get());
-    info.label = label;
-    _add_vertex(vertex, info);
+  static uintptr_t _get_id(const T& v) {
+    return reinterpret_cast<uintptr_t>(&v);
   }
 
   template <typename T>
-  void _add_vertex(const T& vertex, VizVertexInfo& vertex_info) {
-    auto vertex_id = reinterpret_cast<uintptr_t>(vertex.get());
+  static uintptr_t _get_id(const std::shared_ptr<T>& v) {
+    return reinterpret_cast<uintptr_t>(v.get());
+  }
+
+  enum class WrapLabel { On, Off };
+
+  template <typename T>
+  void _add_vertex(const T& vertex, const std::string& label = "", const WrapLabel wrap_label = WrapLabel::On) {
+    VizVertexInfo info = _default_vertex;
+    info.id = _get_id(vertex);
+    info.label = label;
+    _add_vertex(vertex, info, wrap_label);
+  }
+
+  template <typename T>
+  void _add_vertex(const T& vertex, VizVertexInfo& vertex_info, const WrapLabel wrap_label = WrapLabel::On) {
+    auto vertex_id = _get_id(vertex);
     auto inserted = _id_to_position.insert({vertex_id, _id_to_position.size()}).second;
     if (!inserted) {
       // Vertex already exists, do nothing
@@ -121,7 +135,7 @@ class AbstractVisualizer {
     }
 
     vertex_info.id = vertex_id;
-    vertex_info.label = _wrap_label(vertex_info.label);
+    if (wrap_label == WrapLabel::On) vertex_info.label = _wrap_label(vertex_info.label);
     boost::add_vertex(vertex_info, _graph);
   }
 
@@ -132,8 +146,8 @@ class AbstractVisualizer {
 
   template <typename T, typename K>
   void _add_edge(const T& from, const K& to, const VizEdgeInfo& edge_info) {
-    auto from_id = reinterpret_cast<uintptr_t>(from.get());
-    auto to_id = reinterpret_cast<uintptr_t>(to.get());
+    auto from_id = _get_id(from);
+    auto to_id = _get_id(to);
 
     auto from_pos = _id_to_position.at(from_id);
     auto to_pos = _id_to_position.at(to_id);
@@ -180,6 +194,15 @@ class AbstractVisualizer {
     return wrapped_label.str();
   }
 
+  std::string _random_color() {
+    // Favor a hand picked list of nice-to-look-at colors over random generation for now.
+    static std::vector<std::string> colors(
+        {"#008A2A", "#005FAF", "#5F7E7E", "#9C2F2F", "#A0666C", "#9F9F00", "#9FC0CB", "#9F4C00", "#AF00AF"});
+
+    _random_color_index = (_random_color_index + 1) % colors.size();
+    return colors[_random_color_index];
+  }
+
   Graph _graph;
   std::unordered_map<uintptr_t, uint16_t> _id_to_position;
   boost::dynamic_properties _properties;
@@ -188,6 +211,9 @@ class AbstractVisualizer {
   VizGraphInfo _graph_info;
   VizVertexInfo _default_vertex;
   VizEdgeInfo _default_edge;
+
+  // Current index of color in _random_color()
+  size_t _random_color_index{0};
 };
 
 }  // namespace opossum

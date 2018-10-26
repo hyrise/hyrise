@@ -86,6 +86,8 @@ std::vector<std::string> read_queries_from_file() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const std::string query = GetParam();
 
+  SCOPED_TRACE(query);
+
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
   auto sql_pipeline =

@@ -25,13 +25,15 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, mapped_chunk_offsets.cend()};
+      auto begin = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, position_filter.cbegin(),
+                                                      position_filter.cbegin()};
+      auto end = PointAccessIterator<ZsDecoderType>{_null_value_id, *decoder, position_filter.cbegin(),
+                                                    position_filter.cend()};
       functor(begin, end);
     });
   }
@@ -75,9 +77,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<ValueID>> {
    public:
     PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder,
-                        ChunkOffsetsIterator chunk_offsets_it)
+                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
-                                         SegmentIteratorValue<ValueID>>{chunk_offsets_it},
+                                         SegmentIteratorValue<ValueID>>{std::move(position_filter_begin),
+                                                                        std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
 
@@ -87,10 +90,10 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     SegmentIteratorValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto value_id = static_cast<ValueID>(_attribute_decoder.get(chunk_offsets.into_referenced));
+      const auto value_id = static_cast<ValueID>(_attribute_decoder.get(chunk_offsets.offset_in_referenced_chunk));
       const auto is_null = (value_id == _null_value_id);
 
-      return {value_id, is_null, chunk_offsets.into_referencing};
+      return {value_id, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:

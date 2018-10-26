@@ -135,7 +135,6 @@ using TransactionID = uint32_t;
 
 using AttributeVectorWidth = uint8_t;
 
-using PosList = pmr_vector<RowID>;
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};

@@ -7,8 +7,6 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 target_include_directories(
