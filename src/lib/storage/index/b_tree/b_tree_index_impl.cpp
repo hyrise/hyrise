@@ -54,7 +54,7 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
 }
 
 template <typename DataType>
-uint64_t BTreeIndexImpl<DataType>::memory_consumption() const {
+size_t BTreeIndexImpl<DataType>::memory_consumption() const {
   return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.size() + _btree.bytes_used();
 }
 

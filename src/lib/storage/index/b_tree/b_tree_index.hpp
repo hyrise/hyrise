@@ -16,10 +16,16 @@ class BTreeIndex : public BaseIndex {
  public:
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
+  /**
+   * Predicts the memory consumption in bytes of creating this index.
+   * See BaseIndex::estimate_memory_consumption()
+   */
+  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset value_count, uint32_t value_bytes);
+
   BTreeIndex() = delete;
   explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
-  virtual uint64_t memory_consumption() const;
+  size_t _memory_consumption() const override;
 
  protected:
   Iterator _lower_bound(const std::vector<AllTypeVariant>&) const override;
