@@ -23,7 +23,16 @@ class AbstractScheduler {
    */
   virtual void begin() = 0;
 
+  /**
+   * Ends the schedulers lifecycle as the global Scheduler instance. This waits for all scheduled tasks to be finished,
+   * and sets the scheduler to inactive.
+   *
+   * The caller of this method has to make sure that no other tasks can be scheduled from outside while this method
+   * is being executed, otherwise those tasks might get lost.
+   */
   virtual void finish() = 0;
+
+  virtual bool active() const = 0;
 
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
