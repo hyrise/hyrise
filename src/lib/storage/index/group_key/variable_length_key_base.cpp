@@ -28,7 +28,7 @@ VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* data, Compos
     : _data(data), _size(size) {}
 
 VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
-  static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
+  static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   auto raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
   auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), _size);
   for (CompositeKeyLength i = 0; i < operation_width; ++i) {
@@ -42,30 +42,35 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
 }
 
 VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shift) {
-  static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
+  static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   const auto byte_shift = shift / CHAR_BIT;
   const auto bit_shift = shift % CHAR_BIT;
   if (byte_shift >= _size) {
     std::fill(_data, _data + _size, static_cast<VariableLengthKeyWord>(0u));
   } else {
-    // perform shifting
     if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+      // perform shifting
       for (int16_t i = _size - 1; i > static_cast<int16_t>(byte_shift) - 1; --i) {
         VariableLengthKeyWord value, borrow;
         std::tie(value, borrow) = shift_left_with_borrow(_data[i - byte_shift], bit_shift);
         _data[i] = value;
         if (i + 1 < _size) _data[i + 1] |= borrow;
       }
+
+      // fill now "empty" positions with zeros
+      std::fill(_data, _data + byte_shift, static_cast<VariableLengthKeyWord>(0u));
     } else {
+      // perform shifting
       for (int16_t i = 0; i < _size - static_cast<int16_t>(byte_shift); ++i) {
         VariableLengthKeyWord value, borrow;
         std::tie(value, borrow) = shift_left_with_borrow(_data[i + byte_shift], bit_shift);
         _data[i] = value;
         if (i > 0) _data[i - 1] |= borrow;
       }
+
+      // fill now "empty" positions with zeros
+      std::fill(_data + _size - byte_shift, _data + _size, static_cast<VariableLengthKeyWord>(0u));
     }
-    // fill now "empty" positions with zeros
-    std::fill(_data, _data + byte_shift, static_cast<VariableLengthKeyWord>(0u));
   }
   return *this;
 }
@@ -89,7 +94,7 @@ bool operator==(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left == right); }
 
 bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
-  static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
+  static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
   if (left._size != right._size) return left._size < right._size;
 
   if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {

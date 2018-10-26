@@ -25,7 +25,7 @@ const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics:
 TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
                                                     const PredicateCondition predicate_condition,
                                                     const AllParameterVariant& value,
-                                                    const std::optional<AllTypeVariant>& value2) const {
+                                                    const std::optional<AllParameterVariant>& value2) const {
   // Early out, the code below would fail for _row_count == 0
   if (_row_count == 0) return {*this};
 
@@ -35,6 +35,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
 
   // Estimate "a BETWEEN 5 and 6" by combining "a >= 5" with "a <= 6"
   if (predicate_condition == PredicateCondition::Between) {
+    DebugAssert(value2, "Expected second value to be passed in for BETWEEN");
     auto table_statistics = estimate_predicate(column_id, PredicateCondition::GreaterThanEquals, value);
     return table_statistics.estimate_predicate(column_id, PredicateCondition::LessThanEquals, *value2);
   }
@@ -59,12 +60,12 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
     predicated_column_statistics[column_id] = left_operand_column_statistics->only_null_values();
     predicated_row_count *= left_operand_column_statistics->non_null_value_ratio();
   } else if (is_column_id(value)) {
-    const auto column_id = boost::get<ColumnID>(value);
+    const auto column_id_of_value = boost::get<ColumnID>(value);
     const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(
-        predicate_condition, *_column_statistics[column_id]);
+        predicate_condition, *_column_statistics[column_id_of_value]);
 
     predicated_column_statistics[column_id] = estimation.left_column_statistics;
-    predicated_column_statistics[column_id] = estimation.right_column_statistics;
+    predicated_column_statistics[column_id_of_value] = estimation.right_column_statistics;
     predicated_row_count *= estimation.selectivity;
   } else if (is_variant(value)) {
     const auto variant_value = boost::get<AllTypeVariant>(value);
@@ -238,6 +239,27 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   switch (mode) {
+    case JoinMode::Semi:
+      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+      // remove column statistics from right table
+      join_table_stats._column_statistics.resize(_column_statistics.size());
+
+      // Simple heuristic: we assume that three quarters of the elements in the smaller relation
+      // (we are upper-bound by number of non-null values in both relations) will match.
+      join_table_stats._row_count =
+          0.75 * std::min(row_count() * stats_container.left_column_statistics->non_null_value_ratio(),
+                          right_table_statistics.row_count() *
+                              stats_container.right_column_statistics->non_null_value_ratio());
+      break;
+    case JoinMode::Anti:
+      join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
+
+      // For anti join, we assume that all values qualify when we have a small "other" relations.
+      // In case we have a large right table, we take the maximum of the left table and a tenth of the right.
+      join_table_stats._row_count =
+          std::max(row_count(), right_table_statistics.row_count() *
+                                    stats_container.right_column_statistics->non_null_value_ratio() / 10);
+      break;
     case JoinMode::Inner: {
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
       join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;

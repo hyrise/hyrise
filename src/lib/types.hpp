@@ -135,14 +135,13 @@ using TransactionID = uint32_t;
 
 using AttributeVectorWidth = uint8_t;
 
-using PosList = pmr_vector<RowID>;
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
 constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
-constexpr ColumnID INVALID_column_id{std::numeric_limits<ColumnID::base_type>::max()};
+constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
 constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() - 1};
 
@@ -172,6 +171,7 @@ enum class PredicateCondition {
   GreaterThanEquals,
   Between,
   In,
+  NotIn,
   Like,
   NotLike,
   IsNull,
@@ -193,6 +193,8 @@ enum class UnionMode { Positions };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
+
+enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

@@ -2,6 +2,8 @@
 
 #include <boost/preprocessor/seq/for_each.hpp>
 
+#include <unordered_map>
+
 #include "all_type_variant.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"

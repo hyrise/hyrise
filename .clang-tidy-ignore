@@ -5,3 +5,5 @@ src/lib/operators/jit_operator/specialization/llvm/CloneFunction.cpp   # dto.
 
 src/lib/server/client_connection.cpp                                   # clang-tidy doesn't like htons
 src/lib/server/postgres_wire_handler.cpp                               # dto.
+
+src/lib/utils/uninitialized_vector.hpp                                 # external source

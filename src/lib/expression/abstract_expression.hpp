@@ -111,6 +111,11 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   std::string _enclose_argument_as_column_name(const AbstractExpression& argument) const;
 };
 
+// So that google test, e.g., prints readable error messages
+inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& expression) {
+  return stream << expression.as_column_name();
+}
+
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }

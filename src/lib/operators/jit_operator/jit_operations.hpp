@@ -279,7 +279,7 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
   // the result.
   const auto store_result_wrapper = [&](const auto typed_lhs,
                                         const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
-    using ResultType = typename std::remove_const<decltype(typed_rhs)>::type;
+    using ResultType = std::remove_const_t<decltype(typed_rhs)>;
     rhs.set<ResultType>(op_func(typed_lhs, typed_rhs), rhs_index, context);
   };
 

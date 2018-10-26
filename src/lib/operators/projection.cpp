@@ -56,8 +56,10 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
   const auto forward_columns = input_table_left()->type() == output_table_type;
 
-  const auto output_table =
-      std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
+  const auto output_table = std::make_shared<Table>(
+      column_definitions, output_table_type, input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
+
+  const auto uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache(expressions);
 
   /**
    * Perform the projection
@@ -68,7 +70,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
-    ExpressionEvaluator evaluator(input_table_left(), chunk_id);
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_select_results);
     for (const auto& expression : expressions) {
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {

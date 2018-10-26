@@ -64,9 +64,12 @@ struct is_future : public std::false_type {};
 template <typename T>
 struct is_future<boost::future<T>> : public std::true_type {};
 
+template <typename T>
+inline constexpr bool is_future_v = is_future<T>::value;
+
 // handle future<void> inputs with lambdas producing future<*> outputs
 template <class F, class R = std::result_of_t<std::decay_t<F>()>>
-auto invoke(boost::future<void>&& lhs, then_t, F&& f) -> typename std::enable_if<is_future<R>::value, R>::type {
+auto invoke(boost::future<void>&& lhs, then_t, F&& f) -> std::enable_if_t<is_future_v<R>, R> {
   return lhs
       .then(boost::launch::sync,
             [f = std::forward<F>(f)](boost::future<void> fut) mutable -> R {
@@ -78,7 +81,7 @@ auto invoke(boost::future<void>&& lhs, then_t, F&& f) -> typename std::enable_if
 
 // handle future<T> inputs with lambdas producing future<*> outputs
 template <class T, class F, class R = std::result_of_t<std::decay_t<F>(T)>>
-auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> typename std::enable_if<is_future<R>::value, R>::type {
+auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> std::enable_if_t<is_future_v<R>, R> {
   return lhs
       .then(boost::launch::sync,
             [f = std::forward<F>(f)](boost::future<T> fut) mutable -> R {
@@ -89,8 +92,7 @@ auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> typename std::enable_if<is
 
 // handle future<void> inputs
 template <class F, class R = std::result_of_t<std::decay_t<F>()>>
-auto invoke(boost::future<void>&& lhs, then_t, F&& f) ->
-    typename std::enable_if<!is_future<R>::value, boost::future<R>>::type {
+auto invoke(boost::future<void>&& lhs, then_t, F&& f) -> std::enable_if_t<!is_future_v<R>, boost::future<R>> {
   return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut) mutable -> R {
     fut.get();
     return std::move(f)();
@@ -99,8 +101,7 @@ auto invoke(boost::future<void>&& lhs, then_t, F&& f) ->
 
 // handle future<T> inputs
 template <class T, class F, class R = std::result_of_t<std::decay_t<F>(T)>>
-auto invoke(boost::future<T>&& lhs, then_t, F&& f) ->
-    typename std::enable_if<!is_future<R>::value, boost::future<R>>::type {
+auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> std::enable_if_t<!is_future_v<R>, boost::future<R>> {
   return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut) mutable -> R {
     return std::move(f)(std::forward<T>(fut.get()));
   });

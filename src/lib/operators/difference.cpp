@@ -121,7 +121,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       if (search == right_input_row_set.end()) {
         for (auto pos_list_pair : out_pos_list_map) {
           if (pos_list_pair.first) {
-            pos_list_pair.second->emplace_back(pos_list_pair.first->at(chunk_offset));
+            pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
             pos_list_pair.second->emplace_back(RowID{chunk_id, chunk_offset});
           }

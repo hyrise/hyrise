@@ -16,22 +16,30 @@ class MinMaxFilter : public AbstractFilter {
   explicit MinMaxFilter(T min, T max) : _min(min), _max(max) {}
   ~MinMaxFilter() override = default;
 
-  bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
-    const auto t_value = type_cast<T>(value);
-    // Operators work as follows: value_from_table <operator> t_value
-    // e.g. OpGreaterThan: value_from_table > t_value
-    // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
+  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
+    const auto value = type_cast<T>(variant_value);
+    // Operators work as follows: value_from_table <operator> value
+    // e.g. OpGreaterThan: value_from_table > value
+    // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
     switch (predicate_type) {
       case PredicateCondition::GreaterThan:
-        return t_value >= _max;
+        return value >= _max;
       case PredicateCondition::GreaterThanEquals:
-        return t_value > _max;
+        return value > _max;
       case PredicateCondition::LessThan:
-        return t_value <= _min;
+        return value <= _min;
       case PredicateCondition::LessThanEquals:
-        return t_value < _min;
+        return value < _min;
       case PredicateCondition::Equals:
-        return t_value < _min || t_value > _max;
+        return value < _min || value > _max;
+      case PredicateCondition::NotEquals:
+        return value == _min && value == _max;
+      case PredicateCondition::Between: {
+        Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+        const auto value2 = type_cast<T>(*variant_value2);
+        return value > _max || value2 < _min;
+      }
       default:
         return false;
     }

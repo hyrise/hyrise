@@ -9,7 +9,6 @@
 
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {
@@ -87,6 +86,9 @@ class Sort::SortImplMaterializeOutput {
 
         auto value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
         auto value_segment_null_vector = pmr_concurrent_vector<bool>();
+
+        value_segment_value_vector.reserve(row_count_out);
+        value_segment_null_vector.reserve(row_count_out);
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,

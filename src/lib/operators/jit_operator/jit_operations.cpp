@@ -72,13 +72,13 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
 
 bool jit_like(const std::string& a, const std::string& b) {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string, std::regex_constants::icase};
+  const auto regex = std::regex{regex_string};
   return std::regex_match(a, regex);
 }
 
 bool jit_not_like(const std::string& a, const std::string& b) {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string, std::regex_constants::icase};
+  const auto regex = std::regex{regex_string};
   return !std::regex_match(a, regex);
 }
 
