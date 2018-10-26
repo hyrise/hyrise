@@ -77,7 +77,7 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
                 return comparator(left.value(), right.value());
               };
               _scan_with_iterators<true>(comparator_on_values, left_it, left_end,
-                                         chunk_id, *matches_out, true, right_it);
+                                         chunk_id, *matches_out, right_it);
             });
           });
         });

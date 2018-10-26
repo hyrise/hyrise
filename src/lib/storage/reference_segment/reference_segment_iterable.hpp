@@ -74,11 +74,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     void increment() { ++_pos_list_it; }
 
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
-
     bool equal(const SingleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
-
-    std::ptrdiff_t distance_to(const SingleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     SegmentIteratorValue<T> dereference() const {
       if (_pos_list_it->is_null()) return SegmentIteratorValue<T>{T{}, true, 0u};
@@ -119,18 +115,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           _pos_list_it{pos_list_it},
           _accessors{_referenced_table->chunk_count()} {}
 
-    static constexpr bool IsVectorizable = false;  // The indirection through references makes vectorization difficult
-
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() { ++_pos_list_it; }
 
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
-
     bool equal(const MultipleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
-
-    std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentIteratorValue<T> dereference() const {

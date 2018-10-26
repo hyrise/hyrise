@@ -50,7 +50,7 @@ void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID 
 
         auto iterable = create_iterable_from_segment(typed_segment);
         iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(functor, it, end, chunk_id, results, false);
+          _scan_with_iterators<true>(functor, it, end, chunk_id, results);
         });
       });
     }
@@ -78,7 +78,7 @@ void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, cons
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, results, true);
+      _scan_with_iterators<false>(always_true, it, end, chunk_id, results);
     });
 
     return;
@@ -94,7 +94,7 @@ void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, cons
   };
 
   attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, results, false);
+    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, results);
   });
 }
 
