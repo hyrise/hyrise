@@ -25,14 +25,13 @@ class BTreeIndex : public BaseIndex {
   BTreeIndex() = delete;
   explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
-  size_t _memory_consumption() const override;
-
  protected:
   Iterator _lower_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _upper_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _cbegin() const override;
   Iterator _cend() const override;
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
+  size_t _memory_consumption() const override;
 
   std::shared_ptr<const BaseSegment> _indexed_segments;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
