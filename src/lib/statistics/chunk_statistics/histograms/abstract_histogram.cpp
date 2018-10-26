@@ -60,30 +60,41 @@ std::string AbstractHistogram<T>::description() const {
 }
 
 template <typename T>
+std::string AbstractHistogram<T>::bins_to_csv_header(const std::optional<std::string>& column_name,
+                                                     const std::optional<uint64_t>& requested_bin_count,
+                                                     const std::optional<ChunkID>& chunk_id) const {
+  std::stringstream stream;
+
+  stream << "histogram_type";
+
+  if (column_name) {
+    stream << ",column_name";
+  }
+
+  if (chunk_id) {
+    stream << ",chunk_id";
+  }
+
+  stream << ",actual_bin_count";
+
+  if (requested_bin_count) {
+    stream << ",requested_bin_count";
+  }
+
+  stream << ",bin_id,bin_min,bin_max,bin_min_repr,bin_max_repr,bin_width,bin_height,bin_distinct_count";
+  stream << std::endl;
+
+  return stream.str();
+}
+
+template <typename T>
 std::string AbstractHistogram<T>::bins_to_csv(const bool print_header, const std::optional<std::string>& column_name,
                                               const std::optional<uint64_t>& requested_bin_count,
                                               const std::optional<ChunkID>& chunk_id) const {
   std::stringstream stream;
 
   if (print_header) {
-    stream << "histogram_type";
-
-    if (column_name) {
-      stream << ",column_name";
-    }
-
-    if (chunk_id) {
-      stream << ",chunk_id";
-    }
-
-    stream << ",actual_bin_count";
-
-    if (requested_bin_count) {
-      stream << ",requested_bin_count";
-    }
-
-    stream << ",bin_id,bin_min,bin_max,bin_min_repr,bin_max_repr,bin_width,bin_height,bin_distinct_count";
-    stream << std::endl;
+    stream << bins_to_csv_header(column_name, requested_bin_count, chunk_id);
   }
 
   for (auto bin = 0u; bin < bin_count(); bin++) {

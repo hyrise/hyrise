@@ -86,6 +86,9 @@ class AbstractHistogram : public AbstractFilter {
    * and can thus be provided to be included.
    * @param chunk_id The chunk id of the chunk that stores the segment for which the histogram has been created.
    */
+  static std::string bins_to_csv_header(const std::optional<std::string>& column_name,
+                                        const std::optional<uint64_t>& requested_bin_count,
+                                        const std::optional<ChunkID>& chunk_id) const;
   std::string bins_to_csv(const bool print_header = true, const std::optional<std::string>& column_name = std::nullopt,
                           const std::optional<uint64_t>& requested_num_bins = std::nullopt,
                           const std::optional<ChunkID>& chunk_id = std::nullopt) const;

@@ -1026,19 +1026,17 @@ int main(int argc, char** argv) {
                   "equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
 
     bin_log = std::ofstream(output_path + "/estimation_bins.log", std::ios_base::out | std::ios_base::trunc);
-    bin_log << "histogram_type,column_name,actual_num_bins,requested_num_bins,bin_id,bin_min,bin_max,"
-               "bin_min_repr,bin_max_repr,bin_count,bin_count_distinct\n";
   } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
     result_log = std::ofstream(output_path + "/pruning_results.log", std::ios_base::out | std::ios_base::trunc);
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "equal_height_hist_prunable,equal_distinct_count_hist_prunable,equal_width_hist_prunable\n";
 
     bin_log = std::ofstream(output_path + "/pruning_bins.log", std::ios_base::out | std::ios_base::trunc);
-    bin_log << "histogram_type,column_name,actual_num_bins,requested_num_bins,bin_id,bin_min,bin_max,"
-               "bin_min_repr,bin_max_repr,bin_count,bin_count_distinct\n";
   } else {
     Fail("Specify either '--estimation' or '--pruning' to decide what to measure.");
   }
+
+  bin_log << AbstractHistogram::bins_to_csv_header();
 
   CsvMeta csv_meta;
   if (cmd_option_exists(argv, argv_end, "--meta-path")) {
