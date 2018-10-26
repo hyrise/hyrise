@@ -84,9 +84,11 @@ class AbstractHistogram : public AbstractFilter {
    * @param requested_num_bins The histogram might create fewer bins than requested because, e.g., there are fewer
    * distinct values, and it does not store the originally requested number. That number is useful for comparison
    * and can thus be provided to be included.
+   * @param chunk_id The chunk id of the chunk that stores the segment for which the histogram has been created.
    */
   std::string bins_to_csv(const bool print_header = true, const std::optional<std::string>& column_name = std::nullopt,
-                          const std::optional<uint64_t>& requested_num_bins = std::nullopt) const;
+                          const std::optional<uint64_t>& requested_num_bins = std::nullopt,
+                          const std::optional<ChunkID>& chunk_id = std::nullopt) const;
 
   /**
    * Returns the estimated selectivity, given a predicate type and its parameter(s).
