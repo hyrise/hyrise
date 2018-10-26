@@ -8,6 +8,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -110,8 +111,8 @@ void StorageManager::print(std::ostream& out) const {
 void StorageManager::reset() { get() = StorageManager(); }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_tables.size());
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks.reserve(_tables.size());
 
   for (auto& pair : _tables) {
     auto job_task = std::make_shared<JobTask>([pair, &path]() {
@@ -124,11 +125,11 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");  // NOLINT
       export_csv->execute();
     });
-    jobs.push_back(job_task);
+    tasks.push_back(job_task);
     job_task->schedule();
   }
 
-  for (auto& job : jobs) job->join();
+  CurrentScheduler::wait_for_tasks(tasks);
 }
 
 }  // namespace opossum
