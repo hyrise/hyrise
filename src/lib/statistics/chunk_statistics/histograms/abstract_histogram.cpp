@@ -62,7 +62,7 @@ std::string AbstractHistogram<T>::description() const {
 template <typename T>
 std::string AbstractHistogram<T>::bins_to_csv_header(const std::optional<std::string>& column_name,
                                                      const std::optional<uint64_t>& requested_bin_count,
-                                                     const std::optional<ChunkID>& chunk_id) const {
+                                                     const std::optional<ChunkID>& chunk_id) {
   std::stringstream stream;
 
   stream << "histogram_type";
