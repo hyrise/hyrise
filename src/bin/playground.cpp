@@ -708,7 +708,7 @@ void print_histograms_to_csv(
     const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                  std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
         histograms,
-    const std::string& column_name, const uint64_t num_bins, , std::ofstream& bin_log) {
+    const std::string& column_name, const uint64_t num_bins, std::ofstream& bin_log) {
   for (auto idx = size_t{0}; idx < histograms.size(); ++idx) {
     const auto equal_distinct_count_hist = std::get<0>(histograms[idx]);
 
