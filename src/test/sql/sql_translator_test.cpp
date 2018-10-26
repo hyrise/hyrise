@@ -474,7 +474,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   ProjectionNode::make(expression_vector(mul_(sum_(a_times_3), int_float_b)),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
       ProjectionNode::make(expression_vector(a_times_3, int_float_b),
-      stored_table_node_int_float)));
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -499,8 +499,6 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndUnrelatedHaving) {
   const auto actual_lqp = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b HAVING SUM(a) > 1000");
-
-  const auto a_times_3 = mul_(int_float_a, 3);
 
   // clang-format off
   const auto expected_lqp =
@@ -559,8 +557,8 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
   const auto expected_lqp =
   AggregateNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)), expression_vector(),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(int_float_b, a_times_3),
-      stored_table_node_int_float)));
+      ProjectionNode::make(expression_vector(a_times_3, int_float_b),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -603,17 +601,16 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format off
   const auto expected_lqp_count_distinct_a_plus_b =
   AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(count_distinct_(add_(int_float_a, int_float_b))),  // NOLINT
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b)),
+    ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
       stored_table_node_int_float));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
 
-  const auto actual_lqp_count_1 =
-      compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
+  const auto actual_lqp_count_1 =  compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
   // clang-format off
   const auto expected_lqp_count_1 =
   AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
-    ProjectionNode::make(expression_vector(int_float_a, value_(1)),
+    ProjectionNode::make(expression_vector(value_(1), int_float_a),
       stored_table_node_int_float));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_1, expected_lqp_count_1);
@@ -652,7 +649,7 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
   AliasNode::make(select_list_expressions, aliases,
     ProjectionNode::make(select_list_expressions,
       AggregateNode::make(expression_vector(int_float_a, b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
-        ProjectionNode::make(expression_vector(int_float_b, add_(int_float_a, int_float_b), int_float_a, b_plus_3),
+        ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, b_plus_3, int_float_b),
           stored_table_node_int_float))));
   // clang-format on
 

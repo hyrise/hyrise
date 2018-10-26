@@ -688,22 +688,17 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
-  // Visitor that identifies aggregates and their arguments
+  // Visitor that identifies AggregateExpressions and their arguments.
   const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
+    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
+
     /**
      * If the AggregateExpression has already been computed in a previous node (consider "x" in
      * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
      * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
      * but it's the best solution I can come up with right now.
      */
-    if (_current_lqp->find_column_id(*sub_expression)) {
-      if (pre_aggregate_expression_set.emplace(sub_expression).second) {
-        pre_aggregate_expressions.emplace_back(sub_expression);
-      }
-      return ExpressionVisitation::DoNotVisitArguments;
-    }
-
-    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
+    if (_current_lqp->find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
 
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
