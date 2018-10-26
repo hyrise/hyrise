@@ -14,7 +14,7 @@ struct CalibrationTableScanFeatures {
   std::string scan_segment_data_type = "undefined";
   size_t scan_segment_memory_usage_bytes = 0;
   size_t scan_segment_distinct_value_count = 0;
-  bool isColumnComparison = false;
+  bool is_column_comparison = false;
   std::string second_scan_segment_encoding = "undefined";
   bool is_second_scan_segment_reference_segment = false;
   std::string second_scan_segment_data_type = "undefined";
@@ -30,7 +30,7 @@ struct CalibrationTableScanFeatures {
 
 inline const std::vector<std::string> CalibrationTableScanFeatures::columns(
     {"scan_segment_encoding", "is_scan_segment_reference_segment", "scan_segment_data_type",
-     "scan_segment_memory_usage_bytes", "scan_segment_distinct_value_count", "isColumnComparison",
+     "scan_segment_memory_usage_bytes", "scan_segment_distinct_value_count", "is_column_comparison",
      "second_scan_segment_encoding", "is_second_scan_segment_reference_segment", "second_scan_segment_data_type",
      "second_scan_segment_memory_usage_bytes", "second_scan_segment_distinct_value_count", "scan_operator_type",
      "number_of_computable_or_column_expressions"});
@@ -46,7 +46,7 @@ inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize
           features->scan_segment_data_type,
           static_cast<int32_t>(features->scan_segment_memory_usage_bytes),
           static_cast<int32_t>(features->scan_segment_distinct_value_count),
-          features->isColumnComparison,
+          features->is_column_comparison,
           features->second_scan_segment_encoding,
           features->is_second_scan_segment_reference_segment,
           features->second_scan_segment_data_type,

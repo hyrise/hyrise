@@ -171,7 +171,7 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
             const auto &column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(second_argument);
             const auto &column_id = column_expression->column_id;
 
-            features.isColumnComparison = true;
+            features.is_column_comparison = true;
             features.second_scan_segment_data_type = data_type_to_string.left.at(column_expression->data_type());
 
             // TODO(Sven): What should we do when there are different encodings across different chunks?

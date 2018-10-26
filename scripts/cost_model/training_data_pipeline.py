@@ -54,16 +54,12 @@ def transform_calibration_results(raw_data, features = [], dummies = [], operato
 def prepare_df_table_scan(source):
 	df = pd.read_csv(source)
 	df = df[df['operator_type'] == 'TableScan']
-	# Just a quick fix due to CSV error
-	df.columns = df.columns.str.strip()
-	# Remove once CSV is written correctly
-	df.rename(columns={'is_scan_segment_reference_segmen': 'is_scan_segment_reference_segment'}, inplace=True)
-	df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
-	df['second_scan_segment_encoding'] = df['second_scan_segment_encoding'].astype('category', categories=[0,1,2,3,4])
-	df['uses_second_segment'] = df['uses_second_segment'].astype('category', categories=[False, True])
+	df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference'])
+	df['second_scan_segment_encoding'] = df['second_scan_segment_encoding'].astype('category', categories=['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference'])
+	df['isColumnComparison'] = df['isColumnComparison'].astype('category', categories=[False, True])
 	df['is_scan_segment_reference_segment'] = df['is_scan_segment_reference_segment'].astype('category', categories=[False, True])
 	df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment'].astype('category', categories=[False, True])
-	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
-	df['second_scan_segment_data_type'] = df['second_scan_segment_data_type'].astype('category', categories=[0,1,2,3,4,5])
+	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=['null', 'int', 'long', 'float', 'double', 'string'])
+	df['second_scan_segment_data_type'] = df['second_scan_segment_data_type'].astype('category', categories=['null', 'int', 'long', 'float', 'double', 'string'])
 
 	return df
