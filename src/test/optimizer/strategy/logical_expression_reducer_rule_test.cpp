@@ -3,9 +3,9 @@
 #include "base_test.hpp"
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/logical_expression_reducer_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "testing_assert.hpp"
@@ -29,16 +29,20 @@ class Rule : public LogicalExpressionReducerRule {
 class LogicalExpressionReducerRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("dummy", load_table("src/test/tables/five_ints_empty.tbl", Chunk::MAX_SIZE));
-    _table = std::make_shared<StoredTableNode>("dummy");
-    _a = equals_(LQPColumnReference(_table, ColumnID{0}), 0);
-    _b = equals_(LQPColumnReference(_table, ColumnID{1}), 1);
-    _c = equals_(LQPColumnReference(_table, ColumnID{2}), 2);
-    _d = equals_(LQPColumnReference(_table, ColumnID{3}), 3);
-    _e = equals_(LQPColumnReference(_table, ColumnID{4}), 4);
+    _mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
+                                                            {DataType::Int, "b"},
+                                                            {DataType::Int, "c"},
+                                                            {DataType::Int, "d"},
+                                                            {DataType::Int, "e"}},
+                                "t");
+    _a = equals_(LQPColumnReference(_mock_node, ColumnID{0}), 0);
+    _b = equals_(LQPColumnReference(_mock_node, ColumnID{1}), 1);
+    _c = equals_(LQPColumnReference(_mock_node, ColumnID{2}), 2);
+    _d = equals_(LQPColumnReference(_mock_node, ColumnID{3}), 3);
+    _e = equals_(LQPColumnReference(_mock_node, ColumnID{4}), 4);
   }
 
-  std::shared_ptr<AbstractLQPNode> _table;
+  std::shared_ptr<AbstractLQPNode> _mock_node;
   std::shared_ptr<AbstractExpression> _a, _b, _c, _d, _e;
 };
 
@@ -169,10 +173,22 @@ TEST_F(LogicalExpressionReducerRuleTest, ApplyToPredicate) {
   auto a_and_c = and_(_a, _c);
   auto expression = or_(a_and_b, a_and_c);
 
-  auto plan = LogicalPlanRootNode::make(PredicateNode::make(expression, _table));
+  auto plan = LogicalPlanRootNode::make(PredicateNode::make(expression, _mock_node));
   Rule{}.apply_to(plan);
 
-  EXPECT_LQP_EQ(plan, LogicalPlanRootNode::make(PredicateNode::make(_a, PredicateNode::make(or_(_c, _b), _table))));
+  EXPECT_LQP_EQ(plan, LogicalPlanRootNode::make(PredicateNode::make(_a, PredicateNode::make(or_(_c, _b), _mock_node))));
+}
+
+TEST_F(LogicalExpressionReducerRuleTest, ApplyToComplexPredicate) {
+  // (a AND b) OR (a AND ((c AND d) OR (c AND e))) -> PredicateNode{a} -> PredicateNode{b OR (c AND (d OR e))}
+
+  auto expression = or_(and_(_a, _b), and_(_a, or_(and_(_c, _d), and_(_c, _e))));
+
+  auto plan = LogicalPlanRootNode::make(PredicateNode::make(expression, _mock_node));
+  Rule{}.apply_to(plan);
+
+  EXPECT_LQP_EQ(plan, LogicalPlanRootNode::make(
+                          PredicateNode::make(_a, PredicateNode::make(or_(and_(_c, or_(_e, _d)), _b), _mock_node))));
 }
 
 }  // namespace opossum

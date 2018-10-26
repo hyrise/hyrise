@@ -131,7 +131,7 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
 
         // Step 3: If there are no common_and_expressions, we are done.
         if (common_and_expressions.empty()) {
-          return ExpressionVisitation::DoNotVisitArguments;
+          return ExpressionVisitation::VisitArguments;
         }
       }
 
@@ -166,7 +166,7 @@ bool LogicalExpressionReducerRule::_apply_to_expressions(std::vector<std::shared
         subexpression = new_chain;
       }
 
-      return ExpressionVisitation::DoNotVisitArguments;
+      return ExpressionVisitation::VisitArguments;
     });
   }
 
