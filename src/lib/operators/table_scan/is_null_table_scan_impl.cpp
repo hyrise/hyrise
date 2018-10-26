@@ -79,9 +79,8 @@ void IsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const C
 
   const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
-  iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<false>(functor, it, end, chunk_id, results);
-  });
+  iterable.with_iterators(position_filter,
+                          [&](auto it, auto end) { _scan_with_iterators<false>(functor, it, end, chunk_id, results); });
 }
 
 bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
