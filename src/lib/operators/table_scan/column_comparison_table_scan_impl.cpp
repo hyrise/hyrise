@@ -19,11 +19,14 @@ ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_p
                                                              const ColumnID left_column_id,
                                                              const PredicateCondition& predicate_condition,
                                                              const ColumnID right_column_id)
-    : BaseTableScanImpl{in_table, left_column_id, predicate_condition}, _right_column_id{right_column_id} {}
+    : _in_table(in_table),
+      _left_column_id(left_column_id),
+      _predicate_condition(predicate_condition),
+      _right_column_id{right_column_id} {}
 
 std::string ColumnComparisonTableScanImpl::description() const { return "ColumnComparison"; }
 
-std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
+std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
   const auto left_segment = chunk->get_segment(_left_column_id);
@@ -70,7 +73,11 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
         left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
             with_comparator(_predicate_condition, [&](auto comparator) {
-              this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, *matches_out);
+              auto comparator_on_values = [comparator](const auto& left, const auto& right) {
+                return comparator(left.value(), right.value());
+              };
+              _scan_with_iterators<true>(comparator_on_values, left_it, left_end,
+                                         chunk_id, *matches_out, true, right_it);
             });
           });
         });

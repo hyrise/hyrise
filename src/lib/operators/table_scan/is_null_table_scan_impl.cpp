@@ -13,84 +13,78 @@
 
 namespace opossum {
 
-IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
+IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                          const PredicateCondition& predicate_condition)
-    : BaseSingleColumnTableScanImpl{in_table, base_column_id, predicate_condition} {
+    : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition} {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
 
 std::string IsNullTableScanImpl::description() const { return "IsNullScan"; }
 
-void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
-                                         std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  BaseSingleColumnTableScanImpl::handle_segment(base_segment, base_context);
+std::shared_ptr<PosList> IsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
+  const auto& chunk = _in_table->get_chunk(chunk_id);
+  const auto& segment = chunk->get_segment(_column_id);
 
-  const auto& pos_list = *base_segment.pos_list();
+  auto matches = std::make_shared<PosList>();
 
-  // Additionally to the null values in the referencED segment, we need to find null values in the referencING segment
-  if (_predicate_condition == PredicateCondition::IsNull) {
-    for (ChunkOffset chunk_offset{0}; chunk_offset < pos_list.size(); ++chunk_offset) {
-      if (pos_list[chunk_offset].is_null()) context->_matches_out.emplace_back(context->_chunk_id, chunk_offset);
-    }
-  }
+  _on_scan(*segment, chunk_id, *matches, nullptr);
+
+  return matches;
 }
 
-void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
-                                         std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& position_filter = context->_position_filter;
-
-  if (_matches_all(base_segment)) {
-    _add_all(*context, base_segment.size());
-    return;
-  }
-
-  if (_matches_none(base_segment)) {
-    return;
-  }
-
-  DebugAssert(base_segment.is_nullable(),
-              "Columns that are not nullable should have been caught by edge case handling.");
-
-  auto base_segment_iterable = NullValueVectorIterable{base_segment.null_values()};
-
-  base_segment_iterable.with_iterators(position_filter,
-                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
-}
-
-void IsNullTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
-                                         std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& position_filter = context->_position_filter;
-
-  auto base_segment_iterable = create_iterable_from_attribute_vector(base_segment);
-
-  base_segment_iterable.with_iterators(position_filter,
-                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
-}
-
-void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
-                                         std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& position_filter = context->_position_filter;
-
-  const auto base_column_type = _in_table->column_data_type(_left_column_id);
-
-  resolve_data_type(base_column_type, [&](auto type) {
-    using Type = typename decltype(type)::type;
-
-    resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {
-      auto base_segment_iterable = create_iterable_from_segment(typed_segment);
-
-      base_segment_iterable.with_iterators(
-          position_filter, [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
-    });
+void IsNullTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                                   const std::shared_ptr<const PosList>& position_filter) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    _scan_segment(typed_segment, chunk_id, results, position_filter);
   });
 }
 
-bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) {
+void IsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                                        const std::shared_ptr<const PosList>& position_filter) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    using Type = typename decltype(type)::type;
+    auto iterable = create_iterable_from_segment<Type>(typed_segment);
+
+    const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
+    const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
+
+    if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
+      iterable.with_iterators([&](auto it, auto end) {
+        // _scan_with_iterators should not check for null - we do that ourselves
+        _scan_with_iterators<false>(functor, it, end, chunk_id, results, true);
+      });
+    } else {
+      iterable.with_iterators(position_filter, [&](auto it, auto end) {
+        _scan_with_iterators<false>(functor, it, end, chunk_id, results, true);
+      });
+    }
+  });
+}
+
+void IsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& results,
+                                        const std::shared_ptr<const PosList>& position_filter) const {
+  if (_matches_all(segment)) {
+    _add_all(chunk_id, results, position_filter, segment.size());
+    return;
+  }
+
+  if (_matches_none(segment)) {
+    return;
+  }
+
+  DebugAssert(segment.is_nullable(), "Columns that are not nullable should have been caught by edge case handling.");
+
+  auto iterable = NullValueVectorIterable{segment.null_values()};
+
+  const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
+  const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
+  iterable.with_iterators(position_filter, [&](auto it, auto end) {
+    _scan_with_iterators<false>(functor, it, end, chunk_id, results, true);
+  });
+}
+
+bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return false;
@@ -103,7 +97,7 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) {
   }
 }
 
-bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) {
+bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return !segment.is_nullable();
@@ -116,14 +110,12 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) {
   }
 }
 
-void IsNullTableScanImpl::_add_all(Context& context, size_t segment_size) {
-  auto& matches_out = context._matches_out;
-  const auto chunk_id = context._chunk_id;
-  const auto& position_filter = context._position_filter;
-
+void IsNullTableScanImpl::_add_all(const ChunkID chunk_id, PosList& results,
+                                   const std::shared_ptr<const PosList>& position_filter,
+                                   const size_t segment_size) const {
   const auto num_rows = position_filter ? position_filter->size() : segment_size;
   for (auto chunk_offset = 0u; chunk_offset < num_rows; ++chunk_offset) {
-    matches_out.emplace_back(RowID{chunk_id, chunk_offset});
+    results.emplace_back(RowID{chunk_id, chunk_offset});
   }
 }
 

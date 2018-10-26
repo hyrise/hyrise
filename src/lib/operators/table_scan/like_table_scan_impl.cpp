@@ -18,66 +18,67 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                      const PredicateCondition predicate_condition, const std::string& pattern)
-    : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
+    : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
 std::string LikeTableScanImpl::description() const { return "LikeScan"; }
 
-void LikeTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
-                                       std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  auto& matches_out = context->_matches_out;
-  const auto& position_filter = context->_position_filter;
-  const auto chunk_id = context->_chunk_id;
-  auto& left_segment = static_cast<const ValueSegment<std::string>&>(base_segment);
-  auto left_iterable = ValueSegmentIterable<std::string>{left_segment};
-
-  _scan_iterable(left_iterable, chunk_id, matches_out, position_filter);
-}
-
-void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
-                                       std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  auto& matches_out = context->_matches_out;
-  const auto& position_filter = context->_position_filter;
-  const auto chunk_id = context->_chunk_id;
-
-  resolve_encoded_segment_type<std::string>(base_segment, [&](const auto& typed_segment) {
-    auto left_iterable = create_iterable_from_segment(typed_segment);
-    _scan_iterable(left_iterable, chunk_id, matches_out, position_filter);
+void LikeTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                                 const std::shared_ptr<const PosList>& position_filter) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    _scan_segment(typed_segment, chunk_id, results, position_filter);
   });
 }
 
-void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
-                                       std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  auto& matches_out = context->_matches_out;
-  const auto& position_filter = context->_position_filter;
-  const auto chunk_id = context->_chunk_id;
+template <typename T>
+class whatis;
 
+void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                                      const std::shared_ptr<const PosList>& position_filter) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    using Type = typename decltype(type)::type;
+    if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
+      Fail("Expected ReferenceSegments to be handled before calling this method");
+    } else if constexpr (!std::is_same_v<Type, std::string>) {
+      Fail("Can only handle strings");
+    } else {
+      _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
+        const auto functor = [&](const auto& iterator_value) { return resolved_matcher(iterator_value.value()); };
+
+        auto iterable = create_iterable_from_segment(typed_segment);
+        iterable.with_iterators(position_filter, [&](auto it, auto end) {
+          _scan_with_iterators<true>(functor, it, end, chunk_id, results, false);
+        });
+      });
+    }
+  });
+}
+
+void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+                                      const std::shared_ptr<const PosList>& position_filter) const {
   std::pair<size_t, std::vector<bool>> result;
 
-  if (base_segment.encoding_type() == EncodingType::Dictionary) {
-    const auto& left_segment = static_cast<const DictionarySegment<std::string>&>(base_segment);
-    result = _find_matches_in_dictionary(*left_segment.dictionary());
+  if (segment.encoding_type() == EncodingType::Dictionary) {
+    const auto& typed_segment = static_cast<const DictionarySegment<std::string>&>(segment);
+    result = _find_matches_in_dictionary(*typed_segment.dictionary());
   } else {
-    const auto& left_segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
-    result = _find_matches_in_dictionary(*left_segment.dictionary());
+    const auto& typed_segment = static_cast<const FixedStringDictionarySegment<std::string>&>(segment);
+    result = _find_matches_in_dictionary(*typed_segment.dictionary());
   }
 
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = create_iterable_from_attribute_vector(base_segment);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);
 
   // LIKE matches all rows
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+    attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
+      _scan_with_iterators<false>(always_true, it, end, chunk_id, results, true);
     });
 
     return;
@@ -88,25 +89,17 @@ void LikeTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment
     return;
   }
 
-  const auto dictionary_lookup = [&dictionary_matches](const ValueID& value) { return dictionary_matches[value]; };
+  const auto dictionary_lookup = [&dictionary_matches](const auto& iterator_value) {
+    return dictionary_matches[iterator_value.value()];
+  };
 
-  attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-    this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
-  });
-}
-
-template <typename Iterable>
-void LikeTableScanImpl::_scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
-                                       const std::shared_ptr<const PosList>& position_filter) {
-  _matcher.resolve(_invert_results, [&](const auto& matcher) {
-    iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-      this->_unary_scan(matcher, left_it, left_end, chunk_id, matches_out);
-    });
+  attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
+    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, results, false);
   });
 }
 
 std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(
-    const pmr_vector<std::string>& dictionary) {
+    const pmr_vector<std::string>& dictionary) const {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;

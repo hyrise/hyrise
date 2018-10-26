@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "base_single_column_table_scan_impl.hpp"
+#include "abstract_single_column_table_scan_impl.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -21,25 +21,22 @@ class Table;
  * Both of these limitations are to keep the code complexity and the number of template instantiations low,
  * more complicated cases are handled by two scans, see operator_scan_predicate.cpp
  */
-class BetweenTableScanImpl : public BaseSingleColumnTableScanImpl {
+class BetweenTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
-  BetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+  BetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                        const AllTypeVariant& left_value, const AllTypeVariant& right_value);
 
   std::string description() const override;
 
-  void handle_segment(const BaseValueSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+ protected:
+  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void handle_segment(const BaseDictionarySegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                     const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+                     const std::shared_ptr<const PosList>& position_filter) const;
 
-  void handle_segment(const BaseEncodedSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
-
-  using BaseSingleColumnTableScanImpl::handle_segment;
-
- private:
   const AllTypeVariant _left_value;
   const AllTypeVariant _right_value;
 };

@@ -32,7 +32,7 @@
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "table_scan/is_null_table_scan_impl.hpp"
 #include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_column_table_scan_impl.hpp"
+#include "table_scan/literal_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -134,12 +134,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
           if (!filtered_pos_list) {
-            filtered_pos_list = std::make_shared<PosList>();
-            filtered_pos_list->reserve(matches_out->size());
+            filtered_pos_list = std::make_shared<PosList>(matches_out->size());
 
+            size_t offset = 0;
             for (const auto& match : *matches_out) {
               const auto row_id = (*pos_list_in)[match.chunk_offset];
-              filtered_pos_list->push_back(row_id);
+              (*filtered_pos_list)[offset] = row_id;
+              ++offset;
             }
           }
 
@@ -216,12 +217,12 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>
     if (left_column_expression && right_value) {
-      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                         predicate_condition, *right_value);
+      return std::make_unique<LiteralTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                    predicate_condition, *right_value);
     }
     if (right_column_expression && left_value) {
-      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), right_column_expression->column_id,
-                                                         flip_predicate_condition(predicate_condition), *left_value);
+      return std::make_unique<LiteralTableScanImpl>(input_table_left(), right_column_expression->column_id,
+                                                    flip_predicate_condition(predicate_condition), *left_value);
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <column>

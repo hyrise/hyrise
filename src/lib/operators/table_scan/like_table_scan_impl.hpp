@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_single_column_table_scan_impl.hpp"
+#include "abstract_single_column_table_scan_impl.hpp"
 #include "boost/variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 
@@ -29,38 +29,27 @@ class Table;
  * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
  *                    e.g., StartsWithPattern. 
  */
-class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
+class LikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
-  LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+  LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                     const PredicateCondition predicate_condition, const std::string& pattern);
 
   std::string description() const override;
 
-  void handle_segment(const BaseValueSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+ protected:
+  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void handle_segment(const BaseDictionarySegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
-
-  void handle_segment(const BaseEncodedSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
-
-  using BaseSingleColumnTableScanImpl::handle_segment;
-
- private:
-  /**
-   * Scan the iterable (using the optional position_filter) with _pattern_variant and fill the matches_out with
-   * RowIDs that match the pattern.
-   */
-  template <typename Iterable>
-  void _scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
-                      const std::shared_ptr<const PosList>& position_filter);
+  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                     const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+                     const std::shared_ptr<const PosList>& position_filter) const;
 
   /**
    * Used for dictionary segments
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary) const;
 
   const LikeMatcher _matcher;
 

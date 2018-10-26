@@ -112,7 +112,7 @@ void with_comparator(const PredicateCondition predicate_condition, const Functor
       return func(std::greater_equal<void>{});
 
     default:
-      Fail("Unsupported operator.");
+      Fail("Unsupported operator");
   }
 }
 

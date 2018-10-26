@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "base_single_column_table_scan_impl.hpp"
+#include "abstract_single_column_table_scan_impl.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -13,70 +13,39 @@ namespace opossum {
 class Table;
 class BaseValueSegment;
 
-class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
+class IsNullTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
-  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
+  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                       const PredicateCondition& predicate_condition);
 
   std::string description() const override;
 
-  void handle_segment(const ReferenceSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  // We need to override scan_chunk because we do not want ReferenceSegments to be resolved (which would remove
+  // NullValues from the referencing PosList)
+  std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
-  void handle_segment(const BaseValueSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+ protected:
+  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void handle_segment(const BaseDictionarySegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+                     const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& results,
+                     const std::shared_ptr<const PosList>& position_filter) const;
 
-  void handle_segment(const BaseEncodedSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
-
-  using BaseSingleColumnTableScanImpl::handle_segment;
-
- private:
   /**
    * @defgroup Methods used for handling value segments
    * @{
    */
 
-  bool _matches_all(const BaseValueSegment& segment);
+  bool _matches_all(const BaseValueSegment& segment) const;
 
-  bool _matches_none(const BaseValueSegment& segment);
+  bool _matches_none(const BaseValueSegment& segment) const;
 
-  void _add_all(Context& context, size_t segment_size);
+  void _add_all(const ChunkID chunk_id, PosList& results, const std::shared_ptr<const PosList>& position_filter,
+                const size_t segment_size) const;
 
   /**@}*/
-
- private:
-  template <typename Functor>
-  void _resolve_predicate_condition(const Functor& func) {
-    switch (_predicate_condition) {
-      case PredicateCondition::IsNull:
-        return func([](const bool is_null) { return is_null; });
-
-      case PredicateCondition::IsNotNull:
-        return func([](const bool is_null) { return !is_null; });
-
-      default:
-        Fail("Unsupported comparison type encountered");
-    }
-  }
-
-  template <typename Iterator>
-  void _scan(Iterator left_it, Iterator left_end, Context& context) {
-    auto& matches_out = context._matches_out;
-    const auto chunk_id = context._chunk_id;
-
-    _resolve_predicate_condition([&](auto comparator) {
-      for (; left_it != left_end; ++left_it) {
-        const auto left = *left_it;
-
-        if (!comparator(left.is_null())) continue;
-        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
-      }
-    });
-  }
 };
 
 }  // namespace opossum
