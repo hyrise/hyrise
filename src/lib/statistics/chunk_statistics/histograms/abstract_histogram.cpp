@@ -61,7 +61,7 @@ std::string AbstractHistogram<T>::description() const {
 
 template <typename T>
 std::string AbstractHistogram<T>::bins_to_csv(const bool print_header, const std::optional<std::string>& column_name,
-                                              const std::optional<uint64_t>& requested_num_bins) const {
+                                              const std::optional<uint64_t>& requested_bin_count) const {
   std::stringstream stream;
 
   if (print_header) {
@@ -71,35 +71,35 @@ std::string AbstractHistogram<T>::bins_to_csv(const bool print_header, const std
       stream << ",column_name";
     }
 
-    stream << ",actual_num_bins";
+    stream << ",actual_bin_count";
 
-    if (requested_num_bins) {
-      stream << ",requested_num_bins";
+    if (requested_bin_count) {
+      stream << ",requested_bin_count";
     }
 
-    stream << ",bin_id,bin_min,bin_max,bin_min_repr,bin_max_repr,bin_width,bin_count,bin_count_distinct";
+    stream << ",bin_id,bin_min,bin_max,bin_min_repr,bin_max_repr,bin_width,bin_height,bin_distinct_count";
     stream << std::endl;
   }
 
-  for (auto bin = 0u; bin < num_bins(); bin++) {
-    stream << histogram_type_to_string.at(histogram_type());
+  for (auto bin = 0u; bin < bin_count(); bin++) {
+    stream << histogram_name();
 
     if (column_name) {
       stream << "," << *column_name;
     }
 
-    stream << "," << num_bins();
+    stream << "," << bin_count();
 
-    if (requested_num_bins) {
-      stream << "," << *requested_num_bins;
+    if (requested_bin_count) {
+      stream << "," << *requested_bin_count;
     }
 
     stream << "," << bin;
 
     if constexpr (std::is_same_v<T, std::string>) {
       constexpr auto patterns = std::array<std::pair<const char*, const char*>, 2u>{{{"\\", "\\\\"}, {"\"", "\\\""}}};
-      auto min = _bin_min(bin);
-      auto max = _bin_max(bin);
+      auto min = _bin_minimum(bin);
+      auto max = _bin_maximum(bin);
 
       for (const auto& pair : patterns) {
         boost::replace_all(min, pair.first, pair.second);
@@ -108,19 +108,18 @@ std::string AbstractHistogram<T>::bins_to_csv(const bool print_header, const std
 
       stream << ",\"" << min << "\"";
       stream << ",\"" << max << "\"";
-      stream << "," << _convert_string_to_number_representation(_bin_min(bin));
-      stream << "," << _convert_string_to_number_representation(_bin_max(bin));
-      stream << "," << _string_bin_width(bin);
+      stream << "," << _convert_string_to_number_representation(_bin_minimum(bin));
+      stream << "," << _convert_string_to_number_representation(_bin_maximum(bin));
     } else {
-      stream << "," << _bin_min(bin);
-      stream << "," << _bin_max(bin);
-      stream << "," << _bin_min(bin);
-      stream << "," << _bin_max(bin);
-      stream << "," << _bin_width(bin);
+      stream << "," << _bin_minimum(bin);
+      stream << "," << _bin_maximum(bin);
+      stream << "," << _bin_minimum(bin);
+      stream << "," << _bin_maximum(bin);
     }
 
-    stream << "," << _bin_count(bin);
-    stream << "," << _bin_count_distinct(bin);
+    stream << "," << _bin_width(bin);
+    stream << "," << _bin_height(bin);
+    stream << "," << _bin_distinct_count(bin);
     stream << std::endl;
   }
 
