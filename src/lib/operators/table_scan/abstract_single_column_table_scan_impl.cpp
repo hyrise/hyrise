@@ -17,11 +17,11 @@ namespace opossum {
 AbstractSingleColumnTableScanImpl::AbstractSingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                                      const ColumnID column_id,
                                                                      const PredicateCondition predicate_condition)
-    : _in_table(in_table), _column_id(column_id), _predicate_condition(predicate_condition) {}
+    : column_id(column_id), _in_table(in_table), _predicate_condition(predicate_condition) {}
 
 std::shared_ptr<PosList> AbstractSingleColumnTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
   const auto& chunk = _in_table->get_chunk(chunk_id);
-  const auto& segment = chunk->get_segment(_column_id);
+  const auto& segment = chunk->get_segment(column_id);
 
   auto matches = std::make_shared<PosList>();
 
