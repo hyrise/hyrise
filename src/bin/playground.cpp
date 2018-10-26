@@ -1036,7 +1036,8 @@ int main(int argc, char** argv) {
     Fail("Specify either '--estimation' or '--pruning' to decide what to measure.");
   }
 
-  bin_log << AbstractHistogram::bins_to_csv_header();
+  // data type of AbstractHistogram does not matter here.
+  bin_log << AbstractHistogram<int32_t>::bins_to_csv_header();
 
   CsvMeta csv_meta;
   if (cmd_option_exists(argv, argv_end, "--meta-path")) {
