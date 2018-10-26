@@ -88,7 +88,7 @@ class AbstractHistogram : public AbstractFilter {
    */
   static std::string bins_to_csv_header(const std::optional<std::string>& column_name,
                                         const std::optional<uint64_t>& requested_bin_count,
-                                        const std::optional<ChunkID>& chunk_id) const;
+                                        const std::optional<ChunkID>& chunk_id);
   std::string bins_to_csv(const bool print_header = true, const std::optional<std::string>& column_name = std::nullopt,
                           const std::optional<uint64_t>& requested_num_bins = std::nullopt,
                           const std::optional<ChunkID>& chunk_id = std::nullopt) const;
