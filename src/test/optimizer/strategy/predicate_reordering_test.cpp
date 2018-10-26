@@ -252,8 +252,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
-/* Disabled as validate operator cannot be behind jit operator */
-TEST_F(PredicateReorderingTest, /* #0 */ DISABLED_SimpleValidateReorderingTest) {
+TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
   const auto input_lqp =
     PredicateNode::make(greater_than_(a, 60),
