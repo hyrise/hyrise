@@ -49,12 +49,12 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
 
  private:
   /**
-   * Scan the iterable (using the optional mapped_chunk_offsets) with _pattern_variant and fill the matches_out with
+   * Scan the iterable (using the optional position_filter) with _pattern_variant and fill the matches_out with
    * RowIDs that match the pattern.
    */
   template <typename Iterable>
   void _scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
-                      const ChunkOffsetsList* const mapped_chunk_offsets);
+                      const std::shared_ptr<const PosList>& position_filter);
 
   /**
    * Used for dictionary segments
