@@ -293,8 +293,6 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
-    scheduler/processing_unit.cpp
-    scheduler/processing_unit.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/topology.cpp
@@ -520,6 +518,8 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
+    utils/are_args_cxxopts_compatible.cpp
+    utils/are_args_cxxopts_compatible.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp

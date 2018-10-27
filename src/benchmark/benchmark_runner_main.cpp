@@ -7,6 +7,7 @@
 #include "scheduler/topology.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "types.hpp"
+#include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/performance_warning.hpp"
 
 int main(int argc, char* argv[]) {
@@ -33,6 +34,7 @@ int main(int argc, char* argv[]) {
 
   } else {
     // Parse regular command line args
+    Assert(opossum::are_args_cxxopts_compatible(argc, argv), "Command line argument incompatible with cxxopts");
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
     // Display usage and quit
