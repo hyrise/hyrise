@@ -1017,24 +1017,19 @@ int main(int argc, char** argv) {
     Fail("Mode '" + filter_mode + "' not supported.");
   }
 
-  std::ofstream result_log;
-  std::ofstream bin_log;
+  std::ofstream result_log = std::ofstream(output_path + "/results.log", std::ios_base::out | std::ios_base::trunc);
 
   if (cmd_option_exists(argv, argv_end, "--estimation")) {
-    result_log = std::ofstream(output_path + "/estimation_results.log", std::ios_base::out | std::ios_base::trunc);
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
                   "equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
-
-    bin_log = std::ofstream(output_path + "/estimation_bins.log", std::ios_base::out | std::ios_base::trunc);
   } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
-    result_log = std::ofstream(output_path + "/pruning_results.log", std::ios_base::out | std::ios_base::trunc);
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "equal_height_hist_prunable,equal_distinct_count_hist_prunable,equal_width_hist_prunable\n";
-
-    bin_log = std::ofstream(output_path + "/pruning_bins.log", std::ios_base::out | std::ios_base::trunc);
   } else {
     Fail("Specify either '--estimation' or '--pruning' to decide what to measure.");
   }
+
+  std::ofstream bin_log = std::ofstream(output_path + "/bins.log", std::ios_base::out | std::ios_base::trunc);
 
   // Data type and parameters of function call do not matter here.
   bin_log << AbstractHistogram<int32_t>::bins_to_csv_header("column_name", 0, ChunkID{0});
