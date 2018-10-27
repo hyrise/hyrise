@@ -86,7 +86,7 @@ std::vector<TestConfiguration> read_queries_from_file() {
 
   std::vector<TestConfiguration> tests;
   for (const auto& query : queries) {
-    tests.push_back({query, false, false});
+    tests.push_back({query, false, true});
     if constexpr (HYRISE_JIT_SUPPORT) {
       tests.push_back({query, true, true});
       // If validate is not present, there is the possibility that one JitOperatorWrapper can combine more operators
