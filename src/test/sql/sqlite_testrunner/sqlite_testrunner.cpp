@@ -86,7 +86,7 @@ std::vector<TestConfiguration> read_queries_from_file() {
 
   std::vector<TestConfiguration> tests;
   for (const auto& query : queries) {
-    tests.push_back({query, false, true});
+    tests.push_back({query, false, false});
     if constexpr (HYRISE_JIT_SUPPORT) {
       tests.push_back({query, true, true});
       // If validate is not present, there is the possibility that one JitOperatorWrapper can combine more operators
@@ -101,9 +101,6 @@ std::vector<TestConfiguration> read_queries_from_file() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& [query, use_jit, use_mvcc] = GetParam();
 
-  SCOPED_TRACE("SQLite " + query + " " + (use_jit ? "with JIT" : "without JIT") + " " +
-               (use_mvcc ? "with MVCC" : "without MVCC"));
-
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
     lqp_translator = std::make_shared<JitAwareLQPTranslator>();
@@ -111,7 +108,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
 
-  SCOPED_TRACE(query);
+  SCOPED_TRACE("SQLite " + query + " " + (use_jit ? "with JIT" : "without JIT") + " " +
+               (use_mvcc ? "with MVCC" : "without MVCC"));
 
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
