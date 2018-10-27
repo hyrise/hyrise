@@ -27,7 +27,6 @@
    obj:*libsqlite3.so.*
    ...
 }
-# assdasd
 {
    <gtest_says_to_ignore_this_1>
    Memcheck:Value8
