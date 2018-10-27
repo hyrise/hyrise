@@ -21,6 +21,8 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "utils/are_args_cxxopts_compatible.hpp"
+#include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/sql_query_plan_visualizer.hpp"
 
@@ -61,6 +63,7 @@ int main(int argc, char* argv[]) {
 
   } else {
     // Parse regular command line args
+    Assert(opossum::are_args_cxxopts_compatible(argc, argv), "Command line argument incompatible with cxxopts");
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
     // Display usage and quit
