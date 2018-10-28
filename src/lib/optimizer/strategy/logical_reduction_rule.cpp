@@ -1,4 +1,4 @@
-#include "logical_expression_reducer_rule_moritz.hpp"
+#include "logical_reduction_rule.hpp"
 
 #include <functional>
 #include <unordered_set>
@@ -14,10 +14,10 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-std::string LogicalExpressionReducerRuleMoritz::name() const { return "Logical Expression Reducer Rule"; }
+std::string LogicalReductionRule::name() const { return "Logical Expression Reducer Rule"; }
 
-bool LogicalExpressionReducerRuleMoritz::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  Assert(node->type == LQPNodeType::Root, "LogicalExpressionReducerRuleMoritz needs root to hold onto");
+bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  Assert(node->type == LQPNodeType::Root, "LogicalReductionRule needs root to hold onto");
 
   auto predicate_nodes_to_flat_conjunctions = std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
@@ -48,7 +48,7 @@ bool LogicalExpressionReducerRuleMoritz::apply_to(const std::shared_ptr<Abstract
   return false;
 }
 
-std::shared_ptr<AbstractExpression> LogicalExpressionReducerRuleMoritz::reduce_distributivity(const std::shared_ptr<AbstractExpression>& input_expression) {
+std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(const std::shared_ptr<AbstractExpression>& input_expression) {
   const auto flat_disjunction = flatten_logical_expressions(input_expression, LogicalOperator::Or);
 
   auto flat_disjunction_and_conjunction = std::vector<std::vector<std::shared_ptr<AbstractExpression>>>{};
@@ -58,16 +58,13 @@ std::shared_ptr<AbstractExpression> LogicalExpressionReducerRuleMoritz::reduce_d
     flat_disjunction_and_conjunction.emplace_back(flatten_logical_expressions(expression, LogicalOperator::And));
   }
 
-  auto common_conjunctions = ExpressionUnorderedSet{flat_disjunction_and_conjunction.front().begin(),
-                                                    flat_disjunction_and_conjunction.front().end()};
+  auto common_conjunctions = flat_disjunction_and_conjunction.front();
 
   for (auto conjunction_idx = size_t{1}; conjunction_idx < flat_disjunction_and_conjunction.size(); ++conjunction_idx) {
     const auto& flat_conjunction = flat_disjunction_and_conjunction[conjunction_idx];
 
     for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end(); ) {
-      if (std::find_if(flat_conjunction.begin(), flat_conjunction.end(), [&](const auto& expression) {
-        return *expression == *(*common_iter);
-      }) == flat_conjunction.end()) {
+      if (std::find(flat_conjunction.begin(), flat_conjunction.end(), *common_iter) == flat_conjunction.end()) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
@@ -77,7 +74,7 @@ std::shared_ptr<AbstractExpression> LogicalExpressionReducerRuleMoritz::reduce_d
   
   for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
      for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
-        if (common_conjunctions.find(*expression_iter) != common_conjunctions.end()) {
+        if (std::find(common_conjunctions.begin(), common_conjunctions.end(), *expression_iter) != common_conjunctions.end()) {
           expression_iter = flat_conjunction.erase(expression_iter);
         } else {
           ++expression_iter;

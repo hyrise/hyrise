@@ -110,8 +110,7 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/logical_expression_reducer_rule_test.cpp
-    optimizer/strategy/logical_expression_reducer_rule_test_moritz.cpp
+    optimizer/strategy/logical_reduction_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp

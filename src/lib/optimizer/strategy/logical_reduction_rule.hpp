@@ -20,10 +20,12 @@ class AbstractLQPNode;
  * Conjunctive chains, i.e., `(a OR b) AND (a OR c) -> a OR (b AND c)` are currently ignored, as they don't allow
  * us to fully extract predicates.
  */
-class LogicalExpressionReducerRule : public AbstractRule {
+class LogicalReductionRule : public AbstractRule {
  public:
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+
+  static std::shared_ptr<AbstractExpression> reduce_distributivity(const std::shared_ptr<AbstractExpression>& expression);
 
  protected:
   using MapType = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>;
@@ -45,9 +47,8 @@ class LogicalExpressionReducerRule : public AbstractRule {
   // identified: (1) a, (2) b, (3) c, (4) d or e. `top_level` is used to identify the top-level call of this function.
   // If the top-level call would result in a single expression being the result, the result is cleared, as we cannot
   // call a single expression a "chain".
-  static void _collect_chained_logical_expressions(const std::shared_ptr<AbstractExpression>& expression,
-                                                   LogicalOperator logical_operator, ExpressionUnorderedSet& result,
-                                                   bool top_level = true);
+  static void _flatten_logical_expressions(const std::shared_ptr<AbstractExpression>& expression,
+                                           LogicalOperator logical_operator, ExpressionUnorderedSet& flattened);
 
   // Given a chain of expressions (see _collect_chained_logical_expressions), remove all expressions that are in
   // `expressions_to_remove`. Example: When called on `(((a AND b) AND c) AND (d OR e)` with

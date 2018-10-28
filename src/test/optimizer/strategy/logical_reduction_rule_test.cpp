@@ -6,7 +6,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "optimizer/strategy/logical_expression_reducer_rule_moritz.hpp"
+#include "optimizer/strategy/logical_reduction_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
@@ -15,7 +15,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LogicalExpressionReducerRuleMoritzTestMoritz : public StrategyBaseTest {
+class LogicalReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
@@ -29,23 +29,23 @@ class LogicalExpressionReducerRuleMoritzTestMoritz : public StrategyBaseTest {
     d = equals_(mock_node->get_column("d"), 0);
     e = equals_(mock_node->get_column("e"), 0);
 
-    rule = std::make_shared<LogicalExpressionReducerRuleMoritz>();
+    rule = std::make_shared<LogicalReductionRule>();
   }
 
   std::shared_ptr<AbstractExpression> reduce_distributivity(const std::shared_ptr<AbstractExpression>& expression) {
-    return LogicalExpressionReducerRuleMoritz::reduce_distributivity(expression);
+    return LogicalReductionRule::reduce_distributivity(expression);
   }
 
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<AbstractExpression> a, b, c, d, e;
-  std::shared_ptr<LogicalExpressionReducerRuleMoritz> rule;
+  std::shared_ptr<LogicalReductionRule> rule;
 };
 
-TEST_F(LogicalExpressionReducerRuleMoritzTestMoritz, ReduceDistributivity) {
+TEST_F(LogicalReductionRuleTest, ReduceDistributivity) {
   EXPECT_EQ(*reduce_distributivity(a), *a);
-  EXPECT_EQ(*reduce_distributivity(and_(b, a)), *and_(a, b));
+  EXPECT_EQ(*reduce_distributivity(and_(a, b)), *and_(a, b));
   EXPECT_EQ(*reduce_distributivity(or_(a, b)), *or_(a, b));
-  EXPECT_EQ(*reduce_distributivity(or_(and_(a, b), and_(a, b))), *and_(b, a));
+  EXPECT_EQ(*reduce_distributivity(or_(and_(a, b), and_(a, b))), *and_(a, b));
   // clang-format off
 
   // (a AND c AND b) OR (d AND a AND e) -->
@@ -56,15 +56,15 @@ TEST_F(LogicalExpressionReducerRuleMoritzTestMoritz, ReduceDistributivity) {
   // (a AND b AND c) OR (a AND b) OR (a AND d AND b AND a) OR (b AND a AND e) -->
   // a AND b AND (c OR d OR e)
   EXPECT_EQ(*reduce_distributivity(or_(or_(and_(a, and_(b, c)), and_(a, b)), or_(and_(and_(and_(a, d), b), a), and_(b, and_(a, e))))),
-            *and_(and_(b, a), or_(or_(c, d), e)));
+            *and_(and_(a, b), or_(or_(c, d), e)));
 
   // clang-format on
 }
 
 
-TEST_F(LogicalExpressionReducerRuleMoritzTestMoritz, ApplyToProjection) {
+TEST_F(LogicalReductionRuleTest, ApplyToProjection) {
   // (a AND b) OR (a AND c) -> a AND (c OR b)
-  // (a AND b) AND (a AND c) -> a AND b AND c
+  // (a AND b) AND (a AND c) -> no change
 
   const auto a_and_b = and_(a, b);
   const auto a_and_c = and_(a, c);
@@ -75,14 +75,14 @@ TEST_F(LogicalExpressionReducerRuleMoritzTestMoritz, ApplyToProjection) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(and_(a, or_(b, c)), and_(and_(c, b), a)),
+  ProjectionNode::make(expression_vector(and_(a, or_(b, c)), and_(and_(a_and_b, a), c)),
     mock_node);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(LogicalExpressionReducerRuleMoritzTestMoritz, ApplyToPredicate) {
+TEST_F(LogicalReductionRuleTest, ApplyToPredicate) {
   // (a AND b) OR (a AND c) -> PredicateNode{a} -> PredicateNode{b OR c}
 
   const auto a_and_b = and_(a, b);
