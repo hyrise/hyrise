@@ -277,6 +277,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/logical_expression_reducer_rule.cpp
     optimizer/strategy/logical_expression_reducer_rule.hpp
+    optimizer/strategy/logical_expression_reducer_rule_moritz.cpp
+    optimizer/strategy/logical_expression_reducer_rule_moritz.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp

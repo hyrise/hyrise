@@ -26,7 +26,7 @@ class ExpressionUtilsTest : public ::testing::Test {
 TEST_F(ExpressionUtilsTest, ExpressionFlattenConjunction) {
   // a > 5 AND b < 6 AND c = 7
   const auto expression = and_(and_(greater_than_(a_a, 5), less_than_(a_b, 6)), equals_(a_c, 7));
-  const auto flattened_expressions = expression_flatten_conjunction(expression);
+  const auto flattened_expressions = flatten_logical_expressions(expression, LogicalOperator::And);
 
   ASSERT_EQ(flattened_expressions.size(), 3u);
   EXPECT_EQ(*flattened_expressions.at(0), *equals_(a_c, 7));
