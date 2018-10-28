@@ -124,7 +124,7 @@ std::vector<std::shared_ptr<AbstractExpression>> flatten_logical_expressions(
  * Convert [a,b,c], AND into "a AND b AND c"
  */
 std::shared_ptr<AbstractExpression> inflate_logical_expressions(
-  const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator);
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator);
 
 /**
  * Traverse the expression(s) for ParameterExpressions and set them to the requested values

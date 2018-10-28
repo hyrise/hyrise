@@ -19,7 +19,8 @@ std::string LogicalReductionRule::name() const { return "Logical Expression Redu
 bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->type == LQPNodeType::Root, "LogicalReductionRule needs root to hold onto");
 
-  auto predicate_nodes_to_flat_conjunctions = std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
+  auto predicate_nodes_to_flat_conjunctions =
+      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
   visit_lqp(node, [&](const auto& sub_node) {
     if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(sub_node)) {
@@ -48,7 +49,8 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   return false;
 }
 
-std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(const std::shared_ptr<AbstractExpression>& input_expression) {
+std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
+    const std::shared_ptr<AbstractExpression>& input_expression) {
   const auto flat_disjunction = flatten_logical_expressions(input_expression, LogicalOperator::Or);
 
   auto flat_disjunction_and_conjunction = std::vector<std::vector<std::shared_ptr<AbstractExpression>>>{};
@@ -63,26 +65,28 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
   for (auto conjunction_idx = size_t{1}; conjunction_idx < flat_disjunction_and_conjunction.size(); ++conjunction_idx) {
     const auto& flat_conjunction = flat_disjunction_and_conjunction[conjunction_idx];
 
-    for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end(); ) {
+    for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end();) {
       if (std::find(flat_conjunction.begin(), flat_conjunction.end(), *common_iter) == flat_conjunction.end()) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
       }
-    }    
-  }
-  
-  for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
-     for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
-        if (std::find(common_conjunctions.begin(), common_conjunctions.end(), *expression_iter) != common_conjunctions.end()) {
-          expression_iter = flat_conjunction.erase(expression_iter);
-        } else {
-          ++expression_iter;
-        }
-     }
+    }
   }
 
-  auto common_conjunction_expression = inflate_logical_expressions({common_conjunctions.begin(), common_conjunctions.end()}, LogicalOperator::And);
+  for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
+    for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
+      if (std::find(common_conjunctions.begin(), common_conjunctions.end(), *expression_iter) !=
+          common_conjunctions.end()) {
+        expression_iter = flat_conjunction.erase(expression_iter);
+      } else {
+        ++expression_iter;
+      }
+    }
+  }
+
+  auto common_conjunction_expression =
+      inflate_logical_expressions({common_conjunctions.begin(), common_conjunctions.end()}, LogicalOperator::And);
 
   auto flat_disjunction_remainder = std::vector<std::shared_ptr<AbstractExpression>>{};
 

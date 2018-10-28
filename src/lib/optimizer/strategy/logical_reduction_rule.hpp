@@ -25,7 +25,8 @@ class LogicalReductionRule : public AbstractRule {
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
-  static std::shared_ptr<AbstractExpression> reduce_distributivity(const std::shared_ptr<AbstractExpression>& expression);
+  static std::shared_ptr<AbstractExpression> reduce_distributivity(
+      const std::shared_ptr<AbstractExpression>& expression);
 
  protected:
   using MapType = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>;

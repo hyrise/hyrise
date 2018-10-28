@@ -168,7 +168,7 @@ std::vector<std::shared_ptr<AbstractExpression>> flatten_logical_expressions(
 }
 
 std::shared_ptr<AbstractExpression> inflate_logical_expressions(
-const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator) {
   auto inflated = std::shared_ptr<AbstractExpression>{};
 
   if (!expressions.empty()) inflated = expressions.front();

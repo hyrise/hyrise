@@ -18,11 +18,8 @@ namespace opossum {
 class LogicalReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
-                                                            {DataType::Int, "b"},
-                                                            {DataType::Int, "c"},
-                                                            {DataType::Int, "d"},
-                                                            {DataType::Int, "e"}});
+    mock_node = MockNode::make(MockNode::ColumnDefinitions{
+        {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}, {DataType::Int, "e"}});
     a = equals_(mock_node->get_column("a"), 0);
     b = equals_(mock_node->get_column("b"), 0);
     c = equals_(mock_node->get_column("c"), 0);
@@ -55,12 +52,11 @@ TEST_F(LogicalReductionRuleTest, ReduceDistributivity) {
 
   // (a AND b AND c) OR (a AND b) OR (a AND d AND b AND a) OR (b AND a AND e) -->
   // a AND b AND (c OR d OR e)
-  EXPECT_EQ(*reduce_distributivity(or_(or_(and_(a, and_(b, c)), and_(a, b)), or_(and_(and_(and_(a, d), b), a), and_(b, and_(a, e))))),
+  EXPECT_EQ(*reduce_distributivity(or_(or_(and_(a, and_(b, c)), and_(a, b)), or_(and_(and_(and_(a, d), b), a), and_(b, and_(a, e))))),  // NOLINT
             *and_(and_(a, b), or_(or_(c, d), e)));
 
   // clang-format on
 }
-
 
 TEST_F(LogicalReductionRuleTest, ApplyToProjection) {
   // (a AND b) OR (a AND c) -> a AND (c OR b)
