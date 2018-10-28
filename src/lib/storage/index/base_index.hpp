@@ -43,12 +43,12 @@ class BaseIndex : private Noncopyable {
    * on a Chunk with the following statistics:
    *
    * row_count - overall number of rows
-   * value_count - number of distinct values
+   * distinct_count - number of distinct values
    * value_bytes - (average) size of a single value in bytes
    *
-   * If no prediction is possible, this shall fail.
+   * If no prediction is possible (or it is not implemented yet), this shall fail.
    */
-  static size_t estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+  static size_t estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
                                             uint32_t value_bytes);
 
   /**

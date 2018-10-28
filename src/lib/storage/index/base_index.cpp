@@ -10,17 +10,17 @@
 
 namespace opossum {
 
-size_t BaseIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+size_t BaseIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
                                               uint32_t value_bytes) {
   switch (type) {
     case SegmentIndexType::GroupKey:
-      return GroupKeyIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+      return GroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::CompositeGroupKey:
-      return CompositeGroupKeyIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+      return CompositeGroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::AdaptiveRadixTree:
-      return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+      return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::BTree:
-      return BTreeIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+      return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     default:
       Fail("estimate_memory_consumption() is not implemented for the given index type");
   }
