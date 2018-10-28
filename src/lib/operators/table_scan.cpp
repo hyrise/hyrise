@@ -120,24 +120,16 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
-        if (const auto& single_column_scan = dynamic_cast<AbstractSingleColumnTableScanImpl*>(_impl.get())) {
-          // Unless we used a complicated scan (where it's harder to identify the scanned_column_id), there is no need
-          // to translate the PosList that we actually scanned on
-          const auto& scanned_column_id = single_column_scan->column_id;
-          const auto& ref_segment_in =
-              std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(scanned_column_id));
-          filtered_pos_lists[ref_segment_in->pos_list()] = matches_out;
-        }
-
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
           auto segment_in = chunk_in->get_segment(column_id);
 
-          const auto& ref_segment_in = std::static_pointer_cast<const ReferenceSegment>(segment_in);
+          auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
+          DebugAssert(ref_segment_in != nullptr, "All segments should be of type ReferenceSegment.");
 
-          const auto& pos_list_in = ref_segment_in->pos_list();
+          const auto pos_list_in = ref_segment_in->pos_list();
 
-          const auto& table_out = ref_segment_in->referenced_table();
-          const auto& column_id_out = ref_segment_in->referenced_column_id();
+          const auto table_out = ref_segment_in->referenced_table();
+          const auto column_id_out = ref_segment_in->referenced_column_id();
 
           auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 

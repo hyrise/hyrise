@@ -24,7 +24,7 @@ std::string IsNullTableScanImpl::description() const { return "IsNullScan"; }
 
 std::shared_ptr<PosList> IsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
   const auto& chunk = _in_table->get_chunk(chunk_id);
-  const auto& segment = chunk->get_segment(column_id);
+  const auto& segment = chunk->get_segment(_column_id);
 
   auto matches = std::make_shared<PosList>();
 
