@@ -22,7 +22,8 @@ class JitValidate : public AbstractJittable {
 
  private:
   // Function not optimized due to specialization issues with atomic
-  __attribute__((optnone)) static TransactionID _load_atomic_value(const copyable_atomic<TransactionID>& transaction_id);
+  __attribute__((optnone)) static TransactionID _load_atomic_value(
+      const copyable_atomic<TransactionID>& transaction_id);
 
   TableType _input_table_type;
 };
