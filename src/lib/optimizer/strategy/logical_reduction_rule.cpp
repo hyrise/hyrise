@@ -85,8 +85,7 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
     }
   }
 
-  auto common_conjunction_expression =
-      inflate_logical_expressions({common_conjunctions.begin(), common_conjunctions.end()}, LogicalOperator::And);
+  auto common_conjunction_expression = inflate_logical_expressions(common_conjunctions, LogicalOperator::And);
 
   auto flat_disjunction_remainder = std::vector<std::shared_ptr<AbstractExpression>>{};
 
