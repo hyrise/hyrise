@@ -77,12 +77,13 @@ inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
 // If trivial conversion failed, continue here:
 template <typename T>
 T type_cast_variant(const AllTypeVariant& value) {
+  // fast path if the type is the same
+  if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
+
+  // slow path with conversion
   T converted_value;
-
   const auto unpack = [&converted_value](const auto& typed_value) { converted_value = type_cast<T>(typed_value); };
-
   boost::apply_visitor(unpack, value);
-
   return converted_value;
 }
 
