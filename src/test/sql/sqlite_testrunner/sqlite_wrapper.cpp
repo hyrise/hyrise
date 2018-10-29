@@ -61,8 +61,11 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   }
   query << ");";
 
+  size_t rows_added = 0;
+  query << "INSERT INTO " << table_name << " VALUES ";
   while (std::getline(infile, line)) {
-    query << "INSERT INTO " << table_name << " VALUES (";
+    if (rows_added) query << ", ";
+    query << "(";
     std::vector<std::string> values = _split<std::string>(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
       if (column_types[i] == "TEXT" && values[i] != "null") {
@@ -75,8 +78,10 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
         query << ", ";
       }
     }
-    query << ");";
+    query << ")";
+    ++rows_added;
   }
+  query << ";";
 
   _exec_sql(query.str());
 }
