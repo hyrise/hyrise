@@ -39,12 +39,8 @@ const T& get(const AllTypeVariant& value) {
 // Simple (i.e., constructible) conversions
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_constructible_v<std::decay_t<T>, std::decay_t<U>>>>
-inline __attribute__((always_inline)) T&& type_cast(U&& value) {
-  if constexpr(std::is_move_constructible_v<T>) {
-    return std::forward<T>(value);
-  } else {
-    return value;
-  }
+inline __attribute__((always_inline)) T type_cast(U&& value) {
+  return T{std::forward<T>(value)};
 }
 
 // Simple (i.e., copy constructible) conversions
