@@ -7,6 +7,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "statistics/chunk_statistics/segment_statistics_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
@@ -397,7 +398,8 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     chunk_spec.push_back(config.default_encoding_spec);
   }
 
-  return ChunkEncoder::encode_all_chunks(table, chunk_spec);
+  ChunkEncoder::encode_all_chunks(table, chunk_spec);
+  create_pruning_filter_for_immutable_chunks(*table);
 }
 
 // This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.

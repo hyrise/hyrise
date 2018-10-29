@@ -17,10 +17,13 @@
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
+#include "statistics/chunk_statistics/segment_statistics_utils.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/chunk.hpp"
+#include "storage/table.hpp"
 
 #include "utils/assert.hpp"
 
@@ -40,12 +43,13 @@ class ChunkPruningTest : public StrategyBaseTest {
     storage_manager.add_table("string_compressed", load_table("src/test/tables/string.tbl", 3u));
     storage_manager.add_table("fixed_string_compressed", load_table("src/test/tables/string.tbl", 3u));
 
-    ChunkEncoder::encode_all_chunks(storage_manager.get_table("compressed"), EncodingType::Dictionary);
-    ChunkEncoder::encode_all_chunks(storage_manager.get_table("long_compressed"), EncodingType::Dictionary);
-    ChunkEncoder::encode_all_chunks(storage_manager.get_table("run_length_compressed"), EncodingType::RunLength);
-    ChunkEncoder::encode_all_chunks(storage_manager.get_table("string_compressed"), EncodingType::Dictionary);
-    ChunkEncoder::encode_all_chunks(storage_manager.get_table("fixed_string_compressed"),
-                                    EncodingType::FixedStringDictionary);
+    for (const auto& [name, table] : storage_manager.tables()) {
+      for (const auto& chunk : table->chunks()) {
+        chunk->mark_immutable();
+      }
+      create_pruning_filter_for_immutable_chunks(*table);
+    }
+
     _rule = std::make_shared<ChunkPruningRule>();
 
     storage_manager.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
@@ -87,7 +91,6 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
 TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
   auto table = StorageManager::get().get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
-  EXPECT_TRUE(chunk->statistics() == nullptr);
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
 

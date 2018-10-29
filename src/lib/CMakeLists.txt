@@ -376,6 +376,8 @@ set(
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
+    statistics/chunk_statistics/segment_statistics_utils.cpp
+    statistics/chunk_statistics/segment_statistics_utils.hpp
     statistics/chunk_statistics/counting_quotient_filter.hpp
     statistics/chunk_statistics/counting_quotient_filter.cpp
     statistics/column_statistics.cpp

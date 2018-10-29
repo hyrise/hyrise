@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "statistics/segment_statistics2.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "types.hpp"
@@ -27,7 +28,8 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       _type(type),
       _use_mvcc(use_mvcc),
       _max_chunk_size(max_chunk_size),
-      _append_mutex(std::make_unique<std::mutex>()) {
+      _append_mutex(std::make_unique<std::mutex>()),
+      _table_statistics2(std::make_shared<TableStatistics2>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
@@ -190,8 +192,17 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 
   _chunks.emplace_back(chunk);
 
-  //  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(chunk->size());
-  //  _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
+  // Create empty SegmentStatistics for all segments of the new chunk.
+  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(chunk->size());
+  chunk_statistics->segment_statistics.reserve(_column_definitions.size());
+  for (const auto& column_definition : _column_definitions) {
+    resolve_data_type(column_definition.data_type, [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      chunk_statistics->segment_statistics.emplace_back(std::make_shared<SegmentStatistics2<ColumnDataType>>());
+    });
+  }
+
+  _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

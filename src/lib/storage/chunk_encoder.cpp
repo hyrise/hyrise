@@ -8,8 +8,6 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
-#include "statistics/chunk_statistics/segment_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "utils/assert.hpp"
@@ -22,7 +20,6 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   Assert((chunk_encoding_spec.size() == chunk->column_count()),
          "Number of column encoding specs must match the chunk’s column count.");
 
-  std::vector<std::shared_ptr<SegmentStatistics>> column_statistics;
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
@@ -32,18 +29,13 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
     Assert(value_segment != nullptr, "All segments of the chunk need to be of type ValueSegment<T>");
 
-    if (spec.encoding_type == EncodingType::Unencoded) {
-      // No need to encode, but we still want to have statistics for the now immutable value segment
-      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, value_segment));
-    } else {
+    if (spec.encoding_type != EncodingType::Unencoded) {
       auto encoded_segment = encode_segment(spec.encoding_type, data_type, value_segment, spec.vector_compression_type);
       chunk->replace_segment(column_id, encoded_segment);
-      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
     }
   }
 
   chunk->mark_immutable();
-  chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_data()) {
     chunk->get_scoped_mvcc_data_lock()->shrink();

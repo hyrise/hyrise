@@ -52,6 +52,12 @@ class AbstractStatisticsObject {
   template <typename T>
   std::shared_ptr<SingleBinHistogram<T>> reduce_to_single_bin_histogram() const;
 
+  /**
+   * Flag indicating that this statistics object is derived from an immutable, unsampled chunk.
+   * This indicates whether this statistics object can be used for Chunk pruning.
+   */
+  bool is_derived_from_complete_chunk{false};
+
  protected:
   virtual std::shared_ptr<AbstractStatisticsObject> _reduce_to_single_bin_histogram_impl() const;
 };

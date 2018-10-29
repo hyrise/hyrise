@@ -6,44 +6,77 @@
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
+#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/chunk_statistics/min_max_filter.hpp"
+#include "statistics/chunk_statistics/range_filter.hpp"
 
 namespace opossum {
 
 template <typename T>
 void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
-  const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object);
-  Assert(histogram_object, "Can only handle histograms for now.");
+  if (const auto histogram_object = std::dynamic_pointer_cast<AbstractHistogram<T>>(statistics_object)) {
+    switch (histogram_object->histogram_type()) {
+      case HistogramType::EqualDistinctCount:
+        equal_distinct_count_histogram = std::static_pointer_cast<EqualDistinctCountHistogram<T>>(histogram_object);
+        break;
+      case HistogramType::EqualWidth:
+        equal_width_histogram = std::static_pointer_cast<EqualWidthHistogram<T>>(histogram_object);
+        break;
+      case HistogramType::Generic:
+        generic_histogram = std::static_pointer_cast<GenericHistogram<T>>(histogram_object);
+        break;
+      case HistogramType::SingleBin:
+        single_bin_histogram = std::static_pointer_cast<SingleBinHistogram<T>>(histogram_object);
+        break;
+      default:
+        Fail("Histogram type not yet supported.");
+    }
+  } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
+    min_max_filter = min_max_object;
+  } else {
+    if constexpr (std::is_arithmetic_v<T>) {
+      if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
+        range_filter = range_object;
+        return;
+      }
+    }
 
-  switch (histogram_object->histogram_type()) {
-    case HistogramType::EqualDistinctCount:
-      equal_distinct_count_histogram = std::static_pointer_cast<EqualDistinctCountHistogram<T>>(histogram_object);
-      break;
-    case HistogramType::EqualWidth:
-      equal_width_histogram = std::static_pointer_cast<EqualWidthHistogram<T>>(histogram_object);
-      break;
-    case HistogramType::Generic:
-      generic_histogram = std::static_pointer_cast<GenericHistogram<T>>(histogram_object);
-      break;
-    default:
-      Fail("Statistics object type not yet supported.");
+    Fail("Statistics object type not yet supported.");
   }
 }
 
 template <typename T>
 bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                       const std::optional<AllTypeVariant>& variant_value2) const {
-  if (equal_distinct_count_histogram) {
-    const auto estimate = equal_distinct_count_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
-    if (estimate.type == EstimateType::MatchesNone) return true;
+//  if (equal_distinct_count_histogram) {
+//    const auto estimate = equal_distinct_count_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+//    if (estimate.type == EstimateType::MatchesNone) return true;
+//  }
+//
+//  if (equal_width_histogram) {
+//    const auto estimate = equal_width_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+//    if (estimate.type == EstimateType::MatchesNone) return true;
+//  }
+//
+//  if (generic_histogram) {
+//    const auto estimate = generic_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+//    if (estimate.type == EstimateType::MatchesNone) return true;
+//  }
+//
+//  if (single_bin_histogram) {
+//    const auto estimate = generic_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+//    if (estimate.type == EstimateType::MatchesNone) return true;
+//  }
+
+  if constexpr (std::is_arithmetic_v<T>) {
+    if (range_filter && range_filter->is_derived_from_complete_chunk) {
+      const auto estimate = range_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
+      if (estimate.type == EstimateType::MatchesNone) return true;
+    }
   }
 
-  if (equal_width_histogram) {
-    const auto estimate = equal_width_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
-    if (estimate.type == EstimateType::MatchesNone) return true;
-  }
-
-  if (generic_histogram) {
-    const auto estimate = generic_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+  if (min_max_filter && min_max_filter->is_derived_from_complete_chunk) {
+    const auto estimate = min_max_filter->estimate_cardinality(predicate_type, variant_value, variant_value2);
     if (estimate.type == EstimateType::MatchesNone) return true;
   }
 

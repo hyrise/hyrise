@@ -66,7 +66,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
     excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
-  // wanted side effect of usings sets: excluded_chunk_ids vector is sorted
+  // wanted side effect of using sets: excluded_chunk_ids vector is sorted
   auto& already_excluded_chunk_ids = stored_table->excluded_chunk_ids();
   if (!already_excluded_chunk_ids.empty()) {
     std::vector<ChunkID> intersection;
