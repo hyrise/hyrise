@@ -46,8 +46,9 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
 
   /**
    * Step 2:
-   *    - Split up qualifying PredicateNodes into multiple PredicateNodes. We have to do this in a second pass, because
-   *      manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to bugs.
+   *    - Split up qualifying PredicateNodes into multiple consecutive PredicateNodes. We have to do this in a
+   *      second pass, because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
+   *      bugs.
    */
   for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {
     for (const auto& predicate_expression : flat_conjunction) {
