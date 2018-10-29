@@ -34,7 +34,8 @@ inline const std::vector<std::string> CalibrationConstantHardwareFeatures::colum
      "memory_size_kb", "memory_access_bandwidth", "memory_access_latency", "num_cpu_cores", "cpu_clock_speed_mhz",
      "num_numa_nodes", "cpu_architecture"});
 
-inline const std::vector<AllTypeVariant> CalibrationConstantHardwareFeatures::serialize(const CalibrationConstantHardwareFeatures& features) {
+inline const std::vector<AllTypeVariant> CalibrationConstantHardwareFeatures::serialize(
+    const CalibrationConstantHardwareFeatures& features) {
   return {static_cast<int32_t>(features.l1_size_kb),
           static_cast<int32_t>(features.l1_block_size_kb),
           static_cast<int32_t>(features.l2_size_kb),

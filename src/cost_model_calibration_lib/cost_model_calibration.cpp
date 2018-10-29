@@ -90,8 +90,8 @@ const std::vector<CalibrationExample> CostModelCalibration::_calibrate_query(con
 }
 
 void CostModelCalibration::run_tpch() const {
-//  const auto scheduler = std::make_shared<NodeQueueScheduler>();
-//  CurrentScheduler::set(scheduler);
+  //  const auto scheduler = std::make_shared<NodeQueueScheduler>();
+  //  CurrentScheduler::set(scheduler);
 
   // Run just a single iteration for TPCH
   for (size_t i = 0; i < 1; i++) {
@@ -109,8 +109,8 @@ void CostModelCalibration::run_tpch() const {
 void CostModelCalibration::calibrate() const {
   const auto number_of_iterations = _configuration.calibration_runs;
 
-//  const auto scheduler = std::make_shared<NodeQueueScheduler>();
-//  CurrentScheduler::set(scheduler);
+  //  const auto scheduler = std::make_shared<NodeQueueScheduler>();
+  //  CurrentScheduler::set(scheduler);
 
   _write_csv_header(_configuration.output_path);
 
@@ -154,7 +154,7 @@ void CostModelCalibration::_write_csv_header(const std::string& output_path) con
 }
 
 void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
-        const std::vector<CalibrationExample>& examples) const {
+                                                 const std::vector<CalibrationExample>& examples) const {
   CsvWriter writer(output_path);
 
   for (const auto& example : examples) {

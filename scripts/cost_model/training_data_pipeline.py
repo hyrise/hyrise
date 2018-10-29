@@ -1,66 +1,93 @@
 #!/usr/bin/python
 
-import numpy as np
 import pandas as pd
-import json
 
 import warnings
 warnings.filterwarnings('ignore')
 
-def load_json_results(path):
-	"""Reads calibration result file and returns Dict[Operator -> Array]"""
-	with open(path) as json_data:
-		return json.load(json_data)['operators']
 
-def select_features(df, features = []):
-	if len(features) == 0:
+class TrainingDataPipeline:
+
+	@staticmethod
+	def extract_features_and_target(df):
+		"""
+		Takes a DataFrame containing calibrations result and returns tuple of DataFrames for features and target.
+
+		Args:
+			df: A DataFrame holding
+
+		Returns:
+			A tuple of DataFrames for feature and target variables
+		"""
+		x = df.drop('execution_time_ns', axis=1)
+		y = df['execution_time_ns']
+
+		return x, y
+
+	@staticmethod
+	def prepare_df_table_scan(source):
+		"""
+
+		Args:
+			source:
+
+		Returns:
+
+		"""
+		encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference']
+		boolean_categories = [False, True]
+		data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string']
+
+		df = pd.read_csv(source, compression='bz2')
+		df = df[df['operator_type'] == 'TableScan']
+
+		df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=encoding_categories)
+		df['second_scan_segment_encoding'] = df['second_scan_segment_encoding']\
+			.astype('category', categories=encoding_categories)
+		df['isColumnComparison'] = df['isColumnComparison'].astype('category', categories=boolean_categories)
+		df['is_scan_segment_reference_segment'] = df['is_scan_segment_reference_segment']\
+			.astype('category', categories=boolean_categories)
+		df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment']\
+			.astype('category', categories=boolean_categories)
+		df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=data_type_categories)
+		df['second_scan_segment_data_type'] = df['second_scan_segment_data_type']\
+			.astype('category', categories=data_type_categories)
+		df['scan_operator_type'] = df['scan_operator_type']\
+			.astype('category', categories=['<=', 'BETWEEN', 'Or', 'undefined'])
+
 		return df
-	return df[features]
 
-def split_in_train_and_test(df):
-	msk = np.random.rand(len(df)) < 0.8
-	return df[msk], df[~msk]
+	@staticmethod
+	def load_data_frame_for_table_scan(source):
+		"""
 
-def extract_features_and_target(df):
-	X=df.drop('execution_time_ns', axis=1)
-	y=df['execution_time_ns']
+		Args:
+			source:
 
-	return X, y
+		Returns:
 
-def normalize_features(train_data, test_data):
-	"""Reads unnormalized training and test data and returns both normalized"""
+		"""
+		df = TrainingDataPipeline.prepare_df_table_scan(source)
+		df = df.drop('scan_operator_description', axis='columns')
+		return pd.get_dummies(df).dropna(axis='columns')
 
-	mean = train_data.mean(axis=0)
-	std = train_data.std(axis=0)
+	@staticmethod
+	def train_model(model, train, test):
+		"""
+		Train a model with given data. Returns predicted test data
 
-	train_data = (train_data - mean) / std
-	test_data = (test_data - mean) / std
+		Args:
+			model: the model
+			train: Training Set (DataFrame)
+			test: Test Set (DataFrame9
 
-	return train_data, test_data
+		Returns:
+			Predicted Values for Test Set (DataFrame)
 
-def transform_calibration_results(raw_data, features = [], dummies = [], operators = []):
-	"""Transforms raw results from calibration into Dict of DataFrames per operator."""
-	if len(operators) > 0:
-		raw_data = { k: raw_data[k] for k in operators }
+		"""
 
-	def transform_single_df(data):
-		df = transform_to_dataframe(data)
-		df = select_features(df, features)
-		df = generate_dummies(df, dummies)
-		return extract_features_and_target(df)
+		X_train, y_train = TrainingDataPipeline.extract_features_and_target(train)
+		X_test, _ = TrainingDataPipeline.extract_features_and_target(test)
 
-	return { operator_type: transform_single_df(values) for operator_type, values in raw_data.items()}
-
-def prepare_df_table_scan(source):
-	df = pd.read_csv(source)
-	df = df[df['operator_type'] == 'TableScan']
-	df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference'])
-	df['second_scan_segment_encoding'] = df['second_scan_segment_encoding'].astype('category', categories=['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference'])
-	df['isColumnComparison'] = df['isColumnComparison'].astype('category', categories=[False, True])
-	df['is_scan_segment_reference_segment'] = df['is_scan_segment_reference_segment'].astype('category', categories=[False, True])
-	df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment'].astype('category', categories=[False, True])
-	df['scan_segment_data_type'] = df['scan_segment_data_type'].astype('category', categories=['null', 'int', 'long', 'float', 'double', 'string'])
-	df['second_scan_segment_data_type'] = df['second_scan_segment_data_type'].astype('category', categories=['null', 'int', 'long', 'float', 'double', 'string'])
-	df['scan_operator_type'] = df['scan_operator_type'].astype('category', categories=['<=', 'BETWEEN', 'Or', 'undefined'])
-
-	return df
+		model.fit(X_train, y_train)
+		return model.predict(X_test)

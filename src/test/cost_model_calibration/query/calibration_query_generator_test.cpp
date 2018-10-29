@@ -13,19 +13,24 @@
 #include "configuration/calibration_column_specification.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
 class CalibrationQueryGeneratorTest : public BaseTest {
  protected:
-  void SetUp() override {}
+  void SetUp() override {
+    auto& manager = StorageManager::get();
+    manager.add_table("SomeTable", load_table("src/test/tables/int_string.tbl", 1u));
+  }
 };
 
 TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
   std::map<std::string, CalibrationColumnSpecification> columns = {
       {"columnA", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
       {"columnB", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
-      {"columnC", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}}};
+      {"columnC", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
+      {"columnD", CalibrationColumnSpecification{"string", "uniform", false, 100, EncodingType::Unencoded}}};
 
   std::vector<CalibrationTableSpecification> tables = {
       CalibrationTableSpecification{"SomePath", "SomeTable", 1000, columns}};

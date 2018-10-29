@@ -36,7 +36,7 @@ inline const std::vector<std::string> CalibrationTableScanFeatures::columns(
      "number_of_computable_or_column_expressions"});
 
 inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize(
-        const std::optional<CalibrationTableScanFeatures>& features) {
+    const std::optional<CalibrationTableScanFeatures>& features) {
   if (!features) {
     return {NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{},
             NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}};
@@ -53,8 +53,7 @@ inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize
           static_cast<int32_t>(features->second_scan_segment_memory_usage_bytes),
           static_cast<int32_t>(features->second_scan_segment_distinct_value_count),
           features->scan_operator_type,
-          static_cast<int32_t>(features->number_of_computable_or_column_expressions)
-  };
+          static_cast<int32_t>(features->number_of_computable_or_column_expressions)};
 }
 
 }  // namespace opossum

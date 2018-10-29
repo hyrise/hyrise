@@ -264,7 +264,8 @@ set (
     HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES
     ${SHARED_SOURCES}
 
-    cost_model_calibration/calibration_query_generator_test.cpp
+    cost_model_calibration/query/calibration_query_generator_test.cpp
+    cost_model_calibration/query/calibration_query_generator_predicates_test.cpp
     cost_model_calibration/cost_model_feature_extractor_test.cpp
     cost_model_calibration/feature/calibration_table_scan_features_test.cpp
     gtest_main.cpp

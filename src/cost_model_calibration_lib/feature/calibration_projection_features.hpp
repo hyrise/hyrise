@@ -18,7 +18,8 @@ struct CalibrationProjectionFeatures {
 inline const std::vector<std::string> CalibrationProjectionFeatures::columns({"input_column_count",
                                                                               "output_column_count"});
 
-inline const std::vector<AllTypeVariant> CalibrationProjectionFeatures::serialize(const std::optional<CalibrationProjectionFeatures>& features) {
+inline const std::vector<AllTypeVariant> CalibrationProjectionFeatures::serialize(
+    const std::optional<CalibrationProjectionFeatures>& features) {
   if (!features) {
     // Need to return values for all fields
     return {NullValue{}, NullValue{}};

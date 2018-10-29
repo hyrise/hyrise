@@ -19,7 +19,8 @@ struct CalibrationRuntimeHardwareFeatures {
 inline const std::vector<std::string> CalibrationRuntimeHardwareFeatures::columns(
     {"current_memory_consumption_percentage", "running_queries", "remaining_transactions"});
 
-inline const std::vector<AllTypeVariant> CalibrationRuntimeHardwareFeatures::serialize(const CalibrationRuntimeHardwareFeatures& features) {
+inline const std::vector<AllTypeVariant> CalibrationRuntimeHardwareFeatures::serialize(
+    const CalibrationRuntimeHardwareFeatures& features) {
   return {static_cast<int32_t>(features.current_memory_consumption_percentage),
           static_cast<int32_t>(features.running_queries), static_cast<int32_t>(features.remaining_transactions)};
 }

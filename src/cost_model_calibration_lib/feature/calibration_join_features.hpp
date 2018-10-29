@@ -14,6 +14,9 @@ struct CalibrationJoinFeatures {
 
 inline const std::vector<std::string> CalibrationJoinFeatures::columns({});
 
-inline const std::vector<AllTypeVariant> CalibrationJoinFeatures::serialize(const std::optional<CalibrationJoinFeatures>& features) { return {}; }
+inline const std::vector<AllTypeVariant> CalibrationJoinFeatures::serialize(
+    const std::optional<CalibrationJoinFeatures>& features) {
+  return {};
+}
 
 }  // namespace opossum

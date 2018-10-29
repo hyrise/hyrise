@@ -11,28 +11,33 @@
 #include <vector>
 
 #include "../configuration/calibration_column_specification.hpp"
+#include "../configuration/calibration_table_specification.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicates(
     const PredicateGeneratorFunctor& predicate_generator,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
-    const size_t number_of_predicates,
-    const std::string& predicate_join_keyword,
-    const std::string& column_name_prefix) {
+    const CalibrationTableSpecification& table_definition, const size_t number_of_predicates,
+    const std::string& predicate_join_keyword, const std::string& column_name_prefix) {
   std::random_device random_device;
   std::mt19937 engine{random_device()};
 
-  std::vector<std::string> predicates {};
+  std::vector<std::string> predicates{};
 
-  auto column_definitions_copy = column_definitions;
+  auto column_definitions_copy = table_definition.columns;
 
   for (size_t i = 0; i < number_of_predicates; i++) {
+    CalibrationTableSpecification local_table_definition {
+      table_definition.table_path, table_definition.table_name, table_definition.table_size, column_definitions_copy
+    };
+
     // select scan column
-    std::uniform_int_distribution<u_int64_t> filter_column_dist(0, column_definitions_copy.size() - 1);
+    std::uniform_int_distribution<long> filter_column_dist(0, column_definitions_copy.size() - 1);
     auto filter_column = std::next(column_definitions_copy.begin(), filter_column_dist(engine));
-    auto predicate = predicate_generator(*filter_column, column_definitions_copy, column_name_prefix);
+    auto predicate = predicate_generator(*filter_column, local_table_definition, column_name_prefix);
 
     if (!predicate) continue;
     predicates.push_back(*predicate);
@@ -48,11 +53,11 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::_generate_between(
     const BetweenPredicateGeneratorFunctor& between_predicate_generator,
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const CalibrationTableSpecification& table_definition,
     const std::string& column_name_prefix) {
   auto between_predicate_template = "%1% BETWEEN %2% AND %3%";
   auto filter_column_name = column_name_prefix + filter_column.first;
-  const auto& between_values = between_predicate_generator(filter_column, column_definitions, column_name_prefix);
+  const auto& between_values = between_predicate_generator(filter_column, table_definition, column_name_prefix);
 
   if (!between_values) return {};
 
@@ -62,11 +67,11 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::_generate_
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_between_predicate_value(
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const CalibrationTableSpecification& table_definition,
     const std::string& column_name_prefix) {
   const auto& between_predicate_value =
       [](const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-         const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+         const CalibrationTableSpecification& table_definition,
          const std::string& column_name_prefix) {
         auto first_filter_column_value =
             CalibrationQueryGeneratorPredicates::_generate_table_scan_predicate_value(filter_column.second);
@@ -79,66 +84,67 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_b
         return std::make_pair(second_filter_column_value, first_filter_column_value);
       };
 
-  return _generate_between(between_predicate_value, filter_column, column_definitions, column_name_prefix);
+  return _generate_between(between_predicate_value, filter_column, table_definition, column_name_prefix);
 }
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_between_predicate_column(
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const CalibrationTableSpecification& table_definition,
     const std::string& column_name_prefix) {
   const auto& between_predicate_column =
       [](const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-         const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+         const CalibrationTableSpecification& table_definition,
          const std::string& column_name_prefix) -> std::optional<std::pair<std::string, std::string>> {
-        std::random_device random_device;
-        std::mt19937 engine{random_device()};
+    std::random_device random_device;
+    std::mt19937 engine{random_device()};
 
-        auto first_filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
-        auto second_filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
+    auto first_filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
+    auto second_filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
 
-        std::vector<std::pair<std::string, CalibrationColumnSpecification>> v(column_definitions.begin(),
-                                                                              column_definitions.end());
-        std::shuffle(v.begin(), v.end(), engine);
+    const auto& column_definitions = table_definition.columns;
+    std::vector<std::pair<std::string, CalibrationColumnSpecification>> v(column_definitions.begin(),
+                                                                          column_definitions.end());
+    std::shuffle(v.begin(), v.end(), engine);
 
-        std::optional<std::pair<std::string, CalibrationColumnSpecification>> second_column;
-        for (const auto& potential_second_column : v) {
-          if (potential_second_column.first == filter_column.first) continue;
-          if (potential_second_column.second.type != filter_column.second.type) continue;
-          second_column = potential_second_column;
+    std::optional<std::pair<std::string, CalibrationColumnSpecification>> second_column;
+    for (const auto& potential_second_column : v) {
+      if (potential_second_column.first == filter_column.first) continue;
+      if (potential_second_column.second.type != filter_column.second.type) continue;
+      second_column = potential_second_column;
+    }
+
+    std::optional<std::pair<std::string, CalibrationColumnSpecification>> third_column;
+    if (second_column) {
+      for (const auto& potential_third_column : v) {
+        const auto& potential_third_column_type = potential_third_column.second.type;
+        if (potential_third_column.first == filter_column.first ||
+            potential_third_column.first == second_column->first) {
+          continue;
+        }
+        if (potential_third_column_type != filter_column.second.type ||
+            potential_third_column_type != second_column->second.type) {
+          continue;
         }
 
-        std::optional<std::pair<std::string, CalibrationColumnSpecification>> third_column;
-        if (second_column) {
-          for (const auto& potential_third_column : v) {
-            const auto& potential_third_column_type = potential_third_column.second.type;
-            if (potential_third_column.first == filter_column.first ||
-                potential_third_column.first == second_column->first) {
-              continue;
-            }
-            if (potential_third_column_type != filter_column.second.type ||
-                potential_third_column_type != second_column->second.type) {
-              continue;
-            }
+        third_column = potential_third_column;
+      }
+    }
 
-            third_column = potential_third_column;
-          }
-        }
+    if (!second_column || !third_column) return {};
 
-        if (!second_column || !third_column) return {};
+    auto second_column_name = column_name_prefix + second_column->first;
+    auto third_column_name = column_name_prefix + third_column->first;
 
-        auto second_column_name = column_name_prefix + second_column->first;
-        auto third_column_name = column_name_prefix + third_column->first;
+    return std::make_pair(second_column_name, third_column_name);
+  };
 
-        return std::make_pair(second_column_name, third_column_name);
-      };
-
-  return _generate_between(between_predicate_column, filter_column, column_definitions, column_name_prefix);
+  return _generate_between(between_predicate_column, filter_column, table_definition, column_name_prefix);
 }
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::_generate_column_predicate(
-    const ColumnPredicateGeneratorFunctor& predicate_generator,
+    const PredicateGeneratorFunctor& predicate_generator,
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const CalibrationTableSpecification& table_definition,
     const std::string& column_name_prefix) {
   const auto predicate_template = "%1% %2% %3%";
   const auto filter_column_name = column_name_prefix + filter_column.first;
@@ -149,7 +155,7 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::_generate_
   // At the same time this makes sure that the probability of having empty intermediate results is reduced.
   const auto predicate_sign = "<=";
 
-  const auto filter_column_value = predicate_generator(filter_column, column_definitions, column_name_prefix);
+  const auto filter_column_value = predicate_generator(filter_column, table_definition, column_name_prefix);
 
   if (!filter_column_value) {
     return {};
@@ -160,27 +166,28 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::_generate_
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicate_column_value(
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const CalibrationTableSpecification& table_definition,
     const std::string& column_name_prefix) {
   const auto& filter_column_value = [](const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-                                       const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+                                       const CalibrationTableSpecification& table_definition,
                                        const std::string& column_name_prefix) {
     return _generate_table_scan_predicate_value(filter_column.second);
   };
 
-  return _generate_column_predicate(filter_column_value, filter_column, column_definitions, column_name_prefix);
+  return _generate_column_predicate(filter_column_value, filter_column, table_definition, column_name_prefix);
 }
 
 const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicate_column_column(
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-    const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+    const CalibrationTableSpecification& table_definition,
     const std::string& column_name_prefix) {
   const auto& filter_column_column = [](const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-                                        const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+                                        const CalibrationTableSpecification& table_definition,
                                         const std::string& column_name_prefix) -> std::optional<std::string> {
     std::random_device random_device;
     std::mt19937 engine{random_device()};
 
+    const auto& column_definitions = table_definition.columns;
     std::vector<std::pair<std::string, CalibrationColumnSpecification>> v(column_definitions.begin(),
                                                                           column_definitions.end());
     std::shuffle(v.begin(), v.end(), engine);
@@ -200,28 +207,50 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
     return column_name_prefix + second_column->first;
   };
 
-  return _generate_column_predicate(filter_column_column, filter_column, column_definitions, column_name_prefix);
+  return _generate_column_predicate(filter_column_column, filter_column, table_definition, column_name_prefix);
 }
 
-    const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicate_like(
-            const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-            const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
-            const std::string& column_name_prefix) {
+const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_predicate_like(
+    const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
+    const CalibrationTableSpecification& table_definition,
+    const std::string& column_name_prefix) {
+  const auto predicate_template = "%1% %2% %3%";
+  const auto filter_column_name = column_name_prefix + filter_column.first;
+  const auto predicate_sign = "LIKE";
 
-      const auto predicate_template = "%1% %2% %3%";
-      const auto filter_column_name = column_name_prefix + filter_column.first;
-      const auto predicate_sign = "LIKE";
+  if (filter_column.second.type != "string") return {};
 
-      if (filter_column.second.type != "string") return {};
+  auto filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
+  // remove trailing apostrophe
+  filter_column_value.pop_back();
 
-      auto filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
-      // remove trailing apostroph
-      filter_column_value.pop_back();
+  // Append wildcard and apostrophe
+  const auto modified = filter_column_value + "%'";
 
-      // Append wildcard and apostroph
-      const auto modified = filter_column_value + "%'";
+  return boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % modified);
+}
 
-      return boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % modified);
+const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_equi_predicate_for_strings(
+    const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
+    const CalibrationTableSpecification& table_definition,
+    const std::string& column_name_prefix) {
+  // We just want Equi Scans on String columns for now
+  if (filter_column.second.type != "string") return {};
+
+  std::random_device random_device;
+  std::mt19937 engine{random_device()};
+
+  const auto predicate_template = "%1% = '%2%'";
+  const auto filter_column_name = column_name_prefix + filter_column.first;
+
+  // TODO(Sven): Get one existing value from column and filter by that
+  const auto table = StorageManager::get().get_table(table_definition.table_name);
+  const auto column_id = table->column_id_by_name(filter_column.first);
+
+  std::uniform_int_distribution<long> row_number_dist(0, table->row_count() - 1);
+  const auto filter_column_value = table->get_value<std::string>(column_id, row_number_dist(engine));
+
+  return boost::str(boost::format(predicate_template) % filter_column_name % filter_column_value);
 }
 
 const std::string CalibrationQueryGeneratorPredicates::_generate_table_scan_predicate_value(

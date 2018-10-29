@@ -14,23 +14,23 @@
 
 namespace opossum {
 
-    class CalibrationTableScanFeaturesTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class CalibrationTableScanFeaturesTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
-    TEST_F(CalibrationTableScanFeaturesTest, SimpleTest) {
-        const auto num_columns = CalibrationTableScanFeatures::columns.size();
-        const auto num_features = CalibrationTableScanFeatures::serialize(CalibrationTableScanFeatures{}).size();
+TEST_F(CalibrationTableScanFeaturesTest, SimpleTest) {
+  const auto num_columns = CalibrationTableScanFeatures::columns.size();
+  const auto num_features = CalibrationTableScanFeatures::serialize(CalibrationTableScanFeatures{}).size();
 
-        EXPECT_EQ(num_columns, num_features);
-    }
+  EXPECT_EQ(num_columns, num_features);
+}
 
-    TEST_F(CalibrationTableScanFeaturesTest, SerializeNullopt) {
-        const auto num_columns = CalibrationTableScanFeatures::columns.size();
-        const auto num_features = CalibrationTableScanFeatures::serialize({}).size();
+TEST_F(CalibrationTableScanFeaturesTest, SerializeNullopt) {
+  const auto num_columns = CalibrationTableScanFeatures::columns.size();
+  const auto num_features = CalibrationTableScanFeatures::serialize({}).size();
 
-        EXPECT_EQ(num_columns, num_features);
-    }
+  EXPECT_EQ(num_columns, num_features);
+}
 
 }  // namespace opossum
