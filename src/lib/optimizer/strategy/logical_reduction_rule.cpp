@@ -67,7 +67,7 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
 
   // Step 2: `[(a AND b AND c), (a AND d AND b AND e)]` --> `[[a, b, c], [a, d, b, e]]`
   auto flat_disjunction_and_conjunction = std::vector<std::vector<std::shared_ptr<AbstractExpression>>>{};
-  flat_disjunction_and_conjunction.reserve(flat_disjunction.size();
+  flat_disjunction_and_conjunction.reserve(flat_disjunction.size());
 
   for (const auto& expression : flat_disjunction) {
     flat_disjunction_and_conjunction.emplace_back(flatten_logical_expressions(expression, LogicalOperator::And));
