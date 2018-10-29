@@ -30,7 +30,7 @@ void JitValidate::_consume(JitRuntimeContext& context) const {
       _emit(context);
     }
   } else {
-    const auto row_tid = context.transaction_ids[context.chunk_offset];
+    const auto row_tid = context.row_tids[context.chunk_offset];
     if (is_row_visible(context.transaction_id, row_tid, context.snapshot_commit_id, context.chunk_offset,
                        *context.mvcc_data)) {
       _emit(context);

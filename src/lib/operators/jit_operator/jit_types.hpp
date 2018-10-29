@@ -143,7 +143,7 @@ struct JitRuntimeContext {
   std::shared_ptr<const MvccData> mvcc_data;
   std::shared_ptr<const Table> referenced_table;
   std::shared_ptr<const PosList> pos_list;
-  pmr_vector<TransactionID> transaction_ids;
+  pmr_vector<TransactionID> row_tids;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.
