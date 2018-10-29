@@ -283,7 +283,8 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
     return predicate_node->scan_type == ScanType::TableScan;
   }
 
-  return node->type == LQPNodeType::Projection || node->type == LQPNodeType::Union || node->type == LQPNodeType::Validate;
+  return node->type == LQPNodeType::Projection || node->type == LQPNodeType::Union ||
+         node->type == LQPNodeType::Validate;
 }
 
 void JitAwareLQPTranslator::_visit(const std::shared_ptr<AbstractLQPNode>& node,
