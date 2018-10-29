@@ -30,6 +30,10 @@ class LogicalReductionRule : public AbstractRule {
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
+  /**
+   * Use the law of boolean distributivity to reduce an expression
+   * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
+   */
   static std::shared_ptr<AbstractExpression> reduce_distributivity(
       const std::shared_ptr<AbstractExpression>& expression);
 };

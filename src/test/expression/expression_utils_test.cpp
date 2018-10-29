@@ -34,7 +34,7 @@ TEST_F(ExpressionUtilsTest, ExpressionFlattenAndInflate) {
   EXPECT_EQ(*flattened_expressions.at(2), *less_than_(a_b, 6));
 
   const auto inflated_expression = inflate_logical_expressions(flattened_expressions, LogicalOperator::Or);
-  EXPECT_EQ(*inflated_expression, *or_(or_(greater_than_(a_a, 5), less_than_(a_b, 6)), equals_(a_c, 7)));
+  EXPECT_EQ(*inflated_expression, *or_(or_(equals_(a_c, 7), greater_than_(a_a, 5)), less_than_(a_b, 6)));
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionCommonType) {
