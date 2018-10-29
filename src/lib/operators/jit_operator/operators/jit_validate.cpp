@@ -25,7 +25,7 @@ void JitValidate::_consume(JitRuntimeContext& context) const {
     const auto row_id = (*context.pos_list)[context.chunk_offset];
     const auto referenced_chunk = context.referenced_table->get_chunk(row_id.chunk_id);
     const auto mvcc_data = referenced_chunk->mvcc_data();
-    const auto row_tid = load_atomic_value(mvcc_data->tids[row_id.chunk_offset]);
+    const auto row_tid = _load_atomic_value(mvcc_data->tids[row_id.chunk_offset]);
     if (is_row_visible(context.transaction_id, row_tid, context.snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
       _emit(context);
     }
@@ -36,13 +36,9 @@ void JitValidate::_consume(JitRuntimeContext& context) const {
       _emit(context);
     }
   }
-
-#if JIT_MEASURE
-  _end(context);
-#endif
 }
 
-TransactionID JitValidate::load_atomic_value(const copyable_atomic<TransactionID>& transaction_id) {
+TransactionID JitValidate::_load_atomic_value(const copyable_atomic<TransactionID>& transaction_id) {
   return transaction_id.load();
 }
 
