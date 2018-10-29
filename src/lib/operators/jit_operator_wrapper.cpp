@@ -57,7 +57,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 
   for (auto& jit_operator : _jit_operators) {
     if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
-      jit_validate->set_input_table_type(in_table->type());
+      jit_validate->set_input_table_type(in_table.type());
     }
   }
 
