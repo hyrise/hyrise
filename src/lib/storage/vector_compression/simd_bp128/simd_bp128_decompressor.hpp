@@ -54,9 +54,9 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
     _clear_meta_block_cache();
 
     /**
-     * The decoder wasn’t able to use its caches.
+     * The decompressor wasn’t able to use its caches.
      * We need to load the first meta info and
-     * sequentially run through the encoded data
+     * sequentially run through the compressed data
      * up to the meta block in which the requested element is located.
      */
 
@@ -125,7 +125,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   /**
    * @brief reads meta info at a given absolute position
    *
-   * @param meta_info_offset an absolute position within the encoded vector
+   * @param meta_info_offset an absolute position within the compressed vector
    */
   void _read_meta_info(size_t meta_info_offset);
 
@@ -140,7 +140,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   const pmr_vector<uint128_t>* _data;
   const size_t _size;
 
-  // Cached meta info’s offset into the encoded vector
+  // Cached meta info’s offset into the compressed vector
   size_t _cached_meta_info_offset;
 
   // Index of the first element within the cached meta block

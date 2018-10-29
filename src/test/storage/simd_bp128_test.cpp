@@ -22,7 +22,7 @@ namespace opossum {
 namespace {
 
 // Used for debugging purposes
-[[maybe_unused]] void print_encoded_vector(const SimdBp128Vector& vector) {
+[[maybe_unused]] void print_compressed_vector(const SimdBp128Vector& vector) {
   for (auto _128_bit : vector.data()) {
     for (auto _32_bit : _128_bit.data) {
       std::cout << std::bitset<32>{_32_bit} << "|";
@@ -54,12 +54,12 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
     return sequence;
   }
 
-  std::unique_ptr<const BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
-    auto encoder = SimdBp128Compressor{};
-    auto encoded_vector = encoder.encode(vector, vector.get_allocator());
-    EXPECT_EQ(encoded_vector->size(), vector.size());
+  std::unique_ptr<const BaseCompressedVector> compress(const pmr_vector<uint32_t>& vector) {
+    auto compressor = SimdBp128Compressor{};
+    auto compressed_vector = compressor.compress(vector, vector.get_allocator());
+    EXPECT_EQ(compressed_vector->size(), vector.size());
 
-    return encoded_vector;
+    return compressed_vector;
   }
 
  private:
@@ -74,32 +74,32 @@ auto formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
 
 INSTANTIATE_TEST_CASE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
 
-TEST_P(SimdBp128Test, DecodeSequenceUsingIterators) {
+TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
   const auto sequence = generate_sequence(4'200);
-  const auto encoded_sequence_base = encode(sequence);
+  const auto compressed_sequence_base = compress(sequence);
 
-  auto encoded_sequence = dynamic_cast<const SimdBp128Vector*>(encoded_sequence_base.get());
-  EXPECT_NE(encoded_sequence, nullptr);
+  auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
+  EXPECT_NE(compressed_sequence, nullptr);
 
   auto seq_it = sequence.cbegin();
-  auto encoded_seq_it = encoded_sequence->cbegin();
-  const auto encoded_seq_end = encoded_sequence->cend();
-  for (; encoded_seq_it != encoded_seq_end; seq_it++, encoded_seq_it++) {
-    EXPECT_EQ(*seq_it, *encoded_seq_it);
+  auto compressed_seq_it = compressed_sequence->cbegin();
+  const auto compressed_seq_end = compressed_sequence->cend();
+  for (; compressed_seq_it != compressed_seq_end; seq_it++, compressed_seq_it++) {
+    EXPECT_EQ(*seq_it, *compressed_seq_it);
   }
 }
 
-TEST_P(SimdBp128Test, DecodeSequenceUsingDecoder) {
+TEST_P(SimdBp128Test, DecompressSequenceUsingDecompressor) {
   const auto sequence = generate_sequence(4'200);
-  const auto encoded_sequence = encode(sequence);
+  const auto compressed_sequence = compress(sequence);
 
-  auto decoder = encoded_sequence->create_base_decoder();
+  auto decompressor = compressed_sequence->create_base_decompressor();
 
   auto seq_it = sequence.cbegin();
   const auto seq_end = sequence.cend();
   auto index = 0u;
   for (; seq_it != seq_end; seq_it++, index++) {
-    EXPECT_EQ(*seq_it, decoder->get(index));
+    EXPECT_EQ(*seq_it, decompressor->get(index));
   }
 }
 

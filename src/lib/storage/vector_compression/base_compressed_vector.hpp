@@ -20,9 +20,9 @@ namespace opossum {
  * - the encoder, which encapsulates the encoding algorithm (base class: BaseVectorCompressor)
  * - the vector, which is returned by the encoder and contains the encoded data (base class: BaseCompressedVector)
  * - the iterator, for sequentially decoding the vector (base class: BaseCompressedVectorIterator)
- * - the decoder, which implements point access into the vector (base class: BaseVectorDecompressor)
+ * - the decompressor, which implements point access into the vector (base class: BaseVectorDecompressor)
  *
- * The iterators and decoders are created via virtual and non-virtual methods of the vector interface.
+ * The iterators and decompressors are created via virtual and non-virtual methods of the vector interface.
  *
  * Sub-classes must be added in compressed_vector_type.hpp
  */
@@ -42,7 +42,7 @@ class BaseCompressedVector : private Noncopyable {
 
   virtual CompressedVectorType type() const = 0;
 
-  virtual std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const = 0;
+  virtual std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const = 0;
 
   virtual std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const = 0;
@@ -69,10 +69,10 @@ class CompressedVector : public BaseCompressedVector {
    */
 
   /**
-   * @brief Returns a vector specific decoder
+   * @brief Returns a vector specific decompressor
    * @return a unique_ptr of subclass of BaseVectorDecompressor
    */
-  auto create_decoder() const { return _self().on_create_decoder(); }
+  auto create_decompressor() const { return _self().on_create_decompressor(); }
 
   /**
    * @brief Returns an iterator to the beginning
@@ -100,7 +100,9 @@ class CompressedVector : public BaseCompressedVector {
 
   CompressedVectorType type() const final { return get_compressed_vector_type<Derived>(); }
 
-  std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const final { return _self().on_create_base_decoder(); }
+  std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const final {
+    return _self().on_create_base_decompressor();
+  }
 
   std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const final {
