@@ -100,13 +100,27 @@ TEST_F(LQPUtilsTest, VisitLQP) {
   expected_nodes[2]->set_left_input(node_a);
   expected_nodes[3]->set_left_input(node_a);
 
-  auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  visit_lqp(expected_nodes[0], [&](const auto& node) {
-    actual_nodes.emplace_back(node);
-    return LQPVisitation::VisitInputs;
-  });
+  {
+    // Visit AbstractLQPNode
+    auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+    visit_lqp(expected_nodes[0], [&](const auto& node) {
+      actual_nodes.emplace_back(node);
+      return LQPVisitation::VisitInputs;
+    });
 
-  EXPECT_EQ(actual_nodes, expected_nodes);
+    EXPECT_EQ(actual_nodes, expected_nodes);
+  }
+
+  {
+    // Visit PredicateNode
+    auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+    visit_lqp(std::static_pointer_cast<PredicateNode>(expected_nodes[0]), [&](const auto& node) {
+      actual_nodes.emplace_back(node);
+      return LQPVisitation::VisitInputs;
+    });
+
+    EXPECT_EQ(actual_nodes, expected_nodes);
+  }
 }
 
 TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
