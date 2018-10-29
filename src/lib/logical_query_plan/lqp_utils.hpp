@@ -67,7 +67,7 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
 
   while (!node_queue.empty()) {
-    auto& node = node_queue.front();
+    auto node = node_queue.front();
     node_queue.pop();
 
     if (!visited_nodes.emplace(node).second) continue;
