@@ -9,11 +9,11 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
-#include "statistics/chunk_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
 
 namespace opossum {
 
@@ -190,8 +190,8 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 
   _chunks.emplace_back(chunk);
 
-//  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(chunk->size());
-//  _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
+  //  const auto chunk_statistics = std::make_shared<ChunkStatistics2>(chunk->size());
+  //  _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

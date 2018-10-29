@@ -126,6 +126,7 @@ set(
     statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
     statistics/chunk_statistics/histograms/generic_histogram_test.cpp
     statistics/chunk_statistics/histograms/histogram_utils_test.cpp
+    statistics/chunk_statistics/histograms/single_bin_histogram_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
     statistics/chunk_statistics/range_filter_test.cpp
     statistics/column_statistics_test.cpp
