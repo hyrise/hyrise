@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+template <typename T> class SingleBinHistogram;
+
 enum class EstimateType { MatchesNone, MatchesExactly, MatchesApproximately, MatchesAll };
 
 struct CardinalityEstimate {
@@ -43,6 +45,17 @@ class AbstractStatisticsObject {
    * Return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
   virtual std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const = 0;
+
+  /**
+   * Return a SingleBinHistogram that represents the minimal statistics.
+   */
+  template <typename T>
+  std::shared_ptr<SingleBinHistogram<T>> reduce_to_single_bin_histogram() const;
+
+ protected:
+  virtual std::shared_ptr<AbstractStatisticsObject> _reduce_to_single_bin_histogram_impl() const;
 };
 
 }  // namespace opossum
+
+#include "abstract_statistics_object.ipp"

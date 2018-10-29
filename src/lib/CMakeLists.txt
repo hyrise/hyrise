@@ -337,7 +337,9 @@ set(
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     statistics/abstract_cardinality_estimator.hpp
+    statistics/abstract_statistics_object.cpp
     statistics/abstract_statistics_object.hpp
+    statistics/abstract_statistics_object.ipp
     statistics/base_segment_statistics2.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp

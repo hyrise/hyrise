@@ -17,6 +17,7 @@
 #include "generic_histogram.hpp"
 #include "histogram_utils.hpp"
 #include "statistics/abstract_statistics_object.hpp"
+#include "single_bin_histogram.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
@@ -1040,6 +1041,16 @@ std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_edges() const {
   }
 
   return bin_edges;
+}
+
+template <typename T>
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::_reduce_to_single_bin_histogram_impl() const {
+  if constexpr (std::is_same_v<T, std::string>) {
+    return std::make_shared<SingleBinHistogram<T>>(minimum(), maximum(), total_count(), total_distinct_count(),
+    _supported_characters, _string_prefix_length);
+  } else {
+    return std::make_shared<SingleBinHistogram<T>>(minimum(), maximum(), total_count(), total_distinct_count());
+  }
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AbstractHistogram);
