@@ -89,17 +89,17 @@ TEST_P(SimdBp128Test, DecodeSequenceUsingIterators) {
   }
 }
 
-TEST_P(SimdBp128Test, DecodeSequenceUsingDecoder) {
+TEST_P(SimdBp128Test, DecodeSequenceUsingDecompressor) {
   const auto sequence = generate_sequence(4'200);
   const auto encoded_sequence = encode(sequence);
 
-  auto decoder = encoded_sequence->create_base_decoder();
+  auto decompressor = encoded_sequence->create_base_decompressor();
 
   auto seq_it = sequence.cbegin();
   const auto seq_end = sequence.cend();
   auto index = 0u;
   for (; seq_it != seq_end; seq_it++, index++) {
-    EXPECT_EQ(*seq_it, decoder->get(index));
+    EXPECT_EQ(*seq_it, decompressor->get(index));
   }
 }
 

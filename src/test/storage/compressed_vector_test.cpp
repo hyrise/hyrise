@@ -89,17 +89,17 @@ TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
                                  [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
-TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingDecoder) {
+TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingDecompressor) {
   const auto sequence = this->generate_sequence(4'200, 8u);
   const auto encoded_sequence = this->encode(sequence);
 
-  auto decoder = encoded_sequence->create_base_decoder();
+  auto decompressor = encoded_sequence->create_base_decompressor();
 
   auto seq_it = sequence.cbegin();
   const auto seq_end = sequence.cend();
   auto index = 0u;
   for (; seq_it != seq_end; seq_it++, index++) {
-    EXPECT_EQ(*seq_it, decoder->get(index));
+    EXPECT_EQ(*seq_it, decompressor->get(index));
   }
 }
 
@@ -111,17 +111,17 @@ TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingIterators) {
                                  [&](auto& encoded_sequence) { compare_using_iterator(encoded_sequence, sequence); });
 }
 
-TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecoder) {
+TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecompressor) {
   const auto sequence = pmr_vector<uint32_t>(2'200, 0u);
   const auto encoded_sequence = this->encode(sequence);
 
-  auto decoder = encoded_sequence->create_base_decoder();
+  auto decompressor = encoded_sequence->create_base_decompressor();
 
   auto seq_it = sequence.cbegin();
   const auto seq_end = sequence.cend();
   auto index = 0u;
   for (; seq_it != seq_end; seq_it++, index++) {
-    EXPECT_EQ(*seq_it, decoder->get(index));
+    EXPECT_EQ(*seq_it, decompressor->get(index));
   }
 }
 
