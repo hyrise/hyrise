@@ -76,10 +76,6 @@ class JitReadTuples : public AbstractJittable {
       } else {
         context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
       }
-      // Non-jit operators store bool values as int values
-      if constexpr (std::is_same_v<DataType, Bool>) {
-        context.tuple.set<bool>(_tuple_value.tuple_index(), value.value());
-      }
       // clang-format on
     }
 
