@@ -43,7 +43,7 @@ TEST_F(OptimizerTest, RuleBatches) {
 
     std::string name() const override { return "MockNode"; }
 
-    bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
+    bool apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator) const override {
       num_iterations = num_iterations > 0 ? num_iterations - 1 : 0;
       return num_iterations != 0;
     }
@@ -89,9 +89,10 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
    public:
     std::string name() const override { return "Mock"; }
 
-    bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
+    bool apply_to(const std::shared_ptr<AbstractLQPNode>& root,
+                  const AbstractCostEstimator& cost_estimator) const override {
       nodes.emplace(root);
-      _apply_to_inputs(root);
+      _apply_to_inputs(root, cost_estimator);
       return false;
     }
 
@@ -167,7 +168,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    public:
     std::string name() const override { return "Mock"; }
 
-    bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
+    bool apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator) const override {
       ++counter;
       return false;
     }

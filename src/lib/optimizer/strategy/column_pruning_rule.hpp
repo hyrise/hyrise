@@ -22,7 +22,8 @@ class AbstractLQPNode;
 class ColumnPruningRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& lqp,
+                const AbstractCostEstimator& cost_estimator) const override;
 
  private:
   static ExpressionUnorderedSet _collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp);

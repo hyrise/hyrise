@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
+#include "chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "chunk_statistics/histograms/generic_histogram.hpp"
 #include "chunk_statistics2.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -169,7 +170,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
               const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
               const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
 
-              const auto join_histogram = estimate_cardinality_of_inner_equi_join_with_arithmetic_histograms(
+              const auto join_histogram = estimate_histogram_of_inner_equi_join_with_arithmetic_histograms(
                   unified_left_histogram, unified_right_histogram);
 
               const auto cardinality = join_histogram->total_count();
@@ -229,6 +230,8 @@ std::shared_ptr<AbstractHistogram<T>> CardinalityEstimator::get_best_available_h
     const SegmentStatistics2<T>& segment_statistics) {
   if (segment_statistics.equal_distinct_count_histogram) {
     return segment_statistics.equal_distinct_count_histogram;
+  } else if (segment_statistics.equal_width_histogram) {
+    return segment_statistics.equal_width_histogram;
   } else if (segment_statistics.generic_histogram) {
     return segment_statistics.generic_histogram;
   } else {

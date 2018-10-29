@@ -10,14 +10,18 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
+#include "cost_model/abstract_cost_estimator.hpp"
+#include "statistics/cardinality.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+                                       const AbstractCostEstimator& cost_estimator) const {
   auto reordered = false;
 
   // Validate can be seen as a Predicate on the MVCC column
@@ -42,28 +46,36 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
      * Continue rule in deepest input
      */
     if (predicate_nodes.size() > 1) {
-      reordered = _reorder_predicates(predicate_nodes);
-      reordered |= _apply_to_inputs(predicate_nodes.back());
+      reordered = _reorder_predicates(predicate_nodes, cost_estimator);
+      reordered |= _apply_to_inputs(predicate_nodes.back(), cost_estimator);
       return reordered;
     }
   }
 
-  reordered |= _apply_to_inputs(node);
+  reordered |= _apply_to_inputs(node, cost_estimator);
 
   return reordered;
 }
 
-bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
+bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
+                                                  const AbstractCostEstimator& cost_estimator) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
   const auto input_sides = predicates.front()->get_input_sides();
 
+  auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
+  nodes_and_cardinalities.reserve(predicates.size());
+  for (const auto& predicate : predicates) {
+    predicate->set_left_input(input);
+    nodes_and_cardinalities.emplace_back(predicate, cost_estimator.cardinality_estimator->estimate_cardinality(predicate));
+  }
+
   const auto sort_predicate = [&](auto& left, auto& right) {
-    return left->derive_statistics_from(input)->row_count() > right->derive_statistics_from(input)->row_count();
+    return left.second > right.second;
   };
 
-  if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
+  if (std::is_sorted(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(), sort_predicate)) {
     return false;
   }
 
@@ -73,17 +85,17 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   }
 
   // Sort in descending order
-  std::sort(predicates.begin(), predicates.end(), sort_predicate);
+  std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(), sort_predicate);
 
   // Ensure that nodes are chained correctly
-  predicates.back()->set_left_input(input);
+  nodes_and_cardinalities.back().first->set_left_input(input);
 
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], predicates.front());
+    outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_cardinalities.front().first);
   }
 
-  for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
-    predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
+  for (size_t predicate_index = 0; predicate_index < nodes_and_cardinalities.size() - 1; predicate_index++) {
+    nodes_and_cardinalities[predicate_index].first->set_left_input(nodes_and_cardinalities[predicate_index + 1].first);
   }
 
   return true;

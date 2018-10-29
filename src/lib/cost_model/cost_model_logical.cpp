@@ -6,15 +6,16 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto output_row_count = node->get_statistics()->row_count();
-  const auto left_input_row_count = node->left_input() ? node->left_input()->get_statistics()->row_count() : 0.0f;
-  const auto right_input_row_count = node->right_input() ? node->right_input()->get_statistics()->row_count() : 0.0f;
+  const auto output_row_count = cardinality_estimator->estimate_cardinality(node);
+  const auto left_input_row_count = node->left_input() ? cardinality_estimator->estimate_cardinality(node->left_input()) : 0.0f;
+  const auto right_input_row_count = node->right_input() ? cardinality_estimator->estimate_cardinality(node->right_input()) : 0.0f;
 
   switch (node->type) {
     case LQPNodeType::Join:

@@ -3,7 +3,9 @@
 #include <memory>
 #include <vector>
 
+#include "cost_model/cost_model_logical.hpp"
 #include "optimizer/strategy/rule_batch.hpp"
+#include "statistics/cardinality_estimator.hpp"
 
 namespace opossum {
 
@@ -22,7 +24,9 @@ class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
 
-  explicit Optimizer(const uint32_t max_num_iterations);
+  explicit Optimizer(const uint32_t max_num_iterations,
+            const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
+            std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
 
   void add_rule_batch(RuleBatch rule_batch);
 
@@ -33,6 +37,8 @@ class Optimizer final {
 
   // Rather arbitrary right now, atm all rules should be done after one iteration
   uint32_t _max_num_iterations = 10;
+
+  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 
   bool _apply_rule_batch(const RuleBatch& rule_batch, const std::shared_ptr<AbstractLQPNode>& root_node) const;
   bool _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;

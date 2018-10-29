@@ -15,7 +15,8 @@ namespace opossum {
 
 std::string PredicatePlacementRule::name() const { return "Predicate Placement Rule"; }
 
-bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+                                      const AbstractCostEstimator& cost_estimator) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 

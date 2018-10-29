@@ -10,6 +10,9 @@ class AbstractExpression;
  * Cost model for logical complexity, i.e., approximate number of tuple accesses
  */
 class CostModelLogical : public AbstractCostEstimator {
+ public:
+  using AbstractCostEstimator::AbstractCostEstimator;
+
  protected:
   Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
 

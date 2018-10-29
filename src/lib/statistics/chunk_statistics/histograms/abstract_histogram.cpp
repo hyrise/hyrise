@@ -926,6 +926,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       Fail("PredicateCondition not yet supported by Histograms");
 
     case PredicateCondition::In:
+    case PredicateCondition::NotIn:
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
       Fail("PredicateCondition not supported by Histograms");

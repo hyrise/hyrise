@@ -7,8 +7,11 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
@@ -27,25 +30,39 @@ namespace opossum {
 class DpCcpTest : public ::testing::Test {
  public:
   void SetUp() override {
-    cost_estimator = std::make_shared<CostModelLogical>();
+    cost_estimator = std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>());
 
-    const auto column_statistics_a_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
-    const auto column_statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 40, 100);
-    const auto column_statistics_c_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 100);
+    const auto segment_histogram_a = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
+    const auto segment_histogram_b = std::make_shared<SingleBinHistogram<int32_t>>(40, 100, 20, 10);
+    const auto segment_histogram_c = std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 20, 10);
 
-    const auto table_statistics_a = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_a_a});
-    const auto table_statistics_b = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
-    const auto table_statistics_c = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
+    const auto segment_statistics_a = std::make_shared<SegmentStatistics2<int32_t>>();
+    segment_statistics_a->set_statistics_object(segment_histogram_a);
+    const auto segment_statistics_b = std::make_shared<SegmentStatistics2<int32_t>>();
+    segment_statistics_b->set_statistics_object(segment_histogram_b);
+    const auto segment_statistics_c = std::make_shared<SegmentStatistics2<int32_t>>();
+    segment_statistics_c->set_statistics_object(segment_histogram_c);
+
+    const auto chunk_statistics_a = std::make_shared<ChunkStatistics2>(segment_histogram_a->total_count());
+    chunk_statistics_a->segment_statistics.emplace_back(segment_statistics_a);
+    const auto chunk_statistics_b = std::make_shared<ChunkStatistics2>(segment_histogram_b->total_count());
+    chunk_statistics_b->segment_statistics.emplace_back(segment_statistics_b);
+    const auto chunk_statistics_c = std::make_shared<ChunkStatistics2>(segment_histogram_c->total_count());
+    chunk_statistics_c->segment_statistics.emplace_back(segment_statistics_c);
+
+    const auto table_statistics_a = std::make_shared<TableStatistics2>();
+    table_statistics_a->chunk_statistics.emplace_back(chunk_statistics_a);
+    const auto table_statistics_b = std::make_shared<TableStatistics2>();
+    table_statistics_b->chunk_statistics.emplace_back(chunk_statistics_b);
+    const auto table_statistics_c = std::make_shared<TableStatistics2>();
+    table_statistics_c->chunk_statistics.emplace_back(chunk_statistics_c);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_a->set_statistics(table_statistics_a);
+    node_a->set_table_statistics2(table_statistics_a);
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_b->set_statistics(table_statistics_b);
+    node_b->set_table_statistics2(table_statistics_b);
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_c->set_statistics(table_statistics_c);
+    node_c->set_table_statistics2(table_statistics_c);
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");
@@ -73,9 +90,8 @@ TEST_F(DpCcpTest, JoinOrdering) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c, join_edge_b_c}));
-  DpCcp dp_ccp{cost_estimator};
-
-  const auto actual_lqp = dp_ccp(join_graph);
+  DpCcp dp_ccp{};
+  const auto actual_lqp = dp_ccp(join_graph, *cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -100,9 +116,8 @@ TEST_F(DpCcpTest, CrossJoin) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, cross_join_edge_a_c}));
-  DpCcp dp_ccp{cost_estimator};
-
-  const auto actual_lqp = dp_ccp(join_graph);
+  DpCcp dp_ccp{};
+  const auto actual_lqp = dp_ccp(join_graph, *cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -137,9 +152,8 @@ TEST_F(DpCcpTest, LocalPredicateOrdering) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, self_edge_a, self_edge_b}));
-  DpCcp dp_ccp{cost_estimator};
-
-  const auto actual_lqp = dp_ccp(join_graph);
+  DpCcp dp_ccp{};
+  const auto actual_lqp = dp_ccp(join_graph, *cost_estimator);
 
   // clang-format off
   const auto expected_lqp =
@@ -167,9 +181,8 @@ TEST_F(DpCcpTest, ComplexJoinPredicate) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b}));
-  DpCcp dp_ccp{cost_estimator};
-
-  const auto actual_lqp = dp_ccp(join_graph);
+  DpCcp dp_ccp{};
+  const auto actual_lqp = dp_ccp(join_graph, *cost_estimator);
 
   // clang-format off
   const auto expected_lqp =

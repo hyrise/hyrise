@@ -20,7 +20,8 @@ class AbstractLQPNode;
 class ConstantCalculationRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+                const AbstractCostEstimator& cost_estimator) const override;
 
  private:
   void _prune_expression(std::shared_ptr<AbstractExpression>& expression) const;

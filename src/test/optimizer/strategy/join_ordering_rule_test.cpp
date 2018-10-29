@@ -7,8 +7,10 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 
 #include "strategy_base_test.hpp"
 
@@ -24,23 +26,29 @@ namespace opossum {
 class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    cost_estimator = std::make_shared<CostModelLogical>();
-    rule = std::make_shared<JoinOrderingRule>(cost_estimator);
+    rule = std::make_shared<JoinOrderingRule>();
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
-    const auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
-    const auto table_statistics = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
+    const auto segment_histogram = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
+
+    const auto segment_statistics = std::make_shared<SegmentStatistics2<int32_t>>();
+    segment_statistics->set_statistics_object(segment_histogram);
+
+    const auto chunk_statistics = std::make_shared<ChunkStatistics2>(10);
+    chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+
+    const auto table_statistics = std::make_shared<TableStatistics2>();
+    table_statistics->chunk_statistics.emplace_back(chunk_statistics);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_a->set_statistics(table_statistics);
+    node_a->set_table_statistics2(table_statistics);
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_b->set_statistics(table_statistics);
+    node_b->set_table_statistics2(table_statistics);
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_c->set_statistics(table_statistics);
+    node_c->set_table_statistics2(table_statistics);
     node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
-    node_d->set_statistics(table_statistics);
+    node_d->set_table_statistics2(table_statistics);
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");

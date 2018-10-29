@@ -18,6 +18,9 @@ class BaseSegmentStatistics2 {
   virtual std::shared_ptr<BaseSegmentStatistics2> slice_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
+
+  virtual bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                                const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 };
 
 }  // namespace opossum

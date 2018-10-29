@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cost_model/abstract_cost_estimator.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
@@ -12,6 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -30,7 +32,8 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+                             const AbstractCostEstimator& cost_estimator) const {
   if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
@@ -41,18 +44,19 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
 
       const auto index_infos = table->get_indexes();
       for (const auto& index_info : index_infos) {
-        if (_is_index_scan_applicable(index_info, predicate_node)) {
+        if (_is_index_scan_applicable(index_info, predicate_node, cost_estimator)) {
           predicate_node->scan_type = ScanType::IndexScan;
         }
       }
     }
   }
 
-  return _apply_to_inputs(node);
+  return _apply_to_inputs(node, cost_estimator);
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
-                                              const std::shared_ptr<PredicateNode>& predicate_node) const {
+                                              const std::shared_ptr<PredicateNode>& predicate_node,
+                                              const AbstractCostEstimator& cost_estimator) const {
   if (!_is_single_segment_index(index_info)) return false;
 
   if (index_info.type != SegmentIndexType::GroupKey) return false;
@@ -68,11 +72,11 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.column_ids[0] != operator_predicate.column_id) return false;
 
-  const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
+  const auto& cardinality_estimator = *cost_estimator.cardinality_estimator;
+  const auto row_count_table = cardinality_estimator.estimate_cardinality(predicate_node->left_input());
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  const auto row_count_predicate =
-      predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
+  const auto row_count_predicate = cardinality_estimator.estimate_cardinality(predicate_node);
   const float selectivity = row_count_predicate / row_count_table;
 
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;

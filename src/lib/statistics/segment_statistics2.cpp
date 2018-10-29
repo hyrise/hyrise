@@ -30,6 +30,28 @@ void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<Abstract
 }
 
 template <typename T>
+bool SegmentStatistics2<T>::does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                      const std::optional<AllTypeVariant>& variant_value2) const {
+  if (equal_distinct_count_histogram) {
+    const auto estimate = equal_distinct_count_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+    if (estimate.type == EstimateType::MatchesNone) return true;
+  }
+
+  if (equal_width_histogram) {
+    const auto estimate = equal_width_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+    if (estimate.type == EstimateType::MatchesNone) return true;
+  }
+
+  if (generic_histogram) {
+    const auto estimate = generic_histogram->estimate_cardinality(predicate_type, variant_value, variant_value2);
+    if (estimate.type == EstimateType::MatchesNone) return true;
+  }
+
+  return false;
+}
+
+
+template <typename T>
 std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_selectivity(
     const Selectivity selectivity) const {
   const auto segment_statistics = std::make_shared<SegmentStatistics2<T>>();

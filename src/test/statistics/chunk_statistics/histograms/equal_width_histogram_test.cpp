@@ -914,7 +914,7 @@ TEST_F(EqualWidthHistogramTest, StringLikePruning) {
    * As an example, we are not able to prune "c%" because the bin [booo, ccc] is part of "c%"
    * and also contains the value "bums".
    *
-   * For more details see AbstractHistogram::can_prune.
+   * For more details see AbstractHistogram::does_not_contain.
    *
    * For reference, these are the bins:
    * [aa, annm],

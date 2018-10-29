@@ -63,10 +63,7 @@ size_t CountingQuotientFilter<ElementType>::count(const AllTypeVariant& value) c
 }
 
 template <typename ElementType>
-bool CountingQuotientFilter<ElementType>::can_prune(const PredicateCondition predicate_type,
-                                                    const AllTypeVariant& value,
-                                                    const std::optional<AllTypeVariant>& variant_value2) const {
-  DebugAssert(predicate_type == PredicateCondition::Equals && !variant_value2, "CQF only supports equality predicates");
+bool CountingQuotientFilter<ElementType>::does_not_contain(const AllTypeVariant& value) const {
   return count(value) == 0;
 }
 
@@ -114,6 +111,34 @@ float CountingQuotientFilter<ElementType>::load_factor() const {
 template <typename ElementType>
 bool CountingQuotientFilter<ElementType>::is_full() const {
   return load_factor() > 0.99f;
+}
+
+template <typename ElementType>
+CardinalityEstimate CountingQuotientFilter<ElementType>::estimate_cardinality(
+  const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+  const std::optional<AllTypeVariant>& variant_value2) const {
+
+  if (predicate_type == PredicateCondition::Equals) {
+    if (does_not_contain(variant_value)) return {Cardinality{0}, EstimateType::MatchesNone};
+    return {static_cast<Cardinality>(count(variant_value)), EstimateType::MatchesApproximately};
+  } else {
+    // Cannot use CQFs for cardinality estimation beyond equality predicates
+    return {Cardinality{0}, EstimateType::MatchesApproximately};
+  }
+}
+
+template <typename ElementType>
+std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::slice_with_predicate(
+const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+const std::optional<AllTypeVariant>& variant_value2) const {
+  // TODO(tim, martin) consider whether slicing a CQF is possible and worthwhile
+  return nullptr;
+}
+
+template <typename ElementType>
+std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::scale_with_selectivity(const Selectivity selectivity) const {
+  // TODO(tim, martin) consider whether scaling a CQF is possible and worthwhile
+  return nullptr;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(CountingQuotientFilter);

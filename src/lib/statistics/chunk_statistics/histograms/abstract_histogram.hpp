@@ -91,8 +91,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> _reduce_to_single_bin_histogram_impl() const override;
-
   std::vector<std::pair<T, T>> bin_edges() const;
 
   std::shared_ptr<AbstractHistogram<T>> split_at_bin_edges(
@@ -224,6 +222,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
+
+  std::shared_ptr<AbstractStatisticsObject> _reduce_to_single_bin_histogram_impl() const override;
 
   // String histogram-specific members.
   // See general explanation for details.

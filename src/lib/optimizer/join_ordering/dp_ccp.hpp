@@ -23,8 +23,6 @@ class JoinGraph;
  */
 class DpCcp final {
  public:
-  explicit DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
-
   /**
    * @param join_graph      A JoinGraph for a part of an LQP with further subplans as vertices. DpCcp is only applied
    *                        to this particular JoinGraph and doesn't modify the subplans in the vertices.
@@ -32,18 +30,16 @@ class DpCcp final {
    *                         * the operations from the JoinGraph in an optimal order
    *                         * the subplans from the vertices below them
    */
-  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph);
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const AbstractCostEstimator& cost_estimator);
 
  private:
   std::shared_ptr<AbstractLQPNode> _add_predicates_to_plan(
       const std::shared_ptr<AbstractLQPNode>& lqp,
-      const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const;
+      const std::vector<std::shared_ptr<AbstractExpression>>& predicates, const AbstractCostEstimator& cost_estimator) const;
 
   std::shared_ptr<AbstractLQPNode> _add_join_to_plan(
       const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-      std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const;
-
-  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
+      std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const AbstractCostEstimator& cost_estimator) const;
 };
 
 }  // namespace opossum

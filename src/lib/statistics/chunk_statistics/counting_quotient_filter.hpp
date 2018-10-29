@@ -10,7 +10,7 @@
 #include "cqf8.hpp"
 #include "types.hpp"
 
-#include "abstract_filter.hpp"
+#include "statistics/abstract_statistics_object.hpp"
 #include "storage/base_segment.hpp"
 
 namespace opossum {
@@ -31,7 +31,7 @@ smallest number greater than `S` that is a power of 2 as the number of slots." -
 */
 
 template <typename ElementType>
-class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
+class CountingQuotientFilter : public AbstractStatisticsObject, public Noncopyable {
  public:
   CountingQuotientFilter(const size_t quotient_size, const size_t remainder_size);
   ~CountingQuotientFilter() override;
@@ -48,8 +48,17 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
 
   bool is_full() const;
 
-  bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value,
-                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+  bool does_not_contain(const AllTypeVariant& value) const;
+
+  CardinalityEstimate estimate_cardinality(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+  std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
+      const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
 
   // Can't copy CountingQuotientFilter
   CountingQuotientFilter(CountingQuotientFilter&) = delete;

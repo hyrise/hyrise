@@ -9,6 +9,7 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
@@ -94,7 +95,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
 
-  final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
+  final_batch.add_rule(std::make_shared<JoinOrderingRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
@@ -110,7 +111,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
-Optimizer::Optimizer(const uint32_t max_num_iterations) : _max_num_iterations(max_num_iterations) {}
+Optimizer::Optimizer(const uint32_t max_num_iterations, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _max_num_iterations(max_num_iterations), _cost_estimator(cost_estimator) {}
 
 void Optimizer::add_rule_batch(RuleBatch rule_batch) { _rule_batches.emplace_back(std::move(rule_batch)); }
 
@@ -162,7 +163,7 @@ bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch,
 }
 
 bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  auto lqp_changed = rule.apply_to(root_node);
+  auto lqp_changed = rule.apply_to(root_node, *_cost_estimator);
 
   /**
    * Optimize Subselects

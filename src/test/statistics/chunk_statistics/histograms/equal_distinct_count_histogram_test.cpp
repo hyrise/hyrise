@@ -781,7 +781,7 @@ TEST_F(EqualDistinctCountHistogramTest, StringLikeEdgePruning) {
    * A similar situation arises for "v%", but "w" should also be in a gap,
    * because the last bin starts with the next value after "w", i.e., "wa".
    * bins: [aa, bums], [e, uuu], [wa, zzz]
-   * For more details see AbstractHistogram::can_prune.
+   * For more details see AbstractHistogram::does_not_contain.
    * We test all the other one-letter prefixes as well, because, why not.
    */
   auto hist = EqualDistinctCountHistogram<std::string>::from_segment(
