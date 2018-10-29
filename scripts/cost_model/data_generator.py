@@ -31,7 +31,8 @@ class DataGenerator:
     @staticmethod
     def string_column(row_count, distinct_values):
         fake = Faker()
-        distinct_values = np.array([fake.name() for _ in range(distinct_values)])
+        distinct_values = np.array([fake.password(length=10, special_chars=False, digits=False,
+                                                  upper_case=True, lower_case=False) for _ in range(distinct_values)])
         return np.random.choice(distinct_values, row_count)
 
     @staticmethod
