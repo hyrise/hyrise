@@ -27,14 +27,15 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
     auto data_type = input_literal.tuple_value.data_type();
-    // If data_type is null, there is nothing to do as is_null() check on null check will always return true
-    if (data_type != DataType::Null) {
+    if (data_type == DataType::Null) {
+      input_literal.tuple_value.set_is_null(true, context);
+    } else {
       resolve_data_type(data_type, [&](auto type) {
         using DataType = typename decltype(type)::type;
-        context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
+        input_literal.tuple_value.set<DataType>(boost::get<DataType>(input_literal.value), context);
         // Non-jit operators store bool values as int values
         if constexpr (std::is_same_v<DataType, Bool>) {
-          context.tuple.set<bool>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
+          input_literal.tuple_value.set<bool>(boost::get<DataType>(input_literal.value), context);
         }
       });
     }
@@ -114,7 +115,8 @@ JitTupleValue JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple value to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
-  const auto tuple_value = JitTupleValue(data_type, false, _num_tuple_values++);
+  const bool nullable = variant_is_null(value);
+  const auto tuple_value = JitTupleValue(data_type, nullable, _num_tuple_values++);
   _input_literals.push_back({value, tuple_value});
   return tuple_value;
 }

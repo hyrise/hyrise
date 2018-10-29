@@ -73,7 +73,7 @@ bool JitTupleValue::is_nullable() const { return _is_nullable; }
 size_t JitTupleValue::tuple_index() const { return _tuple_index; }
 
 bool JitTupleValue::is_null(JitRuntimeContext& context) const {
-  return _data_type == DataType::Null || (_is_nullable && context.tuple.is_null(_tuple_index));
+  return _is_nullable && context.tuple.is_null(_tuple_index);
 }
 
 void JitTupleValue::set_is_null(const bool is_null, JitRuntimeContext& context) const {
