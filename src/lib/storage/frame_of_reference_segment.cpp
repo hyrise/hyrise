@@ -14,7 +14,7 @@ FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minim
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
       _offset_values{std::move(offset_values)},
-      _decoder{_offset_values->create_base_decoder()} {}
+      _decompressor{_offset_values->create_base_decompressor()} {}
 
 template <typename T, typename U>
 const pmr_vector<T>& FrameOfReferenceSegment<T, U>::block_minima() const {
@@ -49,7 +49,7 @@ const std::optional<T> FrameOfReferenceSegment<T, U>::get_typed_value(const Chun
     return std::nullopt;
   }
   const auto minimum = _block_minima[chunk_offset / block_size];
-  const auto value = static_cast<T>(_decoder->get(chunk_offset)) + minimum;
+  const auto value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
   return value;
 }
 
