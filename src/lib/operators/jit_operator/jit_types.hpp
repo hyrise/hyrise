@@ -138,6 +138,12 @@ struct JitRuntimeContext {
   std::vector<std::shared_ptr<BaseJitSegmentWriter>> outputs;
   JitRuntimeHashmap hashmap;
   Segments out_chunk;
+  TransactionID transaction_id;
+  CommitID snapshot_commit_id;
+  std::shared_ptr<const MvccData> mvcc_data;
+  std::shared_ptr<const Table> referenced_table;
+  std::shared_ptr<const PosList> pos_list;
+  pmr_vector<TransactionID> transaction_ids;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.

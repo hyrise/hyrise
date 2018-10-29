@@ -6,6 +6,8 @@
 
 namespace opossum {
 
+JitReadTuples::JitReadTuples(const bool has_validate) : _has_validate(has_validate) {}
+
 std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
@@ -43,6 +45,24 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   context.inputs.clear();
   context.chunk_offset = 0;
   context.chunk_size = in_chunk.size();
+
+  if (_has_validate) {
+    if (in_chunk.has_mvcc_data()) {
+      // materialize atomic transaction ids as specialization cannot handle atomics
+      context.transaction_ids.resize(in_chunk.mvcc_data()->tids.size());
+      auto itr = context.transaction_ids.begin();
+      for (const auto& tid : in_chunk.mvcc_data()->tids) {
+        *itr++ = tid.load();
+      }
+      context.mvcc_data = in_chunk.mvcc_data();
+    } else {
+      DebugAssert(in_chunk.references_exactly_one_table(),
+                  "Input to Validate contains a Chunk referencing more than one table.");
+      const auto& ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(in_chunk.get_segment(ColumnID{0}));
+      context.referenced_table = ref_col_in->referenced_table();
+      context.pos_list = ref_col_in->pos_list();
+    }
+  }
 
   // Create the segment iterator for each input segment and store them to the runtime context
   for (const auto& input_column : _input_columns) {
