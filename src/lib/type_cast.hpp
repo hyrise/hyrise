@@ -61,7 +61,7 @@ template <typename T, typename U,
           typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, std::string> &&
                                       !std::is_same_v<std::decay_t<U>, std::string>>>
 inline __attribute__((always_inline)) std::string type_cast(const U& value) {
-  return boost::lexical_cast<std::string>(value);
+  return std::to_string(value);
 }
 
 // convert from NullValue to T
