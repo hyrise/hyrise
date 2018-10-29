@@ -109,6 +109,11 @@ class JitValidateTest : public BaseTest {
                     const TableType table_type) {
     if (table_type == TableType::Data) {
       context.mvcc_data = _test_table->get_chunk(chunk_id)->mvcc_data();
+      context.transaction_ids.resize(context.mvcc_data->tids.size());
+      auto itr = context.transaction_ids.begin();
+      for (const auto& transaction_id : context.mvcc_data->tids) {
+        *itr++ = transaction_id.load();
+      }
     }
     context.chunk_offset = chunk_offset;
     sink->reset();
