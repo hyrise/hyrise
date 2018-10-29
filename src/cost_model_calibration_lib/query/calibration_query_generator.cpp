@@ -117,10 +117,10 @@ const std::optional<std::string> CalibrationQueryGenerator::_generate_join(
     return {};
   }
 
-  const auto left_predicate = CalibrationQueryGeneratorPredicates::generate_predicate_column_value(
-      join_columns->first, *left_table, "l.");
-  const auto right_predicate = CalibrationQueryGeneratorPredicates::generate_predicate_column_value(
-      join_columns->second, *right_table, "r.");
+  const auto left_predicate =
+      CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->first, *left_table, "l.");
+  const auto right_predicate =
+      CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->second, *right_table, "r.");
 
   auto select_columns = _generate_select_columns(columns);
 

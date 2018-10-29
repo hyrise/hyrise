@@ -17,26 +17,27 @@
 
 namespace opossum {
 
-    class CalibrationQueryGeneratorPredicatesTest : public BaseTest {
-    protected:
-        void SetUp() override {
-            auto& manager = StorageManager::get();
-            manager.add_table("SomeTable", load_table("src/test/tables/int_string_filtered.tbl", 1u));
-        }
-    };
+class CalibrationQueryGeneratorPredicatesTest : public BaseTest {
+ protected:
+  void SetUp() override {
+    auto& manager = StorageManager::get();
+    manager.add_table("SomeTable", load_table("src/test/tables/int_string_filtered.tbl", 1u));
+  }
+};
 
-    TEST_F(CalibrationQueryGeneratorPredicatesTest, SimpleTest) {
-        std::map<std::string, CalibrationColumnSpecification> columns = {
-                {"a", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
-                {"b", CalibrationColumnSpecification{"string", "uniform", false, 100, EncodingType::Unencoded}}};
+TEST_F(CalibrationQueryGeneratorPredicatesTest, SimpleTest) {
+  std::map<std::string, CalibrationColumnSpecification> columns = {
+      {"a", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
+      {"b", CalibrationColumnSpecification{"string", "uniform", false, 100, EncodingType::Unencoded}}};
 
-        CalibrationTableSpecification table_definition {"SomePath", "SomeTable", 1000, columns};
+  CalibrationTableSpecification table_definition{"SomePath", "SomeTable", 1000, columns};
 
-        const auto filter_column = table_definition.columns.find("b");
-        auto predicate = CalibrationQueryGeneratorPredicates::generate_equi_predicate_for_strings(*filter_column, table_definition, "");
+  const auto filter_column = table_definition.columns.find("b");
+  auto predicate =
+      CalibrationQueryGeneratorPredicates::generate_equi_predicate_for_strings(*filter_column, table_definition, "");
 
-        EXPECT_TRUE(predicate);
-        EXPECT_EQ(*predicate, "b = 'A'");
-    }
+  EXPECT_TRUE(predicate);
+  EXPECT_EQ(*predicate, "b = 'A'");
+}
 
 }  // namespace opossum
