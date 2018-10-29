@@ -74,7 +74,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(query_idx) + " " + (use_jit ? "with JIT" : "without JIT"));
+  SCOPED_TRACE("TPC-H " + std::to_string(query_idx) + (use_jit ? " with JIT" : " without JIT"));
 
   std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
 
