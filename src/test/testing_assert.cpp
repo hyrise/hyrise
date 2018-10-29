@@ -220,20 +220,20 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        variant_is_null(expected_matrix[row_id][column_id])),
                      row_id, column_id);
       } else if (opossum_table->column_data_type(column_id) == DataType::Float) {
-        auto left_val = type_cast<float>(opossum_matrix[row_id][column_id]);
-        auto right_val = type_cast<float>(expected_matrix[row_id][column_id]);
+        auto left_val = type_cast_variant<float>(opossum_matrix[row_id][column_id]);
+        auto right_val = type_cast_variant<float>(expected_matrix[row_id][column_id]);
 
         highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, column_id);
       } else if (opossum_table->column_data_type(column_id) == DataType::Double) {
-        auto left_val = type_cast<double>(opossum_matrix[row_id][column_id]);
-        auto right_val = type_cast<double>(expected_matrix[row_id][column_id]);
+        auto left_val = type_cast_variant<double>(opossum_matrix[row_id][column_id]);
+        auto right_val = type_cast_variant<double>(expected_matrix[row_id][column_id]);
 
         highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, column_id);
       } else {
         if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->column_data_type(column_id) == DataType::Int ||
                                                       opossum_table->column_data_type(column_id) == DataType::Long)) {
-          auto left_val = type_cast<int64_t>(opossum_matrix[row_id][column_id]);
-          auto right_val = type_cast<int64_t>(expected_matrix[row_id][column_id]);
+          auto left_val = type_cast_variant<int64_t>(opossum_matrix[row_id][column_id]);
+          auto right_val = type_cast_variant<int64_t>(expected_matrix[row_id][column_id]);
           highlight_if(left_val != right_val, row_id, column_id);
         } else {
           highlight_if(opossum_matrix[row_id][column_id] != expected_matrix[row_id][column_id], row_id, column_id);

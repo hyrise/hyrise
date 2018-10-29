@@ -31,7 +31,7 @@ void CsvWriter::_write_value(const AllTypeVariant& value) {
   if (variant_is_null(value)) return;
 
   if (value.type() == typeid(std::string)) {
-    _write_string_value(type_cast<std::string>(value));
+    _write_string_value(type_cast_variant<std::string>(value));
     return;
   }
 

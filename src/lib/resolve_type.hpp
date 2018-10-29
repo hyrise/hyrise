@@ -149,7 +149,7 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
  *
  *   resolve_data_type(data_type, [&](auto type) {
  *     using ColumnDataType = typename decltype(type)::type;
- *     const auto var = type_cast<ColumnDataType>(variant_from_elsewhere);
+ *     const auto var = type_cast_variant<ColumnDataType>(variant_from_elsewhere);
  *     process_variant(var);
  *
  *     process_type(type);
