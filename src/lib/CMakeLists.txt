@@ -95,10 +95,14 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/base_non_query_node.cpp
     logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/create_table_node.cpp
+    logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
+    logical_query_plan/drop_table_node.cpp
+    logical_query_plan/drop_table_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
@@ -172,7 +176,8 @@ set(
     operators/insert.hpp
     operators/join_hash.cpp
     operators/join_hash.hpp
-    operators/join_hash/hash_traits.hpp
+    operators/join_hash/join_hash_traits.hpp
+    operators/join_hash/join_hash_steps.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_mpsm.cpp
@@ -187,8 +192,12 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/maintenance/create_table.cpp
+    operators/maintenance/create_table.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
+    operators/maintenance/drop_table.cpp
+    operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
     operators/maintenance/show_columns.cpp
@@ -212,6 +221,7 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_table_scan_impl.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
@@ -219,6 +229,8 @@ set(
     operators/table_scan/between_table_scan_impl.hpp
     operators/table_scan/column_comparison_table_scan_impl.cpp
     operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/expression_evaluator_table_scan_impl.cpp
+    operators/table_scan/expression_evaluator_table_scan_impl.hpp
     operators/table_scan/is_null_table_scan_impl.cpp
     operators/table_scan/is_null_table_scan_impl.hpp
     operators/table_scan/like_table_scan_impl.cpp
@@ -263,17 +275,12 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
-    optimizer/strategy/predicate_pushdown_rule.cpp
-    optimizer/strategy/predicate_pushdown_rule.hpp
+    optimizer/strategy/predicate_placement_rule.cpp
+    optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
-    planviz/abstract_visualizer.hpp
-    planviz/lqp_visualizer.cpp
-    planviz/lqp_visualizer.hpp
-    planviz/sql_query_plan_visualizer.cpp
-    planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -286,8 +293,6 @@ set(
     scheduler/node_queue_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
-    scheduler/processing_unit.cpp
-    scheduler/processing_unit.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
     scheduler/topology.cpp
@@ -371,6 +376,8 @@ set(
     statistics/chunk_statistics/range_filter.hpp
     statistics/chunk_statistics/segment_statistics.cpp
     statistics/chunk_statistics/segment_statistics.hpp
+    statistics/chunk_statistics/counting_quotient_filter.hpp
+    statistics/chunk_statistics/counting_quotient_filter.cpp
     statistics/column_statistics.cpp
     statistics/column_statistics.hpp
     statistics/empty_statistics_object.cpp
@@ -453,6 +460,7 @@ set(
     storage/mvcc_data.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
+    storage/pos_list.hpp
     storage/proxy_chunk.cpp
     storage/proxy_chunk.hpp
     storage/reference_segment.cpp
@@ -470,10 +478,10 @@ set(
     storage/segment_iterables/any_segment_iterable.hpp
     storage/segment_iterables/any_segment_iterator.hpp
     storage/segment_iterables/base_segment_iterators.hpp
-    storage/segment_iterables/chunk_offset_mapping.cpp
-    storage/segment_iterables/chunk_offset_mapping.hpp
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
     storage/segment_iterables/segment_iterator_values.hpp
+    storage/split_pos_list_by_chunk_id.cpp
+    storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table.cpp
@@ -533,6 +541,8 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
+    utils/are_args_cxxopts_compatible.cpp
+    utils/are_args_cxxopts_compatible.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
@@ -563,7 +573,15 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/probes.hpp
-    utils/uninitialized_vector.hpp
+    visualization/abstract_visualizer.hpp
+    visualization/lqp_visualizer.cpp
+    visualization/lqp_visualizer.hpp
+    visualization/join_graph_visualizer.cpp
+    visualization/join_graph_visualizer.hpp
+    visualization/sql_query_plan_visualizer.cpp
+    visualization/sql_query_plan_visualizer.hpp
+    visualization/viz_record_layout.cpp
+    visualization/viz_record_layout.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -571,7 +589,11 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    cqf
+    uninitialized_vector
     ${Boost_CONTAINER_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
     ${TBB_LIBRARY}
 )
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-master_branch=$(curl https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage_percent.txt)
+master_branch=$(curl https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage_percent.txt)
 this_branch=$(cat coverage_percent.txt)
 
 if (( $(bc <<< "$master_branch < $this_branch") ))

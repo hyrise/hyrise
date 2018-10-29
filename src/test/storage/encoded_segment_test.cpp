@@ -69,27 +69,28 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   }
 
-  ChunkOffsetsList create_sequential_chunk_offsets_list() {
-    auto list = ChunkOffsetsList{};
+  std::shared_ptr<PosList> create_sequential_position_filter() {
+    auto list = std::make_shared<PosList>();
+    list->guarantee_single_chunk();
 
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
+    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count(); ++offset_in_referenced_chunk) {
       if (bernoulli_dist(engine)) {
-        list.push_back({into_referencing++, into_referenced});
+        list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
     }
 
     return list;
   }
 
-  ChunkOffsetsList create_random_access_chunk_offsets_list() {
-    auto list = create_sequential_chunk_offsets_list();
+  std::shared_ptr<PosList> create_random_access_position_filter() {
+    auto list = create_sequential_position_filter();
 
     auto random_device = std::random_device{};
     std::default_random_engine engine{random_device()};
-    std::shuffle(list.begin(), list.end(), engine);
+    std::shuffle(list->begin(), list->end(), engine);
 
     return list;
   }
@@ -186,23 +187,22 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithChunkOffsetsLis
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
+  auto position_filter = this->create_sequential_position_filter();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators(
-          &chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
-            for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-              EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
+      encoded_segment_iterable.with_iterators(position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
-              if (!value_segment_it->is_null()) {
-                EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-              }
-            }
-          });
+          if (!value_segment_it->is_null()) {
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+          }
+        }
+      });
     });
   });
 }
@@ -213,32 +213,24 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
+  auto position_filter = this->create_random_access_position_filter();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_segment(*value_segment);
     auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
-    value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_segment_iterable.with_iterators(
-          &chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
-            for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
-              EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
+    value_segment_iterable.with_iterators(position_filter, [&](auto value_segment_it, auto value_segment_end) {
+      encoded_segment_iterable.with_iterators(position_filter, [&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
-              if (!value_segment_it->is_null()) {
-                EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
-              }
-            }
-          });
+          if (!value_segment_it->is_null()) {
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
+          }
+        }
+      });
     });
   });
-}
-
-TEST_P(EncodedSegmentTest, IsImmutable) {
-  auto value_segment = this->create_int_w_null_value_segment();
-  auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
-
-  EXPECT_THROW(base_encoded_segment->append(AllTypeVariant{}), std::logic_error);
 }
 
 }  // namespace opossum

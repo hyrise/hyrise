@@ -14,6 +14,7 @@
 #include "import_export/csv_converter.hpp"
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -66,9 +67,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     tasks.back()->schedule();
   }
 
-  for (auto& task : tasks) {
-    task->join();
-  }
+  CurrentScheduler::wait_for_tasks(tasks);
 
   for (auto& segments : segments_by_chunks) {
     table->append_chunk(segments);
@@ -77,6 +76,11 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   if (_meta.auto_compress) ChunkEncoder::encode_all_chunks(table);
 
   return table;
+}
+
+std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename) {
+  _meta = process_csv_meta_file(filename);
+  return _create_table_from_meta();
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {

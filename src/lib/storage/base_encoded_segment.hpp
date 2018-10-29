@@ -17,9 +17,6 @@ class BaseEncodedSegment : public BaseSegment {
  public:
   using BaseSegment::BaseSegment;
 
-  // Encoded segments are immutable
-  void append(const AllTypeVariant&) final;
-
   virtual EncodingType encoding_type() const = 0;
 
   /**
