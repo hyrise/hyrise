@@ -239,9 +239,7 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 
   auto task_done = false;
   auto task = std::make_shared<JobTask>([&task_done]() {
-    auto subtask = std::make_shared<JobTask>([&task_done]() {
-      task_done = true;
-    });
+    auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
 
     subtask->schedule();
     CurrentScheduler::wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});

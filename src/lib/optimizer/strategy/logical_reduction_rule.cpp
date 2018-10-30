@@ -84,8 +84,8 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
 
     for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end();) {
       if (std::find_if(flat_conjunction.begin(), flat_conjunction.end(), [&](const auto& expression) {
-        return *expression == *(*common_iter);
-      }) == flat_conjunction.end()) {
+            return *expression == *(*common_iter);
+          }) == flat_conjunction.end()) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
@@ -98,8 +98,8 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
   for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
     for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
       if (std::find_if(common_conjunctions.begin(), common_conjunctions.end(), [&](const auto& expression) {
-        return *expression == *(*expression_iter);
-      }) != common_conjunctions.end()) {
+            return *expression == *(*expression_iter);
+          }) != common_conjunctions.end()) {
         expression_iter = flat_conjunction.erase(expression_iter);
       } else {
         ++expression_iter;
