@@ -80,6 +80,8 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    */
   BinID bin_count() const override;
 
+  size_t estimated_memory_footprint() const override;
+
  protected:
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;

@@ -147,6 +147,8 @@ class AbstractHistogram : public AbstractFilter {
    */
   virtual HistogramCountType total_distinct_count() const = 0;
 
+  virtual size_t estimated_memory_footprint() const = 0;
+
  protected:
   /**
    * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.

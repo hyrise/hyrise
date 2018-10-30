@@ -207,6 +207,12 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const 
   return _bin_data.distinct_count_per_bin * bin_count() + _bin_data.bin_count_with_extra_value;
 }
 
+template <typename T>
+size_t EqualDistinctCountHistogram<T>::estimated_memory_footprint() const {
+  return 2 * bin_count() * sizeof(T) + bin_count() * sizeof(HistogramCountType) + sizeof(HistogramCountType) +
+         sizeof(BinID);
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);
 
 }  // namespace opossum

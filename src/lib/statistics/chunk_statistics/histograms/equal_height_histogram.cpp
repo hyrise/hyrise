@@ -206,6 +206,11 @@ HistogramCountType EqualHeightHistogram<T>::total_distinct_count() const {
                          HistogramCountType{0});
 }
 
+template <typename T>
+size_t EqualHeightHistogram<T>::estimated_memory_footprint() const {
+  return sizeof(T) + bin_count() * sizeof(T) + bin_count() * sizeof(HistogramCountType) + sizeof(HistogramCountType);
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualHeightHistogram);
 
 }  // namespace opossum

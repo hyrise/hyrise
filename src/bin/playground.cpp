@@ -709,8 +709,8 @@ template <typename T>
 std::shared_ptr<CountingQuotientFilter<T>> build_cqf(const std::shared_ptr<const BaseSegment>& segment,
                                                      const uint8_t remainder = 8u) {
   const auto distinct_count = get_distinct_values<T>(segment).size();
-  const auto quotient_size = static_cast<size_t>(std::ceil(std::log2(
-      distinct_count * (1 + std::log2(static_cast<double>(segment->size()) / distinct_count) / remainder))));
+  const auto quotient_size = static_cast<size_t>(std::ceil(
+      std::log2(distinct_count * (1 + std::log2(static_cast<double>(segment->size()) / distinct_count) / remainder))));
   const auto cqf = std::make_shared<CountingQuotientFilter<T>>(quotient_size, remainder);
   cqf->populate(segment);
   return cqf;
@@ -729,7 +729,7 @@ std::vector<std::shared_ptr<CountingQuotientFilter<T>>> create_cqfs_for_column(c
 }
 
 template <typename T>
-void print_histograms_to_csv(
+void print_bins_to_csv(
     const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                  std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
         histograms,
@@ -751,9 +751,41 @@ void print_histograms_to_csv(
   }
 }
 
+template <typename T>
+void print_memory_to_csv(
+    const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                 std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
+        histograms,
+    const std::vector<std::shared_ptr<CountingQuotientFilter<T>>>& cqfs, const std::string& column_name,
+    const uint64_t num_bins, std::ofstream& memory_log) {
+  for (auto idx = ChunkID{0}; idx < histograms.size(); ++idx) {
+    const auto equal_distinct_count_hist = std::get<0>(histograms[idx]);
+
+    if (!equal_distinct_count_hist) {
+      continue;
+    }
+
+    memory_log << column_name << ",";
+    memory_log << num_bins << ",";
+    memory_log << idx << ",";
+
+    if (!cqfs.empty()) {
+      memory_log << cqfs[idx]->memory_consumption() << ",";
+    }
+
+    const auto equal_height_hist = std::get<1>(histograms[idx]);
+    const auto equal_width_hist = std::get<2>(histograms[idx]);
+
+    memory_log << equal_height_hist->estimated_memory_footprint() << ",";
+    memory_log << equal_distinct_count_hist->estimated_memory_footprint() << ",";
+    memory_log << equal_width_hist->estimated_memory_footprint() << "\n";
+    memory_log.flush();
+  }
+}
+
 void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
                  const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                 std::ofstream& result_log, std::ofstream& bin_log) {
+                 std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
   log("Running pruning...");
 
   // std::cout.imbue(std::locale("en_US.UTF-8"));
@@ -780,7 +812,7 @@ void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uin
         using T = typename decltype(type)::type;
 
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
-        print_histograms_to_csv<T>(histograms, column_name, num_bins, bin_log);
+        print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
@@ -852,7 +884,7 @@ void run_pruning(const std::shared_ptr<const Table> table, const std::vector<uin
 
 void run_estimation(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
                     const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                    std::ofstream& result_log, std::ofstream& bin_log) {
+                    std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
   log("Running estimation...");
 
   // std::cout.imbue(std::locale("en_US.UTF-8"));
@@ -879,7 +911,7 @@ void run_estimation(const std::shared_ptr<const Table> table, const std::vector<
         using T = typename decltype(type)::type;
 
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
-        print_histograms_to_csv<T>(histograms, column_name, num_bins, bin_log);
+        print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
@@ -940,7 +972,7 @@ void run_estimation(const std::shared_ptr<const Table> table, const std::vector<
 
 void run_estimation_cqf(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
                         const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                        std::ofstream& result_log, std::ofstream& bin_log) {
+                        std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
   log("Running CQF estimation...");
 
   const auto chunk_size = table->max_chunk_size();
@@ -963,7 +995,8 @@ void run_estimation_cqf(const std::shared_ptr<const Table> table, const std::vec
 
         const auto cqfs = create_cqfs_for_column<T>(table, column_id);
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
-        print_histograms_to_csv<T>(histograms, column_name, num_bins, bin_log);
+        print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
+        print_memory_to_csv<T>(histograms, cqfs, column_name, num_bins, memory_log);
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
@@ -1185,16 +1218,20 @@ int main(int argc, char** argv) {
   }
 
   std::ofstream result_log = std::ofstream(output_path + "/results.log", std::ios_base::out | std::ios_base::trunc);
+  std::ofstream memory_log = std::ofstream(output_path + "/memory.log", std::ios_base::out | std::ios_base::trunc);
 
   if (cmd_option_exists(argv, argv_end, "--estimation")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
                   "equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
+    memory_log << "column_name,bin_count,bin_id,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "equal_height_hist_prunable,equal_distinct_count_hist_prunable,equal_width_hist_prunable\n";
+    memory_log << "column_name,bin_count,bin_id,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
                   "cqf_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
+    memory_log << "column_name,bin_count,bin_id,cqf,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
   }
@@ -1229,11 +1266,11 @@ int main(int argc, char** argv) {
     }
 
     if (cmd_option_exists(argv, argv_end, "--estimation")) {
-      run_estimation(table, num_bins_list, filters, result_log, bin_log);
+      run_estimation(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
-      run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log);
+      run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
-      run_pruning(table, num_bins_list, filters, result_log, bin_log);
+      run_pruning(table, num_bins_list, filters, result_log, bin_log, memory_log);
     }
   }
 

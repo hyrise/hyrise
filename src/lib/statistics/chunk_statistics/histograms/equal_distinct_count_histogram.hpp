@@ -75,6 +75,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
    */
   BinID bin_count() const override;
 
+  size_t estimated_memory_footprint() const override;
+
  protected:
   /**
    * Creates bins and their statistics.

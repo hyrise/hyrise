@@ -289,6 +289,11 @@ BinID EqualWidthHistogram<T>::_next_bin_for_value(const T& value) const {
   return index < bin_count() - 1 ? index + 1 : INVALID_BIN_ID;
 }
 
+template <typename T>
+size_t EqualWidthHistogram<T>::estimated_memory_footprint() const {
+  return 2 * sizeof(T) + 2 * bin_count() * sizeof(HistogramCountType) + sizeof(BinID);
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualWidthHistogram);
 
 }  // namespace opossum
