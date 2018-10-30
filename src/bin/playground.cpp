@@ -913,6 +913,60 @@ void run_estimation(const std::shared_ptr<const Table> table, const std::vector<
   }
 }
 
+template <typename T>
+std::pair<HistogramType, BinID> histogram_heuristic(T& min, T& max, HistogramCountType total_count,
+                                                    HistogramCountType distinct_count) {
+  constexpr auto MAX_BINS_ACCURATE_HISTOGRAM = 100u;
+  constexpr auto MAX_BINS_HISTOGRAM = 1000u;
+
+  /**
+   * If we have few distinct values, use an accurate representation of the data with an EqualDistinctCoutnHistogram.
+   */
+  if (distinct_count <= MAX_BINS_ACCURATE_HISTOGRAM) {
+    // This should return an AccurateHistogram, once it is implemented.
+    return std::make_pair(HistogramType::EqualDistinctCount, distinct_count);
+  }
+
+  /**
+   * If 80% or more of the total values are distinct (i.e., the column is almost unique), use a histogram with one bin.
+   */
+  if (distinct_count >= total_count * 8 / 10) {
+    // This should return a SingleBinHistogram.
+    std::make_pair(HistogramType::EqualWidth, 1u);
+  }
+
+  // Aim for ten values per bin, but cap at MAX_BINS_HISTOGRAM.
+  const auto bin_count = std::min(distinct_count / 10, MAX_BINS_HISTOGRAM);
+  // Use EqualDistinctCountHistogram, except if there is a good reason not to.
+  auto histogram_type = HistogramType::EqualDistinctCount;
+
+  /**
+   * If 80% or more of all possible distinct values between min and max are actually present,
+   * use an EqualWidthHistogram, because there will be few gaps anyways.
+   */
+  if constexpr (std::is_integral_v<T>) {
+    if ((max - min + 1) * 8 / 10 <= distinct_count) {
+      histogram_type = HistogramType::EqualWidth;
+    }
+  }
+
+  /**
+   * If the string values are expected to be rather long, use an EqualWidthHistogram,
+   * because its memory consumption does not scale with the length of the string.
+   * If the value range of strings has a common prefix longer than 8,
+   * we do not use an EqualWidthHistogram.
+   * That's because its bin boundaries are based on substrings, and if the substrings all share a large common prefix,
+   * we cannot create many bins.
+   */
+  if constexpr (std::is_same_v<T, std::string>) {
+    if (max.length() > 10 && common_prefix_length(min, max) <= 8) {
+      histogram_type = HistogramType::EqualWidth;
+    }
+  }
+
+  return std::make_pair(histogram_type, bin_count);
+}
+
 int main(int argc, char** argv) {
   const auto argv_end = argv + argc;
   const auto table_path = get_cmd_option<std::string>(argv, argv_end, "--table-path");
