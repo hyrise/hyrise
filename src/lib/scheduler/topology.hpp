@@ -101,7 +101,7 @@ class Topology final : public Singleton<Topology> {
   void _create_memory_resources();
 
   std::vector<TopologyNode> _nodes;
-  size_t _num_cpus{0};
+  uint32_t _num_cpus{0};
   bool _fake_numa_topology{false};
 
   static const int _number_of_hardware_nodes;

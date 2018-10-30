@@ -172,14 +172,14 @@ bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
   collect_select_expressions_by_lqp(select_expressions_by_lqp, root_node, visited_nodes);
 
   for (const auto& lqp_and_select_expressions : select_expressions_by_lqp) {
-    const auto root_node = LogicalPlanRootNode::make(lqp_and_select_expressions.first);
-    lqp_changed |= _apply_rule(rule, root_node);
+    const auto local_root_node = LogicalPlanRootNode::make(lqp_and_select_expressions.first);
+    lqp_changed |= _apply_rule(rule, local_root_node);
     for (const auto& select_expression : lqp_and_select_expressions.second) {
-      select_expression->lqp = root_node->left_input();
+      select_expression->lqp = local_root_node->left_input();
     }
 
     // Explicitly untie the root node, otherwise the LQP is left with an expired output weak_ptr
-    root_node->set_left_input(nullptr);
+    local_root_node->set_left_input(nullptr);
   }
 
   return lqp_changed;

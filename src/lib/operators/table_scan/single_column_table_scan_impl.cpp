@@ -202,7 +202,6 @@ bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionarySe
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 
