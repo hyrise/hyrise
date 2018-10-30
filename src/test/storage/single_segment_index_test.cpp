@@ -173,7 +173,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
   if (!IS_DEBUG) return;
-  auto vs_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
+  auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 
   EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseSegment>>({vs_int})),

@@ -103,7 +103,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   _unoptimized_logical_plan = lqp_roots.front();
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->sql_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _unoptimized_logical_plan;
 }
@@ -227,7 +227,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
   }
 
-  _metrics->compile_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->lqp_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _query_plan;
 }
@@ -279,8 +279,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   _result_table = tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->translate_time_nanos.count(),
-                _metrics->optimize_time_nanos.count(), _metrics->compile_time_nanos.count(),
+  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translate_time_nanos.count(),
+                _metrics->optimize_time_nanos.count(), _metrics->lqp_translate_time_nanos.count(),
                 _metrics->execution_time_nanos.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
                 reinterpret_cast<uintptr_t>(this));
   return _result_table;

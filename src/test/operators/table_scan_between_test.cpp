@@ -78,8 +78,7 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
       SCOPED_TRACE(std::string("BETWEEN ") + std::to_string(boost::get<double>(left)) + " AND " +
                    std::to_string(boost::get<double>(right)));
 
-      const auto predicate = OperatorScanPredicate{ColumnID{0}, PredicateCondition::Between, left, right};
-      auto scan = std::make_shared<TableScan>(_data_table_wrapper, predicate);
+      auto scan = create_table_scan(_data_table_wrapper, ColumnID{0}, PredicateCondition::Between, left, right);
       scan->execute();
 
       const auto& result_table = *scan->get_output();
@@ -101,30 +100,6 @@ TEST_P(TableScanBetweenTest, ExactBoundaries) {
 
       ASSERT_EQ(result_ints, expected);
     }
-  });
-}
-
-TEST_P(TableScanBetweenTest, SingleInputValue) {
-  const auto predicate = OperatorScanPredicate{ColumnID{0}, PredicateCondition::Between, 1};
-  auto scan = std::make_shared<TableScan>(_data_table_wrapper, predicate);
-  EXPECT_THROW(scan->execute(), std::logic_error);
-}
-
-TEST_P(TableScanBetweenTest, MismatchingTypes) {
-  if (!IS_DEBUG) return;
-  const auto predicate = OperatorScanPredicate{ColumnID{0}, PredicateCondition::Between, 1, 2.0f};
-  auto scan = std::make_shared<TableScan>(_data_table_wrapper, predicate);
-  EXPECT_THROW(scan->execute(), std::logic_error);
-}
-
-TEST_P(TableScanBetweenTest, NullValueAsParameter) {
-  const auto& data_type = std::get<0>(GetParam());
-  resolve_data_type(data_type, [&](const auto type) {
-    using DataType = typename decltype(type)::type;
-    const auto predicate =
-        OperatorScanPredicate{ColumnID{0}, PredicateCondition::Between, type_cast<DataType>(1), NullValue{}};
-    auto scan = std::make_shared<TableScan>(_data_table_wrapper, predicate);
-    EXPECT_THROW(scan->execute(), std::logic_error);
   });
 }
 

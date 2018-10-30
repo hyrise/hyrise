@@ -19,7 +19,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
-      _decoder{_attribute_vector->create_base_decoder()} {}
+      _decompressor{_attribute_vector->create_base_decompressor()} {}
 
 template <typename T>
 const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -35,7 +35,7 @@ const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_of
 
 template <typename T>
 const std::optional<T> DictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto value_id = _decoder->get(chunk_offset);
+  const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
     return std::nullopt;
   }

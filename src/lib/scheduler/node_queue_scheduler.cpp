@@ -8,9 +8,9 @@
 
 #include "abstract_task.hpp"
 #include "current_scheduler.hpp"
-#include "processing_unit.hpp"
 #include "task_queue.hpp"
 #include "topology.hpp"
+#include "worker.hpp"
 
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
@@ -20,7 +20,7 @@ namespace opossum {
 NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (IS_DEBUG && !_shut_down) {
+  if (IS_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
     std::exit(EXIT_FAILURE);
@@ -28,7 +28,7 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  _processing_units.reserve(Topology::get().num_cpus());
+  _workers.reserve(Topology::get().num_cpus());
   _queues.reserve(Topology::get().nodes().size());
 
   for (auto node_id = NodeID{0}; node_id < Topology::get().nodes().size(); node_id++) {
@@ -39,13 +39,14 @@ void NodeQueueScheduler::begin() {
     auto& topology_node = Topology::get().nodes()[node_id];
 
     for (auto& topology_cpu : topology_node.cpus) {
-      _processing_units.emplace_back(
-          std::make_shared<ProcessingUnit>(queue, _worker_id_allocator, topology_cpu.cpu_id));
+      _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
     }
   }
 
-  for (auto& processing_unit : _processing_units) {
-    processing_unit->wake_or_create_worker();
+  _active = true;
+
+  for (auto& worker : _workers) {
+    worker->start();
   }
 }
 
@@ -56,8 +57,8 @@ void NodeQueueScheduler::finish() {
    */
   while (true) {
     uint64_t num_finished_tasks = 0;
-    for (auto& processing_unit : _processing_units) {
-      num_finished_tasks += processing_unit->num_finished_tasks();
+    for (auto& worker : _workers) {
+      num_finished_tasks += worker->num_finished_tasks();
     }
 
     if (num_finished_tasks == _task_counter) break;
@@ -72,20 +73,18 @@ void NodeQueueScheduler::finish() {
     }
   }
 
-  for (auto& processing_unit : _processing_units) {
-    processing_unit->shutdown();
+  _active = false;
+
+  for (auto& worker : _workers) {
+    worker->join();
   }
 
-  for (auto& processing_unit : _processing_units) {
-    processing_unit->join();
-  }
-
-  _processing_units = {};
+  _workers = {};
   _queues = {};
   _task_counter = 0;
-
-  _shut_down = true;
 }
+
+bool NodeQueueScheduler::active() const { return _active; }
 
 const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
 
@@ -94,8 +93,8 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   /**
    * Add task to the queue of the preferred node.
    */
-  DebugAssert((!_shut_down), "Can't schedule more tasks after the NodeQueueScheduler was shut down");
-  DebugAssert((task->is_scheduled()), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
+  DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down");
+  DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(task_counter);

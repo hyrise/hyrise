@@ -21,6 +21,8 @@ ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_p
                                                              const ColumnID right_column_id)
     : BaseTableScanImpl{in_table, left_column_id, predicate_condition}, _right_column_id{right_column_id} {}
 
+std::string ColumnComparisonTableScanImpl::description() const { return "ColumnComparison"; }
+
 std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
