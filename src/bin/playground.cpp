@@ -1351,7 +1351,7 @@ int main(int argc, char** argv) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "cqf_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
-    memory_log << "column_name,bin_count,bin_id,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+    memory_log << "column_name,bin_count,bin_id,cqf,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
   }
@@ -1392,9 +1392,11 @@ int main(int argc, char** argv) {
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
       run_pruning(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning-cqf")) {
-    run_pruning_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
+      run_pruning_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
+    }
   }
-  }
+
+  log("Done.");
 
   return 0;
 }
