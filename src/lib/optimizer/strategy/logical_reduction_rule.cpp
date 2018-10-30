@@ -28,16 +28,19 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
       std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
   visit_lqp(node, [&](const auto& sub_node) {
-    if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(sub_node)) {
-      for (auto& expression : projection_node->expressions) {
-        expression = reduce_distributivity(expression);
-      }
-    } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
+    // We mostly aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.
+    // TODO(anybody) once we have a generic way to rewrite expressions in an arbitrary node, use it here
+
+    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
       const auto new_predicate = reduce_distributivity(predicate_node->predicate);
       const auto flat_conjunction = flatten_logical_expressions(new_predicate, LogicalOperator::And);
 
       if (flat_conjunction.size() > 1) {
         predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
+      }
+    } else if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(sub_node)) {
+      for (auto& expression : projection_node->expressions) {
+        expression = reduce_distributivity(expression);
       }
     }
 
@@ -80,7 +83,9 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
     const auto& flat_conjunction = flat_disjunction_and_conjunction[conjunction_idx];
 
     for (auto common_iter = common_conjunctions.begin(); common_iter != common_conjunctions.end();) {
-      if (std::find(flat_conjunction.begin(), flat_conjunction.end(), *common_iter) == flat_conjunction.end()) {
+      if (std::find_if(flat_conjunction.begin(), flat_conjunction.end(), [&](const auto& expression) {
+        return *expression == *(*common_iter);
+      }) == flat_conjunction.end()) {
         common_iter = common_conjunctions.erase(common_iter);
       } else {
         ++common_iter;
@@ -92,8 +97,9 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
   //         flat_disjunction_and_conjunction = [[c], [d, e]]
   for (auto& flat_conjunction : flat_disjunction_and_conjunction) {
     for (auto expression_iter = flat_conjunction.begin(); expression_iter != flat_conjunction.end();) {
-      if (std::find(common_conjunctions.begin(), common_conjunctions.end(), *expression_iter) !=
-          common_conjunctions.end()) {
+      if (std::find_if(common_conjunctions.begin(), common_conjunctions.end(), [&](const auto& expression) {
+        return *expression == *(*expression_iter);
+      }) != common_conjunctions.end()) {
         expression_iter = flat_conjunction.erase(expression_iter);
       } else {
         ++expression_iter;
