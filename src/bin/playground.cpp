@@ -1391,7 +1391,9 @@ int main(int argc, char** argv) {
       run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
       run_pruning(table, num_bins_list, filters, result_log, bin_log, memory_log);
-    }
+    } else if (cmd_option_exists(argv, argv_end, "--pruning-cqf")) {
+    run_pruning_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
+  }
   }
 
   return 0;
