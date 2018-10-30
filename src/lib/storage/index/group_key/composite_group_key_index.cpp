@@ -63,7 +63,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     std::transform(
         _indexed_segments.cbegin(), _indexed_segments.cend(), decompressors.begin(), [](const auto& segment) {
           const auto byte_width = byte_width_for_fixed_size_byte_aligned_type(segment->compressed_vector_type());
-          auto decompressor = segment->attribute_vector()->create_base_decoder();
+          auto decompressor = segment->attribute_vector()->create_base_decompressor();
           return std::make_pair(byte_width, std::move(decompressor));
         });
 

@@ -21,6 +21,7 @@ namespace opossum {
 class BenchmarkRunner {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries, const nlohmann::json& context);
+  ~BenchmarkRunner();
 
   static BenchmarkRunner create(const BenchmarkConfig& config, const std::string& table_path,
                                 const std::string& query_path);
@@ -37,6 +38,9 @@ class BenchmarkRunner {
 
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries();
+
+  // Execute warmup run of a query
+  void _warmup_query(const NamedQuery& named_query);
 
   // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
   std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const NamedQuery& named_query,

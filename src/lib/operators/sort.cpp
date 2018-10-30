@@ -9,7 +9,6 @@
 
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {

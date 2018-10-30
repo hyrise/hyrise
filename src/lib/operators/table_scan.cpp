@@ -143,10 +143,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             }
           }
 
+          if (pos_list_in->references_single_chunk()) filtered_pos_list->guarantee_single_chunk();
+
           auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
           out_segments.push_back(ref_segment_out);
         }
       } else {
+        matches_out->guarantee_single_chunk();
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
           auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, matches_out);
           out_segments.push_back(ref_segment_out);
