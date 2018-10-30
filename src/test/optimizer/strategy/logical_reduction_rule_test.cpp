@@ -73,26 +73,6 @@ TEST_F(LogicalReductionRuleTest, ReduceDistributivity) {
   EXPECT_EQ(*reduce_distributivity(or_(a, b)), *or_(a, b));
 }
 
-TEST_F(LogicalReductionRuleTest, ApplyToProjection) {
-  // (a AND b) OR (a AND c) -> a AND (c OR b)
-  // (a AND b) AND (a AND c) -> no change
-
-  const auto a_and_b = and_(a, b);
-  const auto a_and_c = and_(a, c);
-  const auto expressions = expression_vector(or_(a_and_b, a_and_c), and_(a_and_b, a_and_c));
-
-  const auto input_lqp = ProjectionNode::make(expressions, mock_node);
-  const auto actual_lqp = apply_rule(rule, input_lqp);
-
-  // clang-format off
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(and_(a, or_(b, c)), and_(and_(a_and_b, a), c)),
-    mock_node);
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(LogicalReductionRuleTest, ApplyToPredicate) {
   // (a AND b) OR (a AND c) -> PredicateNode{a} -> PredicateNode{b OR c}
 

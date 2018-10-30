@@ -28,19 +28,13 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
       std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
   visit_lqp(node, [&](const auto& sub_node) {
-    // We mostly aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.
-    // TODO(anybody) once we have a generic way to rewrite expressions in an arbitrary node, use it here
-
+    // We only aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
       const auto new_predicate = reduce_distributivity(predicate_node->predicate);
       const auto flat_conjunction = flatten_logical_expressions(new_predicate, LogicalOperator::And);
 
       if (flat_conjunction.size() > 1) {
         predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
-      }
-    } else if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(sub_node)) {
-      for (auto& expression : projection_node->expressions) {
-        expression = reduce_distributivity(expression);
       }
     }
 
