@@ -22,7 +22,7 @@ namespace opossum {
 template <typename T, typename SegmentType>
 class SegmentAccessor : public BaseSegmentAccessor<T> {
  public:
-  explicit SegmentAccessor(const SegmentType& segment) : _segment{segment} {}
+  explicit SegmentAccessor(const SegmentType& segment) : BaseSegmentAccessor<T>{}, _segment{segment} {}
 
   const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
 

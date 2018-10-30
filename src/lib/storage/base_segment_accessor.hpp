@@ -16,8 +16,13 @@ namespace opossum {
 template <typename T>
 class BaseSegmentAccessor {
  public:
-  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
+  BaseSegmentAccessor() = default;
+  BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
+  BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
+
   virtual ~BaseSegmentAccessor() {}
+
+  virtual const std::optional<T> access(ChunkOffset offset) const = 0;
 };
 
 }  // namespace opossum
