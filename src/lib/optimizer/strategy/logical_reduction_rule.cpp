@@ -107,10 +107,7 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
     }
   }
 
-  // Step 5: Rebuild inflated expression from common_conjunction: `[a, c]` --> `(a AND c)`
-  auto common_conjunction_expression = inflate_logical_expressions(common_conjunctions, LogicalOperator::And);
-
-  // Step 6: Rebuild inflated expression from conjunctions in flat_disjunction_and_conjunction:
+  // Step 5: Rebuild inflated expression from conjunctions in flat_disjunction_and_conjunction:
   //         `[[c], [d, e]]` --> `[c, (d AND e)]`
   auto flat_disjunction_remainder = std::vector<std::shared_ptr<AbstractExpression>>{};
 
@@ -121,12 +118,15 @@ std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
     }
   }
 
-  // Step 7: Rebuild inflated expression from flat_disjunction_remainder:
+  // Step 6: Rebuild inflated expression from flat_disjunction_remainder:
   //          `[c, (d AND e)]` --> `c OR (d AND e)`
   auto inflated_disjunction_remainder = std::shared_ptr<AbstractExpression>{};
   if (!flat_disjunction_remainder.empty()) {
     inflated_disjunction_remainder = inflate_logical_expressions(flat_disjunction_remainder, LogicalOperator::Or);
   }
+
+  // Step 7: Rebuild inflated expression from common_conjunction: `[a, c]` --> `(a AND c)`
+  auto common_conjunction_expression = inflate_logical_expressions(common_conjunctions, LogicalOperator::And);
 
   // Step 8: Build result expression from common_conjunction_expression and inflated_disjunction_remainder:
   //         `(a AND c)` AND `c OR (d AND e)`

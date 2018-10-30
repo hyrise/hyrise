@@ -115,13 +115,13 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
 bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
 /**
- * Convert "a AND b AND c" to [a,b,c] where a,b,c can be arbitrarily complex expressions
+ * Convert "(a AND b) AND c" to [a,b,c] where a,b,c can be arbitrarily complex expressions
  */
 std::vector<std::shared_ptr<AbstractExpression>> flatten_logical_expressions(
     const std::shared_ptr<AbstractExpression>& expression, const LogicalOperator logical_operator);
 
 /**
- * Convert [a,b,c], AND into "a AND b AND c"
+ * Convert ([a,b,c], AND) into "(a AND b) AND c"
  */
 std::shared_ptr<AbstractExpression> inflate_logical_expressions(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator);

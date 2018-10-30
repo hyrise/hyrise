@@ -16,7 +16,7 @@ class AbstractLQPNode;
  * Reverse Distributivity
  *   Expressions of the form `(a AND b) OR (a AND c)` are rewritten as `a AND (b OR c)`.
  *
- * Also, this rule turns conjunctive chains (e.g. `a AND b AND c`) are turned into multiple consecutive PredicateNodes,
+ * Also, this rule turns conjunctive chains (e.g. `a AND b AND c`) into multiple consecutive PredicateNodes,
  *   because other Optimizer rules can work better with simpler predicates.
  *
  * EXAMPLE: TPC-H query 19.
