@@ -1,3 +1,4 @@
+#include <cmath>
 #include <ctime>
 
 #include <algorithm>
@@ -23,6 +24,7 @@
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
+#include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
@@ -704,6 +706,29 @@ create_histograms_for_column(const std::shared_ptr<const Table> table, const Col
 }
 
 template <typename T>
+std::shared_ptr<CountingQuotientFilter<T>> build_cqf(const std::shared_ptr<const BaseSegment>& segment,
+                                                     const uint8_t remainder = 8u) {
+  const auto distinct_count = get_distinct_values<T>(segment).size();
+  const auto quotient_size = static_cast<size_t>(
+      segment->size() * (1 + std::log2(static_cast<double>(distinct_count) / segment->size()) / remainder));
+  const auto cqf = std::make_shared<CountingQuotientFilter<T>>(quotient_size, remainder);
+  cqf->populate(segment);
+  return cqf;
+}
+
+template <typename T>
+std::vector<std::shared_ptr<CountingQuotientFilter<T>>> create_cqfs_for_column(const std::shared_ptr<const Table> table,
+                                                                               const ColumnID column_id) {
+  std::vector<std::shared_ptr<CountingQuotientFilter<T>>> cqfs;
+
+  for (const auto chunk : table->chunks()) {
+    cqfs.emplace_back(build_cqf<T>(chunk->get_segment(column_id)));
+  }
+
+  return cqfs;
+}
+
+template <typename T>
 void print_histograms_to_csv(
     const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                  std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
@@ -913,6 +938,94 @@ void run_estimation(const std::shared_ptr<const Table> table, const std::vector<
   }
 }
 
+void run_estimation_cqf(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+                        const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                        std::ofstream& result_log, std::ofstream& bin_log) {
+  log("Running CQF estimation...");
+
+  const auto chunk_size = table->max_chunk_size();
+  const auto filters_by_column = get_filters_by_column(filters);
+  const auto row_count_by_filter = get_row_count_for_filters(table, filters_by_column);
+  const auto distinct_count_by_column = get_distinct_count_by_column(table, filters_by_column);
+  const auto total_count = table->row_count();
+
+  for (auto num_bins : num_bins_list) {
+    log("  " + std::to_string(num_bins) + " bins...");
+
+    for (auto it : filters_by_column) {
+      const auto column_id = it.first;
+      const auto distinct_count = distinct_count_by_column.at(column_id);
+      const auto column_name = table->column_name(column_id);
+
+      const auto column_data_type = table->column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using T = typename decltype(type)::type;
+
+        const auto cqfs = create_cqfs_for_column<T>(table, column_id);
+        const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
+        print_histograms_to_csv<T>(histograms, column_name, num_bins, bin_log);
+
+        for (const auto& pair : it.second) {
+          const auto predicate_condition = pair.first;
+          const auto value = pair.second;
+
+          const auto actual_count = row_count_by_filter.at(column_id).at(predicate_condition).at(value);
+          const auto cqf_count = std::accumulate(
+              cqfs.cbegin(), cqfs.cend(), float{0},
+              [&](float a, const std::shared_ptr<CountingQuotientFilter<T>>& b) { return a + b->count(value); });
+          const auto equal_distinct_count_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
+
+          const auto equal_height_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
+
+          const auto equal_width_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
+
+          result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
+                     << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
+                     << std::to_string(actual_count) << "," << std::to_string(cqf_count) << ","
+                     << std::to_string(equal_height_hist_count) << ","
+                     << std::to_string(equal_distinct_count_hist_count) << "," << std::to_string(equal_width_hist_count)
+                     << "\n";
+          result_log.flush();
+        }
+      });
+    }
+  }
+}
+
 template <typename T>
 std::pair<HistogramType, BinID> histogram_heuristic(T& min, T& max, HistogramCountType total_count,
                                                     HistogramCountType distinct_count) {
@@ -1079,8 +1192,11 @@ int main(int argc, char** argv) {
   } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "equal_height_hist_prunable,equal_distinct_count_hist_prunable,equal_width_hist_prunable\n";
+  } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
+    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
+                  "cqf_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
   } else {
-    Fail("Specify either '--estimation' or '--pruning' to decide what to measure.");
+    Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
   }
 
   std::ofstream bin_log = std::ofstream(output_path + "/bins.log", std::ios_base::out | std::ios_base::trunc);
@@ -1114,6 +1230,8 @@ int main(int argc, char** argv) {
 
     if (cmd_option_exists(argv, argv_end, "--estimation")) {
       run_estimation(table, num_bins_list, filters, result_log, bin_log);
+    } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
+      run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
       run_pruning(table, num_bins_list, filters, result_log, bin_log);
     }
