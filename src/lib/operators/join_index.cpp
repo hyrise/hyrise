@@ -340,7 +340,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
             reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
                 input_table->get_chunk(current_chunk_id)->get_segment(column_id));
           }
-          new_pos_list->push_back(reference_segment->pos_list()->at(row.chunk_offset));
+          new_pos_list->push_back((*reference_segment->pos_list())[row.chunk_offset]);
         }
 
         segment = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),

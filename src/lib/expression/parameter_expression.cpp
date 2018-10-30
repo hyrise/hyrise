@@ -68,8 +68,7 @@ DataType ParameterExpression::data_type() const {
 
 bool ParameterExpression::is_nullable() const {
   if (parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
-    Assert(_value.has_value(), "Can't obtain nullability of unset ValuePlaceholder");
-    return variant_is_null(*_value);
+    return true;
   } else {
     return _referenced_expression_info->nullable;
   }

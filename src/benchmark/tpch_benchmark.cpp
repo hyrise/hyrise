@@ -12,8 +12,6 @@
 #include "benchmark_runner.hpp"
 #include "cxxopts.hpp"
 #include "json.hpp"
-#include "planviz/lqp_visualizer.hpp"
-#include "planviz/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -23,6 +21,10 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "utils/are_args_cxxopts_compatible.hpp"
+#include "utils/assert.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -61,6 +63,7 @@ int main(int argc, char* argv[]) {
 
   } else {
     // Parse regular command line args
+    Assert(opossum::are_args_cxxopts_compatible(argc, argv), "Command line argument incompatible with cxxopts");
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
     // Display usage and quit
@@ -68,7 +71,6 @@ int main(int argc, char* argv[]) {
       std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
       return 0;
     }
-
     if (cli_parse_result.count("queries")) {
       comma_separated_queries = cli_parse_result["queries"].as<std::string>();
     }

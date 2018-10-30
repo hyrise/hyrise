@@ -219,8 +219,7 @@ class RadixClusterSortNUMA {
               (*output_cluster)[insert_position] = entry;
               ++insert_position;
             }
-          },
-          true);
+          });
       cluster_jobs.push_back(job);
       job->schedule(node_id);
     }
@@ -249,12 +248,10 @@ class RadixClusterSortNUMA {
     for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
       DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) +
                                                       " Cluster count: " + std::to_string(_cluster_count));
-      auto job = std::make_shared<JobTask>(
-          [&output, &input_chunks, node_id, radix_bitmask, this]() {
-            (*output)[node_id] = _cluster((*input_chunks)[node_id],
-                                          [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
-          },
-          true);
+      auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
+        (*output)[node_id] = _cluster((*input_chunks)[node_id],
+                                      [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
+      });
 
       cluster_jobs.push_back(job);
       job->schedule(node_id);
@@ -286,23 +283,21 @@ class RadixClusterSortNUMA {
     auto repartition_jobs = std::vector<std::shared_ptr<AbstractTask>>();
 
     for (NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node) {
-      auto job = std::make_shared<JobTask>(
-          [this, numa_node, &private_partitions, &homogenous_partitions]() {
-            homogenous_partitions->emplace_back(MaterializedNUMAPartition<T>(numa_node, 1));
+      auto job = std::make_shared<JobTask>([this, numa_node, &private_partitions, &homogenous_partitions]() {
+        homogenous_partitions->emplace_back(MaterializedNUMAPartition<T>(numa_node, 1));
 
-            auto& homogenous_partition = (*homogenous_partitions)[numa_node];
+        auto& homogenous_partition = (*homogenous_partitions)[numa_node];
 
-            auto materialized_segment = std::make_shared<MaterializedSegment<T>>();
-            materialized_segment->reserve(_cluster_count);
-            homogenous_partition._materialized_segments[0] = materialized_segment;
+        auto materialized_segment = std::make_shared<MaterializedSegment<T>>();
+        materialized_segment->reserve(_cluster_count);
+        homogenous_partition._materialized_segments[0] = materialized_segment;
 
-            for (const auto& partition : (*private_partitions)) {
-              const auto& src = partition._materialized_segments[numa_node];
+        for (const auto& partition : (*private_partitions)) {
+          const auto& src = partition._materialized_segments[numa_node];
 
-              std::copy(src->begin(), src->end(), std::back_inserter(*materialized_segment));
-            }
-          },
-          true);
+          std::copy(src->begin(), src->end(), std::back_inserter(*materialized_segment));
+        }
+      });
 
       repartition_jobs.push_back(job);
       job->schedule(numa_node);
@@ -321,12 +316,9 @@ class RadixClusterSortNUMA {
 
     for (auto& partition : (*partitions)) {
       for (auto cluster : partition._materialized_segments) {
-        auto job = std::make_shared<JobTask>(
-            [cluster]() {
-              std::sort(cluster->begin(), cluster->end(),
-                        [](auto& left, auto& right) { return left.value < right.value; });
-            },
-            true);
+        auto job = std::make_shared<JobTask>([cluster]() {
+          std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
+        });
 
         sort_jobs.push_back(job);
         job->schedule(partition._node_id);

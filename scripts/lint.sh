@@ -15,12 +15,18 @@ let "exitcode |= $?"
 #             Finds all .cpp and .hpp files, separated by \0
 
 # All disabled tests should have an issue number
-grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/'
-let "exitcode |= $?"
+output=$(grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/')
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
 
 # The singleton pattern should not be manually implemented
-grep -rn 'static[^:]*instance;' --exclude src/lib/utils/singleton.hpp src | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Singletons should not be implmented manually. Have a look at src\/utils\/singleton.hpp/'
-let "exitcode |= $?"
+output=$(grep -rn 'static[^:]*instance;' --exclude singleton.hpp src | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Singletons should not be implemented manually. Have a look at src\/lib\/utils\/singleton.hpp/')
+if [ ! -z "$output" ]; then
+	echo "$output"
+	exitcode=1
+fi
 
 # Check for included cpp files. You would think that this is not necessary, but history proves you wrong.
 regex='#include .*\.cpp'
@@ -29,8 +35,10 @@ namecheck=$(find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | xargs -0 g
 let "exitcode |= ! $?"
 while IFS= read -r line
 do
-	echo $line | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/Include of cpp file:/' | tr '\n' ' '
-	echo $line | sed 's/\(:[^:]*:\)/\1 /'
+	if [ ! -z "$line" ]; then
+		echo $line | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/Include of cpp file:/' | tr '\n' ' '
+		echo $line | sed 's/\(:[^:]*:\)/\1 /'
+	fi
 done <<< "$namecheck"
 
 for dir in src/*
@@ -46,8 +54,6 @@ do
 		fi
 	done
 done
-
-let "exitcode |= $?"
 
 # Check if all probes are defined in provider.d
 for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provider.hpp -h '^\s*DTRACE_PROBE' src | sed -E 's/^ *DTRACE_PROBE[0-9]{0,2}\(HYRISE, *([A-Z_]+).*$/\1/'); do

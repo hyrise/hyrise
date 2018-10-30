@@ -276,10 +276,10 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   sql_pipeline.get_query_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->compile_time_nanos;
+  auto duration = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
   const auto& plans = sql_pipeline.get_query_plans();
-  auto duration2 = metrics.statement_metrics[0]->compile_time_nanos;
+  auto duration2 = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -442,18 +442,18 @@ TEST_F(SQLPipelineTest, GetTimes) {
 
   const auto zero_duration = std::chrono::nanoseconds::zero();
 
-  EXPECT_EQ(statement_metrics->translate_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->sql_translate_time_nanos, zero_duration);
   EXPECT_EQ(statement_metrics->optimize_time_nanos, zero_duration);
-  EXPECT_EQ(statement_metrics->compile_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->lqp_translate_time_nanos, zero_duration);
   EXPECT_EQ(statement_metrics->execution_time_nanos, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
   EXPECT_GT(metrics.parse_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->translate_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->sql_translate_time_nanos, zero_duration);
   EXPECT_GT(statement_metrics->optimize_time_nanos, zero_duration);
-  EXPECT_GT(statement_metrics->compile_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->lqp_translate_time_nanos, zero_duration);
   EXPECT_GT(statement_metrics->execution_time_nanos, zero_duration);
 }
 

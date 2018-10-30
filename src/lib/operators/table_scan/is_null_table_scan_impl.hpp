@@ -18,6 +18,8 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
   IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
                       const PredicateCondition& predicate_condition);
 
+  std::string description() const override;
+
   void handle_segment(const ReferenceSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 

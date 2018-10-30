@@ -440,6 +440,9 @@ void Aggregate::_aggregate() {
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
 
+    // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
+    const auto input_chunk_size = chunk_in->size();
+
     if (_aggregates.empty()) {
       /**
        * DISTINCT implementation
@@ -467,7 +470,7 @@ void Aggregate::_aggregate() {
               _contexts_per_column[0]);
       auto& results = *context->results;
 
-      for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
@@ -487,7 +490,7 @@ void Aggregate::_aggregate() {
           auto& results = *context->results;
 
           // count occurrences for each group key
-          for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+          for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
             auto& hash_entry = results[hash_keys[chunk_offset]];
             hash_entry.row_id = RowID(chunk_id, chunk_offset);
             ++hash_entry.aggregate_count;

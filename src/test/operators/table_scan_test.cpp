@@ -10,14 +10,25 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_scan/between_table_scan_impl.hpp"
+#include "operators/table_scan/column_comparison_table_scan_impl.hpp"
+#include "operators/table_scan/expression_evaluator_table_scan_impl.hpp"
+#include "operators/table_scan/is_null_table_scan_impl.hpp"
+#include "operators/table_scan/like_table_scan_impl.hpp"
+#include "operators/table_scan/single_column_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -41,6 +52,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_table_op() {
     auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    table_wrapper->execute();
+    return table_wrapper;
+  }
+
+  std::shared_ptr<TableWrapper> get_int_string_table_op() {
+    auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 2));
     table_wrapper->execute();
     return table_wrapper;
   }
@@ -114,7 +131,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     TableColumnDefinitions column_definitions;
 
     for (auto column_id = ColumnID{0u}; column_id < table->column_count(); ++column_id) {
-      column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id));
+      column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id),
+                                      table->column_is_nullable(column_id));
 
       auto segment_out = std::make_shared<ReferenceSegment>(table, column_id, pos_list);
       segments.push_back(segment_out);
@@ -160,8 +178,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto predicate_condition = test.first;
       const auto& expected = test.second;
 
-      auto scan = std::make_shared<TableScan>(
-          in, OperatorScanPredicate{ColumnID{1} /* "b" */, predicate_condition, NULL_VALUE});
+      const auto column = get_column_expression(in, ColumnID{1});
+
+      auto scan = create_table_scan(in, ColumnID{1}, predicate_condition, NULL_VALUE);
       scan->execute();
 
       const auto expected_result = std::vector<AllTypeVariant>{{12, 123}};
@@ -212,20 +231,17 @@ INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanTest,
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
 
-  auto scan_1 = std::make_shared<TableScan>(
-      get_table_op(), OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
+  auto scan_1 = create_table_scan(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
 
-  auto scan_2 =
-      std::make_shared<TableScan>(scan_1, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 457.9});
+  auto scan_2 = create_table_scan(scan_1, ColumnID{1}, PredicateCondition::LessThan, 457.9);
   scan_2->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan_2->get_output(), expected_result);
 }
 
 TEST_P(OperatorsTableScanTest, EmptyResultScan) {
-  auto scan_1 = std::make_shared<TableScan>(get_table_op(),
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 90000});
+  auto scan_1 = create_table_scan(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThan, 90000);
   scan_1->execute();
 
   for (auto i = ChunkID{0}; i < scan_1->get_output()->chunk_count(); i++)
@@ -235,8 +251,7 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
 TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
-  auto scan = std::make_shared<TableScan>(
-      get_table_op(), OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
+  auto scan = create_table_scan(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
@@ -256,9 +271,8 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
 
   for (const auto& test : tests) {
-    auto scan_int = std::make_shared<TableScan>(_int_int_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 6});
-    auto scan_int_partly =
-        std::make_shared<TableScan>(_int_int_partly_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 6});
+    auto scan_int = create_table_scan(_int_int_compressed, ColumnID{0}, test.first, 6);
+    auto scan_int_partly = create_table_scan(_int_int_partly_compressed, ColumnID{0}, test.first, 6);
 
     scan_int->execute();
 
@@ -283,16 +297,14 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 100, 102, 104, 106};
 
   for (const auto& test : tests) {
-    auto scan1 = std::make_shared<TableScan>(_int_int_compressed,
-                                             OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 108});
+    auto scan1 = create_table_scan(_int_int_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
     scan1->execute();
 
-    auto scan_partly1 = std::make_shared<TableScan>(
-        _int_int_partly_compressed, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 108});
+    auto scan_partly1 = create_table_scan(_int_int_partly_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
     scan_partly1->execute();
 
-    auto scan2 = std::make_shared<TableScan>(scan1, OperatorScanPredicate{ColumnID{0}, test.first, 4});
-    auto scan_partly2 = std::make_shared<TableScan>(scan_partly1, OperatorScanPredicate{ColumnID{0}, test.first, 4});
+    auto scan2 = create_table_scan(scan1, ColumnID{0}, test.first, 4);
+    auto scan_partly2 = create_table_scan(scan_partly1, ColumnID{0}, test.first, 4);
 
     scan2->execute();
     scan_partly2->execute();
@@ -316,7 +328,7 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
   auto table_wrapper = get_table_op_filtered();
 
   for (const auto& test : tests) {
-    auto scan_partly = std::make_shared<TableScan>(table_wrapper, OperatorScanPredicate{ColumnID{0}, test.first, 10});
+    auto scan_partly = create_table_scan(table_wrapper, ColumnID{0}, test.first, 10);
     scan_partly->execute();
 
     ASSERT_COLUMN_EQ(scan_partly->get_output(), ColumnID{1}, test.second);
@@ -337,11 +349,10 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueGreaterThanMaxDictio
   tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_int_int_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 30});
+    auto scan = create_table_scan(_int_int_compressed, ColumnID{0}, test.first, 30);
     scan->execute();
 
-    auto scan_partly =
-        std::make_shared<TableScan>(_int_int_partly_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 30});
+    auto scan_partly = create_table_scan(_int_int_partly_compressed, ColumnID{0}, test.first, 30);
     scan_partly->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -363,12 +374,10 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionar
   tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan =
-        std::make_shared<TableScan>(_int_int_compressed, OperatorScanPredicate{ColumnID{0} /* "a" */, test.first, -10});
+    auto scan = create_table_scan(_int_int_compressed, ColumnID{0} /* "a" */, test.first, -10);
     scan->execute();
 
-    auto scan_partly = std::make_shared<TableScan>(_int_int_partly_compressed,
-                                                   OperatorScanPredicate{ColumnID{0} /* "a" */, test.first, -10});
+    auto scan_partly = create_table_scan(_int_int_partly_compressed, ColumnID{0} /* "a" */, test.first, -10);
     scan_partly->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -382,9 +391,9 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValue
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(
-      table_wrapper,
-      OperatorScanPredicate{ColumnID{0} /* "a" */, PredicateCondition::GreaterThan, ColumnID{1} /* "b" */});
+  const auto predicate = greater_than_(get_column_expression(table_wrapper, ColumnID{0}),
+                                       get_column_expression(table_wrapper, ColumnID{1}));
+  auto scan = std::make_shared<TableScan>(table_wrapper, predicate);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -397,9 +406,9 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWit
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(
-      table_wrapper,
-      OperatorScanPredicate{ColumnID{0} /* "a" */, PredicateCondition::GreaterThan, ColumnID{1} /* "b" */});
+  const auto predicate = greater_than_(get_column_expression(table_wrapper, ColumnID{0}),
+                                       get_column_expression(table_wrapper, ColumnID{1}));
+  auto scan = std::make_shared<TableScan>(table_wrapper, predicate);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -413,9 +422,9 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNul
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(
-      table_wrapper,
-      OperatorScanPredicate{ColumnID{0} /* "a" */, PredicateCondition::GreaterThan, ColumnID{1} /* "b" */});
+  const auto predicate = greater_than_(get_column_expression(table_wrapper, ColumnID{0}),
+                                       get_column_expression(table_wrapper, ColumnID{1}));
+  auto scan = std::make_shared<TableScan>(table_wrapper, predicate);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -429,9 +438,9 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatCol
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
 
-  auto scan = std::make_shared<TableScan>(
-      table_wrapper,
-      OperatorScanPredicate{ColumnID{0} /* "a" */, PredicateCondition::GreaterThan, ColumnID{1} /* "b" */});
+  const auto predicate = greater_than_(get_column_expression(table_wrapper, ColumnID{0}),
+                                       get_column_expression(table_wrapper, ColumnID{1}));
+  auto scan = std::make_shared<TableScan>(table_wrapper, predicate);
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
@@ -452,11 +461,10 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(_int_int_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 0});
+    auto scan = create_table_scan(_int_int_compressed, ColumnID{0}, test.first, 0);
     scan->execute();
 
-    auto scan_partly =
-        std::make_shared<TableScan>(_int_int_partly_compressed, OperatorScanPredicate{ColumnID{0}, test.first, 0});
+    auto scan_partly = create_table_scan(_int_int_partly_compressed, ColumnID{0}, test.first, 0);
     scan_partly->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -466,13 +474,12 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
 
 TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
   auto scan_1 = std::make_shared<TableScan>(get_table_op(),
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 12345});
+                                            greater_than_(get_column_expression(get_table_op(), ColumnID{0}), 12345));
   scan_1->execute();
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(0));
 
   // scan_1 produced an empty result
-  auto scan_2 =
-      std::make_shared<TableScan>(scan_1, OperatorScanPredicate{ColumnID{1}, PredicateCondition::Equals, 456.7});
+  auto scan_2 = std::make_shared<TableScan>(scan_1, equals_(get_column_expression(scan_1, ColumnID{1}), 456.7));
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
@@ -481,24 +488,24 @@ TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
 TEST_P(OperatorsTableScanTest, ScanOnWideDictionarySegment) {
   // 2**8 + 1 values require a data type of 16bit.
   const auto table_wrapper_dict_16 = get_table_op_with_n_dict_entries((1 << 8) + 1);
-  auto scan_1 = std::make_shared<TableScan>(table_wrapper_dict_16,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 200});
+  auto scan_1 = std::make_shared<TableScan>(
+      table_wrapper_dict_16, greater_than_(get_column_expression(table_wrapper_dict_16, ColumnID{0}), 200));
   scan_1->execute();
 
   EXPECT_EQ(scan_1->get_output()->row_count(), static_cast<size_t>(57));
 
   // 2**16 + 1 values require a data type of 32bit.
   const auto table_wrapper_dict_32 = get_table_op_with_n_dict_entries((1 << 16) + 1);
-  auto scan_2 = std::make_shared<TableScan>(table_wrapper_dict_32,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 65500});
+  auto scan_2 = std::make_shared<TableScan>(
+      table_wrapper_dict_32, greater_than_(get_column_expression(table_wrapper_dict_32, ColumnID{0}), 65500));
   scan_2->execute();
 
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(37));
 }
 
 TEST_P(OperatorsTableScanTest, OperatorName) {
-  auto scan_1 = std::make_shared<TableScan>(
-      get_table_op(), OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
+  auto scan_1 = std::make_shared<TableScan>(get_table_op(),
+                                            greater_than_(get_column_expression(get_table_op(), ColumnID{0}), 12345));
 
   EXPECT_EQ(scan_1->name(), "TableScan");
 }
@@ -609,8 +616,7 @@ TEST_P(OperatorsTableScanTest, NullSemantics) {
        PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals});
 
   for (auto predicate_condition : predicate_conditions) {
-    auto scan = std::make_shared<TableScan>(get_table_op_null(),
-                                            OperatorScanPredicate{ColumnID{0}, predicate_condition, NULL_VALUE});
+    auto scan = create_table_scan(get_table_op_null(), ColumnID{0}, predicate_condition, NullValue{});
     scan->execute();
 
     EXPECT_EQ(scan->get_output()->row_count(), 0u);
@@ -624,8 +630,9 @@ TEST_P(OperatorsTableScanTest, NullSemantics) {
 TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   const auto expected = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 102, 104};
 
-  auto scan = std::make_shared<TableScan>(_int_int_partly_compressed,
-                                          OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan = std::make_shared<TableScan>(
+      _int_int_partly_compressed,
+      greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
   scan->set_excluded_chunk_ids({ChunkID{0u}});
   scan->execute();
 
@@ -636,31 +643,54 @@ TEST_P(OperatorsTableScanTest, SetParameters) {
   const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{3}, AllTypeVariant{5}},
                                                                           {ParameterID{2}, AllTypeVariant{6}}};
 
-  const auto scan_a = std::make_shared<TableScan>(
-      _int_int_compressed, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 4});
-  scan_a->set_parameters(parameters);
-  EXPECT_EQ(scan_a->predicate().column_id, ColumnID{0});
-  EXPECT_EQ(scan_a->predicate().value, AllParameterVariant{4});
+  const auto column = get_column_expression(_int_int_compressed, ColumnID{0});
 
+  const auto scan_a = std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, 4));
+  scan_a->set_parameters(parameters);
+  EXPECT_EQ(*scan_a->predicate(), *greater_than_equals_(column, 4));
+
+  const auto parameter_expression_with_value = uncorrelated_parameter_(ParameterID{2});
+  parameter_expression_with_value->set_value(6);
   const auto scan_b = std::make_shared<TableScan>(
-      _int_int_compressed, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, ParameterID{2}});
+      _int_int_compressed, greater_than_equals_(column, uncorrelated_parameter_(ParameterID{2})));
   scan_b->set_parameters(parameters);
-  EXPECT_EQ(scan_b->predicate().column_id, ColumnID{0});
-  EXPECT_EQ(scan_b->predicate().value, AllParameterVariant{6});
+  EXPECT_EQ(*scan_b->predicate(), *greater_than_equals_(column, parameter_expression_with_value));
 
   const auto scan_c = std::make_shared<TableScan>(
-      _int_int_compressed, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, ParameterID{4}});
+      _int_int_compressed, greater_than_equals_(column, uncorrelated_parameter_(ParameterID{4})));
   scan_c->set_parameters(parameters);
-  EXPECT_EQ(scan_c->predicate().column_id, ColumnID{0});
-  EXPECT_EQ(scan_c->predicate().value, AllParameterVariant{ParameterID{4}});
+  EXPECT_EQ(*scan_c->predicate(), *greater_than_equals_(column, uncorrelated_parameter_(ParameterID{4})));
+}
 
-  const auto scan_d = std::make_shared<TableScan>(
-      _int_int_compressed,
-      OperatorScanPredicate{ColumnID{1}, PredicateCondition::Between, ParameterID{2}, ParameterID{3}});
-  scan_d->set_parameters(parameters);
-  EXPECT_EQ(scan_d->predicate().column_id, ColumnID{1});
-  EXPECT_EQ(scan_d->predicate().value, AllParameterVariant{6});
-  EXPECT_EQ(*scan_d->predicate().value2, AllParameterVariant{5});
+TEST_P(OperatorsTableScanTest, GetImpl) {
+  /**
+   * Test that the correct scanning backend is chosen
+   */
+
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
+  const auto column_s = pqp_column_(ColumnID{1}, DataType::String, false, "c");
+  const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
+
+  // clang-format off
+  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnComparisonTableScanImpl*>(TableScan{get_table_op(),
+                                                                     equals_(column_b, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<LikeTableScanImpl*>(TableScan{get_int_string_table_op(),
+                                                         like_(column_s, "%s%")}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_table_op(),
+                                                                        like_("hello", "%s%")}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(),
+                                                                        in_(column_a, list_(1, 2, 3))}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(),
+                                                                        in_(column_a, list_(1, 2, 3))}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), and_(greater_than_(column_a, 5),
+                                                                                             less_than_(column_b,
+                                                                                                        6))}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
+  // clang-format on
 }
 
 }  // namespace opossum

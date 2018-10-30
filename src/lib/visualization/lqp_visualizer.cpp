@@ -54,25 +54,23 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   // Visualize subselects
-  if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
-    for (const auto& column_expression : projection->column_expressions()) {
-      visit_expression(column_expression, [&](const auto& sub_expression) {
-        const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-        if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
+  for (const auto& expression : node->node_expressions()) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
+      if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
 
-        if (!visualized_sub_queries.emplace(lqp_select_expression).second) return ExpressionVisitation::VisitArguments;
+      if (!visualized_sub_queries.emplace(lqp_select_expression).second) return ExpressionVisitation::VisitArguments;
 
-        _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
+      _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
 
-        auto edge_info = _default_edge;
-        auto correlated_str = std::string(lqp_select_expression->is_correlated() ? "correlated" : "uncorrelated");
-        edge_info.label = correlated_str + " subquery";
-        edge_info.style = "dashed";
-        _add_edge(lqp_select_expression->lqp, node, edge_info);
+      auto edge_info = _default_edge;
+      auto correlated_str = std::string(lqp_select_expression->is_correlated() ? "correlated" : "uncorrelated");
+      edge_info.label = correlated_str + " subquery";
+      edge_info.style = "dashed";
+      _add_edge(lqp_select_expression->lqp, node, edge_info);
 
-        return ExpressionVisitation::VisitArguments;
-      });
-    }
+      return ExpressionVisitation::VisitArguments;
+    });
   }
 }
 

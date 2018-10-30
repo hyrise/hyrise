@@ -6,8 +6,10 @@
 #include <vector>
 
 #include "concurrency/transaction_manager.hpp"
+#include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
+#include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
@@ -21,6 +23,8 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -77,6 +81,36 @@ class BaseTestWithParam
     StorageManager::reset();
     TransactionManager::reset();
     SQLQueryCache<SQLQueryPlan>::get().clear();
+  }
+
+  static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,
+                                                                   const ColumnID column_id) {
+    Assert(op->get_output(), "Expected Operator to be executed");
+    const auto output_table = op->get_output();
+    const auto& column_definition = output_table->column_definitions().at(column_id);
+
+    return pqp_column_(column_id, column_definition.data_type, column_definition.nullable, column_definition.name);
+  }
+
+  // Utility to create table scans
+  static std::shared_ptr<TableScan> create_table_scan(const std::shared_ptr<AbstractOperator>& in,
+                                                      const ColumnID column_id,
+                                                      const PredicateCondition predicate_condition,
+                                                      const AllTypeVariant& value,
+                                                      const std::optional<AllTypeVariant>& value2 = std::nullopt) {
+    const auto column_expression = get_column_expression(in, column_id);
+
+    auto predicate = std::shared_ptr<AbstractExpression>{};
+    if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
+      predicate = std::make_shared<IsNullExpression>(predicate_condition, column_expression);
+    } else if (predicate_condition == PredicateCondition::Between) {
+      Assert(value2, "Need value2 for BetweenExpression");
+      predicate = std::make_shared<BetweenExpression>(column_expression, value_(value), value_(*value2));
+    } else {
+      predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(value));
+    }
+
+    return std::make_shared<TableScan>(in, predicate);
   }
 };
 

@@ -389,7 +389,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (auto cluster_number = ClusterID{0}; cluster_number < _cluster_count; ++cluster_number) {
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }, true));
+      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule(static_cast<NodeID>(cluster_number));
     }
 
