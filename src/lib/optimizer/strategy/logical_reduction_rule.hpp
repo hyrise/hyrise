@@ -35,7 +35,7 @@ class LogicalReductionRule : public AbstractRule {
    * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
    */
   static std::shared_ptr<AbstractExpression> reduce_distributivity(
-      const std::shared_ptr<AbstractExpression>& expression);
+      const std::shared_ptr<AbstractExpression>& input_expression);
 };
 
 }  // namespace opossum
