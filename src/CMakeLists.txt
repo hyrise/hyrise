@@ -90,7 +90,7 @@ include_directories(
 )
 
 if (${ENABLE_JIT_SUPPORT})
-    include_directories(${LLVM_INCLUDE_DIR})
+    include_directories(SYSTEM ${LLVM_INCLUDE_DIR})
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
