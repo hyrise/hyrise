@@ -1306,12 +1306,6 @@ void run_estimation_minmax(const std::shared_ptr<const Table> table, const std::
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
-
-          if (predicate_condition != PredicateCondition::Equals) {
-            log("Skipping filter because CQFs can only handle equality predicates...");
-            continue;
-          }
-
           const auto value = pair.second;
 
           const auto actual_count = row_count_by_filter.at(column_id).at(predicate_condition).at(value);
@@ -1400,12 +1394,6 @@ void run_pruning_minmax(const std::shared_ptr<const Table> table, const std::vec
 
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
-
-          if (predicate_condition != PredicateCondition::Equals) {
-            log("Skipping filter because CQFs can only handle equality predicates...");
-            continue;
-          }
-
           const auto value = pair.second;
 
           auto prunable_count = uint64_t{0};
@@ -1508,12 +1496,6 @@ void run_pruning_range(const std::shared_ptr<const Table> table, const std::vect
 
           for (const auto& pair : it.second) {
             const auto predicate_condition = pair.first;
-
-            if (predicate_condition != PredicateCondition::Equals) {
-              log("Skipping filter because CQFs can only handle equality predicates...");
-              continue;
-            }
-
             const auto value = pair.second;
 
             auto prunable_count = uint64_t{0};
