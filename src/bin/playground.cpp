@@ -861,7 +861,7 @@ void print_memory_to_csv(
     const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                  std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
         histograms,
-    const std::vector<std::shared_ptr<RangeFilter<T>>>& filter, const std::string& column_name, const uint64_t num_bins,
+    const std::vector<std::unique_ptr<RangeFilter<T>>>& filter, const std::string& column_name, const uint64_t num_bins,
     std::ofstream& memory_log) {
   for (auto idx = ChunkID{0}; idx < histograms.size(); ++idx) {
     const auto equal_distinct_count_hist = std::get<0>(histograms[idx]);
@@ -1315,7 +1315,7 @@ void run_estimation_minmax(const std::shared_ptr<const Table> table, const std::
           const auto value = pair.second;
 
           const auto actual_count = row_count_by_filter.at(column_id).at(predicate_condition).at(value);
-          const auto minmax_count = minmax->estimate_predicate_with_value(predicate_condition, value);
+          const auto minmax_count = minmax->estimate_predicate_with_value(predicate_condition, value).selectivity * total_count;
           const auto equal_distinct_count_hist_count =
               std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
                               [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
