@@ -124,7 +124,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
     auto current_bin_begin_value = min;
     auto current_bin_begin_it = value_counts.cbegin();
     for (auto current_bin_id = BinID{0}; current_bin_id < bin_count; current_bin_id++) {
-      T next_bin_begin_value = current_bin_begin_value + bin_width;
+      auto next_bin_begin_value = static_cast<T>(current_bin_begin_value + bin_width);
 
       if constexpr (std::is_integral_v<T>) {
         if (current_bin_id < bin_count_with_larger_range) {
@@ -153,7 +153,8 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
       bin_heights[current_bin_id] =
           std::accumulate(current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
                           [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
-      bin_distinct_counts[current_bin_id] = std::distance(current_bin_begin_it, next_bin_begin_it);
+      bin_distinct_counts[current_bin_id] =
+          static_cast<HistogramCountType>(std::distance(current_bin_begin_it, next_bin_begin_it));
 
       current_bin_begin_value = next_bin_begin_value;
       current_bin_begin_it = next_bin_begin_it;

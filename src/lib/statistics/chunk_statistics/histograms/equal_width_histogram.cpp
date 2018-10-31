@@ -96,7 +96,8 @@ EqualWidthBinData<std::string> EqualWidthHistogram<std::string>::_build_bins(
     bin_heights[current_bin_id] = std::accumulate(
         current_bin_begin_it, next_bin_begin_it, HistogramCountType{0},
         [](HistogramCountType a, std::pair<std::string, HistogramCountType> b) { return a + b.second; });
-    bin_distinct_counts[current_bin_id] = std::distance(current_bin_begin_it, next_bin_begin_it);
+    bin_distinct_counts[current_bin_id] =
+        static_cast<HistogramCountType>(std::distance(current_bin_begin_it, next_bin_begin_it));
 
     current_bin_begin_it = next_bin_begin_it;
     repr_current_bin_begin_value = repr_next_bin_begin_value;
@@ -175,9 +176,9 @@ typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_w
     [maybe_unused]] const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  const auto base_width = this->_get_next_value(_bin_data.maximum - _bin_data.minimum) / bin_count();
+  const auto base_width = static_cast<T>(this->_get_next_value(_bin_data.maximum - _bin_data.minimum) / bin_count());
 
-  if constexpr (std::is_integral_v<T>) {  // NOLINT
+  if constexpr (std::is_integral_v<T>) {
     return base_width + (index < _bin_data.bin_count_with_larger_range ? 1 : 0);
   }
 
@@ -226,10 +227,10 @@ T EqualWidthHistogram<T>::_bin_maximum(const BinID index) const {
                              : base + std::min(index, _bin_data.bin_count_with_larger_range - 1u);
     return this->_convert_number_representation_to_string(bin_max);
   } else {
-    const auto base = _bin_data.minimum + (index + 1u) * _bin_width(bin_count() - 1u);
+    const auto base = static_cast<T>(_bin_data.minimum + (index + 1u) * _bin_width(bin_count() - 1u));
     return _bin_data.bin_count_with_larger_range == 0u
                ? previous_value(base)
-               : base + std::min(index, _bin_data.bin_count_with_larger_range - 1u);
+               : base + static_cast<T>(std::min(index, _bin_data.bin_count_with_larger_range - 1u));
   }
 }
 
@@ -270,12 +271,13 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     if (_bin_data.bin_count_with_larger_range == 0u ||
         value <= _bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
       // All bins up to that point have the exact same width, so we can use index 0.
-      return (value - _bin_data.minimum) / _bin_width(0u);
+      return static_cast<BinID>((value - _bin_data.minimum) / _bin_width(0u));
     }
 
     // All bins after that point have the exact same width as well, so we use that as the new base and add it up.
-    return _bin_data.bin_count_with_larger_range + (value - _bin_minimum(_bin_data.bin_count_with_larger_range)) /
-                                                       _bin_width(_bin_data.bin_count_with_larger_range);
+    return _bin_data.bin_count_with_larger_range +
+           static_cast<BinID>((value - _bin_minimum(_bin_data.bin_count_with_larger_range)) /
+                              _bin_width(_bin_data.bin_count_with_larger_range));
   }
 }
 

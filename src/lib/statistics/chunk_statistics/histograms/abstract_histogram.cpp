@@ -120,7 +120,7 @@ T AbstractHistogram<T>::_get_next_value(const T value) const {
 }
 
 template <typename T>
-float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
+double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -152,7 +152,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
+    return static_cast<double>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
   } else {
     const auto bin_min = _bin_minimum(bin_id);
     const auto bin_max = _bin_maximum(bin_id);
@@ -164,7 +164,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
     const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
     const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
     const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-    return static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    return static_cast<double>(value_repr - min_repr) / (max_repr - min_repr + 1);
   }
 }
 
@@ -417,7 +417,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
         // Therefore, we need to sum up the counts of all bins with a max < value.
         index = _next_bin_for_value(value);
       } else {
-        cardinality += _share_of_bin_less_than_value(index, value) * _bin_height(index);
+        cardinality += static_cast<float>(_share_of_bin_less_than_value(index, value)) * _bin_height(index);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.
