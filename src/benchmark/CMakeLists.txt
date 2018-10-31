@@ -59,4 +59,5 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
+    pcm
 )

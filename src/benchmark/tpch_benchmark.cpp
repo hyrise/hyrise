@@ -26,6 +26,15 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/sql_query_plan_visualizer.hpp"
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#include "cpucounters.h"
+#pragma clang diagnostic pop
+#elif __GNUC__
+#include "cpucounters.h"
+#endif
+
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
  * TPC-H *benchmark* exactly as it is specified.
@@ -45,18 +54,24 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
-    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()); // NOLINT
+    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
+    ("pcm", "Add PCM measurements (sudo needed)", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("resetpmu", "Clear PMU registers (sudo needed)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   std::unique_ptr<opossum::BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
+  bool use_pcm;
+  bool reset_pmu;
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
     scale_factor = json_config.value("scale", 0.1f);
     comma_separated_queries = json_config.value("queries", std::string(""));
+    use_pcm = json_config.value("pcm", false);
+    reset_pmu = json_config.value("resetpmu", false);
 
     config = std::make_unique<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
@@ -75,6 +90,8 @@ int main(int argc, char* argv[]) {
       comma_separated_queries = cli_parse_result["queries"].as<std::string>();
     }
 
+    use_pcm = cli_parse_result["pcm"].as<bool>();
+    reset_pmu = cli_parse_result["resetpmu"].as<bool>();
     scale_factor = cli_parse_result["scale"].as<float>();
 
     config =
@@ -108,6 +125,33 @@ int main(int argc, char* argv[]) {
            "TPC-H query 15 is not supported for multithreaded benchmarking.");
   }
 
+  auto number_of_sockets = uint32_t{1};
+  auto links_per_socket = uint64_t{1};
+
+  PCM * pcm = nullptr;
+
+  if (reset_pmu) {
+    config->out << std::endl << "Clearing PMU registers" << std::endl;
+    pcm = PCM::getInstance();
+    pcm->resetPMU();
+    exit(0);
+  }
+
+  if (use_pcm) {
+    // Initialize PCM lib
+    config->out << std::endl << "Initializing PCM lib" << std::endl;
+    pcm = PCM::getInstance();
+    PCM::ErrorCode returnResult = pcm->program();
+    if (returnResult != PCM::Success){
+      std::cerr << "PCM couldn't start" << std::endl;
+      std::cerr << "Error code: " << returnResult << std::endl;
+      exit(1);
+    }
+    number_of_sockets = pcm->getNumSockets();
+    links_per_socket = pcm->getQPILinksPerSocket();
+    config->out << std::endl;
+  }
+
   // Set up TPCH benchmark
   opossum::NamedQueries queries;
   queries.reserve(query_ids.size());
@@ -131,9 +175,21 @@ int main(int argc, char* argv[]) {
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
+  if (use_pcm) {
+    // Add NUMA-specific information
+    context.emplace("number_of_sockets", number_of_sockets);
+    context.emplace("links_per_socket", links_per_socket);
+  }
+
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
 
   // Run the benchmark
   opossum::BenchmarkRunner(*config, queries, context).run();
+
+  if (use_pcm) {
+    // Deinitialize PCM lib (IMPORTANT!!)
+    config->out << std::endl << "Cleaning up PCM lib" << std::endl;
+    pcm->cleanup();
+  }
 }
