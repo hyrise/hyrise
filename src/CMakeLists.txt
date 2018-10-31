@@ -98,8 +98,8 @@ if (${ENABLE_JIT_SUPPORT})
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
-    include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
-    include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
+    include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
+    include_directories(SYSTEM ${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
