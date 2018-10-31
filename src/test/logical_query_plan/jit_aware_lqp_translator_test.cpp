@@ -8,6 +8,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
@@ -260,14 +261,14 @@ TEST_F(JitAwareLQPTranslatorTest, ConsecutivePredicatesGetTransformedToConjuncti
   ASSERT_EQ(jit_operator_wrapper->jit_operators().size(), 5u);
 
   const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
-  const auto jit_compute = std::dynamic_pointer_cast<JitCompute>(jit_operators[1]);
-  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[2]);
-  const auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operators[3]);
+  const auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operators[1]);
+  const auto jit_compute = std::dynamic_pointer_cast<JitCompute>(jit_operators[2]);
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[3]);
   const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[4]);
   ASSERT_NE(jit_read_tuples, nullptr);
+  ASSERT_NE(jit_validate, nullptr);
   ASSERT_NE(jit_compute, nullptr);
   ASSERT_NE(jit_filter, nullptr);
-  ASSERT_NE(jit_validate, nullptr);
   ASSERT_NE(jit_write_tuples, nullptr);
 
   // Check the structure of the computed expression
@@ -358,6 +359,52 @@ TEST_F(JitAwareLQPTranslatorTest, UnionsGetTransformedToDisjunction) {
   ASSERT_EQ(jit_filter->condition(), expression->result());
 }
 
+TEST_F(JitAwareLQPTranslatorTest, CheckOperatorOrderValidateAfterFilter) {
+  const auto lqp = ValidateNode::make(
+      PredicateNode::make(greater_than_(a_a, a_b), PredicateNode::make(greater_than_(a_b, a_c), stored_table_node_a)));
+
+  const auto jit_operator_wrapper = translate_lqp(lqp);
+  ASSERT_NE(jit_operator_wrapper, nullptr);
+
+  // Check the type of jit operators in the operator pipeline
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+  ASSERT_EQ(jit_operators.size(), 5u);
+
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  const auto jit_compute = std::dynamic_pointer_cast<JitCompute>(jit_operators[1]);
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[2]);
+  const auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operators[3]);
+  const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[4]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  ASSERT_NE(jit_compute, nullptr);
+  ASSERT_NE(jit_filter, nullptr);
+  ASSERT_NE(jit_validate, nullptr);
+  ASSERT_NE(jit_write_tuples, nullptr);
+}
+
+TEST_F(JitAwareLQPTranslatorTest, CheckOperatorOrderValidateBeforeFilter) {
+  const auto lqp = PredicateNode::make(
+      greater_than_(a_a, a_b), PredicateNode::make(greater_than_(a_b, a_c), ValidateNode::make(stored_table_node_a)));
+
+  const auto jit_operator_wrapper = translate_lqp(lqp);
+  ASSERT_NE(jit_operator_wrapper, nullptr);
+
+  // Check the type of jit operators in the operator pipeline
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+  ASSERT_EQ(jit_operators.size(), 5u);
+
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  const auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operators[1]);
+  const auto jit_compute = std::dynamic_pointer_cast<JitCompute>(jit_operators[2]);
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[3]);
+  const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[4]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  ASSERT_NE(jit_validate, nullptr);
+  ASSERT_NE(jit_compute, nullptr);
+  ASSERT_NE(jit_filter, nullptr);
+  ASSERT_NE(jit_write_tuples, nullptr);
+}
+
 TEST_F(JitAwareLQPTranslatorTest, AMoreComplexQuery) {
   const auto jit_operator_wrapper = translate_query("SELECT a, (a + b) * c FROM table_a WHERE a <= b AND b > a + c");
   ASSERT_NE(jit_operator_wrapper, nullptr);
@@ -367,15 +414,15 @@ TEST_F(JitAwareLQPTranslatorTest, AMoreComplexQuery) {
   ASSERT_EQ(jit_operator_wrapper->jit_operators().size(), 6u);
 
   const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
-  const auto jit_compute_1 = std::dynamic_pointer_cast<JitCompute>(jit_operators[1]);
-  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[2]);
-  const auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operators[3]);
+  const auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operators[1]);
+  const auto jit_compute_1 = std::dynamic_pointer_cast<JitCompute>(jit_operators[2]);
+  const auto jit_filter = std::dynamic_pointer_cast<JitFilter>(jit_operators[3]);
   const auto jit_compute_2 = std::dynamic_pointer_cast<JitCompute>(jit_operators[4]);
   const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[5]);
   ASSERT_NE(jit_read_tuples, nullptr);
+  ASSERT_NE(jit_validate, nullptr);
   ASSERT_NE(jit_compute_1, nullptr);
   ASSERT_NE(jit_filter, nullptr);
-  ASSERT_NE(jit_validate, nullptr);
   ASSERT_NE(jit_compute_2, nullptr);
   ASSERT_NE(jit_write_tuples, nullptr);
 

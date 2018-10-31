@@ -98,7 +98,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
     const auto is_root_node = current_node == node;
     if (_node_is_jittable(current_node, is_root_node)) {
       has_validate |= current_node->type == LQPNodeType::Validate;
-      validate_after_filter |= !has_validate && current_node->type == LQPNodeType::Predicate;
+      validate_after_filter |= has_validate && current_node->type == LQPNodeType::Predicate;
       if (count_node(current_node)) ++jittable_node_count;
       return true;
     } else {
