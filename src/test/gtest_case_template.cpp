@@ -13,7 +13,7 @@ class OpossumTestTemplate : public BaseTest {
     // You can do set-up work for each test here.
   }
 
-  virtual ~OpossumTestTemplate() {
+  ~OpossumTestTemplate() override {
     // You can do clean-up work that doesn't throw exceptions here.
   }
 

@@ -34,7 +34,7 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 
   static constexpr auto chunk_size = uint32_t{10};
 
-  std::shared_ptr<GetTable>(gt);
+  std::shared_ptr<GetTable> gt;
   std::shared_ptr<Table> t;
   std::shared_ptr<Validate> validate;
 };

@@ -7,7 +7,6 @@
 
 #include "jit_runtime_pointer.hpp"
 
-#pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wshadow-all"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
 

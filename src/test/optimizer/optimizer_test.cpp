@@ -48,7 +48,7 @@ TEST_F(OptimizerTest, RuleBatches) {
       return num_iterations != 0;
     }
 
-    mutable uint32_t num_iterations;
+    mutable size_t num_iterations;
   };
 
   auto iterative_rule_a = std::make_shared<MockRule>(4u);

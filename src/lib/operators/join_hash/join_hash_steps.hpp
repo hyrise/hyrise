@@ -338,7 +338,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 
         // simple heuristic to estimate result size: half of the partition's rows will match
         // a more conservative pre-allocation would be the size of the left cluster
-        const size_t expected_output_size = static_cast<size_t>(std::max(10.0, std::ceil((partition_end - partition_begin) / 2)));
+        const size_t expected_output_size =
+            static_cast<size_t>(std::max(10.0, std::ceil((partition_end - partition_begin) / 2)));
         pos_list_left_local.reserve(static_cast<size_t>(expected_output_size));
         pos_list_right_local.reserve(static_cast<size_t>(expected_output_size));
 

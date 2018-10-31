@@ -155,7 +155,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
 
   int rc;
   for (const auto& query : queries_before_select) {
-    rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
+    rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, nullptr);
 
     if (rc != SQLITE_OK) {
       sqlite3_finalize(result_row);
@@ -167,7 +167,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
     }
   }
 
-  rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
+  rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, nullptr);
 
   if (rc != SQLITE_OK) {
     auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db));
@@ -290,7 +290,7 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
 
 void SQLiteWrapper::_exec_sql(const std::string& sql) const {
   char* err_msg;
-  auto rc = sqlite3_exec(_db, sql.c_str(), 0, 0, &err_msg);
+  auto rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (rc != SQLITE_OK) {
     auto msg = std::string(err_msg);

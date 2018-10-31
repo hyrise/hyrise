@@ -76,7 +76,8 @@ void SimdBp128Compressor::_pack_incomplete_meta_block() {
   _write_meta_info(bits_needed);
 
   // Returns ceiling of integer division
-  const auto num_blocks_left = (_meta_block_index + Packing::block_size - 1) / Packing::block_size;
+  const auto num_blocks_left =
+      static_cast<uint8_t>((_meta_block_index + Packing::block_size - 1) / Packing::block_size);
 
   _pack_blocks(num_blocks_left, bits_needed);
 }

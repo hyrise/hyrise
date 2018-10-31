@@ -292,8 +292,7 @@ class RadixClusterSort {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wconversion"
-// TODO(anyone): issue #1208
-
+      // TODO(anyone): issue #1208
 
       split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
                                                   // second is the count of the value

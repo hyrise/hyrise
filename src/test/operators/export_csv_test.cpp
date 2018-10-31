@@ -39,9 +39,9 @@ class OperatorsExportCsvTest : public BaseTest {
     return file.good();
   }
 
-  bool compare_file(const std::string& filename, const std::string& expected_content) {
-    std::ifstream t(filename);
-    Assert(t.is_open(), "compare_file: Could not find file " + filename);
+  bool compare_file(const std::string& file, const std::string& expected_content) {
+    std::ifstream t(file);
+    Assert(t.is_open(), "compare_file: Could not find file " + file);
 
     std::string content((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 

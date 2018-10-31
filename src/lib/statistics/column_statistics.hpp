@@ -7,6 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "base_column_statistics.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -16,8 +17,8 @@ namespace opossum {
 template <typename ColumnDataType>
 class ColumnStatistics : public BaseColumnStatistics {
  public:
-  ColumnStatistics(const float null_value_ratio, const float distinct_count,
-                                                     const ColumnDataType min, const ColumnDataType max)
+  ColumnStatistics(const float null_value_ratio, const float distinct_count, const ColumnDataType min,
+                   const ColumnDataType max)
       : BaseColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
         _min(min),
         _max(max) {

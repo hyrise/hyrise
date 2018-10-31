@@ -31,17 +31,17 @@ class RangeFilterTest : public ::testing::Test {
     _after_range = _max_value + 1;   // value larger than the maximum
   }
 
-  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(size_t gap_count, pmr_vector<T> value) {
+  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(size_t gap_count, pmr_vector<T> values) {
     // RangeFilter constructor takes range count, not gap count
-    auto filter = RangeFilter<T>::build_filter(_values, gap_count + 1);
+    auto filter = RangeFilter<T>::build_filter(values, static_cast<uint32_t>(gap_count + 1));
 
-    for (const auto& value : _values) {
+    for (const auto& value : values) {
       EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
     }
 
     // Find `gap_count` largest gaps. We use an std::{{set}} to discard repeated
     // values and directly iterate over an sorted order.
-    auto value_set = std::set<T>(_values.begin(), _values.end(), std::less<T>());
+    auto value_set = std::set<T>(values.begin(), values.end(), std::less<T>());
     std::vector<std::pair<T, T>> begin_length_pairs;
 
     for (auto it = value_set.begin(); it != std::prev(value_set.end()); ++it) {

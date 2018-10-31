@@ -31,7 +31,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that compiles the given SQL query.
-  void BM_CompileQuery(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_CompileQuery(benchmark::State& st) {  // NOLINT
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -41,7 +41,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that only parses the given SQL query.
-  void BM_ParseQuery(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_ParseQuery(benchmark::State& st) {  // NOLINT
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -49,7 +49,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that only plans the given SQL query.
-  void BM_PlanQuery(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_PlanQuery(benchmark::State& st) {  // NOLINT
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
@@ -59,7 +59,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
-  void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_QueryPlanCache(benchmark::State& st) {  // NOLINT
     // Enable query plan cache.
     SQLQueryCache<SQLQueryPlan>::get().clear();
     SQLQueryCache<SQLQueryPlan>::get().resize(16);
@@ -81,9 +81,9 @@ class SQLBenchmark : public BenchmarkBasicFixture {
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 };
 
-BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st, query); }
-BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st, query); }
-BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st, query); }
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st, query); }
+BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st); }
 
 }  // namespace opossum

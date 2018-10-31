@@ -73,14 +73,14 @@ BaseIndex::Iterator ARTNode4::_delegate_to_child(
 }
 
 BaseIndex::Iterator ARTNode4::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
-  return _delegate_to_child(key, depth, [this](size_t i, AdaptiveRadixTreeIndex::BinaryComparable key, size_t depth) {
-    return _children[i]->lower_bound(key, depth);
+  return _delegate_to_child(key, depth, [this](size_t i, AdaptiveRadixTreeIndex::BinaryComparable key2, size_t depth2) {
+    return _children[i]->lower_bound(key2, depth2);
   });
 }
 
 BaseIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
-  return _delegate_to_child(key, depth, [this](size_t i, AdaptiveRadixTreeIndex::BinaryComparable key, size_t depth) {
-    return _children[i]->upper_bound(key, depth);
+  return _delegate_to_child(key, depth, [this](size_t i, AdaptiveRadixTreeIndex::BinaryComparable key2, size_t depth2) {
+    return _children[i]->upper_bound(key2, depth2);
   });
 }
 
@@ -163,16 +163,16 @@ BaseIndex::Iterator ARTNode16::lower_bound(const AdaptiveRadixTreeIndex::BinaryC
   return _delegate_to_child(
       key, depth,
       [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-             AdaptiveRadixTreeIndex::BinaryComparable key,
-             size_t depth) { return _children[partial_key_pos]->lower_bound(key, depth); });
+             AdaptiveRadixTreeIndex::BinaryComparable key2,
+             size_t depth2) { return _children[partial_key_pos]->lower_bound(key2, depth2); });
 }
 
 BaseIndex::Iterator ARTNode16::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
   return _delegate_to_child(
       key, depth,
       [this](std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type partial_key_pos,
-             AdaptiveRadixTreeIndex::BinaryComparable key,
-             size_t depth) { return _children[partial_key_pos]->upper_bound(key, depth); });
+             AdaptiveRadixTreeIndex::BinaryComparable key2,
+             size_t depth2) { return _children[partial_key_pos]->upper_bound(key2, depth2); });
 }
 
 BaseIndex::Iterator ARTNode16::begin() const { return _children[0]->begin(); }
@@ -265,15 +265,15 @@ BaseIndex::Iterator ARTNode48::_delegate_to_child(
 
 BaseIndex::Iterator ARTNode48::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
   return _delegate_to_child(key, depth,
-                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key, size_t depth) {
-                              return _children[_index_to_child[partial_key]]->lower_bound(key, depth);
+                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key2, size_t depth2) {
+                              return _children[_index_to_child[partial_key]]->lower_bound(key2, depth2);
                             });
 }
 
 BaseIndex::Iterator ARTNode48::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
   return _delegate_to_child(key, depth,
-                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key, size_t depth) {
-                              return _children[_index_to_child[partial_key]]->upper_bound(key, depth);
+                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key2, size_t depth2) {
+                              return _children[_index_to_child[partial_key]]->upper_bound(key2, depth2);
                             });
 }
 
@@ -287,7 +287,7 @@ BaseIndex::Iterator ARTNode48::begin() const {
 }
 
 BaseIndex::Iterator ARTNode48::end() const {
-  for (uint8_t i = _index_to_child.size() - 1; i > 0; --i) {
+  for (uint8_t i = static_cast<uint8_t>(_index_to_child.size()) - 1; i > 0; --i) {
     if (_index_to_child[i] != INVALID_INDEX) {
       return _children[_index_to_child[i]]->begin();
     }
@@ -350,15 +350,15 @@ BaseIndex::Iterator ARTNode256::_delegate_to_child(
 
 BaseIndex::Iterator ARTNode256::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
   return _delegate_to_child(key, depth,
-                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key, size_t depth) {
-                              return _children[partial_key]->upper_bound(key, depth);
+                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key2, size_t depth2) {
+                              return _children[partial_key]->upper_bound(key2, depth2);
                             });
 }
 
 BaseIndex::Iterator ARTNode256::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
   return _delegate_to_child(key, depth,
-                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key, size_t depth) {
-                              return _children[partial_key]->lower_bound(key, depth);
+                            [this](uint8_t partial_key, AdaptiveRadixTreeIndex::BinaryComparable key2, size_t depth2) {
+                              return _children[partial_key]->lower_bound(key2, depth2);
                             });
 }
 
@@ -372,7 +372,7 @@ BaseIndex::Iterator ARTNode256::begin() const {
 }
 
 BaseIndex::Iterator ARTNode256::end() const {
-  for (int16_t i = _children.size() - 1; i >= 0; --i) {
+  for (int16_t i = static_cast<int16_t>(_children.size()) - 1; i >= 0; --i) {
     if (_children[i] != nullptr) {
       return _children[i]->begin();
     }

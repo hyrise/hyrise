@@ -73,7 +73,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   for (ChunkOffset chunk_offset = 0; chunk_offset < segment_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
     for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
-      concatenated_key.shift_and_set(decompressor->get(chunk_offset), byte_width * CHAR_BIT);
+      concatenated_key.shift_and_set(decompressor->get(chunk_offset), static_cast<uint8_t>(byte_width * CHAR_BIT));
     }
     keys[chunk_offset] = std::move(concatenated_key);
     _position_list[chunk_offset] = chunk_offset;
@@ -83,7 +83,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   std::sort(_position_list.begin(), _position_list.end(),
             [&keys](auto left, auto right) { return keys[left] < keys[right]; });
 
-  _keys = VariableLengthKeyStore(segment_size, bytes_per_key);
+  _keys = VariableLengthKeyStore(static_cast<ChunkOffset>(segment_size), bytes_per_key);
   for (ChunkOffset chunk_offset = 0; chunk_offset < segment_size; ++chunk_offset) {
     _keys[chunk_offset] = keys[_position_list[chunk_offset]];
   }
@@ -125,7 +125,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
     auto partial_key = _indexed_segments[column_id]->lower_bound(values[column_id]);
     auto bits_of_partial_key =
         byte_width_for_fixed_size_byte_aligned_type(_indexed_segments[column_id]->compressed_vector_type()) * CHAR_BIT;
-    result.shift_and_set(partial_key, bits_of_partial_key);
+    result.shift_and_set(partial_key, static_cast<uint8_t>(bits_of_partial_key));
   }
 
   // retrieve the partial key for the last value (depending on whether we have a lower- or upper-bound-query)
@@ -135,7 +135,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
                                       : segment_for_last_value->lower_bound(values.back());
   auto bits_of_partial_key =
       byte_width_for_fixed_size_byte_aligned_type(segment_for_last_value->compressed_vector_type()) * CHAR_BIT;
-  result.shift_and_set(partial_key, bits_of_partial_key);
+  result.shift_and_set(partial_key, static_cast<uint8_t>(bits_of_partial_key));
 
   // fill empty space of key with zeros if less values than segments were provided
   auto empty_bits = std::accumulate(

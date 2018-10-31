@@ -67,10 +67,11 @@ class JoinHashTest : public BaseTest {
 };
 
 size_t JoinHashTest::_table_size_zero_one = 0;
-std::shared_ptr<Table> JoinHashTest::_table_zero_one = NULL;
+std::shared_ptr<Table> JoinHashTest::_table_zero_one = nullptr;
 std::shared_ptr<TableWrapper> JoinHashTest::_table_wrapper_small, JoinHashTest::_table_tpch_orders,
-    JoinHashTest::_table_tpch_lineitems, JoinHashTest::_table_with_nulls = NULL;
-std::shared_ptr<TableScan> JoinHashTest::_table_tpch_orders_scanned, JoinHashTest::_table_tpch_lineitems_scanned = NULL;
+    JoinHashTest::_table_tpch_lineitems, JoinHashTest::_table_with_nulls = nullptr;
+std::shared_ptr<TableScan> JoinHashTest::_table_tpch_orders_scanned,
+    JoinHashTest::_table_tpch_lineitems_scanned = nullptr;
 
 TEST_F(JoinHashTest, OperatorName) {
   auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
