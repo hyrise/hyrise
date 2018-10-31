@@ -752,7 +752,7 @@ std::vector<std::shared_ptr<MinMaxFilter<T>>> create_minmax_for_column(const std
 }
 
 template <typename T>
-std::shared_ptr<RangeFilter<T>> build_rangefilter(const std::shared_ptr<const BaseSegment>& segment,
+std::unique_ptr<RangeFilter<T>> build_rangefilter(const std::shared_ptr<const BaseSegment>& segment,
                                                   const size_t bin_count) {
   const auto distinct_set = get_distinct_values<T>(segment);
   auto dictionary = pmr_vector<T>{distinct_set.cbegin(), distinct_set.cend()};
@@ -761,10 +761,10 @@ std::shared_ptr<RangeFilter<T>> build_rangefilter(const std::shared_ptr<const Ba
 }
 
 template <typename T>
-std::vector<std::shared_ptr<RangeFilter<T>>> create_rangefilter_for_column(const std::shared_ptr<const Table> table,
+std::vector<std::unique_ptr<RangeFilter<T>>> create_rangefilter_for_column(const std::shared_ptr<const Table> table,
                                                                            const ColumnID column_id,
                                                                            const size_t bin_count) {
-  std::vector<std::shared_ptr<RangeFilter<T>>> filter;
+  std::vector<std::unique_ptr<RangeFilter<T>>> filter;
 
   for (const auto chunk : table->chunks()) {
     filter.emplace_back(build_rangefilter<T>(chunk->get_segment(column_id), bin_count));
@@ -1300,7 +1300,7 @@ void run_estimation_minmax(const std::shared_ptr<const Table> table, const std::
       resolve_data_type(column_data_type, [&](auto type) {
         using T = typename decltype(type)::type;
 
-        const auto minmax = generate_column_statistics<T>(table, column_id);
+        const auto minmax = generate_column_statistics<T>(*table, column_id);
         const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
         print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
 
