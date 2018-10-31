@@ -16,6 +16,8 @@ class MinMaxFilter : public AbstractFilter {
   explicit MinMaxFilter(T min, T max) : _min(min), _max(max) {}
   ~MinMaxFilter() override = default;
 
+  size_t estimated_memory_footprint() const { return 2 * sizeof(T); }
+
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
     const auto value = type_cast<T>(variant_value);

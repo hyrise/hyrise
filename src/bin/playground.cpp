@@ -24,10 +24,14 @@
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
+#include "statistics/base_column_statistics.hpp"
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
+#include "statistics/chunk_statistics/min_max_filter.hpp"
+#include "statistics/chunk_statistics/range_filter.hpp"
+#include "statistics/generate_column_statistics.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 #include "utils/filesystem.hpp"
@@ -729,6 +733,47 @@ std::vector<std::shared_ptr<CountingQuotientFilter<T>>> create_cqfs_for_column(c
 }
 
 template <typename T>
+std::shared_ptr<MinMaxFilter<T>> build_minmax(const std::shared_ptr<const BaseSegment>& segment) {
+  const auto distinct_values = get_distinct_values<T>(segment);
+  const auto [min, max] = std::minmax_element(distinct_values.cbegin(), distinct_values.cend());
+  return std::make_shared<MinMaxFilter<T>>(*min, *max);
+}
+
+template <typename T>
+std::vector<std::shared_ptr<MinMaxFilter<T>>> create_minmax_for_column(const std::shared_ptr<const Table> table,
+                                                                       const ColumnID column_id) {
+  std::vector<std::shared_ptr<MinMaxFilter<T>>> filter;
+
+  for (const auto chunk : table->chunks()) {
+    filter.emplace_back(build_minmax<T>(chunk->get_segment(column_id)));
+  }
+
+  return filter;
+}
+
+template <typename T>
+std::shared_ptr<RangeFilter<T>> build_rangefilter(const std::shared_ptr<const BaseSegment>& segment,
+                                                  const size_t bin_count) {
+  const auto distinct_set = get_distinct_values<T>(segment);
+  auto dictionary = pmr_vector<T>{distinct_set.cbegin(), distinct_set.cend()};
+  std::sort(dictionary.begin(), dictionary.end());
+  return RangeFilter<T>::build_filter(dictionary, bin_count);
+}
+
+template <typename T>
+std::vector<std::shared_ptr<RangeFilter<T>>> create_rangefilter_for_column(const std::shared_ptr<const Table> table,
+                                                                           const ColumnID column_id,
+                                                                           const size_t bin_count) {
+  std::vector<std::shared_ptr<RangeFilter<T>>> filter;
+
+  for (const auto chunk : table->chunks()) {
+    filter.emplace_back(build_rangefilter<T>(chunk->get_segment(column_id), bin_count));
+  }
+
+  return filter;
+}
+
+template <typename T>
 void print_bins_to_csv(
     const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
                                  std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
@@ -765,16 +810,74 @@ void print_memory_to_csv(
       continue;
     }
 
+    const auto equal_height_hist = std::get<1>(histograms[idx]);
+    const auto equal_width_hist = std::get<2>(histograms[idx]);
+
     memory_log << column_name << ",";
     memory_log << num_bins << ",";
     memory_log << idx << ",";
 
-    if (!cqfs.empty()) {
-      memory_log << cqfs[idx]->memory_consumption() << ",";
+    memory_log << cqfs[idx]->memory_consumption() << ",";
+
+    memory_log << equal_height_hist->estimated_memory_footprint() << ",";
+    memory_log << equal_distinct_count_hist->estimated_memory_footprint() << ",";
+    memory_log << equal_width_hist->estimated_memory_footprint() << "\n";
+    memory_log.flush();
+  }
+}
+
+template <typename T>
+void print_memory_to_csv(
+    const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                 std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
+        histograms,
+    const std::vector<std::shared_ptr<MinMaxFilter<T>>>& filter, const std::string& column_name,
+    const uint64_t num_bins, std::ofstream& memory_log) {
+  for (auto idx = ChunkID{0}; idx < histograms.size(); ++idx) {
+    const auto equal_distinct_count_hist = std::get<0>(histograms[idx]);
+
+    if (!equal_distinct_count_hist) {
+      continue;
     }
 
     const auto equal_height_hist = std::get<1>(histograms[idx]);
     const auto equal_width_hist = std::get<2>(histograms[idx]);
+
+    memory_log << column_name << ",";
+    memory_log << num_bins << ",";
+    memory_log << idx << ",";
+
+    memory_log << filter[idx]->estimated_memory_footprint() << ",";
+
+    memory_log << equal_height_hist->estimated_memory_footprint() << ",";
+    memory_log << equal_distinct_count_hist->estimated_memory_footprint() << ",";
+    memory_log << equal_width_hist->estimated_memory_footprint() << "\n";
+    memory_log.flush();
+  }
+}
+
+template <typename T>
+void print_memory_to_csv(
+    const std::vector<std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                 std::shared_ptr<EqualHeightHistogram<T>>, std::shared_ptr<EqualWidthHistogram<T>>>>&
+        histograms,
+    const std::vector<std::shared_ptr<RangeFilter<T>>>& filter, const std::string& column_name, const uint64_t num_bins,
+    std::ofstream& memory_log) {
+  for (auto idx = ChunkID{0}; idx < histograms.size(); ++idx) {
+    const auto equal_distinct_count_hist = std::get<0>(histograms[idx]);
+
+    if (!equal_distinct_count_hist) {
+      continue;
+    }
+
+    const auto equal_height_hist = std::get<1>(histograms[idx]);
+    const auto equal_width_hist = std::get<2>(histograms[idx]);
+
+    memory_log << column_name << ",";
+    memory_log << num_bins << ",";
+    memory_log << idx << ",";
+
+    memory_log << filter[idx]->estimated_memory_footprint() << ",";
 
     memory_log << equal_height_hist->estimated_memory_footprint() << ",";
     memory_log << equal_distinct_count_hist->estimated_memory_footprint() << ",";
@@ -1174,6 +1277,312 @@ void run_pruning_cqf(const std::shared_ptr<const Table> table, const std::vector
   }
 }
 
+void run_estimation_minmax(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+                           const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                           std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
+  log("Running MinMax estimation...");
+
+  const auto chunk_size = table->max_chunk_size();
+  const auto filters_by_column = get_filters_by_column(filters);
+  const auto row_count_by_filter = get_row_count_for_filters(table, filters_by_column);
+  const auto distinct_count_by_column = get_distinct_count_by_column(table, filters_by_column);
+  const auto total_count = table->row_count();
+
+  for (auto num_bins : num_bins_list) {
+    log("  " + std::to_string(num_bins) + " bins...");
+
+    for (auto it : filters_by_column) {
+      const auto column_id = it.first;
+      const auto distinct_count = distinct_count_by_column.at(column_id);
+      const auto column_name = table->column_name(column_id);
+
+      const auto column_data_type = table->column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using T = typename decltype(type)::type;
+
+        const auto minmax = generate_column_statistics<T>(table, column_id);
+        const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
+        print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
+
+        for (const auto& pair : it.second) {
+          const auto predicate_condition = pair.first;
+
+          if (predicate_condition != PredicateCondition::Equals) {
+            log("Skipping filter because CQFs can only handle equality predicates...");
+            continue;
+          }
+
+          const auto value = pair.second;
+
+          const auto actual_count = row_count_by_filter.at(column_id).at(predicate_condition).at(value);
+          const auto minmax_count = minmax->estimate_predicate_with_value(predicate_condition, value);
+          const auto equal_distinct_count_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
+
+          const auto equal_height_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
+
+          const auto equal_width_hist_count =
+              std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                              [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                            std::shared_ptr<EqualHeightHistogram<T>>,
+                                                            std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->estimate_cardinality(predicate_condition, value);
+                              });
+
+          result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
+                     << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
+                     << std::to_string(actual_count) << "," << std::to_string(minmax_count) << ","
+                     << std::to_string(equal_height_hist_count) << ","
+                     << std::to_string(equal_distinct_count_hist_count) << "," << std::to_string(equal_width_hist_count)
+                     << "\n";
+          result_log.flush();
+        }
+      });
+    }
+  }
+}
+
+void run_pruning_minmax(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+                        const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                        std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
+  log("Running MinMax pruning...");
+
+  const auto chunk_size = table->max_chunk_size();
+  const auto filters_by_column = get_filters_by_column(filters);
+  const auto prunable_by_filter = get_prunable_for_filters(table, filters_by_column);
+  const auto distinct_count_by_column = get_distinct_count_by_column(table, filters_by_column);
+  const auto total_count = table->row_count();
+
+  for (auto num_bins : num_bins_list) {
+    log("  " + std::to_string(num_bins) + " bins...");
+
+    for (auto it : filters_by_column) {
+      const auto column_id = it.first;
+      const auto distinct_count = distinct_count_by_column.at(column_id);
+      const auto column_name = table->column_name(column_id);
+
+      const auto column_data_type = table->column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using T = typename decltype(type)::type;
+
+        const auto filter = create_minmax_for_column<T>(table, column_id);
+        const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
+        print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
+        print_memory_to_csv<T>(histograms, filter, column_name, num_bins, memory_log);
+
+        for (const auto& pair : it.second) {
+          const auto predicate_condition = pair.first;
+
+          if (predicate_condition != PredicateCondition::Equals) {
+            log("Skipping filter because CQFs can only handle equality predicates...");
+            continue;
+          }
+
+          const auto value = pair.second;
+
+          auto prunable_count = uint64_t{0};
+          const auto prunable_column_it = prunable_by_filter.find(column_id);
+          if (prunable_column_it != prunable_by_filter.end()) {
+            const auto prunable_predicate_it = prunable_column_it->second.find(predicate_condition);
+            if (prunable_predicate_it != prunable_column_it->second.end()) {
+              const auto prunable_value_it = prunable_predicate_it->second.find(value);
+              if (prunable_value_it != prunable_predicate_it->second.end()) {
+                prunable_count = prunable_value_it->second;
+              }
+            }
+          }
+
+          const auto minmax_prunable = std::accumulate(filter.cbegin(), filter.cend(), uint64_t{0},
+                                                       [&](uint64_t a, const std::shared_ptr<MinMaxFilter<T>>& b) {
+                                                         return a + b->can_prune(predicate_condition, value);
+                                                       });
+          const auto equal_distinct_count_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+
+          const auto equal_height_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+
+          const auto equal_width_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+
+          result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
+                     << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
+                     << std::to_string(prunable_count) << "," << std::to_string(minmax_prunable) << ","
+                     << std::to_string(equal_height_hist_prunable) << ","
+                     << std::to_string(equal_distinct_count_hist_prunable) << ","
+                     << std::to_string(equal_width_hist_prunable) << "\n";
+          result_log.flush();
+        }
+      });
+    }
+  }
+}
+
+void run_pruning_range(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+                       const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                       std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
+  log("Running Range pruning...");
+
+  const auto chunk_size = table->max_chunk_size();
+  const auto filters_by_column = get_filters_by_column(filters);
+  const auto prunable_by_filter = get_prunable_for_filters(table, filters_by_column);
+  const auto distinct_count_by_column = get_distinct_count_by_column(table, filters_by_column);
+  const auto total_count = table->row_count();
+
+  for (auto num_bins : num_bins_list) {
+    log("  " + std::to_string(num_bins) + " bins...");
+
+    for (auto it : filters_by_column) {
+      const auto column_id = it.first;
+      const auto distinct_count = distinct_count_by_column.at(column_id);
+      const auto column_name = table->column_name(column_id);
+
+      const auto column_data_type = table->column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using T = typename decltype(type)::type;
+
+        const auto filter = create_rangefilter_for_column<T>(table, column_id, num_bins);
+        const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
+        print_bins_to_csv<T>(histograms, column_name, num_bins, bin_log);
+        print_memory_to_csv<T>(histograms, filter, column_name, num_bins, memory_log);
+
+        for (const auto& pair : it.second) {
+          const auto predicate_condition = pair.first;
+
+          if (predicate_condition != PredicateCondition::Equals) {
+            log("Skipping filter because CQFs can only handle equality predicates...");
+            continue;
+          }
+
+          const auto value = pair.second;
+
+          auto prunable_count = uint64_t{0};
+          const auto prunable_column_it = prunable_by_filter.find(column_id);
+          if (prunable_column_it != prunable_by_filter.end()) {
+            const auto prunable_predicate_it = prunable_column_it->second.find(predicate_condition);
+            if (prunable_predicate_it != prunable_column_it->second.end()) {
+              const auto prunable_value_it = prunable_predicate_it->second.find(value);
+              if (prunable_value_it != prunable_predicate_it->second.end()) {
+                prunable_count = prunable_value_it->second;
+              }
+            }
+          }
+
+          const auto range_prunable = std::accumulate(filter.cbegin(), filter.cend(), uint64_t{0},
+                                                      [&](uint64_t a, const std::shared_ptr<RangeFilter<T>>& b) {
+                                                        return a + b->can_prune(predicate_condition, value);
+                                                      });
+          const auto equal_distinct_count_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+
+          const auto equal_height_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+
+          const auto equal_width_hist_prunable =
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                               std::shared_ptr<EqualHeightHistogram<T>>,
+                                                               std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if the segment has only null values.
+                                if (!hist) {
+                                  return a + 1;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+
+          result_log << std::to_string(total_count) << "," << std::to_string(distinct_count) << ","
+                     << std::to_string(chunk_size) << "," << std::to_string(num_bins) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << "," << value << ","
+                     << std::to_string(prunable_count) << "," << std::to_string(range_prunable) << ","
+                     << std::to_string(equal_height_hist_prunable) << ","
+                     << std::to_string(equal_distinct_count_hist_prunable) << ","
+                     << std::to_string(equal_width_hist_prunable) << "\n";
+          result_log.flush();
+        }
+      });
+    }
+  }
+}
+
 template <typename T>
 std::pair<HistogramType, BinID> histogram_heuristic(T& min, T& max, HistogramCountType total_count,
                                                     HistogramCountType distinct_count) {
@@ -1352,6 +1761,20 @@ int main(int argc, char** argv) {
                   "cqf_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
     memory_log << "column_name,bin_count,bin_id,cqf,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+  } else if (cmd_option_exists(argv, argv_end, "--estimation-minmax")) {
+    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
+                  "minmax_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
+    memory_log << "column_name,bin_count,bin_id,minmax,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+  } else if (cmd_option_exists(argv, argv_end, "--pruning-minmax")) {
+    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
+                  "minmax_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
+                  "equal_width_hist_prunable\n";
+    memory_log << "column_name,bin_count,bin_id,minmax,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+  } else if (cmd_option_exists(argv, argv_end, "--pruning-range")) {
+    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
+                  "range_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
+                  "equal_width_hist_prunable\n";
+    memory_log << "column_name,bin_count,bin_id,range,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
   }
@@ -1389,10 +1812,16 @@ int main(int argc, char** argv) {
       run_estimation(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
       run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
+    } else if (cmd_option_exists(argv, argv_end, "--estimation-minmax")) {
+      run_estimation_minmax(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
       run_pruning(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning-cqf")) {
       run_pruning_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
+    } else if (cmd_option_exists(argv, argv_end, "--pruning-minmax")) {
+      run_pruning_minmax(table, num_bins_list, filters, result_log, bin_log, memory_log);
+    } else if (cmd_option_exists(argv, argv_end, "--pruning-range")) {
+      run_pruning_range(table, num_bins_list, filters, result_log, bin_log, memory_log);
     }
   }
 
