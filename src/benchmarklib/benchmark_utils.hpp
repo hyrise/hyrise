@@ -42,6 +42,9 @@ struct QueryBenchmarkResult {
   std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
   tbb::concurrent_vector<Duration> iteration_durations;
+
+  double qpi_to_mc_traffic_ratio = 0.0;
+  uint64_t bytesReadFromMC = 0;
 };
 
 using QueryID = size_t;
@@ -100,7 +103,7 @@ struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const Duration& warmup_duration, const UseMvcc use_mvcc,
-                  const std::optional<std::string>& output_file_path, const bool enable_scheduler, const uint cores,
+                  const std::optional<std::string>& output_file_path, const bool enable_scheduler, const bool enable_pcm, const uint cores,
                   const uint clients, const bool enable_visualization, std::ostream& out);
 
   static BenchmarkConfig get_default_config();
@@ -115,6 +118,7 @@ struct BenchmarkConfig {
   const UseMvcc use_mvcc = UseMvcc::No;
   const std::optional<std::string> output_file_path = std::nullopt;
   const bool enable_scheduler = false;
+  const bool enable_pcm = false;
   const uint cores = 0;
   const uint clients = 1;
   const bool enable_visualization = false;

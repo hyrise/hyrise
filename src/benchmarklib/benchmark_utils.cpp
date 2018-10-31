@@ -61,7 +61,7 @@ bool BenchmarkState::is_done() { return state == State::Over; }
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const Duration& warmup_duration, const UseMvcc use_mvcc,
-                                 const std::optional<std::string>& output_file_path, const bool enable_scheduler,
+                                 const std::optional<std::string>& output_file_path, const bool enable_scheduler, const bool enable_pcm,
                                  const uint cores, const uint clients, const bool enable_visualization,
                                  std::ostream& out)
     : benchmark_mode(benchmark_mode),
@@ -74,6 +74,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       use_mvcc(use_mvcc),
       output_file_path(output_file_path),
       enable_scheduler(enable_scheduler),
+      enable_pcm(enable_pcm),
       cores(cores),
       clients(clients),
       enable_visualization(enable_visualization),
@@ -138,6 +139,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     }
   }
 
+  const auto enable_pcm = json_config.value("pcm", default_config.enable_pcm);
+  out << "- PCM " + std::string(enable_pcm ? "enabled" : "disabled") << std::endl;
+
   // Determine benchmark and display it
   const auto benchmark_mode_str = json_config.value("mode", "IndividualQueries");
   auto benchmark_mode = BenchmarkMode::IndividualQueries;  // Just to init it deterministically
@@ -191,7 +195,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
   return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,       *encoding_config, max_runs, timeout_duration,
-                         warmup_duration,      use_mvcc, output_file_path, enable_scheduler, cores,    clients,
+                         warmup_duration,      use_mvcc, output_file_path, enable_scheduler, enable_pcm, cores,    clients,
                          enable_visualization, out};
 }
 
@@ -211,6 +215,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
+  json_config.emplace("pcm", parse_result["pcm"].as<bool>());
   json_config.emplace("cores", parse_result["cores"].as<uint>());
   json_config.emplace("clients", parse_result["clients"].as<uint>());
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());

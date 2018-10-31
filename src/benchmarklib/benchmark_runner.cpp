@@ -17,6 +17,15 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/sql_query_plan_visualizer.hpp"
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#include "cpucounters.h"
+#pragma clang diagnostic pop
+#elif __GNUC__
+#include "cpucounters.h"
+#endif
+
 namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries,
@@ -185,6 +194,12 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     auto state = BenchmarkState{_config.max_duration};
 
+    SystemCounterState system_counter_state_before, system_counter_state_after;
+
+    if (_context["using_pcm"]) {
+      SystemCounterState system_counter_state_before = getSystemCounterState();
+    }
+
     while (state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_num_query_runs) {
       // We want to only schedule as many queries simultaneously as we have simulated clients
       if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
@@ -210,6 +225,11 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     }
     state.set_done();
     result.duration = state.benchmark_duration;
+
+    if (_context["using_pcm"]) {
+      SystemCounterState system_counter_state_after = getSystemCounterState();
+      _save_pcm_measurements(result, system_counter_state_before, system_counter_state_after);
+    }
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
@@ -357,7 +377,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"iteration_durations", iteration_durations},
                              {"avg_real_time_per_iteration", time_per_query},
                              {"items_per_second", items_per_second},
-                             {"time_unit", "ns"}};
+                             {"time_unit", "ns"},
+                             {"qpi_to_mc_traffic_ratio", query_result.qpi_to_mc_traffic_ratio},
+                             {"bytesReadFromMC", query_result.bytesReadFromMC}
+                           };
 
     benchmarks.push_back(benchmark);
   }
@@ -375,6 +398,13 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}, {"summary", summary}};
 
   stream << std::setw(2) << report << std::endl;
+}
+
+void BenchmarkRunner::_save_pcm_measurements(QueryBenchmarkResult& result, const SystemCounterState& before, const SystemCounterState& after) {
+  // result.qpi_all_link_bytes_in = getAllIncomingQPILinkBytes(before, after);
+  // result.qpi_all_link_bytes_out = getAllOutgoingQPILinkBytes(before, after);
+  result.qpi_to_mc_traffic_ratio = getQPItoMCTrafficRatio(before, after);
+  result.bytesReadFromMC = getBytesReadFromMC(before, after);
 }
 
 BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std::string& table_path,
@@ -558,6 +588,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_visualization", config.enable_visualization},
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
       {"using_scheduler", config.enable_scheduler},
+      {"using_pcm", config.enable_pcm},
       {"cores", config.cores},
       {"clients", config.clients},
       {"verbose", config.verbose},
