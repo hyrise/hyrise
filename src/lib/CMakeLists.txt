@@ -275,6 +275,8 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/logical_reduction_rule.cpp
+    optimizer/strategy/logical_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -518,6 +520,8 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
+    utils/are_args_cxxopts_compatible.cpp
+    utils/are_args_cxxopts_compatible.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
