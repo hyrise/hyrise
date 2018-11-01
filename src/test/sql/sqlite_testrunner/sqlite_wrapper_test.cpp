@@ -41,7 +41,7 @@ TEST_F(SQLiteWrapperTest, ReloadTable) {
   const auto expected_table = load_table("src/test/tables/int_float.tbl");
 
   sqlite_wrapper->create_table(*expected_table, "table_to_copy_from");
-  
+
   // We do not create the table upfront but still expect it to be identical in the end
   sqlite_wrapper->reset_table_from_copy("resetted_table", "table_to_copy_from");
   const auto resetted_table = sqlite_wrapper->execute_query("SELECT * FROM resetted_table");
