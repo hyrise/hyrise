@@ -46,8 +46,9 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
      * Continue rule in deepest input
      */
     if (predicate_nodes.size() > 1) {
+      const auto input = predicate_nodes.back()->left_input();
       reordered = _reorder_predicates(predicate_nodes, cost_estimator);
-      reordered |= _apply_to_inputs(predicate_nodes.back(), cost_estimator);
+      reordered |= apply_to(input, cost_estimator);
       return reordered;
     }
   }
@@ -57,7 +58,7 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   return reordered;
 }
 
-bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
+bool PredicateReorderingRule::_reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
                                                   const AbstractCostEstimator& cost_estimator) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
@@ -71,21 +72,15 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
     nodes_and_cardinalities.emplace_back(predicate, cost_estimator.cardinality_estimator->estimate_cardinality(predicate));
   }
 
-  const auto sort_predicate = [&](auto& left, auto& right) {
-    return left.second > right.second;
-  };
-
-  if (std::is_sorted(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(), sort_predicate)) {
-    return false;
-  }
-
   // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
     lqp_remove_node(predicate);
   }
 
   // Sort in descending order
-  std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(), sort_predicate);
+  std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(), [&](auto& left, auto& right) {
+    return left.second > right.second;
+  });
 
   // Ensure that nodes are chained correctly
   nodes_and_cardinalities.back().first->set_left_input(input);
@@ -94,7 +89,7 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
     outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_cardinalities.front().first);
   }
 
-  for (size_t predicate_index = 0; predicate_index < nodes_and_cardinalities.size() - 1; predicate_index++) {
+  for (size_t predicate_index = 0; predicate_index + 1 < nodes_and_cardinalities.size(); predicate_index++) {
     nodes_and_cardinalities[predicate_index].first->set_left_input(nodes_and_cardinalities[predicate_index + 1].first);
   }
 

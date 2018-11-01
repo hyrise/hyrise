@@ -102,7 +102,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   final_batch.add_rule(std::make_shared<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
-  final_batch.add_rule(std::make_shared<PredicateReorderingRule>());
+  //final_batch.add_rule(std::make_shared<PredicateReorderingRule>());
 
   final_batch.add_rule(std::make_shared<IndexScanRule>());
 

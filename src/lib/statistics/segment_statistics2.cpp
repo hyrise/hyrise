@@ -101,6 +101,10 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_select
     segment_statistics->set_statistics_object(equal_distinct_count_histogram->scale_with_selectivity(selectivity));
   }
 
+  if (single_bin_histogram) {
+    segment_statistics->set_statistics_object(single_bin_histogram->scale_with_selectivity(selectivity));
+  }
+
   return segment_statistics;
 }
 
@@ -123,6 +127,11 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predic
   if (equal_distinct_count_histogram) {
     segment_statistics->set_statistics_object(
         equal_distinct_count_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
+  }
+
+  if (single_bin_histogram) {
+    segment_statistics->set_statistics_object(
+    single_bin_histogram->slice_with_predicate(predicate_type, variant_value, variant_value2));
   }
 
   return segment_statistics;

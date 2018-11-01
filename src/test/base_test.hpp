@@ -8,11 +8,15 @@
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
+#include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "statistics/segment_statistics2.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -111,6 +115,36 @@ class BaseTestWithParam
     }
 
     return std::make_shared<TableScan>(in, predicate);
+  }
+
+  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
+    const MockNode::ColumnDefinitions& column_definitions,
+    const Cardinality row_count,
+    const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
+
+    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+
+    const auto mock_node = MockNode::make(column_definitions);
+
+    const auto table_statistics = std::make_shared<TableStatistics2>();
+
+    const auto chunk_statistics = std::make_shared<ChunkStatistics2>(row_count);
+    chunk_statistics->segment_statistics.reserve(column_definitions.size());
+
+    for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
+      resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        segment_statistics->set_statistics_object(statistics_objects[column_id]);
+        chunk_statistics->segment_statistics.emplace_back(segment_statistics);
+      });
+    }
+
+    table_statistics->chunk_statistics.emplace_back(chunk_statistics);
+    mock_node->set_table_statistics2(table_statistics);
+
+    return mock_node;
   }
 };
 

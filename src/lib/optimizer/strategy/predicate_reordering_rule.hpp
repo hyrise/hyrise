@@ -30,7 +30,7 @@ class PredicateReorderingRule : public AbstractRule {
                 const AbstractCostEstimator& cost_estimator) const override;
 
  private:
-  bool _reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
+  bool _reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates,
                            const AbstractCostEstimator& cost_estimator) const;
 };
 

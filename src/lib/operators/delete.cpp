@@ -5,7 +5,8 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
@@ -15,8 +16,7 @@ namespace opossum {
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
     : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete},
       _table_name{table_name},
-      _transaction_id{0},
-      _num_rows_deleted{0} {}
+      _transaction_id{0} {}
 
 const std::string Delete::name() const { return "Delete"; }
 
@@ -27,6 +27,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
+
+  _rows_deleted_by_chunk.resize(_table->chunk_count());
 
   const auto values_to_delete = input_table_left();
 
@@ -40,6 +42,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
     _pos_lists.emplace_back(pos_list);
 
     for (const auto& row_id : *pos_list) {
+      ++_rows_deleted_by_chunk[row_id.chunk_id];
+
       auto referenced_chunk = _table->get_chunk(row_id.chunk_id);
 
       auto expected = 0u;
@@ -66,8 +70,6 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
     }
   }
 
-  _num_rows_deleted = input_table_left()->row_count();
-
   return nullptr;
 }
 
@@ -83,9 +85,12 @@ void Delete::_on_commit_records(const CommitID cid) {
 }
 
 void Delete::_finish_commit() {
-  const auto table_statistics = _table->table_statistics();
-  if (table_statistics) {
-    table_statistics->increase_invalid_row_count(_num_rows_deleted);
+  const auto table_statistics = _table->table_statistics2();
+  DebugAssert(table_statistics, "No TableStatistics in table that was deleted from");
+  Assert(table_statistics->chunk_statistics.size() == _rows_deleted_by_chunk.size(), "Chunk count mismatch between Statistics and actual Table");
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < _rows_deleted_by_chunk.size(); ++chunk_id) {
+    table_statistics->chunk_statistics[chunk_id]->approx_invalid_row_count += _rows_deleted_by_chunk[chunk_id];
   }
 }
 

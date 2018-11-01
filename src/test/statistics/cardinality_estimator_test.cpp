@@ -4,10 +4,15 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
@@ -26,8 +31,8 @@ class CardinalityEstimatorTest : public ::testing::Test {
     /**
      * node_a
      */
-    const auto segment_statistics_a_0_a = std::make_shared<SegmentStatistics2<int32_t>>();
-    const auto segment_statistics_a_0_b = std::make_shared<SegmentStatistics2<int32_t>>();
+    segment_statistics_a_0_a = std::make_shared<SegmentStatistics2<int32_t>>();
+    segment_statistics_a_0_b = std::make_shared<SegmentStatistics2<int32_t>>();
 
     // clang-format off
     const auto histogram_a_0_a = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
@@ -44,10 +49,11 @@ class CardinalityEstimatorTest : public ::testing::Test {
     segment_statistics_a_0_b->equal_width_histogram = histogram_a_0_b;
 
     const auto chunk_statistics_a_0 = std::make_shared<ChunkStatistics2>(100);
+    chunk_statistics_a_0->approx_invalid_row_count = 5;
     chunk_statistics_a_0->segment_statistics.emplace_back(segment_statistics_a_0_a);
     chunk_statistics_a_0->segment_statistics.emplace_back(segment_statistics_a_0_b);
 
-    const auto table_statistics_a = std::make_shared<TableStatistics2>();
+    table_statistics_a = std::make_shared<TableStatistics2>();
     table_statistics_a->chunk_statistics.emplace_back(chunk_statistics_a_0);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
@@ -119,8 +125,105 @@ class CardinalityEstimatorTest : public ::testing::Test {
 
   CardinalityEstimator estimator;
   LQPColumnReference a_a, a_b, b_a, c_x;
+  std::shared_ptr<SegmentStatistics2<int32_t>> segment_statistics_a_0_a, segment_statistics_a_0_b;
   std::shared_ptr<MockNode> node_a, node_b, node_c;
+  std::shared_ptr<TableStatistics2> table_statistics_a;
 };
+
+TEST_F(CardinalityEstimatorTest, Alias) {
+  // clang-format off
+  const auto input_lqp =
+  AliasNode::make(expression_vector(a_b, a_a), std::vector<std::string>{"x", "y"},
+    node_a);
+  // clang-format on
+
+  const auto table_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(table_statistics->chunk_statistics.size(), 1u);
+
+  const auto chunk_statistics = table_statistics->chunk_statistics.at(0);
+
+  EXPECT_EQ(chunk_statistics->row_count, 100u);
+  ASSERT_EQ(chunk_statistics->segment_statistics.size(), 2u);
+  EXPECT_EQ(chunk_statistics->segment_statistics.at(0), segment_statistics_a_0_b);
+  EXPECT_EQ(chunk_statistics->segment_statistics.at(1), segment_statistics_a_0_a);
+}
+
+TEST_F(CardinalityEstimatorTest, Projection) {
+  // clang-format off
+  const auto input_lqp =
+  ProjectionNode::make(expression_vector(a_b, add_(a_b, a_a), a_a),
+    node_a);
+  // clang-format on
+
+  const auto table_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(table_statistics->chunk_statistics.size(), 1u);
+
+  const auto chunk_statistics = table_statistics->chunk_statistics.at(0);
+
+  EXPECT_EQ(chunk_statistics->row_count, 100u);
+  ASSERT_EQ(chunk_statistics->segment_statistics.size(), 3u);
+  EXPECT_EQ(chunk_statistics->segment_statistics.at(0), segment_statistics_a_0_b);
+  EXPECT_TRUE(chunk_statistics->segment_statistics.at(1));
+  EXPECT_EQ(chunk_statistics->segment_statistics.at(2), segment_statistics_a_0_a);
+}
+
+TEST_F(CardinalityEstimatorTest, Aggregate) {
+  // clang-format off
+  const auto input_lqp =
+  AggregateNode::make(expression_vector(a_b, add_(a_b, a_a)), expression_vector(sum_(a_a)),
+    node_a);
+  // clang-format on
+
+  const auto table_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(table_statistics->chunk_statistics.size(), 1u);
+
+  const auto chunk_statistics = table_statistics->chunk_statistics.at(0);
+
+  EXPECT_EQ(chunk_statistics->row_count, 100u);
+  ASSERT_EQ(chunk_statistics->segment_statistics.size(), 3u);
+  EXPECT_EQ(chunk_statistics->segment_statistics.at(0), segment_statistics_a_0_b);
+  EXPECT_TRUE(chunk_statistics->segment_statistics.at(1));
+  EXPECT_TRUE(chunk_statistics->segment_statistics.at(2));
+}
+
+TEST_F(CardinalityEstimatorTest, Validate) {
+  // clang-format off
+  const auto input_lqp =
+  ValidateNode::make(
+    node_a);
+  // clang-format on
+
+  const auto table_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(table_statistics->chunk_statistics.size(), 1u);
+
+  const auto chunk_statistics = table_statistics->chunk_statistics.at(0);
+
+  EXPECT_EQ(chunk_statistics->row_count, 100u - 5u);
+  ASSERT_EQ(chunk_statistics->segment_statistics.size(), 2u);
+
+  const auto segment_statistics_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(0));
+  ASSERT_TRUE(segment_statistics_a->equal_distinct_count_histogram);
+  EXPECT_EQ(segment_statistics_a->equal_distinct_count_histogram->total_count(), 100u - 4u);
+
+  const auto segment_statistics_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(1));
+  ASSERT_TRUE(segment_statistics_b->equal_width_histogram);
+  EXPECT_EQ(segment_statistics_b->equal_width_histogram->total_count(), 75u - 2u);
+}
+
+TEST_F(CardinalityEstimatorTest, Sort) {
+  // clang-format off
+  const auto input_lqp =
+  SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending},
+    node_a);
+  // clang-format on
+
+  const auto table_statistics = estimator.estimate_statistics(input_lqp);
+  EXPECT_EQ(table_statistics, table_statistics_a);
+}
 
 TEST_F(CardinalityEstimatorTest, SinglePredicate) {
   // clang-format off
@@ -163,11 +266,22 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
       5.f);
 }
 
-TEST_F(CardinalityEstimatorTest, TwoPredicates) {
+TEST_F(CardinalityEstimatorTest, TwoPredicatesSameColumn) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(greater_than_(a_a, 50),
     PredicateNode::make(less_than_equals_(a_a, 75),
+      node_a));
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
+}
+
+TEST_F(CardinalityEstimatorTest, TwoPredicatesDifferentColumn) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, 50),
+    PredicateNode::make(less_than_equals_(a_b, 75),
       node_a));
   // clang-format on
 
