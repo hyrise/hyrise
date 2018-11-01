@@ -66,7 +66,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
   // Determines whether a table has been modified.
   bool is_table_modified(const std::shared_ptr<Table> table) const {
     // we iterate backwards, hoping for early exists in case of modifications
-    for(auto it = table->chunks().rbegin(); it != table->chunks().rend(); ++it) {
+    for (auto it = table->chunks().rbegin(); it != table->chunks().rend(); ++it) {
       const auto& chunk = *it;
       const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
