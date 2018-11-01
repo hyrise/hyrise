@@ -49,11 +49,11 @@ class JoinHashTest : public BaseTest {
 
   void SetUp() override {}
 
-  static size_t _table_size_zero_one;
-  static std::shared_ptr<Table> _table_zero_one;
-  static std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems,
+  inline static size_t _table_size_zero_one = 0;
+  inline static std::shared_ptr<Table> _table_zero_one;
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems,
       _table_with_nulls;
-  static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
+  inline static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
 
   // Accumulates the RowIDs hidden behind the iterator element (hash map stores PosLists, not RowIDs)
   template <typename Iter>
@@ -65,12 +65,6 @@ class JoinHashTest : public BaseTest {
     return row_count;
   }
 };
-
-size_t JoinHashTest::_table_size_zero_one = 0;
-std::shared_ptr<Table> JoinHashTest::_table_zero_one = NULL;
-std::shared_ptr<TableWrapper> JoinHashTest::_table_wrapper_small, JoinHashTest::_table_tpch_orders,
-    JoinHashTest::_table_tpch_lineitems, JoinHashTest::_table_with_nulls = NULL;
-std::shared_ptr<TableScan> JoinHashTest::_table_tpch_orders_scanned, JoinHashTest::_table_tpch_lineitems_scanned = NULL;
 
 TEST_F(JoinHashTest, OperatorName) {
   auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
