@@ -29,9 +29,8 @@
 namespace opossum {
 
 class SQLiteTestRunner : public BaseTestWithParam<std::string> {
- protected:
-  void SetUp() override {
-    StorageManager::get().reset();
+ public:
+  static void SetUpTestCase() {  // called ONCE before the tests
     _sqlite = std::make_unique<SQLiteWrapper>();
 
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
@@ -51,21 +50,78 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
       std::string table_file = args.at(0);
       std::string table_name = args.at(1);
 
-      DebugAssert(!StorageManager::get().has_table(table_name), "Table already loaded");
+      // Store loaded tables in a map that basically caches the loaded tables. In case the table
+      // needs to be reloaded (e.g., due to modifications), we also store the file path.
+      _tables_to_test_map.emplace(table_name, TestTable{load_table(table_file, 10), table_file});
 
-      _sqlite->create_table_from_tbl(table_file, table_name);
-
-      std::shared_ptr<Table> table = load_table(table_file, 10);
-      StorageManager::get().add_table(table_name, std::move(table));
+      // Prepare table copy which is later used as the master to copy from.
+      _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
     }
 
     opossum::Topology::use_numa_topology();
     opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
+  }
+
+ protected:
+  // Determines whether a table has been modified.
+  bool is_table_modified(const std::shared_ptr<Table> table) const {
+    // we iterate backwards, hoping for early exists in case of modifications
+    for(auto it = table->chunks().rbegin(); it != table->chunks().rend(); ++it) {
+      const auto& chunk = *it;
+      const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+      // Be aware that we cannot reach values smaller 0 with a size_t:
+      // https://stackoverflow.com/questions/665745/whats-the-best-way-to-do-a-reverse-for-loop-with-an-unsigned-index
+      for (auto row = size_t{chunk->size() - 1}; row + 1 > 0; --row) {
+        const auto begin = mvcc_data->begin_cids[row];
+        const auto end = mvcc_data->end_cids[row];
+        const auto tid = mvcc_data->tids[row];
+
+        if (begin != 0 || end != MvccData::MAX_COMMIT_ID || tid != 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  void SetUp() override {  // called once before each test
+    // For proper testing, we reset the storage manager before EVERY test.
+    StorageManager::get().reset();
+
+    for (auto const& [table_name, test_table] : _tables_to_test_map) {
+      // Opossum: we add the cached tables to the storage manager and check if it has
+      // been modified in the meanwhile (using the MVCC information). If so, load
+      // table using the initial tbl files.
+      // SQLite: drop table and copy the whole table from the master
+      // table to reset all accessed tables.
+      StorageManager::get().add_table(table_name, test_table.table);
+
+      if (is_table_modified(test_table.table)) {
+        StorageManager::get().drop_table(table_name);
+
+        // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
+        auto reloaded_table = load_table(test_table.filename, 10);
+        StorageManager::get().add_table(table_name, reloaded_table);
+        (_tables_to_test_map[table_name]).table = reloaded_table;
+      }
+
+      _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
+    }
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
-  std::unique_ptr<SQLiteWrapper> _sqlite;
+  // Structure to cache initially loaded tables and store their file paths
+  // to reload the the table from the given tbl file whenever required.
+  struct TestTable {
+    std::shared_ptr<Table> table;
+    std::string filename;
+  };
+
+  inline static std::unique_ptr<SQLiteWrapper> _sqlite;
+  inline static std::map<std::string, TestTable> _tables_to_test_map;
+  inline static std::string _master_table_suffix = "_master_copy";
 };
 
 std::vector<std::string> read_queries_from_file() {

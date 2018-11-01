@@ -256,6 +256,14 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
   return nullptr;
 }
 
+void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset, const std::string& table_name_to_copy_from) const {
+  std::stringstream command_ss;
+  command_ss << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
+  command_ss << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
+
+  _exec_sql(command_ss.str());
+}
+
 void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
   std::vector<AllTypeVariant> row;
 
