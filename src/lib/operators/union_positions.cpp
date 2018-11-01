@@ -27,7 +27,7 @@
  *
  *
  * ### About ReferenceMatrices
- * The ReferenceMatrix consists of N rows and C columns of RowIDs.
+ * The ReferenceMatrix consists of N rows and X columns of RowIDs.
  * N is the same number as the number of rows in the input table.
  * Each of the C column can represent 1..X columns in the input table and is called a ColumnCluster, see below.
  *
