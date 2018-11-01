@@ -1277,10 +1277,10 @@ void run_pruning_cqf(const std::shared_ptr<const Table> table, const std::vector
   }
 }
 
-void run_estimation_minmax(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+void run_estimation_minmaxdistinct(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
                            const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
                            std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
-  log("Running MinMax estimation...");
+  log("Running MinMaxDistinct estimation...");
 
   const auto chunk_size = table->max_chunk_size();
   const auto filters_by_column = get_filters_by_column(filters);
@@ -1748,15 +1748,15 @@ int main(int argc, char** argv) {
                   "cqf_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
     memory_log << "column_name,bin_count,bin_id,cqf,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
-  } else if (cmd_option_exists(argv, argv_end, "--estimation-minmax")) {
+  } else if (cmd_option_exists(argv, argv_end, "--estimation-minmaxdistinct")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
-                  "minmax_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
-    memory_log << "column_name,bin_count,bin_id,minmax,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+                  "min_max_distinct_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
+    memory_log << "column_name,bin_count,bin_id,min_max_distinct,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--pruning-minmax")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
-                  "minmax_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
+                  "min_max_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
-    memory_log << "column_name,bin_count,bin_id,minmax,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+    memory_log << "column_name,bin_count,bin_id,min_max,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--pruning-range")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "range_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
@@ -1799,8 +1799,8 @@ int main(int argc, char** argv) {
       run_estimation(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
       run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
-    } else if (cmd_option_exists(argv, argv_end, "--estimation-minmax")) {
-      run_estimation_minmax(table, num_bins_list, filters, result_log, bin_log, memory_log);
+    } else if (cmd_option_exists(argv, argv_end, "--estimation-minmaxdistinct")) {
+      run_estimation_minmaxdistinct(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
       run_pruning(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning-cqf")) {
