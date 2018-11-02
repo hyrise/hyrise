@@ -1106,7 +1106,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
     // Boolean literals
     case ExpressionType::Value: {
       const auto& value_expression = static_cast<const ValueExpression&>(expression);
-      Assert(value_expression.value.type() == typeid(ExpressionEvaluator::Bool), "Cannot evaluate non-boolean literal to PosList");
+      Assert(value_expression.value.type() == typeid(ExpressionEvaluator::Bool),
+             "Cannot evaluate non-boolean literal to PosList");
       // TRUE literal returns the entire Chunk, FALSE literal returns empty PosList
       if (boost::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
         result_pos_list.resize(_chunk->size());

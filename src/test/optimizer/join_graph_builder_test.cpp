@@ -263,7 +263,7 @@ TEST_F(JoinGraphBuilderTest, MultipleComponentsWithHyperEdge) {
 
   EXPECT_EQ(join_graph->edges.at(1).vertex_set, JoinGraphVertexSet(3, 0b011));
   ASSERT_EQ(join_graph->edges.at(1).predicates.size(), 1u);
-  EXPECT_EQ(*join_graph->edges.at(1).predicates.at(0),  *equals_(a_a, b_a));
+  EXPECT_EQ(*join_graph->edges.at(1).predicates.at(0), *equals_(a_a, b_a));
 
   EXPECT_EQ(join_graph->edges.at(2).vertex_set, JoinGraphVertexSet(3, 0b101));
   ASSERT_EQ(join_graph->edges.at(2).predicates.size(), 0u);
