@@ -773,8 +773,6 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
 
   // Build Having
   if (having_expression) {
-    AssertInput(expression_evaluable_on_lqp(having_expression, *_current_lqp),
-                "HAVING references columns not accessible after Aggregation");
     _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
   }
 
