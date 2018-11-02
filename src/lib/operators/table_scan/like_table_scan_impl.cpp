@@ -26,17 +26,17 @@ LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_tabl
 
 std::string LikeTableScanImpl::description() const { return "LikeScan"; }
 
-void LikeTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+void LikeTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                  const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, results, position_filter);
+    _scan_segment(typed_segment, chunk_id, matches, position_filter);
   });
 }
 
 template <typename T>
 class whatis;
 
-void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                       const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using Type = typename decltype(type)::type;
@@ -50,14 +50,14 @@ void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID 
 
         auto iterable = create_iterable_from_segment(typed_segment);
         iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(functor, it, end, chunk_id, results);
+          _scan_with_iterators<true>(functor, it, end, chunk_id, matches);
         });
       });
     }
   });
 }
 
-void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                       const std::shared_ptr<const PosList>& position_filter) const {
   std::pair<size_t, std::vector<bool>> result;
 
@@ -78,7 +78,7 @@ void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, cons
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, results);
+      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -94,7 +94,7 @@ void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, cons
   };
 
   attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, results);
+    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, matches);
   });
 }
 

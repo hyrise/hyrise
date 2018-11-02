@@ -25,12 +25,12 @@ class IsNullTableScanImpl : public AbstractSingleColumnTableScanImpl {
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
  protected:
-  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                 const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;
-  void _scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& results,
+  void _scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;
 
   /**
@@ -42,7 +42,7 @@ class IsNullTableScanImpl : public AbstractSingleColumnTableScanImpl {
 
   bool _matches_none(const BaseValueSegment& segment) const;
 
-  void _add_all(const ChunkID chunk_id, PosList& results, const std::shared_ptr<const PosList>& position_filter,
+  void _add_all(const ChunkID chunk_id, PosList& matches, const std::shared_ptr<const PosList>& position_filter,
                 const size_t segment_size) const;
 
   /**@}*/

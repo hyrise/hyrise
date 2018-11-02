@@ -20,7 +20,7 @@ LiteralTableScanImpl::LiteralTableScanImpl(const std::shared_ptr<const Table>& i
 
 std::string LiteralTableScanImpl::description() const { return "LiteralTableScan"; }
 
-void LiteralTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+void LiteralTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                     const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
   if (variant_is_null(_value)) {
@@ -34,11 +34,11 @@ void LiteralTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID ch
   }
 
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, results, position_filter);
+    _scan_segment(typed_segment, chunk_id, matches, position_filter);
   });
 }
 
-void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
@@ -54,14 +54,14 @@ void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
           return comparator(iterator_value.value(), typed_value);
         };
         segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(comparator_with_value, it, end, chunk_id, results);
+          _scan_with_iterators<true>(comparator_with_value, it, end, chunk_id, matches);
         });
       });
     }
   });
 }
 
-void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   /*
    * ValueID value_id; // left value id
@@ -97,7 +97,7 @@ void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, results);
+      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -116,10 +116,10 @@ void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
           _predicate_condition == PredicateCondition::GreaterThanEquals) {
         // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
         // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator_with_value, it, end, chunk_id, results);
+        _scan_with_iterators<true>(comparator_with_value, it, end, chunk_id, matches);
       } else {
         // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
-        _scan_with_iterators<false>(comparator_with_value, it, end, chunk_id, results);
+        _scan_with_iterators<false>(comparator_with_value, it, end, chunk_id, matches);
       }
     });
   });

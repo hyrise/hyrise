@@ -24,7 +24,7 @@ BetweenTableScanImpl::BetweenTableScanImpl(const std::shared_ptr<const Table>& i
 
 std::string BetweenTableScanImpl::description() const { return "BetweenScan"; }
 
-void BetweenTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+void BetweenTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                     const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
   if (variant_is_null(_left_value) || variant_is_null(_right_value)) {
@@ -38,11 +38,11 @@ void BetweenTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID ch
   }
 
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, results, position_filter);
+    _scan_segment(typed_segment, chunk_id, matches, position_filter);
   });
 }
 
-void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
@@ -59,13 +59,13 @@ void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
       auto iterable = create_iterable_from_segment(typed_segment);
 
       iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        _scan_with_iterators<true>(comparator_with_values, left_it, left_end, chunk_id, results);
+        _scan_with_iterators<true>(comparator_with_values, left_it, left_end, chunk_id, matches);
       });
     }
   });
 }
 
-void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   const auto left_value_id = segment.lower_bound(_left_value);
   const auto right_value_id = segment.upper_bound(_right_value);
@@ -77,7 +77,7 @@ void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
     // all values match
     column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, left_it, left_end, chunk_id, results);
+      _scan_with_iterators<false>(always_true, left_it, left_end, chunk_id, matches);
     });
 
     return;
@@ -96,7 +96,7 @@ void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-    _scan_with_iterators<true>(comparator_with_values, left_it, left_end, chunk_id, results);
+    _scan_with_iterators<true>(comparator_with_values, left_it, left_end, chunk_id, matches);
   });
 }
 

@@ -37,7 +37,7 @@ class AbstractSingleColumnTableScanImpl : public AbstractTableScanImpl {
   // For most implementations, this will be the same code. This is because it needs to use its own, local,
   // non-virtual overloads. Overloads and virtual methods don't mix well. We could de-duplicate the code here
   // using the CRTP, but that would not improve readability.
-  virtual void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+  virtual void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                         const std::shared_ptr<const PosList>& position_filter) const = 0;
 
   const std::shared_ptr<const Table> _in_table;

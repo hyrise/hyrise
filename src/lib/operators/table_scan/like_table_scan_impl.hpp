@@ -22,7 +22,7 @@ class Table;
  *
  * - The only supported type is std::string.
  * - Value segments are scanned sequentially
- * - For dictionary segments, we check the values in the dictionary and store the results in a vector
+ * - For dictionary segments, we check the values in the dictionary and store the matches in a vector
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
  *   enables us to detect if all or none of the values in the segment satisfy the expression.
  *
@@ -37,12 +37,12 @@ class LikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
   std::string description() const override;
 
  protected:
-  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                 const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& results,
+  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;
-  void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& results,
+  void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;
 
   /**
