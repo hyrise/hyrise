@@ -55,12 +55,12 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       _sqlite->create_table_from_tbl(table_file, table_name);
 
-      std::shared_ptr<Table> table = load_table(table_file, 10);
+      std::shared_ptr<Table> table = load_table(table_file, 50);
       StorageManager::get().add_table(table_name, std::move(table));
     }
 
     opossum::Topology::use_numa_topology();
-    opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
+    //opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
