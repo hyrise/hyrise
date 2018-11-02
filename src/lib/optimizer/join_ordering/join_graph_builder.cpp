@@ -212,7 +212,10 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
 
       for (auto iter = edges.begin(); iter != edges.end();) {
         const auto& edge = *iter;
-        if (!edge.vertex_set.test(vertex_idx2)) {
+        // Skip edges not connected to this vertex.
+        // Also skip hyperedges, as hyperedges do not connect components; components connected only by a hyperedge
+        //    need a cross join edge between them anyway
+        if (!edge.vertex_set.test(vertex_idx2) || edge.vertex_set.count() != 2) {
           ++iter;
           continue;
         }
