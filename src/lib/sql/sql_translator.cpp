@@ -538,7 +538,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
    * See TPC-H 13 for an example query.
    */
   const auto raw_join_predicate = _translate_hsql_expr(*join.condition, result_state.sql_identifier_resolver);
-  const auto raw_join_predicate_cnf = expression_flatten_conjunction(raw_join_predicate);
+  const auto raw_join_predicate_cnf = flatten_logical_expressions(raw_join_predicate, LogicalOperator::And);
 
   auto left_local_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto right_local_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};

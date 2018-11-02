@@ -3,8 +3,9 @@
 #include <memory>
 #include <optional>
 #include <queue>
-#include <unordered_map>
 #include <unordered_set>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -12,7 +13,6 @@ class AbstractLQPNode;
 class AbstractExpression;
 enum class LQPInputSide;
 
-using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
 
 /**
@@ -56,16 +56,15 @@ enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
  * as well.
  * Each node is visited exactly once.
  *
- * @tparam LQP          Either `std::shared_ptr<AbstractLQPNode>` or `const std::shared_ptr<AbstractLQPNode>`
  * @tparam Visitor      Functor called with every node as a param.
  *                      Returns `LQPVisitation`
  */
-template <typename LQP, typename Visitor>
-void visit_lqp(LQP& lqp, Visitor visitor) {
-  std::queue<std::decay_t<LQP>> node_queue;
+template <typename Visitor>
+void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
+  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
   node_queue.push(lqp);
 
-  std::unordered_set<std::decay_t<LQP>> visited_nodes;
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
 
   while (!node_queue.empty()) {
     auto node = node_queue.front();

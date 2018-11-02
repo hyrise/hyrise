@@ -14,7 +14,7 @@ namespace opossum {
 namespace hana = boost::hana;
 
 /**
- * @brief Encodes values as either uint32_t, uint16_t, or uint8_t
+ * @brief Stores values as either uint32_t, uint16_t, or uint8_t
  *
  * This is simplest vector compression scheme. It matches the old FittedAttributeVector
  */
@@ -33,9 +33,11 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
   size_t on_size() const { return _data.size(); }
   size_t on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
-  auto on_create_base_decoder() const { return std::unique_ptr<BaseVectorDecompressor>{on_create_decoder()}; }
+  auto on_create_base_decompressor() const { return std::unique_ptr<BaseVectorDecompressor>{on_create_decompressor()}; }
 
-  auto on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
+  auto on_create_decompressor() const {
+    return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data);
+  }
 
   auto on_begin() const { return _data.cbegin(); }
 

@@ -75,7 +75,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   const std::shared_ptr<const FixedStringVector> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
-  const std::unique_ptr<BaseVectorDecompressor> _decoder;
+  const std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
 }  // namespace opossum
