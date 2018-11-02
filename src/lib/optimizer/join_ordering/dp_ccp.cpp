@@ -129,9 +129,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   const auto best_plan_iter = best_plan.find(all_vertices_set);
   Assert(best_plan_iter != best_plan.end(), "No plan for all vertices generated. Maybe JoinGraph isn't connected?");
 
-  auto result_plan = best_plan_iter->second;
-
-  return result_plan;
+  return best_plan_iter->second;
 }
 
 std::shared_ptr<AbstractLQPNode> DpCcp::_add_predicates_to_plan(
