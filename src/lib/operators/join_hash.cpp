@@ -268,8 +268,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (_radix_bits > 0) {
         // radix partition the left table
-        radix_left =
-            partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
+        radix_left = partition_radix_parallel<LeftType, HashedType>(materialized_left, left_chunk_offsets,
+                                                                    histograms_left, _radix_bits);
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_left = std::move(materialized_left);
@@ -289,8 +289,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
-                                                          _radix_bits, keep_nulls);
+        radix_right = partition_radix_parallel<RightType, HashedType>(materialized_right, right_chunk_offsets,
+                                                                      histograms_right, _radix_bits, keep_nulls);
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_right = std::move(materialized_right);

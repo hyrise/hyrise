@@ -20,7 +20,7 @@ void test_hash_map(const std::vector<T>& values) {
   Partition<T> elements;
   for (size_t i = 0; i < values.size(); ++i) {
     RowID row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(i)}};
-    elements.emplace_back(PartitionedElement<T>{row_id, 17, static_cast<T>(values.at(i))});
+    elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
   }
 
   auto hash_map = build<T, HashType>(

@@ -29,11 +29,10 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  PartitionedElement() : row_id(NULL_ROW_ID), partition_hash(0), value(T()) {}
-  PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
+  PartitionedElement() : row_id(NULL_ROW_ID), value(T()) {}
+  PartitionedElement(RowID row, T val) : row_id(row), value(val) {}
 
   RowID row_id;
-  Hash partition_hash{0};
   T value;
 };
 
@@ -127,12 +126,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             values from different inputs (important for Multi Joins).
             */
             if constexpr (std::is_same_v<std::decay<decltype(typed_segment)>, ReferenceSegment>) {
-              *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, hashed_value, value.value()};
+              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
             } else {
-              *(output_iterator++) =
-                  PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
+              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
             }
+
+            std::cout << "Outputting " << hashed_value << " & " << value.value() << std::endl;
 
             const Hash radix = hashed_value & mask;
             ++histogram[radix];
@@ -199,7 +198,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
         auto& element = partition_left[partition_offset];
 
         if (element.row_id.chunk_offset == INVALID_CHUNK_OFFSET) {
-          // Skip initialized PartionedElements that might remain after materialization phase.
+          // Skip initialized PartitionedElements that might remain after materialization phase.
           continue;
         }
 
@@ -222,7 +221,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   return hashtables;
 }
 
-template <typename T>
+template <typename T, typename HashedType>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
@@ -281,7 +280,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
           continue;
         }
 
-        const size_t radix = element.partition_hash & mask;
+        const size_t radix = std::hash<HashedType>{}(type_cast<HashedType>(element.value)) & mask;
 
         out[output_offsets[radix]++] = element;
       }
