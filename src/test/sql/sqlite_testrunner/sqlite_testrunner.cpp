@@ -103,7 +103,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
         // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
         auto reloaded_table = load_table(test_table.filename, 10);
         StorageManager::get().add_table(table_name, reloaded_table);
-        (_tables_to_test_map[table_name]).table = reloaded_table;
+        _tables_to_test_map[table_name].table = reloaded_table;
       }
 
       _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
