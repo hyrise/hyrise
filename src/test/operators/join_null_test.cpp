@@ -37,7 +37,8 @@ class JoinNullTest : public JoinTest {
     _table_wrapper_a_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
     _table_wrapper_a_null->execute();
 
-    _table_wrapper_null_and_zero = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4_with_null.tbl", 2));
+    _table_wrapper_null_and_zero =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4_with_null.tbl", 2));
     _table_wrapper_null_and_zero->execute();
 
     // load and create DictionarySegment tables
@@ -49,9 +50,7 @@ class JoinNullTest : public JoinTest {
   }
 
  protected:
-  void SetUp() override {
-    JoinTest::SetUp();
-  }
+  void SetUp() override { JoinTest::SetUp(); }
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_null;
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a_null_dict;
@@ -121,9 +120,9 @@ TYPED_TEST(JoinNullTest, LeftJoinWithNullAsInnerDict) {
 }
 
 TYPED_TEST(JoinNullTest, LeftJoinWithNullAndZeros) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_null_and_zero, this->_table_wrapper_null_and_zero,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Left, "src/test/tables/joinoperators/int_with_null_and_zero.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_null_and_zero, this->_table_wrapper_null_and_zero, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Left, "src/test/tables/joinoperators/int_with_null_and_zero.tbl", 1);
 }
 
 TYPED_TEST(JoinNullTest, RightJoinWithNullAsOuter) {
