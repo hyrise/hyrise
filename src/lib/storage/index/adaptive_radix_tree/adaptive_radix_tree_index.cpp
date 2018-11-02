@@ -18,7 +18,6 @@ namespace opossum {
 
 size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
-  // ToDo(anyone): If you use this index in combination with the Tuning subsystem, you need to properly implement this.
   Fail("AdaptiveRadixTreeIndex::estimate_memory_consumption() is not implemented yet");
 }
 
