@@ -29,6 +29,7 @@ static_parameters = [
     '--runs 10000',
     '--time 60',
     '--result-dir ma-results',
+    '--pcm',
 ]
 
 chunk_size_50k = '50000'
@@ -71,7 +72,7 @@ for vp in variable_parameters:
     params = ''.join(' '.join(vp).split('--')).split(' ')
     chunksize_str = chunk_size_to_str[params[-1]]
     params_str = params[0] + params[1] + '_' + params[2] + params[3] + '_chunksize' + chunksize_str
-    resultname = 'tpch_' + params_str + '_' + timestamp
+    resultname = 'tpch_pcm_' + params_str + '_' + timestamp
     cmd = './scripts/benchmark_multithreaded.py -e build-release/hyriseBenchmarkTPCH ' + ' '.join(static_parameters) + ' ' + ' '.join(vp) + ' ' + '--result-name ' + resultname
     commands.append((cmd, resultname))
 
