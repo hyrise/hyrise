@@ -27,8 +27,6 @@ void LiteralTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID ch
     /**
      * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
      * Therefore, these scans will always return an empty position list.
-     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl,
-     * we can assume that comparing with NULLs here will always return nothing.
      */
     return;
   }
@@ -49,12 +47,12 @@ void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
 
       auto segment_iterable = create_iterable_from_segment(typed_segment);
 
-      with_comparator(_predicate_condition, [&](auto comparator) {
-        auto comparator_with_value = [comparator, typed_value](const auto& iterator_value) {
-          return comparator(iterator_value.value(), typed_value);
+      with_comparator(_predicate_condition, [&](auto predicate_comparator) {
+        auto comparator = [predicate_comparator, typed_value](const auto& iterator_value) {
+          return predicate_comparator(iterator_value.value(), typed_value);
         };
         segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(comparator_with_value, it, end, chunk_id, matches);
+          _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
         });
       });
     }
@@ -107,19 +105,19 @@ void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
     return;
   }
 
-  _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto comparator) {
-    auto comparator_with_value = [comparator, search_value_id](const auto& iterator_value) {
-      return comparator(iterator_value.value(), search_value_id);
+  _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
+    auto comparator = [predicate_comparator, search_value_id](const auto& iterator_value) {
+      return predicate_comparator(iterator_value.value(), search_value_id);
     };
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       if (_predicate_condition == PredicateCondition::GreaterThan ||
           _predicate_condition == PredicateCondition::GreaterThanEquals) {
         // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
         // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator_with_value, it, end, chunk_id, matches);
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       } else {
         // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
-        _scan_with_iterators<false>(comparator_with_value, it, end, chunk_id, matches);
+        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
       }
     });
   });

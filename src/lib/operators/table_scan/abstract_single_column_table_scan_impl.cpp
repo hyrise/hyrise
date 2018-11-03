@@ -55,21 +55,21 @@ void AbstractSingleColumnTableScanImpl::_scan_reference_segment(const ReferenceS
 
   // Visit each referenced segment
   for (auto referenced_chunk_id = ChunkID{0}; referenced_chunk_id < referenced_chunk_count; ++referenced_chunk_id) {
-    const auto& splitted_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_id];
-    const auto& sub_pos_list = splitted_pos_list.row_ids;
-    if (!sub_pos_list || sub_pos_list->empty()) continue;
+    const auto& sub_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_id];
+    const auto& position_filter = sub_pos_list.row_ids;
+    if (!position_filter || position_filter->empty()) continue;
 
     const auto chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
     const auto num_previous_matches = matches.size();
 
-    _on_scan(*referenced_segment, chunk_id, matches, sub_pos_list);
+    _on_scan(*referenced_segment, chunk_id, matches, position_filter);
 
-    // The scan has filled `matches` assuming that `sub_pos_list` was the entire ReferenceSegment, so we need to fix
+    // The scan has filled `matches` assuming that `position_filter` was the entire ReferenceSegment, so we need to fix
     // that:
     for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches); match_idx < matches.size(); ++match_idx) {
-      matches[match_idx].chunk_offset = splitted_pos_list.original_positions[matches[match_idx].chunk_offset];
+      matches[match_idx].chunk_offset = sub_pos_list.original_positions[matches[match_idx].chunk_offset];
     }
   }
 }

@@ -31,8 +31,6 @@ void BetweenTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID ch
     /**
      * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
      * Therefore, these scans will always return an empty position list.
-     * Because OpIsNull/OpIsNotNull are handled separately in IsNullTableScanImpl,
-     * we can assume that comparing with NULLs here will always return nothing.
      */
     return;
   }
@@ -52,14 +50,14 @@ void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
 
       auto typed_left_value = type_cast<ColumnDataType>(_left_value);
       auto typed_right_value = type_cast<ColumnDataType>(_right_value);
-      auto comparator_with_values = [typed_left_value, typed_right_value](const auto& iterator_value) {
+      auto comparator = [typed_left_value, typed_right_value](const auto& iterator_value) {
         return iterator_value.value() >= typed_left_value && iterator_value.value() <= typed_right_value;
       };
 
       auto iterable = create_iterable_from_segment(typed_segment);
 
       iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        _scan_with_iterators<true>(comparator_with_values, left_it, left_end, chunk_id, matches);
+        _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches);
       });
     }
   });
@@ -89,14 +87,14 @@ void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
   }
 
   const auto value_id_diff = right_value_id - left_value_id;
-  const auto comparator_with_values = [left_value_id, value_id_diff](const auto& iterator_value) {
+  const auto comparator = [left_value_id, value_id_diff](const auto& iterator_value) {
     // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
     // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)) - cf. https://stackoverflow.com/a/17095534/2204581
     return (iterator_value.value() - left_value_id) < value_id_diff;
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-    _scan_with_iterators<true>(comparator_with_values, left_it, left_end, chunk_id, matches);
+    _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches);
   });
 }
 

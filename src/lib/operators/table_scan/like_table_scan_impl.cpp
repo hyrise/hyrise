@@ -33,9 +33,6 @@ void LikeTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk
   });
 }
 
-template <typename T>
-class whatis;
-
 void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                       const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
