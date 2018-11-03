@@ -481,7 +481,7 @@ int Console::_load_table(const std::string& args) {
       // We used this chunk size in order to be able to test chunk pruning
       // on sizeable data sets. This should probably be made configurable
       // at some point.
-      static constexpr auto DEFAULT_CHUNK_SIZE = 500'000u;
+      static constexpr auto DEFAULT_CHUNK_SIZE = 100'000u;
       auto table = opossum::load_table(filepath, DEFAULT_CHUNK_SIZE);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
