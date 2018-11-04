@@ -53,7 +53,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
   std::string line;
   while (std::getline(infile, line)) {
-    const auto string_values = split_string_by_delimiter(line, '|');
+    auto string_values = split_string_by_delimiter(line, '|');
     auto variant_values = std::vector<AllTypeVariant>(string_values.size());
 
     for (auto column_id = ColumnID{0}; column_id < string_values.size(); ++column_id) {
