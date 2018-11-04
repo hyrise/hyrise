@@ -14,11 +14,6 @@
 
 namespace opossum {
 
-TextRecoverer& TextRecoverer::get() {
-  static TextRecoverer instance;
-  return instance;
-}
-
 std::string TextRecoverer::_extract_token(const std::string& line, size_t& begin, const size_t end) {
   auto token = line.substr(begin, end - begin + 1);
   begin = end + 2;

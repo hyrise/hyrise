@@ -14,11 +14,6 @@
 
 namespace opossum {
 
-BinaryRecoverer& BinaryRecoverer::get() {
-  static BinaryRecoverer instance;
-  return instance;
-}
-
 template <typename T>
 T BinaryRecoverer::_read(std::ifstream& file) {
   T result;

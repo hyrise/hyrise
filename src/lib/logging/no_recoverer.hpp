@@ -2,6 +2,7 @@
 
 #include "abstract_recoverer.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -9,15 +10,11 @@ namespace opossum {
  *  Used when logging is turned off, so there is nothing to recover.
  */
 
-class NoRecoverer : public AbstractRecoverer {
+class NoRecoverer : public Singleton<NoRecoverer>, public AbstractRecoverer {
+  friend class Singleton;
  public:
   NoRecoverer(const NoRecoverer&) = delete;
   NoRecoverer& operator=(const NoRecoverer&) = delete;
-
-  static NoRecoverer& get() {
-    static NoRecoverer instance;
-    return instance;
-  }
 
   uint32_t recover() final { return 0u; };
 

@@ -2,15 +2,15 @@
 
 #include "abstract_recoverer.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
-class TextRecoverer : public AbstractRecoverer {
+class TextRecoverer : public Singleton<TextRecoverer>, public AbstractRecoverer {
+  friend class Singleton;
  public:
   TextRecoverer(const TextRecoverer&) = delete;
   TextRecoverer& operator=(const TextRecoverer&) = delete;
-
-  static TextRecoverer& get();
 
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;

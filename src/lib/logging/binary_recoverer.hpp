@@ -3,15 +3,15 @@
 #include <fstream>
 
 #include "abstract_recoverer.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
-class BinaryRecoverer : public AbstractRecoverer {
+class BinaryRecoverer : public Singleton<BinaryRecoverer>, public AbstractRecoverer {
+  friend class Singleton;
  public:
   BinaryRecoverer(const BinaryRecoverer&) = delete;
   BinaryRecoverer& operator=(const BinaryRecoverer&) = delete;
-
-  static BinaryRecoverer& get();
 
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;
