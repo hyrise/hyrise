@@ -8,19 +8,20 @@
 #include "storage/table.hpp"
 
 #include "constant_mappings.hpp"
+#include "string_utils.hpp"
 
 namespace opossum {
 
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t chunk_size) {
   std::string line;
   std::getline(infile, line);
-  std::vector<std::string> column_names = _split<std::string>(line, '|');
+  std::vector<std::string> column_names = split_string_by_delimiter<std::string>(line, '|');
   std::getline(infile, line);
-  std::vector<std::string> column_types = _split<std::string>(line, '|');
+  std::vector<std::string> column_types = split_string_by_delimiter<std::string>(line, '|');
 
   auto column_nullable = std::vector<bool>{};
   for (auto& type : column_types) {
-    auto type_nullable = _split<std::string>(type, '_');
+    auto type_nullable = split_string_by_delimiter<std::string>(type, '_');
     type = type_nullable[0];
 
     auto nullable = type_nullable.size() > 1 && type_nullable[1] == "null";
@@ -52,7 +53,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
   std::string line;
   while (std::getline(infile, line)) {
-    std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');
+    std::vector<AllTypeVariant> values = split_string_by_delimiter<AllTypeVariant>(line, '|');
 
     for (auto column_id = ColumnID{0}; column_id < values.size(); ++column_id) {
       auto& value = values[column_id];

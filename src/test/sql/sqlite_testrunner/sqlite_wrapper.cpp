@@ -13,6 +13,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
+#include "utils/string_utils.hpp"
 
 namespace opossum {
 
@@ -33,12 +34,12 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 
   std::string line;
   std::getline(infile, line);
-  std::vector<std::string> column_names = _split<std::string>(line, '|');
+  std::vector<std::string> column_names = split_string_by_delimiter(line, '|');
   std::getline(infile, line);
   std::vector<std::string> column_types;
 
-  for (const std::string& type : _split<std::string>(line, '|')) {
-    std::string actual_type = _split<std::string>(type, '_')[0];
+  for (const std::string& type : split_string_by_delimiter(line, '|')) {
+    std::string actual_type = split_string_by_delimiter(type, '_')[0];
     if (actual_type == "int" || actual_type == "long") {
       column_types.push_back("INT");
     } else if (actual_type == "float" || actual_type == "double") {
@@ -63,7 +64,7 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 
   while (std::getline(infile, line)) {
     query << "INSERT INTO " << table_name << " VALUES (";
-    std::vector<std::string> values = _split<std::string>(line, '|');
+    std::vector<std::string> values = split_string_by_delimiter(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
       if (column_types[i] == "TEXT" && values[i] != "null") {
         query << "'" << values[i] << "'";
