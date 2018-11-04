@@ -65,6 +65,8 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
 
   EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
+  EXPECT_TRUE(projection->get_output()->has_mvcc() == UseMvcc::Yes);
+  EXPECT_TRUE(projection->get_output()->get_chunk(ChunkID{0})->mvcc_data());
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
@@ -80,8 +82,7 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
 }
 
 TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
-  const auto table_scan = std::make_shared<TableScan>(
-      table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 100'000});
+  const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection =
       std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
@@ -97,8 +98,7 @@ TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
   // See ForwardsIfPossibleDataTable
 
-  const auto table_scan = std::make_shared<TableScan>(
-      table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 100'000});
+  const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();
@@ -110,19 +110,16 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
-  const auto table_scan_a = std::make_shared<TableScan>(
-      table_wrapper_b, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThan, ParameterID{5}});
+  const auto table_scan_a = create_table_scan(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, 5);
   const auto projection_a = std::make_shared<Projection>(table_scan_a, expression_vector(b_a));
   const auto select_expression =
       std::make_shared<PQPSelectExpression>(table_scan_a, DataType::Int, false, PQPSelectExpression::Parameters{});
-  const auto projection_b =
-      std::make_shared<Projection>(table_wrapper_a, expression_vector(parameter_(ParameterID{2}), select_expression));
+  const auto projection_b = std::make_shared<Projection>(
+      table_wrapper_a, expression_vector(uncorrelated_parameter_(ParameterID{2}), select_expression));
 
   const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{5}, AllTypeVariant{12}},
                                                                           {ParameterID{2}, AllTypeVariant{13}}};
   projection_b->set_parameters(parameters);
-
-  EXPECT_EQ(table_scan_a->predicate().value, AllParameterVariant{12});
 
   const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(projection_b->expressions.at(0));
   ASSERT_TRUE(parameter_expression);

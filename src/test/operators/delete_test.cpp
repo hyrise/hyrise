@@ -46,8 +46,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThan, "456.7"});
+  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -101,12 +100,9 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, "123"});
-  auto expected_result =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::NotEquals, "123"});
-  auto table_scan2 =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "1234"});
+  auto table_scan1 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "123");
+  auto expected_result = create_table_scan(_gt, ColumnID{0}, PredicateCondition::NotEquals, "123");
+  auto table_scan2 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
@@ -197,8 +193,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto table_scan1 =
-        std::make_shared<TableScan>(validate1, OperatorScanPredicate{ColumnID{1}, PredicateCondition::Equals, value});
+    auto table_scan1 = create_table_scan(validate1, ColumnID{1}, PredicateCondition::Equals, value);
     table_scan1->execute();
     EXPECT_EQ(table_scan1->get_output()->row_count(), 2);
 
@@ -213,8 +208,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate2->set_transaction_context(context);
     validate2->execute();
 
-    auto table_scan2 =
-        std::make_shared<TableScan>(validate2, OperatorScanPredicate{ColumnID{1}, PredicateCondition::Equals, value});
+    auto table_scan2 = create_table_scan(validate2, ColumnID{1}, PredicateCondition::Equals, value);
     table_scan2->execute();
     EXPECT_EQ(table_scan2->get_output()->row_count(), 0);
 

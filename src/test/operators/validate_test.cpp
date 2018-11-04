@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
@@ -16,16 +17,18 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+using namespace opossum::expression_functional;  // NOLINT
+
 namespace opossum {
 
 class OperatorsValidateTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> test_table = load_table("src/test/tables/validate_input.tbl", 2u);
-    set_all_records_visible(*test_table);
-    set_record_invisible_for(*test_table, RowID{ChunkID{1}, 0u}, 2u);
+    _test_table = load_table("src/test/tables/validate_input.tbl", 2u);
+    set_all_records_visible(*_test_table);
+    set_record_invisible_for(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
 
-    _table_wrapper = std::make_shared<TableWrapper>(std::move(test_table));
+    _table_wrapper = std::make_shared<TableWrapper>(_test_table);
 
     _table_wrapper->execute();
   }
@@ -33,6 +36,7 @@ class OperatorsValidateTest : public BaseTest {
   void set_all_records_visible(Table& table);
   void set_record_invisible_for(Table& table, RowID row, CommitID end_cid);
 
+  std::shared_ptr<Table> _test_table;
   std::shared_ptr<TableWrapper> _table_wrapper;
 };
 
@@ -69,8 +73,8 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_scanned.tbl", 2u);
 
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 2});
+  auto a = PQPColumnExpression::from_table(*_test_table, "a");
+  auto table_scan = std::make_shared<TableScan>(_table_wrapper, greater_than_equals_(a, 2));
   table_scan->set_transaction_context(context);
   table_scan->execute();
 

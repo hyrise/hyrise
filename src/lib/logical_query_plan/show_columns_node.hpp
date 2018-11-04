@@ -15,6 +15,8 @@ class ShowColumnsNode : public EnableMakeForLQPNode<ShowColumnsNode>, public Abs
 
   std::string description() const override;
 
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+
   const std::string& table_name() const;
 
  protected:
@@ -23,6 +25,7 @@ class ShowColumnsNode : public EnableMakeForLQPNode<ShowColumnsNode>, public Abs
 
  private:
   const std::string _table_name;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 };
 
 }  // namespace opossum

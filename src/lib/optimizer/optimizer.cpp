@@ -8,13 +8,15 @@
 #include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
+#include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
-#include "strategy/predicate_pushdown_rule.hpp"
+#include "strategy/logical_reduction_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -83,21 +85,30 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(100);
 
-  // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
-  RuleBatch pruning_batch(RuleBatchExecutionPolicy::Once);
-  pruning_batch.add_rule(std::make_shared<ColumnPruningRule>());
-  optimizer->add_rule_batch(pruning_batch);
-
-  RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
-  main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
-  main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
-  optimizer->add_rule_batch(main_batch);
-
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
-  final_batch.add_rule(std::make_shared<ChunkPruningRule>());
+
+  // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
+
+  final_batch.add_rule(std::make_shared<LogicalReductionRule>());
+
+  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
+
+  final_batch.add_rule(std::make_shared<ExistsReformulationRule>());
+
+  final_batch.add_rule(std::make_shared<ChunkPruningRule>());
+
   final_batch.add_rule(std::make_shared<JoinOrderingRule>(std::make_shared<CostModelLogical>()));
+
+  // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
+  // for now we want the PredicateReorderingRule to have the final say on predicate positions
+  final_batch.add_rule(std::make_shared<PredicatePlacementRule>());
+
+  // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
+  final_batch.add_rule(std::make_shared<PredicateReorderingRule>());
+
   final_batch.add_rule(std::make_shared<IndexScanRule>());
+
   optimizer->add_rule_batch(final_batch);
 
   return optimizer;

@@ -30,69 +30,52 @@ std::ostream& get_out_stream(const bool verbose) {
   return null_stream;
 }
 
-BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {
-  iteration_durations.reserve(max_num_iterations);
-}
+BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
 
 bool BenchmarkState::keep_running() {
-  bool is_first_iteration = false;
-
   switch (state) {
     case State::NotStarted:
       benchmark_begin = std::chrono::high_resolution_clock::now();
       state = State::Running;
-      is_first_iteration = true;
       break;
     case State::Over:
       return false;
     default: {}
   }
 
-  const auto now = std::chrono::high_resolution_clock::now();
-
-  if (!is_first_iteration) {
-    // "Finish" the current iteration, i.e. get its duration
-    const auto iteration_duration = now - iteration_begin;
-    iteration_durations.push_back(iteration_duration);
-  }
-
-  // "Start" new iteration
-  benchmark_end = now;
-  iteration_begin = now;
-
-  // Stop execution if we reached the maximum number of iterations
-  if (num_iterations >= max_num_iterations) {
-    state = State::Over;
-    return false;
-  }
+  benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;
 
   // Stop execution if we reached the time limit
-  const auto benchmark_duration = now - benchmark_begin;
   if (benchmark_duration >= max_duration) {
-    state = State::Over;
+    set_done();
     return false;
   }
-
-  num_iterations++;
 
   return true;
 }
 
+void BenchmarkState::set_done() { state = State::Over; }
+
+bool BenchmarkState::is_done() { return state == State::Over; }
+
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                                  const EncodingConfig& encoding_config, const size_t max_num_query_runs,
-                                 const Duration& max_duration, const UseMvcc use_mvcc,
+                                 const Duration& max_duration, const Duration& warmup_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
-                                 const bool enable_visualization, std::ostream& out)
+                                 const uint cores, const uint clients, const bool enable_visualization,
+                                 std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
       encoding_config(encoding_config),
       max_num_query_runs(max_num_query_runs),
       max_duration(max_duration),
+      warmup_duration(warmup_duration),
       use_mvcc(use_mvcc),
       output_file_path(output_file_path),
       enable_scheduler(enable_scheduler),
+      cores(cores),
+      clients(clients),
       enable_visualization(enable_visualization),
       out(out) {}
 
@@ -140,15 +123,28 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
-  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << std::endl;
+  const auto cores = json_config.value("cores", default_config.cores);
+  const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
+  const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
+  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
+      << std::endl;
+
+  const auto clients = json_config.value("clients", default_config.clients);
+  out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
+
+  if (cores != default_config.cores || clients != default_config.clients) {
+    if (!enable_scheduler) {
+      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false")
+    }
+  }
 
   // Determine benchmark and display it
   const auto benchmark_mode_str = json_config.value("mode", "IndividualQueries");
   auto benchmark_mode = BenchmarkMode::IndividualQueries;  // Just to init it deterministically
   if (benchmark_mode_str == "IndividualQueries") {
     benchmark_mode = BenchmarkMode::IndividualQueries;
-  } else if (benchmark_mode_str == "PermutedQuerySets") {
-    benchmark_mode = BenchmarkMode::PermutedQuerySets;
+  } else if (benchmark_mode_str == "PermutedQuerySet") {
+    benchmark_mode = BenchmarkMode::PermutedQuerySet;
   } else {
     throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
   }
@@ -185,9 +181,18 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
-  return BenchmarkConfig{
-      benchmark_mode, verbose,          chunk_size,       *encoding_config,     max_runs, timeout_duration,
-      use_mvcc,       output_file_path, enable_scheduler, enable_visualization, out};
+  const auto default_warmup_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.warmup_duration);
+  const auto warmup = json_config.value("warmup", default_warmup_seconds.count());
+  if (warmup > 0) {
+    out << "- Warmup duration per query is " << warmup << " seconds" << std::endl;
+  } else {
+    out << "- No warmup runs are performed" << std::endl;
+  }
+  const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
+
+  return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,       *encoding_config, max_runs, timeout_duration,
+                         warmup_duration,      use_mvcc, output_file_path, enable_scheduler, cores,    clients,
+                         enable_visualization, out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -201,10 +206,13 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("runs", parse_result["runs"].as<size_t>());
   json_config.emplace("chunk_size", parse_result["chunk_size"].as<ChunkOffset>());
   json_config.emplace("time", parse_result["time"].as<size_t>());
+  json_config.emplace("warmup", parse_result["warmup"].as<size_t>());
   json_config.emplace("mode", parse_result["mode"].as<std::string>());
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
+  json_config.emplace("cores", parse_result["cores"].as<uint>());
+  json_config.emplace("clients", parse_result["clients"].as<uint>());
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
@@ -281,12 +289,13 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec)
-    : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec)
+    : EncodingConfig{default_encoding_spec, {}, {}} {}
 
-EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+EncodingConfig::EncodingConfig(const SegmentEncodingSpec& default_encoding_spec,
+                               DataTypeEncodingMapping type_encoding_mapping,
                                TableSegmentEncodingMapping encoding_mapping)
-    : default_encoding_spec{std::move(default_encoding_spec)},
+    : default_encoding_spec{default_encoding_spec},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 

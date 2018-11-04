@@ -14,7 +14,9 @@ SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
+SELECT * FROM mixed WHERE b BETWEEN 0 AND 99999;
 SELECT * FROM mixed WHERE b BETWEEN 20 AND 45;
+SELECT * FROM mixed WHERE b BETWEEN 20 AND 45.5;
 SELECT * FROM mixed WHERE b = 10 OR b BETWEEN 45 AND 20; -- valid SQL with expected empty result
 SELECT * FROM mixed WHERE b BETWEEN c AND 45;
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
@@ -89,6 +91,12 @@ SELECT t1.id, t1.a, t2.b, t3.b, t4.c_name FROM mixed AS t1 INNER JOIN mixed_null
 -- Join three tables and perform a scan
 SELECT * FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a WHERE t1.c > 23.0 AND t2.a = 'c';
 
+-- (not) exists to semi(/anti) join reformulation
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
+SELECT * FROM id_int_int_int_100 WHERE NOT EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
+-- exists to semi join reformulation: query not rewriteable
+SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a) OR id < 20
+
 -- Aggregates
 SELECT SUM(b + b) AS sum_b_b FROM mixed;
 SELECT SUM(b) + AVG(c) AS x FROM mixed GROUP BY id + 5;
@@ -100,6 +108,14 @@ SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
+
+-- DISTINCT
+SELECT DISTINCT a FROM mixed;
+SELECT DISTINCT a FROM mixed GROUP BY a;
+SELECT DISTINCT a, b FROM mixed;
+SELECT DISTINCT * FROM mixed;
+SELECT DISTINCT a, MIN(b) FROM mixed GROUP BY a;
+SELECT DISTINCT MIN(b) FROM mixed GROUP BY a;
 
 -- Join, GROUP BY, Having, ...
 SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
@@ -139,6 +155,9 @@ SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30
 -- DELETE
 DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 4); SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a = 5 OR b = 6 OR (a > 2 AND b > 80) OR (a = (SELECT MIN(a) FROM id_int_int_int_100)); SELECT * FROM id_int_int_int_100;
 
 -- Update
 UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
@@ -182,6 +201,7 @@ SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
 
 -- Subqueries in WHERE statement
 SELECT a FROM id_int_int_int_100 AS r WHERE id + 1 = (SELECT MIN(b) + r.id FROM mixed)
+SELECT * FROM id_int_int_int_100 WHERE a = (SELECT MAX(b) FROM id_int_int_int_100)
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
@@ -239,6 +259,8 @@ SELECT EXISTS(SELECT 1) AS some_exists;
 SELECT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT * FROM mixed AS outer_mixed WHERE EXISTS(SELECT * FROM mixed AS inner_mixed WHERE inner_mixed.id = outer_mixed.id * 10);
+SELECT * FROM mixed WHERE EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
+SELECT * FROM mixed WHERE NOT EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
 
 -- Cannot test the following expressions, because sqlite doesn't support them:
 --  * EXTRACT

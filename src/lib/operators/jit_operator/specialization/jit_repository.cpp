@@ -12,12 +12,6 @@
 
 namespace opossum {
 
-// Singleton
-JitRepository& JitRepository::get() {
-  static JitRepository instance;
-  return instance;
-}
-
 llvm::Function* JitRepository::get_function(const std::string& name) const {
   return _functions.count(name) ? _functions.at(name) : nullptr;
 }

@@ -90,11 +90,14 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     if (!is_variant(operator_predicate.value)) {
       return std::set<ChunkID>();
     }
-    auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
+    const auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
+    std::optional<AllTypeVariant> value2;
+    if (static_cast<bool>(operator_predicate.value2)) value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
     auto condition = operator_predicate.predicate_condition;
     for (size_t chunk_id = 0; chunk_id < statistics.size(); ++chunk_id) {
       // statistics[chunk_id] can be a shared_ptr initialized with a nullptr
-      if (statistics[chunk_id] && statistics[chunk_id]->can_prune(operator_predicate.column_id, value, condition)) {
+      if (statistics[chunk_id] &&
+          statistics[chunk_id]->can_prune(operator_predicate.column_id, condition, value, value2)) {
         result.insert(ChunkID(chunk_id));
       }
     }

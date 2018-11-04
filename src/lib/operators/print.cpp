@@ -60,6 +60,14 @@ std::shared_ptr<const Table> Print::_on_execute() {
     _out << "||_BEGIN|_END  |_TID  ";
   }
   _out << "|" << std::endl;
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    const auto nullable = input_table_left()->column_is_nullable(column_id);
+    _out << "|" << (nullable ? "    null" : "not null");
+  }
+  if (_flags & PrintMvcc) {
+    _out << "||      |      |      ";
+  }
+  _out << "|" << std::endl;
 
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
@@ -68,7 +76,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       continue;
     }
 
-    _out << "=== Chunk " << chunk_id << " === " << std::endl;
+    _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
     if (chunk->size() == 0) {
       _out << "Empty chunk." << std::endl;

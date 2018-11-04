@@ -33,7 +33,7 @@ bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   _prune_columns_in_projections(lqp, actually_used_columns);
 
   // Search the plan for leaf nodes and prune all columns from them that are not referenced
-  return _prune_columns_from_leafs(lqp, actually_used_columns);
+  return _prune_columns_from_leaves(lqp, actually_used_columns);
 }
 
 ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
@@ -69,12 +69,12 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
   return consumed_columns;
 }
 
-bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                  const ExpressionUnorderedSet& referenced_columns) {
+bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                   const ExpressionUnorderedSet& referenced_columns) {
   auto lqp_changed = false;
 
-  // Collect all parents of leafs and on which input side their leave is (if a node has two leafs as inputs, it will be
-  // collected twice)
+  // Collect all parents of leaves and on which input side their leave is
+  // (if a node has two leaves as inputs, it will be collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
   visit_lqp(lqp, [&](auto& node) {
     for (const auto input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
@@ -86,7 +86,7 @@ bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<Abstract
     return LQPVisitation::VisitInputs;
   });
 
-  // Insert ProjectionNodes that prune unused columns between the leafs and their parents
+  // Insert ProjectionNodes that prune unused columns between the leaves and their parents
   for (const auto& parent_and_leaf_input_side : leaf_parents) {
     const auto& parent = parent_and_leaf_input_side.first;
     const auto& leaf_input_side = parent_and_leaf_input_side.second;

@@ -16,6 +16,9 @@ class BaseValueSegment : public BaseSegment {
   // returns true if segment supports null values
   virtual bool is_nullable() const = 0;
 
+  // appends the value at the end of the segment
+  virtual void append(const AllTypeVariant& val) = 0;
+
   /**
    * @brief Returns null array
    *
@@ -23,5 +26,7 @@ class BaseValueSegment : public BaseSegment {
    */
   virtual const pmr_concurrent_vector<bool>& null_values() const = 0;
   virtual pmr_concurrent_vector<bool>& null_values() = 0;
+
+  virtual void reserve(const size_t capacity) = 0;
 };
 }  // namespace opossum

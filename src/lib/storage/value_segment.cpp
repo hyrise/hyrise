@@ -99,6 +99,12 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
+void ValueSegment<T>::reserve(const size_t capacity) {
+  _values.reserve(capacity);
+  if (_null_values) _null_values->reserve(capacity);
+}
+
+template <typename T>
 const pmr_concurrent_vector<T>& ValueSegment<T>::values() const {
   return _values;
 }

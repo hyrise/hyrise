@@ -35,9 +35,10 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
 
   /**
-   * If the predicate is a not simple `<column> <predicate_condition> <value>` predicate, then we have to
-   * fall back to a selectivity of 1 atm, because computing statistics for complex predicates is
-   * not implemented
+   * If the predicate is not a simple `<column> <predicate_condition> <value/column/placeholder>` predicate, 
+   * then we have to fall back to a selectivity of 1 atm, because computing statistics for complex predicates
+   * is not implemented.
+   * Currently, we cannot compute statistics for, e.g., IN or nestings of AND/OR.
    */
 
   const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate, *left_input);
@@ -46,8 +47,9 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   auto output_statistics = left_input->get_statistics();
 
   for (const auto& operator_predicate : *operator_predicates) {
-    output_statistics = std::make_shared<TableStatistics>(output_statistics->estimate_predicate(
-        operator_predicate.column_id, operator_predicate.predicate_condition, operator_predicate.value));
+    output_statistics = std::make_shared<TableStatistics>(
+        output_statistics->estimate_predicate(operator_predicate.column_id, operator_predicate.predicate_condition,
+                                              operator_predicate.value, operator_predicate.value2));
   }
 
   return output_statistics;

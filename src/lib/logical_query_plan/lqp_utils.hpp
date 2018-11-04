@@ -3,8 +3,9 @@
 #include <memory>
 #include <optional>
 #include <queue>
-#include <unordered_map>
 #include <unordered_set>
+
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace opossum {
 
@@ -12,7 +13,6 @@ class AbstractLQPNode;
 class AbstractExpression;
 enum class LQPInputSide;
 
-using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
 
 /**
@@ -38,7 +38,7 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
                      const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
- * @return whether all paths to all leafs contain a Validate node - i.e. the LQP can be used in an MVCC aware context
+ * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 
@@ -56,16 +56,15 @@ enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
  * as well.
  * Each node is visited exactly once.
  *
- * @tparam LQP          Either `std::shared_ptr<AbstractLQPNode>` or `const std::shared_ptr<AbstractLQPNode>`
  * @tparam Visitor      Functor called with every node as a param.
  *                      Returns `LQPVisitation`
  */
-template <typename LQP, typename Visitor>
-void visit_lqp(LQP& lqp, Visitor visitor) {
-  std::queue<std::decay_t<LQP>> node_queue;
+template <typename Visitor>
+void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
+  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
   node_queue.push(lqp);
 
-  std::unordered_set<std::decay_t<LQP>> visited_nodes;
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
 
   while (!node_queue.empty()) {
     auto node = node_queue.front();
@@ -79,5 +78,11 @@ void visit_lqp(LQP& lqp, Visitor visitor) {
     }
   }
 }
+
+/**
+ * @return The node @param lqp as well as the root nodes of all LQPs in subselects and, recursively, LQPs in their
+ *         subselects
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 }  // namespace opossum

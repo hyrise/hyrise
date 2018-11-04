@@ -88,6 +88,9 @@ struct STLComparisonFunctorWrapper {
   };
 
   template <typename Result, typename ArgA, typename ArgB>
+  inline static constexpr bool supports_v = supports<Result, ArgA, ArgB>::value;
+
+  template <typename Result, typename ArgA, typename ArgB>
   void operator()(Result& result, const ArgA& a, const ArgB& b) {
     if constexpr (std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
       result = Result{};
@@ -195,6 +198,9 @@ struct CaseEvaluator {
     static constexpr bool value = (std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, ArgB>)&&(
         std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, Result>);
   };
+
+  template <typename Result, typename ArgA, typename ArgB>
+  inline static constexpr bool supports_v = supports<Result, ArgA, ArgB>::value;
 
   // Implementation is in ExpressionEvaluator::_evaluate_case_expression
 };

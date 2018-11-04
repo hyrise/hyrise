@@ -73,8 +73,7 @@ TEST_F(OperatorsLimitTest, Limit1ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit1ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_1();
@@ -87,8 +86,7 @@ TEST_F(OperatorsLimitTest, Limit2ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit2ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_2();
@@ -101,8 +99,7 @@ TEST_F(OperatorsLimitTest, Limit4ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit4ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_4();
@@ -115,8 +112,7 @@ TEST_F(OperatorsLimitTest, Limit10ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit10ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_10();

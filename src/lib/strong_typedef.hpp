@@ -43,10 +43,10 @@
   template <>                                                                                                     \
                                                                                                                   \
   struct numeric_limits<::opossum::D> {                                                                           \
-    static typename std::enable_if_t<std::is_arithmetic<T>::value, ::opossum::D> min() {                          \
+    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::opossum::D> min() {                               \
       return ::opossum::D(numeric_limits<T>::min());                                                              \
     }                                                                                                             \
-    static typename std::enable_if_t<std::is_arithmetic<T>::value, ::opossum::D> max() {                          \
+    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::opossum::D> max() {                               \
       return ::opossum::D(numeric_limits<T>::max());                                                              \
     }                                                                                                             \
   };                                                                                                              \

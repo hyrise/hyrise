@@ -47,7 +47,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
    *        -> look for more JoinGraphs below the JoinGraph's vertices
    */
 
-  const auto join_graph = JoinGraph::from_lqp(lqp);
+  const auto join_graph = JoinGraph::build_from_lqp(lqp);
   if (!join_graph) {
     _recurse_to_inputs(lqp);
     return lqp;

@@ -24,11 +24,11 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
     auto begin = PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(),
-                                     mapped_chunk_offsets.cbegin()};
+                                     position_filter.cbegin(), position_filter.cbegin()};
     auto end = PointAccessIterator{*_segment.values(), *_segment.null_values(), *_segment.end_positions(),
-                                   mapped_chunk_offsets.cend()};
+                                   position_filter.cbegin(), position_filter.cend()};
 
     functor(begin, end);
   }
@@ -97,8 +97,10 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    public:
     explicit PointAccessIterator(const pmr_vector<T>& values, const pmr_vector<bool>& null_values,
                                  const pmr_vector<ChunkOffset>& end_positions,
-                                 const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{chunk_offsets_it},
+                                 const PosList::const_iterator position_filter_begin,
+                                 PosList::const_iterator position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{std::move(position_filter_begin),
+                                                                                       std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
@@ -111,7 +113,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      const auto current_chunk_offset = chunk_offsets.into_referenced;
+      const auto current_chunk_offset = chunk_offsets.offset_in_referenced_chunk;
       const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) { return offset < current; };
 
       auto end_position_it = _end_positions.cend();
@@ -132,7 +134,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
 
-      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
+      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:

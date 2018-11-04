@@ -1,10 +1,10 @@
 #pragma once
 
 #include <array>
+#include <unordered_map>
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "lqp_utils.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -15,9 +15,11 @@ class TableStatistics;
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  CreateTable,
   CreateView,
   Delete,
   DropView,
+  DropTable,
   DummyTable,
   Insert,
   Join,
@@ -42,6 +44,8 @@ struct LQPOutputRelation {
   std::shared_ptr<AbstractLQPNode> output;
   LQPInputSide input_side{LQPInputSide::Left};
 };
+
+using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
  public:

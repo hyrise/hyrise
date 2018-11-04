@@ -5,6 +5,8 @@
 
 #include "all_parameter_variant.hpp"
 #include "base_test.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -53,12 +55,16 @@ class ColumnStatisticsTest : public BaseTest {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
     auto row_count = table->row_count();
-    for (ColumnID::base_type column_1 = 0; column_1 < column_statistics.size(); ++column_1) {
-      for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
+    for (ColumnID column_1{0}; column_1 < column_statistics.size(); ++column_1) {
+      for (ColumnID column_2{0}; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
         auto result_container = column_statistics[column_1]->estimate_predicate_with_column(
             predicate_condition, *column_statistics[column_2]);
-        auto table_scan = std::make_shared<TableScan>(
-            table_wrapper, OperatorScanPredicate{ColumnID{column_1}, predicate_condition, ColumnID{column_2}});
+
+        auto left_operand = PQPColumnExpression::from_table(*table, column_1);
+        auto right_operand = PQPColumnExpression::from_table(*table, column_2);
+        auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
+
+        auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,
@@ -289,15 +295,6 @@ TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
 
   EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
   EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
-
-  auto column_stat5 = std::make_shared<ColumnStatistics<float>>(0.0f, 10.f, 20.f, 30.f);
-
-  auto result5 = column_stat3->estimate_predicate_with_column(predicate_condition, *column_stat5);
-  auto result6 = column_stat5->estimate_predicate_with_column(predicate_condition, *column_stat3);
-  expected_selectivity = 0.f;
-
-  EXPECT_FLOAT_EQ(result5.selectivity, expected_selectivity);
-  EXPECT_FLOAT_EQ(result6.selectivity, expected_selectivity);
 }
 
 TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
@@ -430,6 +427,69 @@ TEST_F(ColumnStatisticsTest, Dummy) {
     auto dummy_column_statistics = ColumnStatistics<std::string>::dummy();
     EXPECT_EQ(dummy_column_statistics.min(), "");
     EXPECT_EQ(dummy_column_statistics.max(), "");
+  }
+}
+
+TEST_F(ColumnStatisticsTest, TwoColumnsNonOverlappingDomains) {
+  auto column_stats_lower = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, 0, 20);
+  auto column_stats_upper = std::make_shared<ColumnStatistics<int>>(0.0f, 10.f, 50, 60);
+
+  {
+    auto result1 = column_stats_lower->estimate_predicate_with_column(PredicateCondition::Equals, *column_stats_upper);
+    auto result2 = column_stats_upper->estimate_predicate_with_column(PredicateCondition::Equals, *column_stats_lower);
+
+    EXPECT_FLOAT_EQ(result1.selectivity, 0.f);
+    EXPECT_FLOAT_EQ(result2.selectivity, 0.f);
+  }
+
+  {
+    auto result1 =
+        column_stats_lower->estimate_predicate_with_column(PredicateCondition::NotEquals, *column_stats_upper);
+    auto result2 =
+        column_stats_upper->estimate_predicate_with_column(PredicateCondition::NotEquals, *column_stats_lower);
+
+    EXPECT_FLOAT_EQ(result1.selectivity, 1.f);
+    EXPECT_FLOAT_EQ(result2.selectivity, 1.f);
+  }
+
+  {
+    auto result1 =
+        column_stats_lower->estimate_predicate_with_column(PredicateCondition::LessThan, *column_stats_upper);
+    auto result2 =
+        column_stats_upper->estimate_predicate_with_column(PredicateCondition::LessThan, *column_stats_lower);
+
+    EXPECT_FLOAT_EQ(result1.selectivity, 1.f);
+    EXPECT_FLOAT_EQ(result2.selectivity, 0.f);
+  }
+
+  {
+    auto result1 =
+        column_stats_lower->estimate_predicate_with_column(PredicateCondition::LessThanEquals, *column_stats_upper);
+    auto result2 =
+        column_stats_upper->estimate_predicate_with_column(PredicateCondition::LessThanEquals, *column_stats_lower);
+
+    EXPECT_FLOAT_EQ(result1.selectivity, 1.f);
+    EXPECT_FLOAT_EQ(result2.selectivity, 0.f);
+  }
+
+  {
+    auto result1 =
+        column_stats_lower->estimate_predicate_with_column(PredicateCondition::GreaterThan, *column_stats_upper);
+    auto result2 =
+        column_stats_upper->estimate_predicate_with_column(PredicateCondition::GreaterThan, *column_stats_lower);
+
+    EXPECT_FLOAT_EQ(result1.selectivity, 0.f);
+    EXPECT_FLOAT_EQ(result2.selectivity, 1.f);
+  }
+
+  {
+    auto result1 =
+        column_stats_lower->estimate_predicate_with_column(PredicateCondition::GreaterThanEquals, *column_stats_upper);
+    auto result2 =
+        column_stats_upper->estimate_predicate_with_column(PredicateCondition::GreaterThanEquals, *column_stats_lower);
+
+    EXPECT_FLOAT_EQ(result1.selectivity, 0.f);
+    EXPECT_FLOAT_EQ(result2.selectivity, 1.f);
   }
 }
 

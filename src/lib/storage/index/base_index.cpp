@@ -20,14 +20,14 @@ bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment
 
 BaseIndex::Iterator BaseIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((_get_indexed_segments().size() >= values.size()),
-              "BaseIndex: The amount of queried segments has to be less or equal to the number of indexed segments.");
+              "BaseIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _lower_bound(values);
 }
 
 BaseIndex::Iterator BaseIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((_get_indexed_segments().size() >= values.size()),
-              "BaseIndex: The amount of queried segments has to be less or equal to the number of indexed segments.");
+              "BaseIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _upper_bound(values);
 }

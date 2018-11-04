@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "operators/abstract_read_only_operator.hpp"
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 
@@ -95,14 +96,14 @@ class UnionPositions : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   /**
-   * Validates the input AND initializes some utility data it uses (_column_segment_offsets, _referenced_tables,
+   * Validates the input AND initializes some utility data it uses (_column_cluster_offsets, _referenced_tables,
    * _referenced_column_ids).
    *
    * We can't really split this up into one validate and one prepare step, since some of the validation depends on
    * the utility data being initialized.
    *
    * @returns the result table of the operator if one or both of the inputs was empty and we don't actually need to
-   *    execute the operatopr. nullptr otherwise.
+   *    execute the operator. nullptr otherwise.
    */
   std::shared_ptr<const Table> _prepare_operator();
 
@@ -110,10 +111,10 @@ class UnionPositions : public AbstractReadOnlyOperator {
   bool _compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
                                       const ReferenceMatrix& right_matrix, size_t right_row_idx) const;
 
-  // See the "About ColumnSegments" doc in the cpp
-  std::vector<ColumnID> _column_segment_offsets;
+  // See the "About ColumnClusters" doc in the cpp
+  std::vector<ColumnID> _column_cluster_offsets;
 
-  // For each column segment, the table its pos_list references
+  // For each ColumnCluster, the table its pos_list references
   std::vector<std::shared_ptr<const Table>> _referenced_tables;
 
   // For each column_idx in the input tables, specifies the referenced column in the referenced table

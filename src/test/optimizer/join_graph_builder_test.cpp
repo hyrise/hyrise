@@ -233,4 +233,41 @@ TEST_F(JoinGraphBuilderTest, MultipleComponents) {
   EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 0u);
 }
 
+TEST_F(JoinGraphBuilderTest, NonJoinGraphJoin) {
+  // Non-Inner/Cross Joins are not represented in the JoinGraph
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Left, equals_(a_a, b_a),
+    node_a,
+    node_b);
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+  ASSERT_FALSE(join_graph);
+}
+
+TEST_F(JoinGraphBuilderTest, BuildAllInLQP) {
+  // clang-format off
+  const auto sub_lqp =
+  AggregateNode::make(expression_vector(a_a), expression_vector(),
+    JoinNode::make(JoinMode::Cross,
+      node_a,
+      node_b));
+
+  const auto lqp =
+  JoinNode::make(JoinMode::Cross,
+    sub_lqp,
+    node_c);
+  // clang-format on
+
+  const auto join_graphs = JoinGraph::build_all_in_lqp(lqp);
+
+  ASSERT_EQ(join_graphs.size(), 2u);
+  EXPECT_EQ(join_graphs.at(0).vertices.at(0), sub_lqp);
+  EXPECT_EQ(join_graphs.at(0).vertices.at(1), node_c);
+  EXPECT_EQ(join_graphs.at(1).vertices.at(0), node_a);
+  EXPECT_EQ(join_graphs.at(1).vertices.at(1), node_b);
+}
+
 }  // namespace opossum

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "base_segment.hpp"
+#include "storage/pos_list.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -24,8 +25,6 @@ class ReferenceSegment : public BaseSegment {
                    const std::shared_ptr<const PosList>& pos);
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
-
-  void append(const AllTypeVariant&) override;
 
   size_t size() const final;
 

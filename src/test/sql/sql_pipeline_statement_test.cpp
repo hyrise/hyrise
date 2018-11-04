@@ -17,6 +17,8 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -331,10 +333,10 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   sql_pipeline.get_query_plan();
-  auto duration = sql_pipeline.metrics()->compile_time_micros;
+  auto duration = sql_pipeline.metrics()->lqp_translate_time_nanos;
 
   const auto& plan = sql_pipeline.get_query_plan();
-  auto duration2 = sql_pipeline.metrics()->compile_time_micros;
+  auto duration2 = sql_pipeline.metrics()->lqp_translate_time_nanos;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -426,10 +428,10 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   sql_pipeline.get_result_table();
-  auto duration = sql_pipeline.metrics()->execution_time_micros;
+  auto duration = sql_pipeline.metrics()->execution_time_nanos;
 
   const auto& table = sql_pipeline.get_result_table();
-  auto duration2 = sql_pipeline.metrics()->execution_time_micros;
+  auto duration2 = sql_pipeline.metrics()->execution_time_nanos;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -477,23 +479,26 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetTimes) {
+  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  EXPECT_EQ(cache.size(), 0u);
+
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   const auto& metrics = sql_pipeline.metrics();
-  const auto zero_duration = std::chrono::microseconds::zero();
+  const auto zero_duration = std::chrono::nanoseconds::zero();
 
-  EXPECT_EQ(metrics->translate_time_micros, zero_duration);
-  EXPECT_EQ(metrics->optimize_time_micros, zero_duration);
-  EXPECT_EQ(metrics->compile_time_micros, zero_duration);
-  EXPECT_EQ(metrics->execution_time_micros, zero_duration);
+  EXPECT_EQ(metrics->sql_translate_time_nanos, zero_duration);
+  EXPECT_EQ(metrics->optimize_time_nanos, zero_duration);
+  EXPECT_EQ(metrics->lqp_translate_time_nanos, zero_duration);
+  EXPECT_EQ(metrics->execution_time_nanos, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
-  EXPECT_GT(metrics->translate_time_micros, zero_duration);
-  EXPECT_GT(metrics->optimize_time_micros, zero_duration);
-  EXPECT_GT(metrics->compile_time_micros, zero_duration);
-  EXPECT_GT(metrics->execution_time_micros, zero_duration);
+  EXPECT_GT(metrics->sql_translate_time_nanos, zero_duration);
+  EXPECT_GT(metrics->optimize_time_nanos, zero_duration);
+  EXPECT_GT(metrics->lqp_translate_time_nanos, zero_duration);
+  EXPECT_GT(metrics->execution_time_nanos, zero_duration);
 }
 
 TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
@@ -740,9 +745,10 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
-  const std::string subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
+  const auto subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
 
   auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
+
   const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);

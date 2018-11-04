@@ -190,11 +190,11 @@ void resolve_data_type(DataType data_type, const Functor& func) {
  *   });
  */
 template <typename In, typename Out>
-using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out, Out>;
+using ConstOutIfConstIn = std::conditional_t<std::is_const_v<In>, const Out, Out>;
 
 template <typename ColumnDataType, typename BaseSegmentType, typename Functor>
 // BaseSegmentType allows segment to be const and non-const
-std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
+std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType>>>
 /*void*/ resolve_segment_type(BaseSegmentType& segment, const Functor& func) {
   using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<ColumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
@@ -235,7 +235,7 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
  *   });
  */
 template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows segment to be const and non-const
-std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
+std::enable_if_t<std::is_same_v<BaseSegment, std::remove_const_t<BaseSegmentType>>>
 /*void*/ resolve_data_and_segment_type(BaseSegmentType& segment, const Functor& func) {
   resolve_data_type(segment.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;

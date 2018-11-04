@@ -4,7 +4,10 @@
 
 #include "base_test.hpp"
 
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/show_columns_node.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -14,6 +17,13 @@ class ShowColumnsNodeTest : public ::testing::Test {
 
   std::shared_ptr<ShowColumnsNode> _show_columns_node;
 };
+
+TEST_F(ShowColumnsNodeTest, Columns) {
+  ASSERT_EQ(_show_columns_node->column_expressions().size(), 3u);
+  EXPECT_EQ(*_show_columns_node->column_expressions().at(0), *lqp_column_({_show_columns_node, ColumnID{0}}));
+  EXPECT_EQ(*_show_columns_node->column_expressions().at(1), *lqp_column_({_show_columns_node, ColumnID{1}}));
+  EXPECT_EQ(*_show_columns_node->column_expressions().at(2), *lqp_column_({_show_columns_node, ColumnID{2}}));
+}
 
 TEST_F(ShowColumnsNodeTest, Description) {
   EXPECT_EQ(_show_columns_node->description(), "[ShowColumns] Table: 'table_a'");

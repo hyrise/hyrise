@@ -19,7 +19,7 @@ struct SQLPipelineMetrics {
   std::vector<std::shared_ptr<const SQLPipelineStatementMetrics>> statement_metrics;
 
   // This is different from the other measured times as we only get this for all statements at once
-  std::chrono::microseconds parse_time_micros{0};
+  std::chrono::nanoseconds parse_time_nanos{0};
 
   std::string to_string() const;
 };
