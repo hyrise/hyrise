@@ -9,6 +9,7 @@
 #include "lqp_view.hpp"
 #include "lqp_prepared_statement.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -17,7 +18,7 @@ class AbstractLQPNode;
 
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
-class StorageManager : private Noncopyable {
+class StorageManager : public Singleton<StorageManager> {
  public:
   static StorageManager& get();
 
@@ -30,6 +31,7 @@ class StorageManager : private Noncopyable {
   std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const std::string& name) const;
   std::vector<std::string> table_names() const;
+  const std::map<std::string, std::shared_ptr<Table>>& tables() const;
   /** @} */
 
   /**
@@ -67,6 +69,10 @@ class StorageManager : private Noncopyable {
 
  protected:
   StorageManager() {}
+
+  friend class Singleton;
+
+  const StorageManager& operator=(const StorageManager&) = delete;
   StorageManager& operator=(StorageManager&&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;

@@ -23,7 +23,7 @@ namespace opossum {
  */
 template <typename T>
 class copyable_atomic {
-  static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable.");
+  static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable.");
 
  public:
   copyable_atomic() noexcept = default;

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "utils/pausable_loop_thread.hpp"
+#include "utils/singleton.hpp"
 
 namespace boost {
 namespace container {
@@ -22,7 +23,10 @@ namespace opossum {
 // and triggers the NUMA-aware chunk migration tasks
 // The NUMAPlacementManager is initialized in a paused state and needs to be
 // `resumed` to start its operation.
-class NUMAPlacementManager {
+
+// Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory
+// resources. Without those, all destructors of all PMR vectors out there will fail.
+class NUMAPlacementManager : public Singleton<NUMAPlacementManager> {
  public:
   struct Options {
     // Parameters of the NUMA placement and chunk migration algorithm.
@@ -62,8 +66,6 @@ class NUMAPlacementManager {
     double imbalance_threshold = 0.1;
   };
 
-  static NUMAPlacementManager& get();
-
   // Returns the memory resource of the next node according to a round robin placement policy
   boost::container::pmr::memory_resource* get_next_memory_resource();
 
@@ -74,11 +76,12 @@ class NUMAPlacementManager {
 
   void set_options(const Options options);
 
-  NUMAPlacementManager(NUMAPlacementManager const&) = delete;
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
   NUMAPlacementManager();
+
+  friend class Singleton;
 
   Options _options;
   int _current_node_id;

@@ -43,7 +43,7 @@ class TableStatistics final {
    */
   TableStatistics estimate_predicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                                      const AllParameterVariant& value,
-                                     const std::optional<AllTypeVariant>& value2 = std::nullopt) const;
+                                     const std::optional<AllParameterVariant>& value2 = std::nullopt) const;
 
   TableStatistics estimate_cross_join(const TableStatistics& right_table_statistics) const;
 

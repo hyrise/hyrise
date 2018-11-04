@@ -440,6 +440,9 @@ void Aggregate::_aggregate() {
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
 
+    // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
+    const auto input_chunk_size = chunk_in->size();
+
     if (_aggregates.empty()) {
       /**
        * DISTINCT implementation
@@ -467,7 +470,7 @@ void Aggregate::_aggregate() {
               _contexts_per_column[0]);
       auto& results = *context->results;
 
-      for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
@@ -487,7 +490,7 @@ void Aggregate::_aggregate() {
           auto& results = *context->results;
 
           // count occurrences for each group key
-          for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+          for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
             auto& hash_entry = results[hash_keys[chunk_offset]];
             hash_entry.row_id = RowID(chunk_id, chunk_offset);
             ++hash_entry.aggregate_count;
@@ -547,7 +550,7 @@ void Aggregate::_aggregate() {
 
     auto groupby_segment =
         make_shared_by_data_type<BaseSegment, ValueSegment>(input_table->column_data_type(column_id), true);
-    _groupby_segments.push_back(groupby_segment);
+    _groupby_segments.push_back(std::static_pointer_cast<BaseValueSegment>(groupby_segment));
     _output_segments.push_back(groupby_segment);
   }
   /**
@@ -620,8 +623,8 @@ They are separate and templated to avoid compiler errors for invalid type/functi
 */
 // MIN, MAX, SUM write the current aggregated value
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<
-    func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
+std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum,
+                 void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
                        std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
                                                           std::hash<AggregateKey>>>
@@ -647,7 +650,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // COUNT writes the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggregate_values(
+std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
         std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
@@ -666,7 +669,7 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggr
 
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type write_aggregate_values(
+std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     std::shared_ptr<
         std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
@@ -685,11 +688,11 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type wr
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                          std::hash<AggregateKey>>>
-                           results) {
+std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    std::shared_ptr<
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
+        results) {
   DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
   auto& values = segment->values();
@@ -711,10 +714,10 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnType, typename AggregateType, AggregateFunction func, typename AggregateKey>
-typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>>,
-                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                          std::hash<AggregateKey>>>) {
+std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>>,
+    std::shared_ptr<
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>) {
   Fail("Invalid aggregate");
 }
 
@@ -726,6 +729,7 @@ void Aggregate::_write_groupby_output(PosList& pos_list) {
     for (const auto& chunk : input_table->chunks()) {
       base_segments.push_back(chunk->get_segment(_groupby_column_ids[group_column_index]));
     }
+    _groupby_segments[group_column_index]->reserve(pos_list.size());
     for (const auto row_id : pos_list) {
       _groupby_segments[group_column_index]->append((*base_segments[row_id.chunk_id])[row_id.chunk_offset]);
     }

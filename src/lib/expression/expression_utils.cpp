@@ -4,11 +4,15 @@
 #include <queue>
 #include <sstream>
 
+#include "expression_functional.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "pqp_select_expression.hpp"
+#include "value_expression.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -147,20 +151,33 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
   return evaluable;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
-    const std::shared_ptr<AbstractExpression>& expression) {
+std::vector<std::shared_ptr<AbstractExpression>> flatten_logical_expressions(
+    const std::shared_ptr<AbstractExpression>& expression, const LogicalOperator logical_operator) {
   std::vector<std::shared_ptr<AbstractExpression>> flattened_expressions;
 
   visit_expression(expression, [&](const auto& sub_expression) {
     if (sub_expression->type == ExpressionType::Logical) {
       const auto logical_expression = std::static_pointer_cast<LogicalExpression>(sub_expression);
-      if (logical_expression->logical_operator == LogicalOperator::And) return ExpressionVisitation::VisitArguments;
+      if (logical_expression->logical_operator == logical_operator) return ExpressionVisitation::VisitArguments;
     }
     flattened_expressions.emplace_back(sub_expression);
     return ExpressionVisitation::DoNotVisitArguments;
   });
 
   return flattened_expressions;
+}
+
+std::shared_ptr<AbstractExpression> inflate_logical_expressions(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator) {
+  auto inflated = std::shared_ptr<AbstractExpression>{};
+
+  if (!expressions.empty()) inflated = expressions.front();
+
+  for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
+    inflated = std::make_shared<LogicalExpression>(logical_operator, inflated, expressions[expression_idx]);
+  }
+
+  return inflated;
 }
 
 void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression,
@@ -225,6 +242,18 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   });
 
   return placeholder_found;
+}
+
+std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
+  if (expression.type == ExpressionType::Parameter) {
+    const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
+    DebugAssert(parameter_expression.value(), "ParameterExpression doesn't have a value set");
+    return *parameter_expression.value();
+  } else if (expression.type == ExpressionType::Value) {
+    return static_cast<const ValueExpression&>(expression).value;
+  } else {
+    return std::nullopt;
+  }
 }
 
 }  // namespace opossum

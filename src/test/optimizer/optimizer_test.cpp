@@ -26,9 +26,9 @@ class OptimizerTest : public ::testing::Test {
     y = node_b->get_column("y");
 
     select_lqp_a = LimitNode::make(to_expression(1), node_b);
-    select_a = select_(select_lqp_a);
+    select_a = lqp_select_(select_lqp_a);
     select_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(x, y), node_b));
-    select_b = select_(select_lqp_b);
+    select_b = lqp_select_(select_lqp_b);
   }
 
   std::shared_ptr<MockNode> node_a, node_b;

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "optimizer/enumerate_ccp.hpp"
+#include "optimizer/join_ordering/enumerate_ccp.hpp"
 
 #include "utils/assert.hpp"
 

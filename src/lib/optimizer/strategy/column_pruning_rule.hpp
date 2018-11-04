@@ -26,8 +26,8 @@ class ColumnPruningRule : public AbstractRule {
 
  private:
   static ExpressionUnorderedSet _collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp);
-  static bool _prune_columns_from_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                        const ExpressionUnorderedSet& referenced_columns);
+  static bool _prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                         const ExpressionUnorderedSet& referenced_columns);
   static void _prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
                                             const ExpressionUnorderedSet& referenced_columns);
 };

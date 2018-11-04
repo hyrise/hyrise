@@ -26,15 +26,15 @@ std::shared_ptr<ValueExpression> null_() { // NOLINT - clang-tidy doesn't like t
   return std::make_shared<ValueExpression>(NullValue{});
 }
 
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<ParameterExpression> uncorrelated_parameter_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<ParameterExpression>(parameter_id);
 }
 
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
-std::shared_ptr<PQPColumnExpression> column_(const ColumnID column_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type, const bool nullable,  // NOLINT - clang-tidy doesn't like the suffix
                                              const std::string& column_name) {
   return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
 }
@@ -44,7 +44,11 @@ std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doe
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression) {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<ExistsExpression>(select_expression);
+  return std::make_shared<ExistsExpression>(select_expression, ExistsExpressionType::Exists);
+}
+
+std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& select_expression) {  // NOLINT - clang-tidy doesn't like the suffix
+  return std::make_shared<ExistsExpression>(select_expression, ExistsExpressionType::NotExists);
 }
 // clang-format on
 

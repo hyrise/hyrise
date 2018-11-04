@@ -21,6 +21,7 @@ namespace opossum {
 class BenchmarkRunner {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries, const nlohmann::json& context);
+  ~BenchmarkRunner();
 
   static BenchmarkRunner create(const BenchmarkConfig& config, const std::string& table_path,
                                 const std::string& query_path);
@@ -32,13 +33,26 @@ class BenchmarkRunner {
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
  private:
-  // Run benchmark in BenchmarkMode::PermutedQuerySets mode
-  void _benchmark_permuted_query_sets();
+  // Run benchmark in BenchmarkMode::PermutedQuerySet mode
+  void _benchmark_permuted_query_set();
 
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries();
 
-  void _execute_query(const NamedQuery& named_query);
+  // Execute warmup run of a query
+  void _warmup_query(const NamedQuery& named_query);
+
+  // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const NamedQuery& named_query,
+                                                                        const std::function<void()>& done_callback);
+
+  // Schedule and return all tasks for named_query
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const NamedQuery& named_query,
+                                                             const std::function<void()>& done_callback);
+
+  // Execute named_query
+  void _execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback);
+
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 

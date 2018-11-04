@@ -26,7 +26,7 @@ std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& no
 }
 
 bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto delete_node_rhs = static_cast<const DeleteNode&>(rhs);
+  const auto& delete_node_rhs = static_cast<const DeleteNode&>(rhs);
   return _table_name == delete_node_rhs._table_name;
 }
 

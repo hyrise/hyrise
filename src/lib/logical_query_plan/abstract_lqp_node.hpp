@@ -1,10 +1,10 @@
 #pragma once
 
 #include <array>
+#include <unordered_map>
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "lqp_utils.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -15,9 +15,11 @@ class TableStatistics;
 enum class LQPNodeType {
   Aggregate,
   Alias,
+  CreateTable,
   CreateView,
   Delete,
   DropView,
+  DropTable,
   DummyTable,
   ExecuteStatement,
   Insert,
@@ -45,10 +47,12 @@ struct LQPOutputRelation {
   LQPInputSide input_side{LQPInputSide::Left};
 };
 
-class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
+using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
+
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
  public:
   explicit AbstractLQPNode(const LQPNodeType node_type);
-  virtual ~AbstractLQPNode() = default;
+  virtual ~AbstractLQPNode();
 
   /**
    * @return a string describing this node, but nothing about its inputs.
@@ -186,7 +190,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * Add or remove a output without manipulating this output's input ptr.
    */
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
-  void _remove_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
+  void _remove_output_pointer(const AbstractLQPNode& output);
   /** @} */
 
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;

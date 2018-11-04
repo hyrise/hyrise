@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 /**
  * MVCC overview
@@ -45,9 +46,8 @@ class TransactionContext;
  * which represents the current global visibility of records.
  * The TransactionManager is thread-safe.
  */
-class TransactionManager : private Noncopyable {
+class TransactionManager : public Singleton<TransactionManager> {
  public:
-  static TransactionManager& get();
   static void reset();
 
   CommitID last_commit_id() const;
@@ -64,17 +64,14 @@ class TransactionManager : private Noncopyable {
   static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
 
  private:
-  friend class TransactionContext;
-
   TransactionManager();
 
-  TransactionManager(TransactionManager&&) = delete;
-  TransactionManager& operator=(TransactionManager&&) = delete;
+  friend class Singleton;
+  friend class TransactionContext;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
 
- private:
   std::atomic<TransactionID> _next_transaction_id;
 
   std::atomic<CommitID> _last_commit_id;

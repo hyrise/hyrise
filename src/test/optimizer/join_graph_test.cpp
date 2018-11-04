@@ -5,7 +5,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "optimizer/join_graph.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

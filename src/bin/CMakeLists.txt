@@ -7,9 +7,7 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    boost_program_options
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 target_include_directories(
     hyriseServer
@@ -26,6 +24,7 @@ add_executable(
 )
 target_link_libraries(
     hyrisePlayground
+
     hyrise
     hyriseBenchmarkLib
 )
@@ -61,6 +60,7 @@ target_link_libraries(
     ncurses
     ${READLINE_LIBRARY}
     ${FILESYSTEM_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 target_include_directories(
     hyriseConsole

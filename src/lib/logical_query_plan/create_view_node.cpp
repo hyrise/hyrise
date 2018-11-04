@@ -26,7 +26,7 @@ std::shared_ptr<AbstractLQPNode> CreateViewNode::_on_shallow_copy(LQPNodeMapping
 }
 
 bool CreateViewNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto create_view_node_rhs = static_cast<const CreateViewNode&>(rhs);
+  const auto& create_view_node_rhs = static_cast<const CreateViewNode&>(rhs);
 
   return _view_name == create_view_node_rhs._view_name && _view->deep_equals(*create_view_node_rhs._view);
 }

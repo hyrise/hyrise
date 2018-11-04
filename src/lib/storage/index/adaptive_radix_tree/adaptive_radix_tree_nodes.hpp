@@ -155,9 +155,9 @@ class ARTNode256 final : public ARTNode {
 
 /**
  *
- * Leafs contain two std::vector<ChunkOffset>::const_iterator: _lower_bound and _upper_bound.
+ * leaves contain two std::vector<ChunkOffset>::const_iterator: _lower_bound and _upper_bound.
  *
- * Consider the following example tree showing only its leafs:
+ * Consider the following example tree showing only its leaves:
  *
  *           Leaf(0x00000000) Leaf(0x00000001) ... Leaf(0xa101fe07) Leaf(0xa101feaf) ... Leaf(0xfebb34f1)
  *         _lower_ |  | _upper_     |       | _upper_    | |             |       |           |          |

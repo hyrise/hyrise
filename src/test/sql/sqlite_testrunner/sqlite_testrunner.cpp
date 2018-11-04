@@ -55,7 +55,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       _sqlite->create_table_from_tbl(table_file, table_name);
 
-      std::shared_ptr<Table> table = load_table(table_file);
+      std::shared_ptr<Table> table = load_table(table_file, 10);
       StorageManager::get().add_table(table_name, std::move(table));
     }
 
@@ -86,6 +86,8 @@ std::vector<std::string> read_queries_from_file() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const std::string query = GetParam();
 
+  SCOPED_TRACE(query);
+
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
   auto sql_pipeline =
@@ -115,12 +117,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       << "Query failed: " << query;
 }
 
-auto formatter = [](const testing::TestParamInfo<std::string>) {
-  // stupid, but otherwise Wextra complains about the unused macro parameter
-  static int test = 1;
-  return std::to_string(test++);
-};
-INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner,
+                        testing::ValuesIn(read_queries_from_file()), );  // NOLINT
 
 }  // namespace opossum

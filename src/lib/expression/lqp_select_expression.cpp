@@ -4,6 +4,7 @@
 
 #include "boost/functional/hash.hpp"
 
+#include "expression/parameter_expression.hpp"
 #include "expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -56,6 +57,8 @@ bool LQPSelectExpression::is_nullable() const {
          "Can only determine the nullability of SelectExpressions that return exactly one column");
   return lqp->column_expressions()[0]->is_nullable();
 }
+
+bool LQPSelectExpression::is_correlated() const { return !arguments.empty(); }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& lqp_select_expression = static_cast<const LQPSelectExpression&>(expression);

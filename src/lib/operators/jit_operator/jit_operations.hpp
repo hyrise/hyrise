@@ -91,13 +91,13 @@ const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(
 
 const auto jit_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string, std::regex_constants::icase};
+  const auto regex = std::regex{regex_string};
   return std::regex_match(a, regex);
 };
 
 const auto jit_not_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string, std::regex_constants::icase};
+  const auto regex = std::regex{regex_string};
   return !std::regex_match(a, regex);
 };
 
@@ -220,7 +220,7 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
   // the result.
   const auto store_result_wrapper = [&](const auto typed_lhs,
                                         const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
-    using ResultType = typename std::remove_const<decltype(typed_rhs)>::type;
+    using ResultType = std::remove_const_t<decltype(typed_rhs)>;
     rhs.set<ResultType>(op_func(typed_lhs, typed_rhs), rhs_index, context);
   };
 

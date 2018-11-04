@@ -7,7 +7,6 @@
 #include "base_table_scan_impl.hpp"
 
 #include "storage/abstract_segment_visitor.hpp"
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 
 #include "types.hpp"
 
@@ -39,13 +38,13 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public AbstractS
   struct Context : public SegmentVisitorContext {
     Context(const ChunkID chunk_id, PosList& matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
-    Context(const ChunkID chunk_id, PosList& matches_out, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)
-        : _chunk_id{chunk_id}, _matches_out{matches_out}, _mapped_chunk_offsets{std::move(mapped_chunk_offsets)} {}
+    Context(const ChunkID chunk_id, PosList& matches_out, const std::shared_ptr<const PosList>& position_filter)
+        : _chunk_id{chunk_id}, _matches_out{matches_out}, _position_filter{position_filter} {}
 
     const ChunkID _chunk_id;
     PosList& _matches_out;
 
-    std::unique_ptr<ChunkOffsetsList> _mapped_chunk_offsets;
+    const std::shared_ptr<const PosList> _position_filter;
   };
 };
 

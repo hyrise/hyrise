@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --generate_badge=*)
@@ -43,15 +45,18 @@ rm -fr coverage; mkdir coverage
 # merge the profile data using the llvm-profdata tool:
 ${path_to_compiler}llvm-profdata merge -o ./default.profdata ./default.profraw
 
+# gather list of files for SOURCES environment variable (because llvm-cov does not support exclusions)
+SOURCES=$(${path_to_compiler}llvm-cov show -dump-collected-paths -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ 2>&1 | awk '{print "./" substr($0,'$((${#PWD}+2))')}' | grep -v operators/jit_operator/specialization/llvm/)
+
 # run LLVM’s code coverage tool
-${path_to_compiler}llvm-cov show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage ./src/lib/
+${path_to_compiler}llvm-cov show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage $SOURCES
 
 echo Coverage Information is in ./coverage/index.html
 
 # Continuing only if diff output is needed with Linux/gcc
 if [ "true" == "$generate_badge" ]; then
 
-  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
+  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest $SOURCES > coverage.txt
 
   # coverage badge generation
   coverage_percent=$(tail -c 7 coverage.txt)

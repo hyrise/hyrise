@@ -355,11 +355,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   // clang-format off
   const auto subselect_b_lqp =
   PredicateNode::make(equals_(a2, 5), node_int_int_int);
-  const auto subselect_b = select_(subselect_b_lqp);
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
 
   const auto subselect_a_lqp =
   PredicateNode::make(equals_(a2, subselect_b), node_int_int_int);
-  const auto subselect_a = select_(subselect_a_lqp);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
 
   const auto lqp =
   PredicateNode::make(greater_than_(a1, subselect_a), node_int_int);
@@ -389,14 +389,14 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
-  const auto parameter_a = parameter_(ParameterID{0}, b1);
+  const auto parameter_a = correlated_parameter_(ParameterID{0}, b1);
 
   // clang-format off
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(add_(a2, parameter_a))),
     ProjectionNode::make(expression_vector(a2, b2, add_(a2, parameter_a)),
       node_int_int_int));
-  const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
+  const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
 
   const auto lqp =
   ProjectionNode::make(expression_vector(a1, sub_select),
@@ -421,6 +421,20 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   EXPECT_NE(copied_sub_select_a->lqp, sub_select->lqp);
   EXPECT_NE(copied_sub_select_b, sub_select);
   EXPECT_NE(copied_sub_select_b->lqp, sub_select->lqp);
+}
+
+TEST_F(LogicalQueryPlanTest, OutputResetOnNodeDelete) {
+  auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
+  auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "y"}});
+  auto join_node = JoinNode::make(JoinMode::Cross, mock_node_a, mock_node_b);
+
+  EXPECT_EQ(mock_node_a->output_count(), 1u);
+  EXPECT_EQ(mock_node_b->output_count(), 1u);
+
+  join_node.reset();
+
+  EXPECT_EQ(mock_node_a->output_count(), 0u);
+  EXPECT_EQ(mock_node_b->output_count(), 0u);
 }
 
 }  // namespace opossum

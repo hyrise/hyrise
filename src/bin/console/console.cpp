@@ -3,8 +3,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 
 #include <chrono>
 #include <csetjmp>
@@ -22,13 +20,16 @@
 #include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "planviz/lqp_visualizer.hpp"
-#include "planviz/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -37,9 +38,15 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "tpch/tpch_db_generator.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
+#include "utils/plugin_manager.hpp"
+#include "utils/string_utils.hpp"
+#include "visualization/join_graph_visualizer.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -108,8 +115,10 @@ Console::Console()
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
-  register_command("generate", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
+  register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
+  register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
+  register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
@@ -119,6 +128,8 @@ Console::Console()
   register_command("txinfo", std::bind(&Console::_print_transaction_info, this, std::placeholders::_1));
   register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
+  register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
+  register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -128,11 +139,6 @@ Console::Console()
   }
 
   _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
-}
-
-Console& Console::get() {
-  static Console instance;
-  return instance;
 }
 
 int Console::read() {
@@ -349,32 +355,42 @@ void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
 int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
+  // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate [TABLENAME]             - Generate available TPC-C tables, or a specific table if TABLENAME is "
-      "specified\n");
-  out("  load FILE TABLENAME              - Load table from disc specified by filepath FILE, store it with name "
-      "TABLENAME\n");
-  out("  script SCRIPTFILE                - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                  - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] (noexec) SQL - Visualize a SQL query\n");
-  out("                      <if set>        - does not execute the query (only supported with single statements)\n");
-  out("             lqp                      - print the raw logical query plans\n");
-  out("             lqpopt                   - print the optimized logical query plans\n");
-  out("            <not set>                 - print the physical query plan\n");
-  out("  begin                            - Manually create a new transaction (Auto-commit is active unless begin is "
-      "called)\n");
-  out("  rollback                         - Roll back a manually created transaction\n");
-  out("  commit                           - Commit a manually created transaction\n");
-  out("  txinfo                           - Print information on the current transaction\n");
-  out("  pwd                              - Print current working directory\n");
-  out("  quit                             - Exit the HYRISE Console\n");
-  out("  help                             - Show this message\n\n");
-  out("  setting [property] [value]       - Change a runtime setting\n\n");
-  out("           scheduler (on|off)      - Turn the scheduler on (default) or off\n\n");
-  out("After TPC-C tables are generated, SQL queries can be executed.\n");
-  out("Example:\n");
-  out("SELECT * FROM DISTRICT\n");
+  out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
+  out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
+  out("  load FILEPATH TABLENAME                 - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("                                               The import type is chosen by the type of FILEPATH.\n");
+  out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
+  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
+  out("                                               The export type is chosen by the type of FILEPATH.\n");
+  out("                                                 Supported types: '.bin', '.csv'\n");
+  out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                         - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]               - Visualize a SQL query\n");
+  out("                                               Options\n");
+  out("                                                - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                                 Default: noexec\n");
+  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
+  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
+  out("                                                                       Default: pqp\n");
+  out("                                              SQL\n");
+  out("                                                - Optional, a query to visualize. If not specified, the last\n");
+  out("                                                  previously executed query is visualized.\n");
+  out("  begin                                   - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
+  out("  rollback                                - Roll back a manually created transaction\n");
+  out("  commit                                  - Commit a manually created transaction\n");
+  out("  txinfo                                  - Print information on the current transaction\n");
+  out("  pwd                                     - Print current working directory\n");
+  out("  load_plugin FILE                        - Load and start plugin stored at FILE\n");
+  out("  unload_plugin NAME                      - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT
+  out("  quit                                    - Exit the HYRISE Console\n");
+  out("  help                                    - Show this message\n\n");
+  out("  setting [property] [value]              - Change a runtime setting\n\n");
+  out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
+  // clang-format on
+
   return Console::ReturnCode::Ok;
 }
 
@@ -399,11 +415,44 @@ int Console::_generate_tpcc(const std::string& tablename) {
   return ReturnCode::Ok;
 }
 
-int Console::_load_table(const std::string& args) {
-  std::string input = args;
+int Console::_generate_tpch(const std::string& args) {
+  auto input = args;
   boost::algorithm::trim<std::string>(input);
-  std::vector<std::string> arguments;
+  auto arguments = std::vector<std::string>{};
   boost::algorithm::split(arguments, input, boost::is_space());
+
+  // Check whether there are one or two arguments.
+  auto args_valid = !arguments.empty() && arguments.size() <= 2;
+
+  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
+  // and that's not actually an argument
+  auto scale_factor = 1.0f;
+  if (!arguments.empty() && !arguments[0].empty()) {
+    scale_factor = std::stof(arguments[0]);
+  } else {
+    args_valid = false;
+  }
+
+  auto chunk_size = Chunk::MAX_SIZE;
+  if (arguments.size() > 1) {
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+  }
+
+  if (!args_valid) {
+    out("Usage: ");
+    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
+    out("                                            Chunk size is unlimited by default. \n");
+    return ReturnCode::Error;
+  }
+
+  out("Generating all TPCH tables (this might take a while) ...\n");
+  TpchDbGenerator{scale_factor, chunk_size}.generate_and_store();
+
+  return ReturnCode::Ok;
+}
+
+int Console::_load_table(const std::string& args) {
+  std::vector<std::string> arguments = trim_and_split(args);
 
   if (arguments.size() != 2) {
     out("Usage:\n");
@@ -411,8 +460,8 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& filepath = arguments.at(0);
-  const std::string& tablename = arguments.at(1);
+  const std::string& filepath = arguments[0];
+  const std::string& tablename = arguments[1];
 
   std::vector<std::string> file_parts;
   boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
@@ -444,6 +493,14 @@ int Console::_load_table(const std::string& args) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
+  } else if (extension == "bin") {
+    auto importer = std::make_shared<ImportBinary>(filepath, tablename);
+    try {
+      importer->execute();
+    } catch (const std::exception& exception) {
+      out("Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
   } else {
     out("Error: Unsupported file extension '" + extension + "'\n");
     return ReturnCode::Error;
@@ -452,11 +509,53 @@ int Console::_load_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
+int Console::_export_table(const std::string& args) {
+  std::vector<std::string> arguments = trim_and_split(args);
+
+  if (arguments.size() != 2) {
+    out("Usage:\n");
+    out("  export TABLENAME FILEPATH\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& tablename = arguments[0];
+  const std::string& filepath = arguments[1];
+
+  auto& storage_manager = StorageManager::get();
+  if (!storage_manager.has_table(tablename)) {
+    out("Table does not exist in StorageManager");
+    return ReturnCode::Error;
+  }
+
+  std::vector<std::string> file_parts;
+  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
+  const std::string& extension = file_parts.back();
+
+  out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  auto gt = std::make_shared<GetTable>(tablename);
+  gt->execute();
+
+  try {
+    if (extension == "bin") {
+      auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
+      ex->execute();
+    } else if (extension == "csv") {
+      auto ex = std::make_shared<opossum::ExportCsv>(gt, filepath);
+      ex->execute();
+    } else {
+      out("Exporting to extension \"" + extension + "\" is not supported.\n");
+      return ReturnCode::Error;
+    }
+  } catch (const std::exception& exception) {
+    out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
+}
+
 int Console::_print_table(const std::string& args) {
-  std::string input = args;
-  boost::algorithm::trim<std::string>(input);
-  std::vector<std::string> arguments;
-  boost::algorithm::split(arguments, input, boost::is_space());
+  std::vector<std::string> arguments = trim_and_split(args);
 
   if (arguments.size() != 1) {
     out("Usage:\n");
@@ -480,42 +579,61 @@ int Console::_print_table(const std::string& args) {
 }
 
 int Console::_visualize(const std::string& input) {
+  /**
+   * "visualize" supports three dimensions of options:
+   *    - "noexec"; or implicit "exec", the execution of the specified query
+   *    - "lqp", "unoptlqp", "joins"; or implicit "pqp"
+   *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
+   */
+
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  const std::string noexec_string = "noexec";
-  const std::string lqp_string = "lqp";
-  const std::string lqpopt_string = "lqpopt";
+  constexpr char EXEC[] = "exec";
+  constexpr char NOEXEC[] = "noexec";
+  constexpr char PQP[] = "pqp";
+  constexpr char LQP[] = "lqp";
+  constexpr char UNOPTLQP[] = "unoptlqp";
+  constexpr char JOINS[] = "joins";
 
-  std::string first_word, second_word;
-  if (!input_words.empty()) {
-    first_word = input_words[0];
+  // Determine whether the specified query is to be executed before visualization
+  auto no_execute = false;  // Default
+  if (input_words.front() == NOEXEC || input_words.front() == EXEC) {
+    no_execute = input_words.front() == NOEXEC;
+    input_words.erase(input_words.begin());
   }
 
-  if (input_words.size() > 1) {
-    second_word = input_words[1];
+  // Determine the plan type to visualize
+  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
+  auto plan_type = PlanType::PQP;
+  auto plan_type_str = std::string{"pqp"};
+  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
+      input_words.front() == JOINS) {
+    if (input_words.front() == LQP) {
+      plan_type = PlanType::LQP;
+    } else if (input_words.front() == UNOPTLQP) {
+      plan_type = PlanType::UnoptLQP;
+    } else if (input_words.front() == JOINS) {
+      plan_type = PlanType::Joins;
+    }
+
+    plan_type_str = input_words.front();
+    input_words.erase(input_words.begin());
   }
 
-  const bool no_execute = (first_word == noexec_string || second_word == noexec_string);
-
-  std::string mode;
-  if (first_word == lqp_string || first_word == lqpopt_string)
-    mode = first_word;
-  else if (second_word == lqp_string || second_word == lqpopt_string)
-    mode = second_word;
-
-  // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
-  const auto noexec_size = no_execute ? noexec_string.length() : 0u;
-  auto sql_begin_pos = mode.size() + noexec_size;
-
-  // If we have both words present, we need to remove additional whitespace
-  if (no_execute && !mode.empty()) sql_begin_pos++;
-
-  const auto sql = input.substr(sql_begin_pos, input.size());
+  // Removes plan type and noexec (+ leading whitespace) so that only the sql string is left.
+  const auto sql = boost::algorithm::join(input_words, " ");
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
   if (!sql.empty()) {
     if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  }
+
+  // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
+  // nor was there a previous execution), return an error
+  if (!_sql_pipeline) {
+    out("Nothing to visualize.\n");
+    return ReturnCode::Error;
   }
 
   if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
@@ -523,58 +641,75 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  std::string graph_filename, img_filename;
+  const auto graph_filename = "." + plan_type_str + ".dot";
+  const auto img_filename = plan_type_str + ".png";
 
   // Visualize the Logical Query Plan
-  if (mode == lqp_string || mode == lqpopt_string) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+  switch (plan_type) {
+    case PlanType::LQP:
+    case PlanType::UnoptLQP: {
+      std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
-    try {
-      if (!no_execute) {
-        // Run the query and then collect the LQPs
-        _sql_pipeline->get_result_table();
+      try {
+        const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                        : _sql_pipeline->get_unoptimized_logical_plans();
+        for (const auto& lqp : lqps) {
+          lqp_roots.push_back(lqp);
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        _handle_rollback();
+        return ReturnCode::Error;
       }
 
-      const auto& lqps = (mode == lqp_string) ? _sql_pipeline->get_unoptimized_logical_plans()
-                                              : _sql_pipeline->get_optimized_logical_plans();
+      LQPVisualizer visualizer;
+      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+    } break;
+
+    case PlanType::PQP: {
+      // Visualize the Physical Query Plan
+      SQLQueryPlan query_plan{CleanupTemporaries::No};
+
+      try {
+        if (!no_execute) {
+          _sql_pipeline->get_result_table();
+        }
+
+        // Create plan with all roots
+        const auto& plans = _sql_pipeline->get_query_plans();
+        for (const auto& plan : plans) {
+          query_plan.append_plan(*plan);
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        _handle_rollback();
+        return ReturnCode::Error;
+      }
+
+      SQLQueryPlanVisualizer visualizer;
+      visualizer.visualize(query_plan, graph_filename, img_filename);
+    } break;
+
+    case PlanType::Joins: {
+      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Outer and Anti joins.\n");
+
+      auto join_graphs = std::vector<JoinGraph>{};
+
+      const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
       for (const auto& lqp : lqps) {
-        lqp_roots.push_back(lqp);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
+        const auto sub_lqps = lqp_find_subplan_roots(lqp);
 
-    graph_filename = "." + mode + ".dot";
-    img_filename = mode + ".png";
-    LQPVisualizer visualizer;
-    visualizer.visualize(lqp_roots, graph_filename, img_filename);
-
-  } else {
-    // Visualize the Physical Query Plan
-    SQLQueryPlan query_plan{CleanupTemporaries::No};
-
-    try {
-      if (!no_execute) {
-        _sql_pipeline->get_result_table();
+        for (const auto& sub_lqp : sub_lqps) {
+          const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
+          for (auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
+            join_graphs.emplace_back(sub_lqp_join_graph);
+          }
+        }
       }
 
-      // Create plan with all roots
-      const auto& plans = _sql_pipeline->get_query_plans();
-      for (const auto& plan : plans) {
-        query_plan.append_plan(*plan);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
-
-    graph_filename = ".queryplan.dot";
-    img_filename = "queryplan.png";
-    SQLQueryPlanVisualizer visualizer;
-    visualizer.visualize(query_plan, graph_filename, img_filename);
+      JoinGraphVisualizer visualizer;
+      visualizer.visualize(join_graphs, graph_filename, img_filename);
+    } break;
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");
@@ -726,6 +861,50 @@ int Console::_print_current_working_directory(const std::string&) {
   return ReturnCode::Ok;
 }
 
+int Console::_load_plugin(const std::string& args) {
+  auto arguments = trim_and_split(args);
+
+  if (arguments.size() != 1) {
+    out("Usage:\n");
+    out("  load_plugin PLUGINPATH\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& plugin_path_str = arguments[0];
+
+  const filesystem::path plugin_path(plugin_path_str);
+  const auto plugin_name = plugin_name_from_path(plugin_path);
+
+  PluginManager::get().load_plugin(plugin_path);
+
+  out("Plugin (" + plugin_name + ") successfully loaded.\n");
+
+  return ReturnCode::Ok;
+}
+
+int Console::_unload_plugin(const std::string& input) {
+  auto arguments = trim_and_split(input);
+
+  if (arguments.size() != 1) {
+    out("Usage:\n");
+    out("  unload_plugin PLUGINNAME\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& plugin_name = arguments[0];
+
+  PluginManager::get().unload_plugin(plugin_name);
+
+  // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
+  // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
+  // using IndexScans, these query plans might become unusable after the plugin is unloaded.
+  SQLQueryCache<SQLQueryPlan>::get().clear();
+
+  out("Plugin (" + plugin_name + ") stopped.\n");
+
+  return ReturnCode::Ok;
+}
+
 // GNU readline interface to our commands
 
 char** Console::_command_completion(const char* text, int start, int end) {
@@ -743,8 +922,8 @@ char** Console::_command_completion(const char* text, int start, int end) {
   // Choose completion function depending on the input. If it starts with "generate",
   // suggest TPC-C tablenames for completion.
   const std::string& first_word = tokens.at(0);
-  if (first_word == "generate") {
-    // Completion only for two words, "generate", and the TABLENAME
+  if (first_word == "generate_tpcc") {
+    // Completion only for two words, "generate_tpcc", and the TABLENAME
     if (tokens.size() <= 2) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_tpcc);
     }
@@ -853,7 +1032,6 @@ int main(int argc, char** argv) {
   // Display welcome message if Console started normally
   if (argc == 1) {
     console.out("HYRISE SQL Interface\n");
-    console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
     console.out("Type 'help' for more information.\n\n");
 
     console.out("Hyrise is running a ");

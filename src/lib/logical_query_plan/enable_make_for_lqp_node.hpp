@@ -26,7 +26,7 @@ template <typename DerivedNode>
 class EnableMakeForLQPNode {
  public:
   template <int N, typename... Ts>
-  using NthTypeOf = typename std::tuple_element<N, std::tuple<Ts...>>::type;
+  using NthTypeOf = std::tuple_element_t<N, std::tuple<Ts...>>;
 
   template <typename... Args>
   static std::shared_ptr<DerivedNode> make(Args&&... args) {

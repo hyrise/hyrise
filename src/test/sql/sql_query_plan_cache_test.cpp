@@ -60,7 +60,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   EXPECT_FALSE(cache.has(Q2));
 
   // Retrieve and execute the cached plan.
-  const SQLQueryPlan cached_plan = cache.get(Q1);
+  const SQLQueryPlan cached_plan = cache.get_entry(Q1);
   auto task_list1 = cached_plan.deep_copy().create_tasks();
   auto task_list2 = cached_plan.deep_copy().create_tasks();
 

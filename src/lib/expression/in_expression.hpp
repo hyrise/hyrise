@@ -9,7 +9,14 @@ namespace opossum {
  */
 class InExpression : public AbstractPredicateExpression {
  public:
-  InExpression(const std::shared_ptr<AbstractExpression>& value, const std::shared_ptr<AbstractExpression>& set);
+  InExpression(const PredicateCondition predicate_condition, const std::shared_ptr<AbstractExpression>& value,
+               const std::shared_ptr<AbstractExpression>& set);
+
+  /**
+   * Utility for better readability
+   * @return predicate_condition == PredicateCondition::NotIn
+   */
+  bool is_negated() const;
 
   const std::shared_ptr<AbstractExpression>& value() const;
   const std::shared_ptr<AbstractExpression>& set() const;

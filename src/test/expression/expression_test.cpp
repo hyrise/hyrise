@@ -59,14 +59,14 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_EQ(*value_(5), *value_(5));
   EXPECT_NE(*value_(5.0), *value_(5));
   EXPECT_NE(*value_(5.3), *value_(5));
-  EXPECT_EQ(*between(1, a, 3), *between(1, a, 3));
+  EXPECT_EQ(*between_(1, a, 3), *between_(1, a, 3));
   EXPECT_EQ(*greater_than_(1, a), *greater_than_(1, a));
   EXPECT_NE(*greater_than_(1, a), *less_than_(a, 1));
   EXPECT_EQ(*is_null_(a), *is_null_(a));
   EXPECT_NE(*is_null_(a), *is_null_(b));
   EXPECT_EQ(*is_not_null_(a), *is_not_null_(a));
-  EXPECT_EQ(*parameter_(ParameterID{4}), *parameter_(ParameterID{4}));
-  EXPECT_NE(*parameter_(ParameterID{4}), *parameter_(ParameterID{5}));
+  EXPECT_EQ(*uncorrelated_parameter_(ParameterID{4}), *uncorrelated_parameter_(ParameterID{4}));
+  EXPECT_NE(*uncorrelated_parameter_(ParameterID{4}), *uncorrelated_parameter_(ParameterID{5}));
   EXPECT_EQ(*extract_(DatetimeComponent::Month, "1999-07-30"), *extract_(DatetimeComponent::Month, "1999-07-30"));
   EXPECT_NE(*extract_(DatetimeComponent::Day, "1999-07-30"), *extract_(DatetimeComponent::Month, "1999-07-30"));
   EXPECT_EQ(*unary_minus_(6), *unary_minus_(6));
@@ -102,7 +102,7 @@ TEST_F(ExpressionTest, DeepCopy) {
 
 TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(sum_(a)->requires_computation());
-  EXPECT_TRUE(between(a, 1, 5)->requires_computation());
+  EXPECT_TRUE(between_(a, 1, 5)->requires_computation());
   EXPECT_TRUE(greater_than_(a, b)->requires_computation());
   EXPECT_TRUE(case_(1, a, b)->requires_computation());
   EXPECT_TRUE(substr_("Hello", 1, 2)->requires_computation());
@@ -110,19 +110,20 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(is_null_(null_())->requires_computation());
   EXPECT_TRUE(and_(1, 0)->requires_computation());
   EXPECT_TRUE(unary_minus_(5)->requires_computation());
-  EXPECT_FALSE(parameter_(ParameterID{5})->requires_computation());
-  EXPECT_FALSE(parameter_(ParameterID{5}, a)->requires_computation());
-  EXPECT_FALSE(column_(a)->requires_computation());
+  EXPECT_FALSE(uncorrelated_parameter_(ParameterID{5})->requires_computation());
+  EXPECT_FALSE(correlated_parameter_(ParameterID{5}, a)->requires_computation());
+  EXPECT_FALSE(lqp_column_(a)->requires_computation());
   EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
   EXPECT_FALSE(value_(5)->requires_computation());
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
   EXPECT_TRUE(cast_(5.5, DataType::Int)->requires_computation());
 
-  const auto lqp_select_expression = select_(int_float_node);
+  const auto lqp_select_expression = lqp_select_(int_float_node);
 
   EXPECT_TRUE(lqp_select_expression->requires_computation());
   EXPECT_TRUE(exists_(lqp_select_expression)->requires_computation());
   EXPECT_TRUE(in_(5, lqp_select_expression)->requires_computation());
+  EXPECT_TRUE(not_in_(5, lqp_select_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
   const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(get_table);
@@ -142,7 +143,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(greater_than_(5, 3)->as_column_name(), "5 > 3");
   EXPECT_EQ(equals_(5, 3)->as_column_name(), "5 = 3");
   EXPECT_EQ(not_equals_(5, 3)->as_column_name(), "5 != 3");
-  EXPECT_EQ(between(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
+  EXPECT_EQ(between_(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
   EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
   EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM '1993-03-04')");
   EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello', 1, 2)");
@@ -157,8 +158,10 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(value_(3.25)->as_column_name(), "3.25");
   EXPECT_EQ(null_()->as_column_name(), "NULL");
   EXPECT_EQ(cast_("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
-  EXPECT_EQ(parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
-  EXPECT_EQ(parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
+  EXPECT_EQ(uncorrelated_parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
+  EXPECT_EQ(correlated_parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
+  EXPECT_EQ(in_(5, list_(1, 2, 3))->as_column_name(), "(5) IN (1, 2, 3)");
+  EXPECT_EQ(not_in_(5, list_(1, 2, 3))->as_column_name(), "(5) NOT IN (1, 2, 3)");
 }
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
@@ -181,12 +184,12 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(is_null_(sum_(add_(a, 2)))->as_column_name(), "SUM(a + 2) IS NULL");
   EXPECT_EQ(less_than_(a, b)->as_column_name(), "a < b");
   EXPECT_EQ(less_than_(add_(a, 5), b)->as_column_name(), "a + 5 < b");
-  EXPECT_EQ(between(a, 2, 3)->as_column_name(), "a BETWEEN 2 AND 3");
-  EXPECT_EQ(and_(greater_than_equals_(b, 5), between(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN 2 AND 3");
-  EXPECT_EQ(not_equals_(between(a, 2, 3), 0)->as_column_name(), "(a BETWEEN 2 AND 3) != 0");
+  EXPECT_EQ(between_(a, 2, 3)->as_column_name(), "a BETWEEN 2 AND 3");
+  EXPECT_EQ(and_(greater_than_equals_(b, 5), between_(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN 2 AND 3");
+  EXPECT_EQ(not_equals_(between_(a, 2, 3), 0)->as_column_name(), "(a BETWEEN 2 AND 3) != 0");
 
   EXPECT_EQ(mul_(less_than_(add_(a, 5), b), 3)->as_column_name(), "(a + 5 < b) * 3");
-  EXPECT_EQ(add_(1, between(a, 2, 3))->as_column_name(), "1 + (a BETWEEN 2 AND 3)");
+  EXPECT_EQ(add_(1, between_(a, 2, 3))->as_column_name(), "1 + (a BETWEEN 2 AND 3)");
 
   // TODO(anybody) Omit redundant parentheses
   EXPECT_EQ(add_(5, add_(1, 3))->as_column_name(), "5 + (1 + 3)");
@@ -216,9 +219,11 @@ TEST_F(ExpressionTest, DataType) {
 
   EXPECT_EQ(less_than_(1, 2)->data_type(), DataType::Int);
   EXPECT_EQ(less_than_(1.5, 2)->data_type(), DataType::Int);
-  EXPECT_EQ(between(1.5, 2, 3)->data_type(), DataType::Int);
+  EXPECT_EQ(between_(1.5, 2, 3)->data_type(), DataType::Int);
   EXPECT_EQ(and_(1, 1)->data_type(), DataType::Int);
   EXPECT_EQ(or_(1, 1)->data_type(), DataType::Int);
+  EXPECT_EQ(in_(1, list_(1, 2, 3))->data_type(), DataType::Int);
+  EXPECT_EQ(not_in_(1, list_(1, 2, 3))->data_type(), DataType::Int);
   EXPECT_EQ(is_null_(5)->data_type(), DataType::Int);
 
   EXPECT_EQ(case_(1, int32_t{1}, int32_t{1})->data_type(), DataType::Int);
@@ -230,8 +235,8 @@ TEST_F(ExpressionTest, DataType) {
 
 TEST_F(ExpressionTest, IsNullable) {
   EXPECT_FALSE(add_(1, 2)->is_nullable());
-  EXPECT_FALSE(between(1, 2, 3)->is_nullable());
-  EXPECT_TRUE(between(1, null_(), 3)->is_nullable());
+  EXPECT_FALSE(between_(1, 2, 3)->is_nullable());
+  EXPECT_TRUE(between_(1, null_(), 3)->is_nullable());
   EXPECT_FALSE(list_(1, 2)->is_nullable());
   EXPECT_TRUE(list_(1, null_())->is_nullable());
   EXPECT_FALSE(and_(1, 1)->is_nullable());
@@ -240,8 +245,8 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(case_(1, 1, null_())->is_nullable());
   EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable());
   EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_FALSE(column_(a)->is_nullable());
-  EXPECT_TRUE(column_(a_nullable)->is_nullable());
+  EXPECT_FALSE(lqp_column_(a)->is_nullable());
+  EXPECT_TRUE(lqp_column_(a_nullable)->is_nullable());
   EXPECT_FALSE(cast_(12, DataType::String)->is_nullable());
   EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable());
   EXPECT_TRUE(sum_(null_())->is_nullable());
@@ -249,6 +254,8 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_FALSE(count_star_()->is_nullable());
   EXPECT_FALSE(count_(5)->is_nullable());
   EXPECT_FALSE(count_(null_())->is_nullable());
+  EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable());
+  EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable());
 
   // Division by zero could be nullable, thus division and modulo are always nullable
   EXPECT_TRUE(div_(1, 2)->is_nullable());

@@ -29,6 +29,9 @@ class LQPSelectExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
+  // Returns whether this query is correlated, i.e., uses external parameters
+  bool is_correlated() const;
+
   size_t parameter_count() const;
   std::shared_ptr<AbstractExpression> parameter_expression(const size_t parameter_idx) const;
 

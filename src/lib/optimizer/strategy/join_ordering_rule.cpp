@@ -2,8 +2,8 @@
 
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "optimizer/dp_ccp.hpp"
-#include "optimizer/join_graph.hpp"
+#include "optimizer/join_ordering/dp_ccp.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -47,7 +47,7 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
    *        -> look for more JoinGraphs below the JoinGraph's vertices
    */
 
-  const auto join_graph = JoinGraph::from_lqp(lqp);
+  const auto join_graph = JoinGraph::build_from_lqp(lqp);
   if (!join_graph) {
     _recurse_to_inputs(lqp);
     return lqp;

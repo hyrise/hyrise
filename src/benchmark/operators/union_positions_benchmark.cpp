@@ -122,8 +122,8 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
 
   while (state.KeepRunning()) {
     // Create copies, this would need to be done the UnionPositions Operator as well
-    auto left = *pos_list_left;
-    auto right = *pos_list_right;
+    auto& left = *pos_list_left;
+    auto& right = *pos_list_right;
 
     std::sort(left.begin(), left.end());
     std::sort(right.begin(), right.end());

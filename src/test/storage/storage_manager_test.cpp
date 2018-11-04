@@ -8,6 +8,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "utils/filesystem.hpp"
 
 namespace opossum {
 
@@ -113,6 +114,42 @@ TEST_F(StorageManagerTest, ListViewNames) {
 
   EXPECT_EQ(view_names[0], "first_view");
   EXPECT_EQ(view_names[1], "second_view");
+}
+
+TEST_F(StorageManagerTest, Print) {
+  auto& sm = StorageManager::get();
+  sm.add_table("third_table", load_table("src/test/tables/int_int2.tbl", 2));
+
+  std::ostringstream output;
+  sm.print(output);
+  auto output_string = output.str();
+
+  EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> first_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> second_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> third_table << (2 columns, 4 rows in 2 chunks)") != std::string::npos);
+
+  EXPECT_TRUE(output_string.find("===== Views ======") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== view >> first_view <<") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== view >> second_view <<") != std::string::npos);
+}
+
+TEST_F(StorageManagerTest, ExportTables) {
+  std::ostringstream output;
+  auto& sm = StorageManager::get();
+
+  // first, we remove empty test tables
+  sm.drop_table("first_table");
+  sm.drop_table("second_table");
+
+  // add a non-empty table
+  sm.add_table("third_table", load_table("src/test/tables/int_float.tbl"));
+
+  sm.export_all_tables_as_csv(opossum::test_data_path);
+
+  const std::string filename = opossum::test_data_path + "/third_table.csv";
+  EXPECT_TRUE(filesystem::exists(filename));
+  filesystem::remove(filename);
 }
 
 }  // namespace opossum

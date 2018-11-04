@@ -3,6 +3,7 @@
 #include <set>
 
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -54,6 +55,28 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
   return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
 }
 
+void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& root_nodes,
+                                 std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes,
+                                 const std::shared_ptr<AbstractLQPNode>& lqp) {
+  root_nodes.emplace_back(lqp);
+
+  visit_lqp(lqp, [&](const auto& sub_node) {
+    if (!visited_nodes.emplace(sub_node).second) return LQPVisitation::DoNotVisitInputs;
+
+    for (const auto& expression : sub_node->node_expressions()) {
+      visit_expression(expression, [&](const auto sub_expression) {
+        if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
+          lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
+        }
+
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+
+    return LQPVisitation::VisitInputs;
+  });
+}
+
 }  // namespace
 
 namespace opossum {
@@ -83,7 +106,8 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node) {
   DebugAssert(replacement_node->outputs().empty(), "Node can't have outputs");
-  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(), "Node can't have inputs");
+  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(),
+              "Replacement node can't have inputs");
 
   const auto outputs = original_node->outputs();
   const auto input_sides = original_node->get_input_sides();
@@ -185,6 +209,13 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
     default:
       return nullptr;
   }
+}
+
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  auto root_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
+  return root_nodes;
 }
 
 }  // namespace opossum

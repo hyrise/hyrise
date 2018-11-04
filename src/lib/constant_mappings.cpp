@@ -37,6 +37,8 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::Between, "BETWEEN"},
         {PredicateCondition::Like, "LIKE"},
         {PredicateCondition::NotLike, "NOT LIKE"},
+        {PredicateCondition::In, "IN"},
+        {PredicateCondition::NotIn, "NOT IN"},
         {PredicateCondition::IsNull, "IS NULL"},
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });

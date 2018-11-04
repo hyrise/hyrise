@@ -5,10 +5,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "boost/hana/for_each.hpp"
-#include "boost/hana/integral_constant.hpp"
-#include "boost/hana/zip_with.hpp"
-
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"

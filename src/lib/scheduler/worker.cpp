@@ -28,9 +28,8 @@ namespace opossum {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
-Worker::Worker(const std::weak_ptr<ProcessingUnit>& processing_unit, const std::shared_ptr<TaskQueue>& queue,
-               WorkerID id, CpuID cpu_id, SchedulePriority min_priority)
-    : _processing_unit(processing_unit), _queue(queue), _id(id), _cpu_id(cpu_id), _min_priority(min_priority) {}
+Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
+    : _queue(queue), _id(id), _cpu_id(cpu_id) {}
 
 WorkerID Worker::id() const { return _id; }
 
@@ -38,77 +37,59 @@ std::shared_ptr<TaskQueue> Worker::queue() const { return _queue; }
 
 CpuID Worker::cpu_id() const { return _cpu_id; }
 
-std::weak_ptr<ProcessingUnit> Worker::processing_unit() const { return _processing_unit; }
-
 void Worker::operator()() {
-  DebugAssert((this_thread_worker.expired()), "Thread already has a worker");
+  Assert(this_thread_worker.expired(), "Thread already has a worker");
 
   this_thread_worker = shared_from_this();
 
   _set_affinity();
 
-  auto scheduler = CurrentScheduler::get();
+  while (CurrentScheduler::get()->active()) {
+    _work();
+  }
+}
 
-  DebugAssert(static_cast<bool>(scheduler), "No scheduler");
+void Worker::_work() {
+  auto task = _queue->pull();
 
-  auto processing_unit = _processing_unit.lock();
-
-  DebugAssert(static_cast<bool>(processing_unit), "No processing unit");
-
-  while (!processing_unit->shutdown_flag()) {
-    // Hibernate if this is not the active worker.
-    {
-      auto this_worker_is_active = processing_unit->try_acquire_active_worker_token(_id);
-      if (!this_worker_is_active) {
-        processing_unit->hibernate_calling_worker();
-        continue;  // Re-try to become the active worker
-      }
-    }
-
-    auto task = _queue->pull(_min_priority);
-
-    // TODO(all): this might shutdown the worker and leave non-ready tasks in the queue.
-    // Figure out how we want to deal with that later.
-    if (!task) {
-      // If the worker is the dedicated JobTask worker, go back into hibernation to wake up
-      // (or pass priority to) one of the all-priorities workers.
-      if (_min_priority < SchedulePriority::Lowest) {
-        processing_unit->yield_active_worker_token(_id);
-        processing_unit->wake_or_create_worker();
-        continue;  // Re-try to become the active worker
-      }
-
-      // Simple work stealing without explicitly transferring data between nodes.
-      auto work_stealing_successful = false;
-      for (auto& queue : scheduler->queues()) {
-        if (queue == _queue) {
-          continue;
-        }
-
-        task = queue->steal();
-        if (task) {
-          task->set_node_id(_queue->node_id());
-          work_stealing_successful = true;
-          break;
-        }
-      }
-
-      // Sleep iff there is no ready task in our queue and work stealing was not successful.
-      if (!work_stealing_successful) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  if (!task) {
+    // Simple work stealing without explicitly transferring data between nodes.
+    auto work_stealing_successful = false;
+    for (auto& queue : CurrentScheduler::get()->queues()) {
+      if (queue == _queue) {
         continue;
       }
+
+      task = queue->steal();
+      if (task) {
+        task->set_node_id(_queue->node_id());
+        work_stealing_successful = true;
+        break;
+      }
     }
 
-    task->execute();
-
-    // This is part of the Scheduler shutdown system. Count the number of tasks a ProcessingUnit executed to allow the
-    // Scheduler to determine whether all tasks finished
-    processing_unit->on_worker_finished_task();
+    // Sleep if there is no ready task in our queue and work stealing was not successful.
+    if (!work_stealing_successful) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      return;
+    }
   }
 
-  processing_unit->yield_active_worker_token(_id);
+  task->execute();
+
+  // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
+  // Scheduler to determine whether all tasks finished
+  _num_finished_tasks++;
 }
+
+void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
+
+void Worker::join() {
+  Assert(!CurrentScheduler::get()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  _thread.join();
+}
+
+uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 
 void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT

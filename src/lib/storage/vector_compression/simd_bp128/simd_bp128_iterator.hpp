@@ -52,7 +52,7 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   size_t _data_index;
   size_t _absolute_index;
 
-  std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info{};
+  alignas(16) std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info{};
 
   const std::unique_ptr<std::array<uint32_t, Packing::meta_block_size>> _current_meta_block;
   size_t _current_meta_block_index;

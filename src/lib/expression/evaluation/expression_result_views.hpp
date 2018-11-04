@@ -27,7 +27,7 @@ class ExpressionResultNullableSeries {
 
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
-  bool is_nullable() const { return !_nulls.empty(); }
+  bool is_nullable() const { return true; }
 
   const T& value(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");

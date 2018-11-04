@@ -2,6 +2,8 @@
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -98,13 +100,48 @@ TEST_F(LQPUtilsTest, VisitLQP) {
   expected_nodes[2]->set_left_input(node_a);
   expected_nodes[3]->set_left_input(node_a);
 
-  auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  visit_lqp(expected_nodes[0], [&](const auto& node) {
-    actual_nodes.emplace_back(node);
-    return LQPVisitation::VisitInputs;
-  });
+  {
+    // Visit AbstractLQPNode
+    auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+    visit_lqp(expected_nodes[0], [&](const auto& node) {
+      actual_nodes.emplace_back(node);
+      return LQPVisitation::VisitInputs;
+    });
 
-  EXPECT_EQ(actual_nodes, expected_nodes);
+    EXPECT_EQ(actual_nodes, expected_nodes);
+  }
+
+  {
+    // Visit PredicateNode
+    auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+    visit_lqp(std::static_pointer_cast<PredicateNode>(expected_nodes[0]), [&](const auto& node) {
+      actual_nodes.emplace_back(node);
+      return LQPVisitation::VisitInputs;
+    });
+
+    EXPECT_EQ(actual_nodes, expected_nodes);
+  }
+}
+
+TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
+  // clang-format off
+  const auto subselect_a_lqp = AggregateNode::make(expression_vector(b_x), expression_vector(), node_b);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto subselect_b_lqp = ProjectionNode::make(expression_vector(subselect_a), DummyTableNode::make());
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
+
+  const auto lqp =
+  PredicateNode::make(greater_than_(a_a, 5),
+    PredicateNode::make(less_than_(subselect_b, 4),
+      node_a));
+  // clang-format on
+
+  const auto roots = lqp_find_subplan_roots(lqp);
+
+  ASSERT_EQ(roots.size(), 3u);
+  EXPECT_EQ(roots[0], lqp);
+  EXPECT_EQ(roots[1], subselect_b_lqp);
+  EXPECT_EQ(roots[2], subselect_a_lqp);
 }
 
 }  // namespace opossum

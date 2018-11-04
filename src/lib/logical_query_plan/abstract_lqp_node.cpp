@@ -55,6 +55,17 @@ namespace opossum {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : type(node_type) {}
 
+AbstractLQPNode::~AbstractLQPNode() {
+  Assert(
+      _outputs.empty(),
+      "Bug detected. There are outputs that should still reference to this node. Thus this node shouldn't get deleted");
+
+  // We're in the destructor, thus we must make sure we're not calling any virtual methods - so we're doing the removal
+  // directly instead of calling set_input_left/right(nullptr)
+  if (_inputs[0]) _inputs[0]->_remove_output_pointer(*this);
+  if (_inputs[1]) _inputs[1]->_remove_output_pointer(*this);
+}
+
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::right_input() const { return _inputs[1]; }
@@ -82,7 +93,7 @@ void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<Abstrac
 
   // Untie from previous input
   if (current_input) {
-    current_input->_remove_output_pointer(shared_from_this());
+    current_input->_remove_output_pointer(*this);
   }
 
   /**
@@ -272,9 +283,23 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
   return shallow_copy;
 }
 
-void AbstractLQPNode::_remove_output_pointer(const std::shared_ptr<AbstractLQPNode>& output) {
-  const auto iter =
-      std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) { return output == other.lock(); });
+void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
+  const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
+    /**
+     * HACK!
+     *  Normally we'd just check `&output == other.lock().get()` here.
+     *  BUT (this is the hacky part), we're checking for `other.expired()` here as well and accept an expired element as
+     *  a match. If nothing else breaks the only way we might get an expired element is if `other` is the
+     *  expired weak_ptr<> to `output` - and thus the element we're looking for - in the following scenario:
+     *
+     * auto node_a = Node::make()
+     * auto node_b = Node::make(..., node_a)
+     *
+     * node_b.reset(); // node_b::~AbstractLQPNode() will call `node_a.remove_output_pointer(node_b)`
+     *                 // But we can't lock node_b anymore, since its ref count is already 0
+     */
+    return &output == other.lock().get() || other.expired();
+  });
   DebugAssert(iter != _outputs.end(), "Specified output node is not actually a output node of this node.");
 
   /**
