@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "strategy_base_test.hpp"
 #include "testing_assert.hpp"
 
@@ -22,8 +20,8 @@ namespace opossum {
 class ExistsReformulationRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int2.tbl"));
-    StorageManager::get().add_table("table_b", load_table("src/test/tables/int_int3.tbl"));
+    StorageManager::get().add_table("table_a", load_table_cached("src/test/tables/int_int2.tbl"));
+    StorageManager::get().add_table("table_b", load_table_cached("src/test/tables/int_int3.tbl"));
 
     node_table_a = StoredTableNode::make("table_a");
     node_table_a_col_a = node_table_a->get_column("a");

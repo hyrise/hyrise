@@ -5,8 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "all_type_variant.hpp"
 #include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
@@ -27,9 +25,9 @@ class JoinIndexTest : public BaseTest {
   void SetUp() override {
     // load and create the indexed tables
     _table_wrapper_a = load_table_with_index("src/test/tables/int_float.tbl", 2);
-    _table_wrapper_a_no_index = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    _table_wrapper_a_no_index = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float.tbl", 2));
     _table_wrapper_b = load_table_with_index("src/test/tables/int_float2.tbl", 2);
-    _table_wrapper_b_no_index = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
+    _table_wrapper_b_no_index = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float2.tbl", 2));
     _table_wrapper_c = load_table_with_index("src/test/tables/int_string.tbl", 4);
     _table_wrapper_d = load_table_with_index("src/test/tables/string_int.tbl", 3);
     _table_wrapper_e = load_table_with_index("src/test/tables/int_int.tbl", 4);
@@ -65,7 +63,7 @@ class JoinIndexTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
-    auto table = load_table(filename, chunk_size);
+    auto table = load_table_cached(filename, chunk_size);
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
@@ -88,7 +86,7 @@ class JoinIndexTest : public BaseTest {
                         const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition,
                         const JoinMode mode, const std::string& file_name, size_t chunk_size, bool using_index = true) {
     // load expected results from file
-    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
+    std::shared_ptr<Table> expected_result = load_table_cached(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join

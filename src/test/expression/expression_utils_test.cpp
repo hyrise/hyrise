@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -9,7 +8,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ExpressionUtilsTest : public ::testing::Test {
+class ExpressionUtilsTest : public BaseTest {
  public:
   void SetUp() override {
     node_a =

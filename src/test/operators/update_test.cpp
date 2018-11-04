@@ -3,8 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -24,7 +22,7 @@ namespace opossum {
 class OperatorsUpdateTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+    auto t = load_table_cached("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
     // Update operator works on the StorageManager
     StorageManager::get().add_table(_table_name, t);
   }
@@ -91,7 +89,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt, expected_result);
 }
 
@@ -99,13 +97,13 @@ TEST_F(OperatorsUpdateTest, NormalUpdate) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+  auto t2 = load_table_cached("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 
@@ -113,13 +111,13 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+  auto t2 = load_table_cached("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 
@@ -127,13 +125,13 @@ TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", 2u);
+  auto t2 = load_table_cached("src/test/tables/int_int.tbl", 2u);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 
@@ -141,13 +139,13 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
 
-  auto t2 = load_table("src/test/tables/int_int.tbl", 1u);
+  auto t2 = load_table_cached("src/test/tables/int_int.tbl", 1u);
   StorageManager::get().add_table("updateTestTable2", t2);
 
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 TEST_F(OperatorsUpdateTest, MissingChunks) {

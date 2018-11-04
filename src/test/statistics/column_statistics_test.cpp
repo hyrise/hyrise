@@ -7,7 +7,6 @@
 #include "base_test.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/column_statistics.hpp"
@@ -18,7 +17,7 @@ namespace opossum {
 class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
+    _table_with_different_column_types = load_table_cached("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     auto table_statistics1 = generate_table_statistics(*_table_with_different_column_types);
     _column_statistics_int = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[0]));
@@ -29,7 +28,7 @@ class ColumnStatisticsTest : public BaseTest {
     _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[3]));
 
-    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
+    _table_uniform_distribution = load_table_cached("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
     auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
     _column_statistics_uniform_columns = table_statistics2.column_statistics();
   }

@@ -5,8 +5,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "import_export/csv_meta.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_scan.hpp"
@@ -219,7 +217,7 @@ TEST_F(OperatorsExportCsvTest, NonsensePath) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float_with_null.tbl", 4));
   table_wrapper->execute();
 
   auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
@@ -235,7 +233,7 @@ TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/string_with_null.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/string_with_null.tbl", 4));
   table_wrapper->execute();
 
   auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);
@@ -251,7 +249,7 @@ TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float_with_null.tbl", 4));
   table_wrapper->execute();
 
   auto ex = std::make_shared<ExportCsv>(table_wrapper, filename);

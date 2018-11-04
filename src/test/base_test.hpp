@@ -7,7 +7,7 @@
 
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -24,6 +24,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
+#include "load_table_cached.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -36,7 +37,7 @@ extern std::string test_data_path;
 
 template <typename ParamType>
 class BaseTestWithParam
-    : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
+ : public std::conditional_t<std::is_same_v<ParamType, void>, ::testing::Test, ::testing::TestWithParam<ParamType>> {
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
@@ -113,52 +114,6 @@ class BaseTestWithParam
 
     return std::make_shared<TableScan>(in, predicate);
   }
-
-  static std::shared_ptr<Table> load_table_cached(const std::string& file_name, size_t chunk_size = Chunk::MAX_SIZE) {
-    auto cache_iter = table_cache.find({file_name, chunk_size});
-
-    if (cache_iter == table_cache.end()) {
-      cache_iter = table_cache.emplace(std::make_pair(file_name, chunk_size), load_table(file_name, chunk_size)).first;
-    }
-
-    const auto cached_table = cache_iter->second;
-
-    const auto result_table = std::make_shared<Table>(cached_table->column_definitions(), TableType::Data, cached_table->max_chunk_size());
-
-    for (const auto& cached_chunk : cached_table->chunks()) {
-      auto segments = Segments{cached_table->column_count()};
-
-      for (auto column_id = ColumnID{0}; column_id < cached_table->column_count(); ++column_id) {
-        const auto cached_segment = cached_chunk->get_segment(column_id);
-        const auto cached_value_segment = std::dynamic_pointer_cast<BaseValueSegment>(cached_segment);
-        Assert(cached_value_segment, "Expected ValueSegment in cache");
-
-        resolve_data_type(cached_table->column_data_type(column_id), [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-
-          pmr_concurrent_vector<ColumnDataType> values;
-          values.reserve(cached_segment->size());
-          materialize_values<ColumnDataType>(*cached_segment, values);
-
-          if (cached_value_segment->is_nullable()) {
-            pmr_concurrent_vector<bool> null_values;
-            null_values.reserve(cached_segment->size());
-            materialize_nulls<ColumnDataType>(*cached_segment, null_values);
-
-            segments[column_id] = std::make_shared<ValueSegment>(std::move(values), std::move(null_values));
-          } else {
-
-            segments[column_id] = std::make_shared<ValueSegment>(std::move(values));
-          }
-        });
-
-      }
-    }
-
-    return result_table;
-  }
-
-  static std::map<std::pair<std::string, ChunkOffset>, std::shared_ptr<Table>> table_cache;
 };
 
 using BaseTest = BaseTestWithParam<void>;

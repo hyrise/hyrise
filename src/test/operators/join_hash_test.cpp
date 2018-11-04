@@ -1,6 +1,4 @@
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_scan.hpp"
@@ -26,17 +24,17 @@ class JoinHashTest : public BaseTest {
       _table_zero_one->append({static_cast<int>(i % 2)});
     }
 
-    _table_wrapper_small = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
+    _table_wrapper_small = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
 
-    _table_tpch_orders = std::make_shared<TableWrapper>(load_table("src/test/tables/tpch/sf-0.001/orders.tbl", 10));
+    _table_tpch_orders = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/tpch/sf-0.001/orders.tbl", 10));
     _table_tpch_orders->execute();
 
     _table_tpch_lineitems =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl", 10));
+        std::make_shared<TableWrapper>(load_table_cached("src/test/tables/tpch/sf-0.001/lineitem.tbl", 10));
     _table_tpch_lineitems->execute();
 
-    _table_with_nulls = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4_with_null.tbl", 10));
+    _table_with_nulls = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int4_with_null.tbl", 10));
     _table_with_nulls->execute();
 
     // filters retains all rows

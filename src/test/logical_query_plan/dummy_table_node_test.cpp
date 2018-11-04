@@ -1,13 +1,13 @@
 #include <memory>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {
 
-class DummyTableNodeTest : public ::testing::Test {
+class DummyTableNodeTest : public BaseTest {
  protected:
   void SetUp() override { _dummy_table_node = DummyTableNode::make(); }
 

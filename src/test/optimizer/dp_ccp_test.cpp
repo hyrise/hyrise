@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -24,7 +23,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class DpCcpTest : public ::testing::Test {
+class DpCcpTest : public BaseTest {
  public:
   void SetUp() override {
     cost_estimator = std::make_shared<CostModelLogical>();

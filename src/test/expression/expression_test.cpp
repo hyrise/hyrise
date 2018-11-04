@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -23,11 +22,11 @@ namespace opossum {
  * test file.
  */
 
-class ExpressionTest : public ::testing::Test {
+class ExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    table_int_float = load_table("src/test/tables/int_float.tbl");
-    table_int_float_with_null = load_table("src/test/tables/int_float_with_null.tbl");
+    table_int_float = load_table_cached("src/test/tables/int_float.tbl");
+    table_int_float_with_null = load_table_cached("src/test/tables/int_float_with_null.tbl");
     StorageManager::get().add_table("int_float", table_int_float);
     StorageManager::get().add_table("int_float_with_null", table_int_float_with_null);
 

@@ -7,8 +7,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "storage/vector_compression/simd_bp128/simd_bp128_compressor.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_decompressor.hpp"
 #include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"

@@ -8,8 +8,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/join_hash.hpp"
@@ -28,72 +26,72 @@ class OperatorsAggregateTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
 
     _table_wrapper_1_1_null = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2));
     _table_wrapper_1_1_null->execute();
 
     _table_wrapper_1_2 = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
     _table_wrapper_1_2->execute();
 
     _table_wrapper_2_1 = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_1agg/input.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_2gb_1agg/input.tbl", 2));
     _table_wrapper_2_1->execute();
 
     _table_wrapper_2_2 = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
     _table_wrapper_2_2->execute();
 
     _table_wrapper_2_0_null = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_2gb_0agg/input_null.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_2gb_0agg/input_null.tbl", 2));
     _table_wrapper_2_0_null->execute();
 
     _table_wrapper_3_1 = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_3gb_1agg/input.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_3gb_1agg/input.tbl", 2));
     _table_wrapper_3_1->execute();
 
     _table_wrapper_3_0_null = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_3gb_0agg/input_null.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_3gb_0agg/input_null.tbl", 2));
     _table_wrapper_3_0_null->execute();
 
     _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1_string->execute();
 
     _table_wrapper_1_1_string_null = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input_null.tbl", 2));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input_null.tbl", 2));
     _table_wrapper_1_1_string_null->execute();
 
-    _table_wrapper_join_1 = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
+    _table_wrapper_join_1 = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int4.tbl", 1));
     _table_wrapper_join_1->execute();
 
-    _table_wrapper_join_2 = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
+    _table_wrapper_join_2 = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int.tbl", 1));
     _table_wrapper_join_2->execute();
 
     _table_wrapper_2_0_a =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
+        std::make_shared<TableWrapper>(load_table_cached("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
     _table_wrapper_2_0_a->execute();
 
     _table_wrapper_2_o_b =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_b.tbl", 2));
+        std::make_shared<TableWrapper>(load_table_cached("src/test/tables/aggregateoperator/join_2gb_0agg/input_b.tbl", 2));
     _table_wrapper_2_o_b->execute();
 
-    auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
+    auto test_table = load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     ChunkEncoder::encode_all_chunks(test_table);
 
     _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_dict->execute();
 
-    test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2);
+    test_table = load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2);
     ChunkEncoder::encode_all_chunks(test_table);
 
     _table_wrapper_1_1_null_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_null_dict->execute();
 
-    _table_wrapper_int_int = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int.tbl", 2));
+    _table_wrapper_int_int = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int.tbl", 2));
     _table_wrapper_int_int->execute();
   }
 
@@ -101,7 +99,7 @@ class OperatorsAggregateTest : public BaseTest {
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_aggregate_on_reference_table = true) {
     // load expected results from file
-    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
+    std::shared_ptr<Table> expected_result = load_table_cached(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // Test the Aggregate on stored table data

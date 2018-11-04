@@ -17,7 +17,7 @@ class JitOperatorWrapperTest : public BaseTest {
     _empty_table = Table::create_dummy_table({{"a", DataType::Int}});
     _empty_table_wrapper = std::make_shared<TableWrapper>(_empty_table);
     _empty_table_wrapper->execute();
-    _int_table = load_table("src/test/tables/10_ints.tbl", 5);
+    _int_table = load_table_cached("src/test/tables/10_ints.tbl", 5);
     _int_table_wrapper = std::make_shared<TableWrapper>(_int_table);
     _int_table_wrapper->execute();
   }

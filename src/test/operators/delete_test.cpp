@@ -5,8 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/delete.hpp"
@@ -27,7 +25,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE);
+    _table = load_table_cached("src/test/tables/int_float.tbl", Chunk::MAX_SIZE);
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
@@ -179,7 +177,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   for (const auto value : {456.7, 457.7}) {
     auto context = TransactionManager::get().new_transaction_context();
 
-    auto values_to_insert = load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE);
+    auto values_to_insert = load_table_cached("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE);
     auto table_name_for_insert = "bla";
     StorageManager::get().add_table(table_name_for_insert, values_to_insert);
     auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
@@ -231,7 +229,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto expected_result = load_table("src/test/tables/int_float_deleted.tbl", Chunk::MAX_SIZE);
+    auto expected_result = load_table_cached("src/test/tables/int_float_deleted.tbl", Chunk::MAX_SIZE);
 
     EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
 

@@ -3,7 +3,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
@@ -13,12 +12,12 @@ namespace opossum {
 
 class EqualDistinctCountHistogramTest : public BaseTest {
   void SetUp() override {
-    _int_float4 = load_table("src/test/tables/int_float4.tbl");
-    _float2 = load_table("src/test/tables/float2.tbl");
-    _string2 = load_table("src/test/tables/string2.tbl");
-    _string3 = load_table("src/test/tables/string3.tbl");
-    _string_with_prefix = load_table("src/test/tables/string_with_prefix.tbl");
-    _string_like_pruning = load_table("src/test/tables/string_like_pruning.tbl");
+    _int_float4 = load_table_cached("src/test/tables/int_float4.tbl");
+    _float2 = load_table_cached("src/test/tables/float2.tbl");
+    _string2 = load_table_cached("src/test/tables/string2.tbl");
+    _string3 = load_table_cached("src/test/tables/string3.tbl");
+    _string_with_prefix = load_table_cached("src/test/tables/string_with_prefix.tbl");
+    _string_like_pruning = load_table_cached("src/test/tables/string_like_pruning.tbl");
   }
 
  protected:

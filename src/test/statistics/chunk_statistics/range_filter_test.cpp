@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "utils/assert.hpp"
 
 #include "statistics/chunk_statistics/range_filter.hpp"
@@ -16,7 +14,7 @@
 namespace opossum {
 
 template <typename T>
-class RangeFilterTest : public ::testing::Test {
+class RangeFilterTest : public BaseTest {
  protected:
   void SetUp() override {
     _values = pmr_vector<T>{-1000, 2, 3, 4, 7, 8, 10, 17, 100, 101, 102, 103, 123456};

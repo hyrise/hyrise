@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/table_wrapper.hpp"
@@ -27,44 +26,44 @@ class JoinTest : public BaseTest {
  protected:
   void SetUp() override {
     // load and create regular ValueSegment tables
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
-    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 4));
-    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/string_int.tbl", 3));
-    _table_wrapper_e = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int.tbl", 4));
-    _table_wrapper_f = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int2.tbl", 4));
-    _table_wrapper_g = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 4));
-    _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
-    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int5.tbl", 1));
-    _table_wrapper_j = std::make_shared<TableWrapper>(load_table("src/test/tables/int3.tbl", 1));
-    _table_wrapper_k = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
-    _table_wrapper_l = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float.tbl", 2));
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float2.tbl", 2));
+    _table_wrapper_c = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_string.tbl", 4));
+    _table_wrapper_d = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/string_int.tbl", 3));
+    _table_wrapper_e = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int.tbl", 4));
+    _table_wrapper_f = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int2.tbl", 4));
+    _table_wrapper_g = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int3.tbl", 4));
+    _table_wrapper_h = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int4.tbl", 4));
+    _table_wrapper_i = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int5.tbl", 1));
+    _table_wrapper_j = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int3.tbl", 1));
+    _table_wrapper_k = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int4.tbl", 1));
+    _table_wrapper_l = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int.tbl", 1));
     _table_wrapper_m = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
     _table_wrapper_n = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
-    _table_wrapper_o = std::make_shared<TableWrapper>(load_table("src/test/tables/float_zero_precision.tbl", 1));
-    _table_wrapper_p = std::make_shared<TableWrapper>(load_table("src/test/tables/double_zero_precision.tbl", 1));
-    _table_wrapper_q = std::make_shared<TableWrapper>(load_table("src/test/tables/string_numbers.tbl", 1));
+        load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
+    _table_wrapper_o = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/float_zero_precision.tbl", 1));
+    _table_wrapper_p = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/double_zero_precision.tbl", 1));
+    _table_wrapper_q = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/string_numbers.tbl", 1));
 
     // load and create DictionarySegment tables
-    auto table = load_table("src/test/tables/int_float.tbl", 2);
+    auto table = load_table_cached("src/test/tables/int_float.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/int_float2.tbl", 2);
+    table = load_table_cached("src/test/tables/int_float2.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/int_float.tbl", 2);
+    table = load_table_cached("src/test/tables/int_float.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
+    table = load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_m_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+    table = load_table_cached("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_n_dict = std::make_shared<TableWrapper>(std::move(table));
 
@@ -100,7 +99,7 @@ class JoinTest : public BaseTest {
                         const PredicateCondition predicate_condition, const JoinMode mode, const std::string& file_name,
                         size_t chunk_size) {
     // load expected results from file
-    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
+    std::shared_ptr<Table> expected_result = load_table_cached(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join

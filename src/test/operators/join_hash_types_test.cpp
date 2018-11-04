@@ -1,6 +1,4 @@
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
 

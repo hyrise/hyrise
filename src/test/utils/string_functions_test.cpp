@@ -1,5 +1,4 @@
-#include "../base_test.hpp"
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "utils/string_utils.hpp"
 

@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 #include "join_test.hpp"
 
 #include "operators/get_table.hpp"
@@ -34,11 +33,11 @@ class JoinNullTest : public JoinTest {
   void SetUp() override {
     JoinTest::SetUp();
 
-    _table_wrapper_a_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
+    _table_wrapper_a_null = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_float_with_null.tbl", 2));
     _table_wrapper_a_null->execute();
 
     // load and create DictionarySegment tables
-    auto table = load_table("src/test/tables/int_float_with_null.tbl", 2);
+    auto table = load_table_cached("src/test/tables/int_float_with_null.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
 
     _table_wrapper_a_null_dict = std::make_shared<TableWrapper>(std::move(table));

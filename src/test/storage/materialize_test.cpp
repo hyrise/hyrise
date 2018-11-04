@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "encoding_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/table_scan.hpp"

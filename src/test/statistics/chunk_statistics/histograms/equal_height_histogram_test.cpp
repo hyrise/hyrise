@@ -3,8 +3,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 #include "utils/load_table.hpp"
@@ -13,11 +11,11 @@ namespace opossum {
 
 class EqualHeightHistogramTest : public BaseTest {
   void SetUp() override {
-    _int_float4 = load_table("src/test/tables/int_float4.tbl");
-    _float2 = load_table("src/test/tables/float2.tbl");
-    _expected_join_result_1 = load_table("src/test/tables/joinoperators/expected_join_result_1.tbl");
-    _string3 = load_table("src/test/tables/string3.tbl");
-    _string_with_prefix = load_table("src/test/tables/string_with_prefix.tbl");
+    _int_float4 = load_table_cached("src/test/tables/int_float4.tbl");
+    _float2 = load_table_cached("src/test/tables/float2.tbl");
+    _expected_join_result_1 = load_table_cached("src/test/tables/joinoperators/expected_join_result_1.tbl");
+    _string3 = load_table_cached("src/test/tables/string3.tbl");
+    _string_with_prefix = load_table_cached("src/test/tables/string_with_prefix.tbl");
   }
 
  protected:

@@ -1,6 +1,6 @@
 #include <regex>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -18,10 +18,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class PQPSelectExpressionTest : public ::testing::Test {
+class PQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    table_a = load_table("src/test/tables/int_float.tbl");
+    table_a = load_table_cached("src/test/tables/int_float.tbl");
     StorageManager::get().add_table("int_float", table_a);
     a_a = PQPColumnExpression::from_table(*table_a, "a");
     a_b = PQPColumnExpression::from_table(*table_a, "b");

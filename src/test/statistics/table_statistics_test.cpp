@@ -7,7 +7,6 @@
 #include "all_parameter_variant.hpp"
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/base_column_statistics.hpp"
@@ -28,7 +27,7 @@ class TableStatisticsTest : public BaseTest {
   };
 
   void SetUp() override {
-    auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
+    auto table = load_table_cached("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     _table_a_with_statistics.statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
     table->set_table_statistics(_table_a_with_statistics.statistics);
     _table_a_with_statistics.table = table;
@@ -251,7 +250,7 @@ TEST_F(TableStatisticsTest, TableType) {
 }
 
 TEST_F(TableStatisticsTest, TwoColumnScan) {
-  const auto int_int_float = load_table("src/test/tables/int_int_float.tbl");
+  const auto int_int_float = load_table_cached("src/test/tables/int_int_float.tbl");
   const auto int_int_float_statistics = generate_table_statistics(*int_int_float);
 
   // Make sure that the distinct counts are as expected, mainly that they are different. We compare them later.

@@ -2,8 +2,7 @@
 
 #include <memory>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
@@ -15,7 +14,7 @@ namespace opossum {
 class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
  public:
   std::shared_ptr<Table> load_table_with_encoding(const std::string& path, ChunkOffset max_chunk_size) {
-    const auto table = load_table(path, max_chunk_size);
+    const auto table = load_table_cached(path, max_chunk_size);
     ChunkEncoder::encode_all_chunks(table, GetParam());
     return table;
   }

@@ -3,8 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -118,7 +116,7 @@ TEST_F(StorageManagerTest, ListViewNames) {
 
 TEST_F(StorageManagerTest, Print) {
   auto& sm = StorageManager::get();
-  sm.add_table("third_table", load_table("src/test/tables/int_int2.tbl", 2));
+  sm.add_table("third_table", load_table_cached("src/test/tables/int_int2.tbl", 2));
 
   std::ostringstream output;
   sm.print(output);
@@ -143,7 +141,7 @@ TEST_F(StorageManagerTest, ExportTables) {
   sm.drop_table("second_table");
 
   // add a non-empty table
-  sm.add_table("third_table", load_table("src/test/tables/int_float.tbl"));
+  sm.add_table("third_table", load_table_cached("src/test/tables/int_float.tbl"));
 
   sm.export_all_tables_as_csv(opossum::test_data_path);
 

@@ -4,8 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "all_type_variant.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"

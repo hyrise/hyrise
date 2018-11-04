@@ -1,7 +1,6 @@
 #include <optional>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
@@ -27,11 +26,11 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ExpressionEvaluatorToPosListTest : public ::testing::Test {
+class ExpressionEvaluatorToPosListTest : public BaseTest {
  public:
   void SetUp() override {
-    table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl", 4);
-    table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl", 4);
+    table_a = load_table_cached("src/test/tables/expression_evaluator/input_a.tbl", 4);
+    table_b = load_table_cached("src/test/tables/expression_evaluator/input_b.tbl", 4);
     c = PQPColumnExpression::from_table(*table_a, "c");
     d = PQPColumnExpression::from_table(*table_a, "d");
     s1 = PQPColumnExpression::from_table(*table_a, "s1");

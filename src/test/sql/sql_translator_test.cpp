@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -42,14 +41,14 @@ using namespace std::string_literals;            // NOLINT
 
 namespace opossum {
 
-class SQLTranslatorTest : public ::testing::Test {
+class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
-    opossum::StorageManager::get().add_table("int_string", opossum::load_table("src/test/tables/int_string.tbl"));
-    opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
-    opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
-    opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
+    opossum::StorageManager::get().add_table("int_float", load_table_cached("src/test/tables/int_float.tbl"));
+    opossum::StorageManager::get().add_table("int_string", load_table_cached("src/test/tables/int_string.tbl"));
+    opossum::StorageManager::get().add_table("int_float2", load_table_cached("src/test/tables/int_float2.tbl"));
+    opossum::StorageManager::get().add_table("int_float5", load_table_cached("src/test/tables/int_float5.tbl"));
+    opossum::StorageManager::get().add_table("int_int_int", load_table_cached("src/test/tables/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");

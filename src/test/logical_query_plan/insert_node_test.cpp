@@ -1,7 +1,5 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
 
 #include "logical_query_plan/insert_node.hpp"
@@ -9,7 +7,7 @@
 
 namespace opossum {
 
-class InsertNodeTest : public ::testing::Test {
+class InsertNodeTest : public BaseTest {
  protected:
   void SetUp() override { _insert_node = InsertNode::make("table_a"); }
 

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_functional.hpp"

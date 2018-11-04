@@ -3,8 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_wrapper.hpp"
 #include "statistics/generate_table_statistics.hpp"
@@ -22,7 +20,7 @@ class TableStatisticsJoinTest : public BaseTest {
   };
 
   void SetUp() override {
-    auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
+    auto table_uniform_distribution = load_table_cached("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
     _table_uniform_distribution_with_stats.statistics =
         std::make_shared<TableStatistics>(generate_table_statistics(*table_uniform_distribution));
     table_uniform_distribution->set_table_statistics(_table_uniform_distribution_with_stats.statistics);

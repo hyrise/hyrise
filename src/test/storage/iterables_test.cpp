@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
@@ -66,9 +64,9 @@ struct AppendWithIterator {
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = load_table("src/test/tables/int_float6.tbl", Chunk::MAX_SIZE);
-    table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
-    table_strings = load_table("src/test/tables/string.tbl", Chunk::MAX_SIZE);
+    table = load_table_cached("src/test/tables/int_float6.tbl", Chunk::MAX_SIZE);
+    table_with_null = load_table_cached("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
+    table_strings = load_table_cached("src/test/tables/string.tbl", Chunk::MAX_SIZE);
 
     position_filter = std::make_shared<PosList>(
         PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
@@ -238,7 +236,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
   // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
   // have been created with the function: <IterableClass>.with_iterators(<Callback>)
 
-  const auto table = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+  const auto table = load_table_cached("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
 
   auto pos_list = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 0u}});
   pos_list->guarantee_single_chunk();

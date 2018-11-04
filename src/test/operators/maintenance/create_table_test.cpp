@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/maintenance/create_table.hpp"
 #include "storage/storage_manager.hpp"

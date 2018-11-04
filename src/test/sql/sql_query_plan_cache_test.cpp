@@ -19,9 +19,9 @@ class SQLQueryPlanCacheTest : public BaseTest {
  protected:
   void SetUp() override {
     // Load tables.
-    auto table_a = load_table("src/test/tables/int_float.tbl", 2);
+    auto table_a = load_table_cached("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(table_a));
-    auto table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    auto table_b = load_table_cached("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
 
     _query_plan_cache_hits = 0;

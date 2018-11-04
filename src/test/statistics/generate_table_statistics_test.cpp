@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -8,10 +7,10 @@
 
 namespace opossum {
 
-class GenerateTableStatisticsTest : public ::testing::Test {};
+class GenerateTableStatisticsTest : public BaseTest {};
 
 TEST_F(GenerateTableStatisticsTest, GenerateTableStatisticsUnsampled) {
-  const auto table = load_table("src/test/tables/tpch/sf-0.001/customer.tbl");
+  const auto table = load_table_cached("src/test/tables/tpch/sf-0.001/customer.tbl");
   const auto table_statistics = generate_table_statistics(*table);
 
   ASSERT_EQ(table_statistics.column_statistics().size(), 8u);

@@ -1,8 +1,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -94,7 +92,7 @@ TEST_F(AllParameterVariantTest, ToString) {
     EXPECT_EQ(to_string(parameter), "Column #17");
   }
   {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("int_float", load_table_cached("src/test/tables/int_float.tbl"));
     const std::shared_ptr<StoredTableNode> int_float = StoredTableNode::make("int_float");
     const LQPColumnReference column_a = {int_float, ColumnID{0}};
     const LQPColumnReference column_b = {int_float, ColumnID{1}};

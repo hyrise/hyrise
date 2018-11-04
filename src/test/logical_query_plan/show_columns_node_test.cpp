@@ -1,7 +1,5 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -11,7 +9,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ShowColumnsNodeTest : public ::testing::Test {
+class ShowColumnsNodeTest : public BaseTest {
  protected:
   void SetUp() override { _show_columns_node = ShowColumnsNode::make("table_a"); }
 

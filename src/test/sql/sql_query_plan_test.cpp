@@ -4,8 +4,6 @@
 
 #include "SQLParser.h"
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -20,10 +18,10 @@ namespace opossum {
 class SQLQueryPlanTest : public BaseTest {
  protected:
   void SetUp() override {
-    std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float.tbl", 2);
+    std::shared_ptr<Table> table_a = load_table_cached("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", std::move(table_a));
 
-    std::shared_ptr<Table> table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    std::shared_ptr<Table> table_b = load_table_cached("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", std::move(table_b));
   }
 };
@@ -63,7 +61,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
 }
 
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/int_float_filtered.tbl", 2);
 
   std::string query1 = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9;";
 

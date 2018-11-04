@@ -17,7 +17,7 @@ class ServerTestRunner : public BaseTest {
     StorageManager::get().reset();
     SQLQueryCache<SQLQueryPlan>::get().clear();
 
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table_cached("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.

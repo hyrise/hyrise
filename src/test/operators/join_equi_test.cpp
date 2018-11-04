@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 #include "join_test.hpp"
 
 #include "operators/get_table.hpp"
@@ -68,7 +67,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
   if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     // float with int
     // radix bits = 0
-    std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/float_int_inner.tbl", 1);
+    std::shared_ptr<Table> expected_result = load_table_cached("src/test/tables/joinoperators/float_int_inner.tbl", 1);
     auto join = std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
                                            ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 0);
     join->execute();

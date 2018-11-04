@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"

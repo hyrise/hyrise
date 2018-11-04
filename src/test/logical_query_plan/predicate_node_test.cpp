@@ -1,9 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -13,10 +10,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class PredicateNodeTest : public ::testing::Test {
+class PredicateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float_double_string.tbl", 2));
+    StorageManager::get().add_table("table_a", load_table_cached("src/test/tables/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
     _i = {_table_node, ColumnID{0}};

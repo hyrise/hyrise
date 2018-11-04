@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 namespace opossum {
 

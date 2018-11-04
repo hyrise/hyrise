@@ -1,8 +1,6 @@
 #include <memory>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -14,10 +12,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class SortNodeTest : public ::testing::Test {
+class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float_double_string.tbl", 2));
+    StorageManager::get().add_table("table_a", load_table_cached("src/test/tables/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
 

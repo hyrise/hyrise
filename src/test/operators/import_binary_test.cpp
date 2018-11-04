@@ -3,8 +3,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
@@ -207,7 +205,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionarySegment) {
 TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
 }
@@ -218,7 +216,7 @@ TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
   auto retriever =
       std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin", std::string("float_table"));
   retriever->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
 }

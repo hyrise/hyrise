@@ -2,8 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -15,7 +14,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class AggregateNodeTest : public ::testing::Test {
+class AggregateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node = MockNode::make(

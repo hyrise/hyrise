@@ -1,9 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/show_tables_node.hpp"

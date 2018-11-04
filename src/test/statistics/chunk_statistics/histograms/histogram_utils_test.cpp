@@ -1,7 +1,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "statistics/chunk_statistics/histograms/histogram_utils.hpp"
 

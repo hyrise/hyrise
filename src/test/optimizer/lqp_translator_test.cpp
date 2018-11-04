@@ -4,8 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -46,26 +44,27 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
+#include "base_test.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPTranslatorTest : public ::testing::Test {
+class LQPTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    table_int_float = load_table("src/test/tables/int_float.tbl");
-    table_int_string = load_table("src/test/tables/int_string.tbl");
-    table_int_float2 = load_table("src/test/tables/int_float2.tbl");
-    table_int_float5 = load_table("src/test/tables/int_float5.tbl");
-    table_alias_name = load_table("src/test/tables/table_alias_name.tbl");
+    table_int_float = load_table_cached("src/test/tables/int_float.tbl");
+    table_int_string = load_table_cached("src/test/tables/int_string.tbl");
+    table_int_float2 = load_table_cached("src/test/tables/int_float2.tbl");
+    table_int_float5 = load_table_cached("src/test/tables/int_float5.tbl");
+    table_alias_name = load_table_cached("src/test/tables/table_alias_name.tbl");
 
     StorageManager::get().add_table("table_int_float", table_int_float);
     StorageManager::get().add_table("table_int_string", table_int_string);
     StorageManager::get().add_table("table_int_float2", table_int_float2);
     StorageManager::get().add_table("table_int_float5", table_int_float5);
     StorageManager::get().add_table("table_alias_name", table_alias_name);
-    StorageManager::get().add_table("int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
+    StorageManager::get().add_table("int_float_chunked", load_table_cached("src/test/tables/int_float.tbl", 1));
     ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");

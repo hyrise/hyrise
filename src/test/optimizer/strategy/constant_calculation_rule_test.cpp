@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -26,7 +25,7 @@ namespace opossum {
 class ConstantCalculationRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("table_a", load_table_cached("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
     rule = std::make_shared<ConstantCalculationRule>();
 
     stored_table_node = StoredTableNode::make("table_a");

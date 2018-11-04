@@ -1,12 +1,10 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include "base_test.hpp"
 
+#include "base_test.hpp"
 #include "SQLParser.h"
 #include "SQLParserResult.h"
-#include "gtest/gtest.h"
-
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
@@ -41,13 +39,13 @@ namespace opossum {
 class SQLPipelineStatementTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table_cached("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
-    _table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _table_b = load_table_cached("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
-    _table_int = load_table("src/test/tables/int_int_int.tbl", 2);
+    _table_int = load_table_cached("src/test/tables/int_int_int.tbl", 2);
     StorageManager::get().add_table("table_int", _table_int);
 
     TableColumnDefinitions column_definitions;

@@ -1,7 +1,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/join_hash/join_hash_traits.hpp"
 

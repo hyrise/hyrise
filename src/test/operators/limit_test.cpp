@@ -5,8 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "expression/expression_functional.hpp"
 #include "operators/limit.hpp"
 #include "operators/table_scan.hpp"
@@ -20,7 +18,7 @@ namespace opossum {
 class OperatorsLimitTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 3));
+    _table_wrapper = std::make_shared<TableWrapper>(load_table_cached("src/test/tables/int_int3.tbl", 3));
     _table_wrapper->execute();
   }
 
@@ -28,7 +26,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{1}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 3);
+    auto expected_result = load_table_cached("src/test/tables/int_int3_limit_1.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -36,7 +34,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{2}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3_limit_2.tbl", 3);
+    auto expected_result = load_table_cached("src/test/tables/int_int3_limit_2.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -47,7 +45,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{4}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3_limit_4.tbl", 3);
+    auto expected_result = load_table_cached("src/test/tables/int_int3_limit_4.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -58,7 +56,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{10}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3.tbl", 3);
+    auto expected_result = load_table_cached("src/test/tables/int_int3.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 

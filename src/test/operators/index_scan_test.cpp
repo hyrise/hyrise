@@ -5,8 +5,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/index_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -25,8 +23,8 @@ class OperatorsIndexScanTest : public BaseTest {
   void SetUp() override {
     _index_type = get_index_type_of<DerivedIndex>();
 
-    auto int_int_7 = load_table("src/test/tables/int_int_shuffled.tbl", 7);
-    auto int_int_5 = load_table("src/test/tables/int_int_shuffled_2.tbl", 5);
+    auto int_int_7 = load_table_cached("src/test/tables/int_int_shuffled.tbl", 7);
+    auto int_int_5 = load_table_cached("src/test/tables/int_int_shuffled_2.tbl", 5);
 
     ChunkEncoder::encode_all_chunks(int_int_7);
     ChunkEncoder::encode_all_chunks(int_int_5);

@@ -1,8 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/get_table.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -14,7 +12,7 @@ class OperatorsGetTableTest : public BaseTest {
   void SetUp() override {
     _test_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     auto& manager = StorageManager::get();
-    manager.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));
+    manager.add_table("tableWithValues", load_table_cached("src/test/tables/int_float2.tbl", 1u));
   }
 
   std::shared_ptr<Table> _test_table;
@@ -24,7 +22,7 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
   auto gt = std::make_shared<GetTable>("tableWithValues");
   gt->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(gt->get_output(), load_table("src/test/tables/int_float2.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(gt->get_output(), load_table_cached("src/test/tables/int_float2.tbl", 1u));
 }
 
 TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {

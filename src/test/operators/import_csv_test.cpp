@@ -2,8 +2,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/import_csv.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -20,28 +18,28 @@ class OperatorsImportCsvTest : public BaseTest {};
 TEST_F(OperatorsImportCsvTest, SingleFloatColumn) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FloatIntTable) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float_int.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringNoQuotes) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/string.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/string.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, StringQuotes) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_quotes.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/string.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/string.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
@@ -61,7 +59,7 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
 TEST_F(OperatorsImportCsvTest, TrailingNewline) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_trailing_newline.csv");
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float_int.tbl", 2);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
@@ -73,7 +71,7 @@ TEST_F(OperatorsImportCsvTest, FileDoesNotExist) {
 TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
 }
@@ -83,7 +81,7 @@ TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
   importer->execute();
   auto retriever = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
   retriever->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table_cached("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
 }

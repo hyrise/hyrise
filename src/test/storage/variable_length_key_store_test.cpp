@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
 #include "storage/index/group_key/variable_length_key_store.hpp"
 

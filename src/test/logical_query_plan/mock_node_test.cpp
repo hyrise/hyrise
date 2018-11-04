@@ -1,10 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -15,10 +12,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class MockNodeTest : public ::testing::Test {
+class MockNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
+    auto table = load_table_cached("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     _statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
 
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{

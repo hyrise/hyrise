@@ -1,7 +1,5 @@
 #include <regex>
 
-#include "gtest/gtest.h"
-
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -12,16 +10,17 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
+#include "base_test.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPSelectExpressionTest : public ::testing::Test {
+class LQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("int_float", load_table_cached("src/test/tables/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
     a = {int_float_node_a, ColumnID{0}};

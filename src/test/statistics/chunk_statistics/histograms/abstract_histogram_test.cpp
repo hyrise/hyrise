@@ -2,8 +2,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_height_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
@@ -14,7 +12,7 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogramIntTest : public BaseTest {
-  void SetUp() override { _int_float4 = load_table("src/test/tables/int_float4.tbl"); }
+  void SetUp() override { _int_float4 = load_table_cached("src/test/tables/int_float4.tbl"); }
 
  protected:
   std::shared_ptr<Table> _int_float4;
@@ -142,9 +140,9 @@ TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
 template <typename T>
 class AbstractHistogramStringTest : public BaseTest {
   void SetUp() override {
-    _string2 = load_table("src/test/tables/string2.tbl");
-    _string3 = load_table("src/test/tables/string3.tbl");
-    _int_string_like_containing2 = load_table("src/test/tables/int_string_like_containing2.tbl");
+    _string2 = load_table_cached("src/test/tables/string2.tbl");
+    _string3 = load_table_cached("src/test/tables/string3.tbl");
+    _int_string_like_containing2 = load_table_cached("src/test/tables/int_string_like_containing2.tbl");
   }
 
  protected:

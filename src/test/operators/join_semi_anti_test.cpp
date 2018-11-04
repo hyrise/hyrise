@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 #include "join_test.hpp"
 
 #include "operators/join_hash.hpp"
@@ -28,9 +27,9 @@ class JoinSemiAntiTest : public JoinTest {
     JoinTest::SetUp();
 
     _table_wrapper_semi_a =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_left.tbl", 2));
+        std::make_shared<TableWrapper>(load_table_cached("src/test/tables/joinoperators/semi_left.tbl", 2));
     _table_wrapper_semi_b =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_right.tbl", 2));
+        std::make_shared<TableWrapper>(load_table_cached("src/test/tables/joinoperators/semi_right.tbl", 2));
 
     _table_wrapper_semi_a->execute();
     _table_wrapper_semi_b->execute();

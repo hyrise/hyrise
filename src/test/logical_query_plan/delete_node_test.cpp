@@ -1,13 +1,12 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/delete_node.hpp"
 
 namespace opossum {
 
-class DeleteNodeTest : public ::testing::Test {
+class DeleteNodeTest : public BaseTest {
  protected:
   void SetUp() override { _delete_node = DeleteNode::make("table_a"); }
 

@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"

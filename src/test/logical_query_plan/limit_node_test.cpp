@@ -1,9 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -12,7 +9,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LimitNodeTest : public ::testing::Test {
+class LimitNodeTest : public BaseTest {
  protected:
   void SetUp() override { _limit_node = LimitNode::make(value_(10)); }
 

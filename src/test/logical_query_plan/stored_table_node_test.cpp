@@ -1,10 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
-
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
@@ -14,8 +11,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
-    StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("t_a", load_table_cached("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("t_b", load_table_cached("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});

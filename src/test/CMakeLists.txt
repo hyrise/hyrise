@@ -1,5 +1,7 @@
 set(
     SHARED_SOURCES
+    load_table_cached.cpp
+    load_table_cached.hpp
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp

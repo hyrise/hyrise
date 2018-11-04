@@ -2,8 +2,6 @@
 #include <string>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
 #include "type_cast.hpp"
 #include "types.hpp"
 
