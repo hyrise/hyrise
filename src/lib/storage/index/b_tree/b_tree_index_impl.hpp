@@ -68,8 +68,10 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
 
  protected:
   void _bulk_insert(const std::shared_ptr<const BaseSegment>&);
+  void _add_to_heap_memory_usage(const DataType&);
 
   btree::btree_map<DataType, size_t> _btree;
+  size_t _heap_bytes_used;
 };
 
 }  // namespace opossum

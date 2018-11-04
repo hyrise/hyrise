@@ -65,4 +65,41 @@ TEST_F(BTreeIndexTest, IndexProbes) {
   EXPECT_EQ(index->upper_bound({"inbox"}) - begin, 8);
 }
 
+TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
+  values = {"h", "d", "f", "d", "a", "c", "c", "i"};
+  segment = std::make_shared<ValueSegment<std::string>>(values);
+  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+
+  EXPECT_EQ(index->memory_consumption(), 320u);
+}
+
+TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
+  ASSERT_GE(std::string("").capacity(), 6u)
+      << "Short String Optimization (SSO) is expected to hold at least 7 characters";
+
+  EXPECT_EQ(index->memory_consumption(), 320u);
+}
+
+TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
+  ASSERT_LT(std::string("").capacity(), 20u)
+      << "Short String Optimization (SSO) is expected to hold less than 20 characters";
+
+  values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
+            "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
+  segment = std::make_shared<ValueSegment<std::string>>(values);
+  index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
+
+  // Index usage:
+  //   320 (reported by cpp_btree implementation)
+  // +  20 "appleappleappleapple"
+  // +  21 "charliecharliecharlie"
+  // +  20 "deltadeltadeltadelta"
+  // +  20 "frankfrankfrankfrank"
+  // +  25 "hotelhotelhotelhotelhotel"
+  // +  20 "inboxinboxinboxinbox"
+  // = 446
+
+  EXPECT_EQ(index->memory_consumption(), 446u);
+}
+
 }  // namespace opossum
