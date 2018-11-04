@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/base_non_query_node.hpp"
 #include "all_type_variant.hpp"
 
 namespace opossum {
@@ -10,7 +10,7 @@ class LQPPreparedStatement;
 /**
  * LQP equivalent to the ExecuteStatement operator.
  */
-class ExecuteStatementNode : public EnableMakeForLQPNode<ExecuteStatementNode>, public AbstractLQPNode {
+class ExecuteStatementNode : public EnableMakeForLQPNode<ExecuteStatementNode>, public BaseNonQueryNode {
  public:
   ExecuteStatementNode(const std::string& name, const std::vector<AllTypeVariant>& parameters);
 

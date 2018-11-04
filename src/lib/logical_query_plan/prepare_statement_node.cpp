@@ -8,11 +8,15 @@ namespace opossum {
 
 
 PrepareStatementNode::PrepareStatementNode(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& prepared_statement):
-AbstractLQPNode(LQPNodeType::PrepareStatement), name(name), prepared_statement(prepared_statement) {}
+BaseNonQueryNode(LQPNodeType::PrepareStatement), name(name), prepared_statement(prepared_statement) {}
 
 std::string PrepareStatementNode::description() const {
   std::stringstream stream;
-  stream << "PrepareStatement '" << name << "' (" << reinterpret_cast<const void*>(prepared_statement->lqp.get()) << "'";
+  stream << "PrepareStatement '" << name << "' (" << reinterpret_cast<const void*>(prepared_statement->lqp.get()) << ") ";
+  stream << "{\n";
+  prepared_statement->print(stream);
+  stream << "}\n";
+
   return stream.str();
 }
 

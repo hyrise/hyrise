@@ -1,6 +1,6 @@
 #pragma once
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/base_non_query_node.hpp"
 
 namespace opossum {
 
@@ -9,7 +9,7 @@ class LQPPreparedStatement;
 /**
  * LQP equivalent to the PrepareStatement operator.
  */
-class PrepareStatementNode : public EnableMakeForLQPNode<PrepareStatementNode>, public AbstractLQPNode {
+class PrepareStatementNode : public EnableMakeForLQPNode<PrepareStatementNode>, public BaseNonQueryNode {
  public:
   PrepareStatementNode(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& prepared_statement);
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -15,6 +16,10 @@ class LQPPreparedStatement final {
   LQPPreparedStatement(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids);
 
   std::shared_ptr<LQPPreparedStatement> deep_copy() const;
+
+  void print(std::ostream& stream) const;
+
+  bool operator==(const LQPPreparedStatement& rhs) const;
 
   std::shared_ptr<AbstractLQPNode> lqp;
   std::vector<ParameterID> parameter_ids;

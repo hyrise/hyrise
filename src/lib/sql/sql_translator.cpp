@@ -35,6 +35,7 @@
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/execute_statement_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -42,6 +43,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/prepare_statement_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
@@ -163,6 +165,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_create(static_cast<const hsql::CreateStatement&>(statement));
     case hsql::kStmtDrop:
       return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
+    case hsql::kStmtPrepare:
+      return _translate_prepare(static_cast<const hsql::PrepareStatement&>(statement));
+
     default:
       FailInput("SQL statement type not supported");
   }
@@ -990,6 +995,29 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
     default:
       FailInput("hsql::DropType is not supported.");
   }
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::PrepareStatement& prepare_statement) {
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parse(prepare_statement.query, &parse_result);
+
+  AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
+  AssertInput(parse_result.size() == 1u, "PREPAREd statement can only contain a single SQL statement");
+
+  auto prepared_statement_translator = SQLTranslator{};
+
+  const auto lqp = prepared_statement_translator.translate_parser_result(parse_result).at(0);
+
+  const auto& value_placeholder_parameter_ids = prepared_statement_translator.value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{value_placeholder_parameter_ids.size()};
+
+  for (const auto& [value_placeholder_id, parameter_id] : value_placeholder_parameter_ids) {
+    parameter_ids[value_placeholder_id] = parameter_id;
+  }
+
+  const auto lqp_prepared_statement = std::make_shared<LQPPreparedStatement>(lqp, parameter_ids);
+
+  return std::make_shared<PrepareStatementNode>(prepare_statement.name, lqp_prepared_statement);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

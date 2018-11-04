@@ -20,8 +20,6 @@ class AbstractLQPNode;
 // by mapping table names to table instances.
 class StorageManager : public Singleton<StorageManager> {
  public:
-  static StorageManager& get();
-
   /**
    * @defgroup Manage Tables
    * @{

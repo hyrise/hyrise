@@ -116,6 +116,8 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& drop_statement);
 
+  std::shared_ptr<AbstractLQPNode> _translate_prepare(const hsql::PrepareStatement& prepare_statement);
+
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
       const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const;
 
