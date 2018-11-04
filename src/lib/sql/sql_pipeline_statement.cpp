@@ -9,6 +9,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -118,7 +119,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     const auto plan = *cached_plan;
     DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
     // MVCC-enabled and MVCC-disabled LQPs will evict each other
-    if (plan->subplan_is_validated() == (_use_mvcc == UseMvcc::Yes)) {
+    if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
       _optimized_logical_plan = plan;
       return _optimized_logical_plan;
     }
