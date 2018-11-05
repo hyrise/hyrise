@@ -49,12 +49,13 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
-  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions(), i.e. columns that are necessary for
+  // Search the entire LQP for columns used in the node expressions, i.e. columns that are necessary for
   // the "functioning" of the LQP.
   // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
   // prune) by only searching the arguments of expression.
   visit_lqp(lqp, [&](const auto& node) {
-    for (const auto& expression : node->node_expressions()) {
+    for (auto expression_idx = size_t{0}; expression_idx < node->node_expression_count(); ++expression_idx) {
+      const auto& expression = node->node_expression(expression_idx);
       if (node->type == LQPNodeType::Projection) {
         for (const auto& argument : expression->arguments) {
           collect_consumed_columns_from_expression(argument);
@@ -132,7 +133,8 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
   // Replace ProjectionNodes with pruned ProjectionNodes if necessary
   for (const auto& projection_node : projection_nodes) {
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto& expression : projection_node->node_expressions()) {
+    for (auto expression_idx = size_t{0}; expression_idx < projection_node->node_expression_count(); ++expression_idx) {
+      const auto& expression = projection_node->node_expression(expression_idx);
       // We keep all non-column expressions
       if (expression->type != ExpressionType::LQPColumn) {
         referenced_projection_expressions.emplace_back(expression);
@@ -141,7 +143,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
       }
     }
 
-    if (projection_node->node_expressions().size() == referenced_projection_expressions.size()) {
+    if (projection_node->node_expression_count() == referenced_projection_expressions.size()) {
       // No columns to prune
       continue;
     }

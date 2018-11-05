@@ -57,7 +57,8 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
   if (!node) return;
   if (!visited_nodes.emplace(node).second) return;
 
-  for (const auto& expression : node->node_expressions()) {
+  for (auto expression_idx = size_t{0}; expression_idx < node->node_expression_count(); ++expression_idx) {
+    auto& expression = node->node_expression(expression_idx);
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
       if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;

@@ -320,16 +320,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   const auto input_operator = translate_node(node->left_input());
 
+  const auto aggregate_expressions = aggregate_node->aggregate_expressions();
+
   const auto aggregate_pqp_expressions =
-      _translate_expressions(aggregate_node->aggregate_expressions, node->left_input());
+      _translate_expressions(aggregate_expressions, node->left_input());
   const auto group_by_pqp_expressions =
-      _translate_expressions(aggregate_node->group_by_expressions, node->left_input());
+      _translate_expressions(aggregate_node->group_by_expressions(), node->left_input());
 
   // Create AggregateColumnDefinitions from AggregateExpressions
   // All aggregate_pqp_expressions have to be AggregateExpressions and their argument() has to be a PQPColumnExpression
   std::vector<AggregateColumnDefinition> aggregate_column_definitions;
   aggregate_column_definitions.reserve(aggregate_pqp_expressions.size());
-  for (const auto& expression : aggregate_node->aggregate_expressions) {
+  for (const auto& expression : aggregate_expressions) {
     Assert(
         expression->type == ExpressionType::Aggregate,
         "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");

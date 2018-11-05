@@ -18,6 +18,15 @@ std::string LimitNode::description() const {
   return stream.str();
 }
 
+size_t LimitNode::node_expression_count() const {
+  return 1u;
+}
+
+std::shared_ptr<AbstractExpression>& LimitNode::node_expression(const size_t idx) {
+  Assert(idx == 0u, "Expression index out of bounds");
+  return num_rows_expression;
+}
+
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return LimitNode::make(expression_copy_and_adapt_to_different_lqp(*num_rows_expression, node_mapping));
 }

@@ -29,7 +29,8 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   explicit PredicateNode(const std::shared_ptr<AbstractExpression>& predicate);
 
   std::string description() const override;
-  std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
+  size_t node_expression_count() const override;
+  std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) override;
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;

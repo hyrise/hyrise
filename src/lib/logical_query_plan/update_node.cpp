@@ -25,8 +25,13 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> UpdateNode::node_expressions() const {
-  return update_column_expressions;
+size_t UpdateNode::node_expression_count() const {
+  return update_column_expressions.size();
+}
+
+std::shared_ptr<AbstractExpression>& UpdateNode::node_expression(const size_t idx) {
+  Assert(idx < update_column_expressions.size(), "Expression index out of bounds");
+  return update_column_expressions[idx];
 }
 
 std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

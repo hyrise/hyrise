@@ -31,6 +31,16 @@ std::string AliasNode::description() const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const { return _expressions; }
 
+size_t AliasNode::node_expression_count() const {
+  return _expressions.size();
+}
+
+std::shared_ptr<AbstractExpression>& AliasNode::node_expression(const size_t idx) {
+  Assert(idx < _expressions.size(), "Expression index out of bounds");
+  // Modifying an element of the vector is fine.
+  return const_cast<std::shared_ptr<AbstractExpression>&>(_expressions[idx]);
+}
+
 std::shared_ptr<AbstractLQPNode> AliasNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<AliasNode>(expressions_copy_and_adapt_to_different_lqp(_expressions, node_mapping), aliases);
 }

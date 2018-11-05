@@ -63,8 +63,8 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   visit_lqp(lqp, [&](const auto& sub_node) {
     if (!visited_nodes.emplace(sub_node).second) return LQPVisitation::DoNotVisitInputs;
 
-    for (const auto& expression : sub_node->node_expressions()) {
-      visit_expression(expression, [&](const auto sub_expression) {
+    for (auto expression_idx = size_t{0}; expression_idx < sub_node->node_expression_count(); ++expression_idx) {
+      visit_expression(sub_node->node_expression(expression_idx), [&](const auto sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
           lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
         }
@@ -100,9 +100,9 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp, con
   visit_lqp(lqp, [&](const auto& node) {
     if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
 
-    visit_lqp_node_expressions(node, [&](auto& expression) {
-      expression_bind_placeholders_impl(expression, parameters, visited_nodes);
-    });
+    for (auto expression_idx = size_t{0}; expression_idx < node->node_expression_count(); ++expression_idx) {
+      expression_bind_placeholders_impl(node->node_expression(expression_idx), parameters, visited_nodes);
+    }
 
     return LQPVisitation::VisitInputs;
   });

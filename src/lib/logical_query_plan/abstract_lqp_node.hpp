@@ -126,12 +126,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
   /**
-   * @return    All expressions that this node USES (and doesn't just forward)
-   *            (e.g., predicates, projections, ...).
+   * @return    Access expressions that this node USES (and doesn't just forward) (e.g., predicates, projections, ...).
    *            Intended, e.g., for the optimizer to have ONE function to call recursively on a plan and see ALL
    *            expressions used in that plan
    */
-  virtual std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const;
+  virtual size_t node_expression_count() const;
+  virtual std::shared_ptr<AbstractExpression>& node_expression(const size_t idx);
+  const std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found

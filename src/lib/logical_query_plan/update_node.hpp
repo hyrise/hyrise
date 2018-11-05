@@ -19,7 +19,8 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNo
              const std::vector<std::shared_ptr<AbstractExpression>>& update_column_expressions);
 
   std::string description() const override;
-  std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
+  size_t node_expression_count() const override;
+  std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) override;
 
   const std::string table_name;
   std::vector<std::shared_ptr<AbstractExpression>> update_column_expressions;

@@ -25,7 +25,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_e
   return expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::node_expressions() const { return expressions; }
+size_t ProjectionNode::node_expression_count() const {
+  return expressions.size();
+}
+
+std::shared_ptr<AbstractExpression>& ProjectionNode::node_expression(const size_t idx) {
+  Assert(idx < expressions.size(), "Expression index out of bounds");
+  return expressions[idx];
+}
 
 std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {

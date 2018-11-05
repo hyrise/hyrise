@@ -54,8 +54,8 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   // Visualize subselects
-  for (const auto& expression : node->node_expressions()) {
-    visit_expression(expression, [&](const auto& sub_expression) {
+  for (auto expression_idx = size_t{0}; expression_idx < node->node_expression_count(); ++expression_idx) {
+    visit_expression(node->node_expression(expression_idx), [&](const auto& sub_expression) {
       const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
       if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
 

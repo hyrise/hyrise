@@ -19,9 +19,7 @@ namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
-    : AbstractLQPNode(LQPNodeType::Aggregate),
-      group_by_expressions(group_by_expressions),
-      aggregate_expressions(aggregate_expressions) {
+    : AbstractLQPNode(LQPNodeType::Aggregate), _aggregate_expressions_begin_idx{group_by_expressions.size()} {
 #if IS_DEBUG
   for (const auto& aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type == ExpressionType::Aggregate,
@@ -29,16 +27,17 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
   }
 #endif
 
-  _column_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
-  _column_expressions.insert(_column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
-  _column_expressions.insert(_column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
+  // To fill _column_expressions, we need a non-const reference to it
+  auto& column_expressions = const_cast<std::vector<std::shared_ptr<AbstractExpression>>&>(_column_expressions);
+  column_expressions.insert(column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
+  column_expressions.insert(column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
 }
 
 std::string AggregateNode::description() const {
   std::stringstream stream;
 
-  stream << "[Aggregate] GroupBy: [" << expression_column_names(group_by_expressions);
-  stream << "] Aggregates: [" << expression_column_names(aggregate_expressions) << "]";
+  stream << "[Aggregate] GroupBy: [" << expression_column_names(group_by_expressions());
+  stream << "] Aggregates: [" << expression_column_names(aggregate_expressions()) << "]";
 
   return stream.str();
 }
@@ -74,20 +73,34 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
   return _column_expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::node_expressions() const { return _column_expressions; }
+size_t AggregateNode::node_expression_count() const {
+  return _column_expressions.size();
+}
+
+std::shared_ptr<AbstractExpression>& AggregateNode::node_expression(const size_t idx) {
+  Assert(idx < _column_expressions.size(), "Expression index out of bounds");
+  // Modifying an element of the vector is fine.
+  return const_cast<std::shared_ptr<AbstractExpression>&>(_column_expressions[idx]);
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::group_by_expressions() const {
+  return {_column_expressions.begin(), _column_expressions.begin() + _aggregate_expressions_begin_idx};
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::aggregate_expressions() const {
+  return {_column_expressions.begin() + _aggregate_expressions_begin_idx, _column_expressions.end()};
+}
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<AggregateNode>(
-      expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),
-      expressions_copy_and_adapt_to_different_lqp(aggregate_expressions, node_mapping));
+      expressions_copy_and_adapt_to_different_lqp(group_by_expressions(), node_mapping),
+      expressions_copy_and_adapt_to_different_lqp(aggregate_expressions(), node_mapping));
 }
 
 bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
 
-  return expressions_equal_to_expressions_in_different_lqp(group_by_expressions, aggregate_node.group_by_expressions,
-                                                           node_mapping) &&
-         expressions_equal_to_expressions_in_different_lqp(aggregate_expressions, aggregate_node.aggregate_expressions,
-                                                           node_mapping);
+  return expressions_equal_to_expressions_in_different_lqp(column_expressions(), aggregate_node.column_expressions(),
+                                                           node_mapping) && _aggregate_expressions_begin_idx == aggregate_node._aggregate_expressions_begin_idx;
 }
 }  // namespace opossum

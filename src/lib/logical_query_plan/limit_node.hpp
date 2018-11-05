@@ -14,6 +14,8 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
   explicit LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_expression);
 
   std::string description() const override;
+  size_t node_expression_count() const override;
+  std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) override;
 
   std::shared_ptr<AbstractExpression> num_rows_expression;
 

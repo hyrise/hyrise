@@ -52,8 +52,7 @@ TEST_F(ConstantCalculationRuleTest, ProjectionAndPredicate) {
 
   /**
    * NOTE
-   * The ProjectionNode will still contain a Column calculating 1+7. It isn't rewritten because the Optimizer
-   * (TODO(anybody)!) can't rewrite root expressions, because AbstractLQPNode::node_expressions() returns them by value.
+   * The ProjectionNode will still contain a Column calculating 1+7. See rule for details
    */
 
   // clang-format off

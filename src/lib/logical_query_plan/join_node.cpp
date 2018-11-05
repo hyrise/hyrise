@@ -61,12 +61,13 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   return _column_expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> JoinNode::node_expressions() const {
-  if (join_predicate) {
-    return {join_predicate};
-  } else {
-    return {};
-  }
+size_t JoinNode::node_expression_count() const {
+  return join_predicate ? 1u : 0u;
+}
+
+std::shared_ptr<AbstractExpression>& JoinNode::node_expression(const size_t idx) {
+  Assert(join_predicate ? idx == 0 : false, "Expression index out of bounds");
+  return join_predicate;
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(

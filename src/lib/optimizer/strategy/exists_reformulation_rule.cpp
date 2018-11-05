@@ -45,8 +45,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   auto correlated_parameter_usage_count = 0;
 
   visit_lqp(subselect_expression->lqp, [&](const auto& deeper_node) {
-    for (const auto& expression : deeper_node->node_expressions()) {
-      visit_expression(expression, [&](const auto& sub_expression) {
+    for (auto expression_idx = size_t{0}; expression_idx < deeper_node->node_expression_count(); ++expression_idx) {
+      visit_expression(deeper_node->node_expression(expression_idx), [&](const auto& sub_expression) {
         const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
         if (parameter_expression && parameter_expression->parameter_id == correlated_parameter_id) {
           ++correlated_parameter_usage_count;

@@ -28,7 +28,14 @@ std::string PredicateNode::description() const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> PredicateNode::node_expressions() const { return {predicate}; }
+size_t PredicateNode::node_expression_count() const {
+  return 1u;
+}
+
+std::shared_ptr<AbstractExpression>& PredicateNode::node_expression(const size_t idx) {
+  Assert(idx == 0u, "Expression index out of bounds");
+  return predicate;
+}
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {

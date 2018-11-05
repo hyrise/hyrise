@@ -31,7 +31,15 @@ std::string SortNode::description() const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> SortNode::node_expressions() const { return expressions; }
+size_t SortNode::node_expression_count() const {
+  return expressions.size();
+}
+
+std::shared_ptr<AbstractExpression>& SortNode::node_expression(const size_t idx) {
+  Assert(idx < expressions.size(), "Expression index out of bounds");
+  // Modifying an element of the vector is fine.
+  return const_cast<std::shared_ptr<AbstractExpression>&>(expressions[idx]);
+}
 
 std::shared_ptr<AbstractLQPNode> SortNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return SortNode::make(expressions_copy_and_adapt_to_different_lqp(expressions, node_mapping), order_by_modes);
