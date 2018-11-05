@@ -239,6 +239,11 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     return INVALID_BIN_ID;
   }
 
+  // Avoid floating point rounding errors.
+  if (value == _bin_data.maximum) {
+    return BinID{_bin_data.bin_heights.size() - 1u};
+  }
+
   if constexpr (std::is_same_v<T, std::string>) {
     const auto num_value = this->_convert_string_to_number_representation(value);
 

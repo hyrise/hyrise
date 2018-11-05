@@ -507,6 +507,16 @@ TEST_F(EqualWidthHistogramTest, FloatLessThan) {
                   4.f + 7.f + 3.f);
 }
 
+TEST_F(EqualWidthHistogramTest, FloatRounding) {
+  // Values are adapted from an actual error.
+  const auto min = 1023.79f;
+  const auto max = 694486.f;
+  const auto bin_count = 10000u;
+  const auto hist = EqualWidthHistogram<float>(min, max, std::vector<HistogramCountType>(bin_count, 1u),
+                                               std::vector<HistogramCountType>(bin_count, 1u), 0u);
+  EXPECT_NO_THROW(hist.estimate_cardinality(PredicateCondition::GreaterThanEquals, max));
+}
+
 TEST_F(EqualWidthHistogramTest, StringLessThan) {
   auto hist = EqualWidthHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);
