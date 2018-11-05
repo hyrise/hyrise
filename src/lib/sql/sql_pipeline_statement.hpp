@@ -6,8 +6,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
-#include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "cache/hash_cache.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -35,7 +34,7 @@ struct SQLPipelineStatementMetrics {
  * result table).
  *
  * E.g: calling sql_pipeline_statement.get_result_table() will result in the following "call stack"
- * get_result_table -> get_tasks -> get_query_plan -> get_optimized_logical_plan -> get_parsed_sql
+ * get_result_table -> get_tasks -> get_physical_plan -> get_optimized_logical_plan -> get_parsed_sql
  */
 class SQLPipelineStatement : public Noncopyable {
  public:
@@ -59,7 +58,7 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
 
   // For now, this always uses the optimized LQP.
-  const std::shared_ptr<SQLQueryPlan>& get_query_plan();
+  const std::shared_ptr<AbstractOperator>& get_physical_plan();
 
   // Returns all task sets that need to be executed for this query.
   const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
@@ -92,7 +91,7 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
   std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
   std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
-  std::shared_ptr<SQLQueryPlan> _query_plan;
+  std::shared_ptr<AbstractOperator> _physical_plan;
   std::vector<std::shared_ptr<OperatorTask>> _tasks;
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.

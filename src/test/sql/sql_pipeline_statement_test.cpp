@@ -17,8 +17,8 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "cache/hash_cache.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -72,7 +72,7 @@ class SQLPipelineStatementTest : public BaseTest {
     _multi_statement_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    QueryPlanCache::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -315,68 +315,58 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlan) {
   // We don't have a transaction context yet, as it was not needed
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
 
-  const auto& plan = sql_pipeline.get_query_plan();
-  const auto& roots = plan->tree_roots();
-
-  // We need the transaction context for the query plan if we use MVCC
-  EXPECT_NE(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_EQ(roots.size(), 1u);
-  EXPECT_NE(roots.at(0), nullptr);
+  const auto& plan = sql_pipeline.get_physical_plan();
+  EXPECT_NE(plan, nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
-  sql_pipeline.get_query_plan();
+  sql_pipeline.get_physical_plan();
   auto duration = sql_pipeline.metrics()->lqp_translate_time_nanos;
 
-  const auto& plan = sql_pipeline.get_query_plan();
+  const auto& plan = sql_pipeline.get_physical_plan();
   auto duration2 = sql_pipeline.metrics()->lqp_translate_time_nanos;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
 
-  const auto& roots = plan->tree_roots();
-
-  EXPECT_EQ(roots.size(), 1u);
-  EXPECT_NE(roots.at(0), nullptr);
+  EXPECT_NE(plan, nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanJoinWithFilter) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline_statement();
 
-  const auto& plan = sql_pipeline.get_query_plan();
-  const auto& roots = plan->tree_roots();
+  const auto& plan = sql_pipeline.get_physical_plan();
 
   auto is_join_op = [](const std::shared_ptr<const AbstractOperator>& node) {
     return static_cast<bool>(std::dynamic_pointer_cast<const AbstractJoinOperator>(node));
   };
 
-  EXPECT_EQ(roots.size(), 1u);
-  EXPECT_NE(roots.at(0), nullptr);
-  EXPECT_TRUE(contained_in_query_plan(roots.at(0), is_join_op));
+  EXPECT_NE(plan, nullptr);
+  EXPECT_TRUE(contained_in_query_plan(plan, is_join_op));
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithMVCC) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
-  const auto& plan = sql_pipeline.get_query_plan();
+  const auto& plan = sql_pipeline.get_physical_plan();
 
-  EXPECT_NE(plan->tree_roots().at(0)->transaction_context(), nullptr);
+  EXPECT_NE(plan->transaction_context(), nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithoutMVCC) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
-  const auto& plan = sql_pipeline.get_query_plan();
+  const auto& plan = sql_pipeline.get_physical_plan();
 
-  EXPECT_EQ(plan->tree_roots().at(0)->transaction_context(), nullptr);
+  EXPECT_EQ(plan->transaction_context(), nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
-  const auto& plan = sql_pipeline.get_query_plan();
+  const auto& plan = sql_pipeline.get_physical_plan();
 
-  EXPECT_EQ(plan->tree_roots().at(0)->transaction_context().get(), context.get());
+  EXPECT_EQ(plan->transaction_context().get(), context.get());
 }
 
 TEST_F(SQLPipelineStatementTest, GetTasks) {
@@ -474,7 +464,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetTimes) {
-  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& cache = QueryPlanCache::get();
   EXPECT_EQ(cache.size(), 0u);
 
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
@@ -517,7 +507,7 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
   sql_pipeline.get_result_table();
 
-  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& cache = QueryPlanCache::get();
   EXPECT_EQ(cache.size(), 1u);
   EXPECT_TRUE(cache.has(_select_query_a));
 }

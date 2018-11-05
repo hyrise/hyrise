@@ -102,6 +102,17 @@ std::shared_ptr<LQPPreparedStatement> StorageManager::get_prepared_statement(con
   return iter->second->deep_copy();
 }
 
+bool StorageManager::has_prepared_statement(const std::string& name) const {
+  return _prepared_statements.find(name) != _prepared_statements.end();
+}
+
+void StorageManager::drop_prepared_statement(const std::string& name) {
+  const auto iter = _prepared_statements.find(name);
+  Assert(iter != _prepared_statements.end(), "No such prepared statement named '" + name + "'");
+
+  _prepared_statements.erase(iter);
+}
+
 void StorageManager::print(std::ostream& out) const {
   out << "==================" << std::endl;
   out << "===== Tables =====" << std::endl << std::endl;

@@ -11,8 +11,8 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "cache/hash_cache.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -80,7 +80,7 @@ class BaseTestWithParam
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    QueryPlanCache::get().clear();
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,

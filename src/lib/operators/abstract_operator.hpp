@@ -21,7 +21,6 @@ enum class OperatorType {
   Alias,
   Delete,
   Difference,
-  Execute,
   ExportBinary,
   ExportCsv,
   GetTable,

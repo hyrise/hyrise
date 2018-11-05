@@ -141,7 +141,6 @@ void visit_lqp_node_expressions(const std::shared_ptr<AbstractLQPNode>& node, Vi
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
     case LQPNodeType::DummyTable:
-    case LQPNodeType::ExecuteStatement:
     case LQPNodeType::Insert:
     case LQPNodeType::PrepareStatement:
     case LQPNodeType::Root:
@@ -154,5 +153,7 @@ void visit_lqp_node_expressions(const std::shared_ptr<AbstractLQPNode>& node, Vi
       break;
   }
 }
+
+void lqp_bind_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters);
 
 }  // namespace opossum

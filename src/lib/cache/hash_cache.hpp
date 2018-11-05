@@ -9,22 +9,20 @@
 
 #include "gdfs_cache.hpp"
 
-#include "SQLParserResult.h"
 #include "utils/singleton.hpp"
 
 namespace opossum {
 
 inline constexpr size_t DefaultCacheCapacity = 1024;
 
-// Cache that stores instances of SQLParserResult.
 // Per-default, uses the GDFS cache as underlying storage.
 template <typename Value, typename Key = std::string>
-class SQLQueryCache : public Singleton<SQLQueryCache<Value, Key>> {
+class HashCache : public Singleton<HashCache<Value, Key>> {
  public:
-  explicit SQLQueryCache(size_t capacity = DefaultCacheCapacity)
+  explicit HashCache(size_t capacity = DefaultCacheCapacity)
       : _cache(std::move(std::make_unique<GDFSCache<Key, Value>>(capacity))) {}
 
-  virtual ~SQLQueryCache() {}
+  virtual ~HashCache() {}
 
   // Adds or refreshes the cache entry [query, value].
   void set(const Key& query, const Value& value) {

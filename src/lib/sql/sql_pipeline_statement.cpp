@@ -12,8 +12,8 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
@@ -47,7 +47,6 @@ const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; 
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
   if (_parsed_sql_statement) {
-    // Return cached result
     return _parsed_sql_statement;
   }
 
@@ -111,9 +110,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   return _optimized_logical_plan;
 }
 
-const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
-  if (_query_plan) {
-    return _query_plan;
+const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan() {
+  if (_physical_plan) {
+    return _physical_plan;
   }
 
   // If we need a transaction context but haven't passed one in, this is the latest point where we can create it
@@ -121,28 +120,18 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     _transaction_context = TransactionManager::get().new_transaction_context();
   }
 
-  _query_plan = std::make_shared<SQLQueryPlan>(_cleanup_temporaries);
-
   // Stores when the actual compilation started/ended
   auto started = std::chrono::high_resolution_clock::now();
   auto done = started;  // dummy value needed for initialization
 
-  auto assert_same_mvcc_mode = [this](const SQLQueryPlan& plan) {
-    if (plan.tree_roots().front()->transaction_context_is_set()) {
+  if (const auto cached_physical_plan = QueryPlanCache::get().try_get(_sql_string)) {
+    if ((*cached_physical_plan)->transaction_context_is_set()) {
       Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
     } else {
       Assert(_use_mvcc == UseMvcc::No, "Trying to use non-MVCC cached query with a transaction context.");
     }
-  };
 
-  if (const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string)) {
-    // Handle query plan if statement has been cached
-    auto& plan = *cached_plan;
-
-    DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
-    assert_same_mvcc_mode(plan);
-
-    _query_plan->append_plan(plan.deep_copy());
+    _physical_plan = (*cached_physical_plan)->deep_copy();
     _metrics->query_plan_cache_hit = true;
 
   } else {
@@ -151,21 +140,21 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
     // Reset time to exclude previous pipeline steps
     started = std::chrono::high_resolution_clock::now();
-    _query_plan->add_tree_by_root(_lqp_translator->translate_node(lqp));
+    _physical_plan = _lqp_translator->translate_node(lqp);
   }
 
   done = std::chrono::high_resolution_clock::now();
 
-  if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);
+  if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
   if (!_metrics->query_plan_cache_hit) {
-    SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
+    QueryPlanCache::get().set(_sql_string, _physical_plan);
   }
 
   _metrics->lqp_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
-  return _query_plan;
+  return _physical_plan;
 }
 
 const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_tasks() {
@@ -173,12 +162,7 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
     return _tasks;
   }
 
-  const auto& query_plan = get_query_plan();
-  DebugAssert(query_plan->tree_roots().size() == 1,
-              "Physical query plan creation returned no or more than one plan for a single statement.");
-
-  const auto& root = query_plan->tree_roots().front();
-  _tasks = OperatorTask::make_tasks_from_operator(root, _cleanup_temporaries);
+  _tasks = OperatorTask::make_tasks_from_operator(get_physical_plan(), _cleanup_temporaries);
   return _tasks;
 }
 
@@ -190,15 +174,6 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   const auto& tasks = get_tasks();
 
   const auto started = std::chrono::high_resolution_clock::now();
-
-  const auto* statement = get_parsed_sql_statement()->getStatement(0);
-  // If this is a PREPARE x FROM ... command, calling get_result_table should not fail but just return
-  if (statement->isType(hsql::kStmtPrepare)) {
-    _query_has_output = false;
-    const auto done = std::chrono::high_resolution_clock::now();
-    _metrics->execution_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
-    return _result_table;
-  }
 
   DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
                 reinterpret_cast<uintptr_t>(this));

@@ -26,7 +26,7 @@ class Optimizer;
  *
  * Defaults:
  *  - MVCC is enabled
- *  - The default Optimizer (Optimizer::create_default_optimizer() is used.
+ *  - The default Optimizer (Optimizer::create_default_optimizer()) is used.
  *  - No JIT operators
  *
  * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list.

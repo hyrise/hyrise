@@ -4,18 +4,18 @@
 
 #include "base_test.hpp"
 
-#include "sql/gdfs_cache.hpp"
-#include "sql/lru_cache.hpp"
-#include "sql/lru_k_cache.hpp"
+#include "cache/gdfs_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/lru_k_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "cache/hash_cache.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-class SQLQueryPlanCacheTest : public BaseTest {
+class QueryPlanCacheTest : public BaseTest {
  protected:
   void SetUp() override {
     // Load tables.
@@ -26,7 +26,7 @@ class SQLQueryPlanCacheTest : public BaseTest {
 
     _query_plan_cache_hits = 0;
 
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    QueryPlanCache::get().clear();
   }
 
   void execute_query(const std::string& query) {
@@ -45,8 +45,8 @@ class SQLQueryPlanCacheTest : public BaseTest {
   size_t _query_plan_cache_hits;
 };
 
-TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
-  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
+  auto& cache = QueryPlanCache::get();
 
   EXPECT_FALSE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
@@ -54,27 +54,20 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   // Execute a query and cache its plan.
   auto pipeline_statement = SQLPipelineBuilder{Q1}.disable_mvcc().create_pipeline_statement();
   pipeline_statement.get_result_table();
-  cache.set(Q1, *(pipeline_statement.get_query_plan()));
+  cache.set(Q1, pipeline_statement.get_physical_plan());
 
   EXPECT_TRUE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
 
   // Retrieve and execute the cached plan.
-  const SQLQueryPlan cached_plan = cache.get_entry(Q1);
-  auto task_list1 = cached_plan.deep_copy().create_tasks();
-  auto task_list2 = cached_plan.deep_copy().create_tasks();
-
-  for (auto task : task_list1) task->execute();
-  for (auto task : task_list2) task->execute();
-
-  EXPECT_TABLE_EQ_UNORDERED(task_list1.back()->get_operator()->get_output(),
-                            task_list2.back()->get_operator()->get_output());
+  const auto cached_plan = cache.get_entry(Q1);
+  EXPECT_EQ(cached_plan, pipeline_statement.get_physical_plan());
 }
 
 // Test query plan cache with LRU implementation.
-TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
-  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
-  cache.replace_cache_impl<LRUCache<std::string, SQLQueryPlan>>(2);
+TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
+  auto& cache = QueryPlanCache::get();
+  cache.replace_cache_impl<LRUCache<std::string, std::shared_ptr<AbstractOperator>>>(2);
 
   // Execute the queries in arbitrary order.
   execute_query(Q1);  // Miss.
@@ -98,9 +91,9 @@ TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
 }
 
 // Test query plan cache with GDFS implementation.
-TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
-  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
-  cache.replace_cache_impl<GDFSCache<std::string, SQLQueryPlan>>(2);
+TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
+  auto& cache = QueryPlanCache::get();
+  cache.replace_cache_impl<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>>(2);
 
   // Execute the queries in arbitrary order.
   execute_query(Q1);  // Miss.
@@ -128,9 +121,9 @@ TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
 }
 
 // Test query plan cache with LRUK implementation.
-TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
-  auto& cache = SQLQueryCache<SQLQueryPlan>::get();
-  cache.replace_cache_impl<LRUKCache<2, std::string, SQLQueryPlan>>(2);
+TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
+  auto& cache = QueryPlanCache::get();
+  cache.replace_cache_impl<LRUKCache<2, std::string, std::shared_ptr<AbstractOperator>>>(2);
 
   // Execute the queries in arbitrary order.
   execute_query(Q1);  // Miss.

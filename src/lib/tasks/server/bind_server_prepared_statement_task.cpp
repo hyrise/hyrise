@@ -2,25 +2,33 @@
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "expression/value_expression.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "storage/lqp_prepared_statement.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 
 namespace opossum {
 
 void BindServerPreparedStatementTask::_on_execute() {
   try {
-    const auto placeholder_plan = _sql_pipeline->get_query_plans().front();
-    auto query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
+    Assert(_params.size() == _prepared_statement->parameter_ids.size(), "Prepared statement parameter count mismatch");
 
-    std::unordered_map<ParameterID, AllTypeVariant> pqp_parameters;
-    for (auto value_placeholder_id = ValuePlaceholderID{0}; value_placeholder_id < _params.size();
-         ++value_placeholder_id) {
-      const auto parameter_id = placeholder_plan->parameter_ids().at(value_placeholder_id);
-      pqp_parameters.emplace(parameter_id, _params[value_placeholder_id]);
+    auto parameters = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
+
+    auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{_params.size()};
+    for (auto parameter_idx = size_t{0}; parameter_idx < _params.size(); ++parameter_idx) {
+      const auto parameter_id = _prepared_statement->parameter_ids[parameter_idx];
+      parameters.emplace(parameter_id, std::make_shared<ValueExpression>(_params[parameter_idx]));
     }
-    Assert(!query_plan->tree_roots().empty(), "Expected just one PQP");
-    query_plan->tree_roots().at(0)->set_parameters(pqp_parameters);
 
-    _promise.set_value(std::move(query_plan));
+    const auto lqp = _prepared_statement->lqp->deep_copy();
+    lqp_bind_placeholders(lqp, parameters);
+
+    const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+    _promise.set_value(pqp);
   } catch (const std::exception& exception) {
     _promise.set_exception(boost::current_exception());
   }

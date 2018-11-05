@@ -150,21 +150,21 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
   return _optimized_logical_plans;
 }
 
-const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans() {
-  if (!_query_plans.empty()) {
-    return _query_plans;
+const std::vector<std::shared_ptr<AbstractOperator>>& SQLPipeline::get_physical_plans() {
+  if (!_physical_plans.empty()) {
+    return _physical_plans;
   }
 
   Assert(!_requires_execution || _pipeline_was_executed,
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
-  _query_plans.reserve(statement_count());
+  _physical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _query_plans.push_back(pipeline_statement->get_query_plan());
+    _physical_plans.push_back(pipeline_statement->get_physical_plan());
   }
 
-  return _query_plans;
+  return _physical_plans;
 }
 
 const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {

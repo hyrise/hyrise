@@ -6,7 +6,7 @@
 namespace opossum {
 
 Prepare::Prepare(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& prepared_statement):
-  AbstractReadOnlyOperator(OperatorType::Execute), _name(name), _prepared_statement(prepared_statement) {}
+  AbstractReadOnlyOperator(OperatorType::Prepare), _name(name), _prepared_statement(prepared_statement) {}
 
 const std::string Prepare::name() const {
   return "Prepare";

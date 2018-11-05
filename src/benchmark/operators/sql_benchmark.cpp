@@ -66,7 +66,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
 
     while (st.KeepRunning()) {
       auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
-      pipeline_statement.get_query_plan();
+      pipeline_statement.get_physical_plan();
     }
   }
 

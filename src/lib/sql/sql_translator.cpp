@@ -35,7 +35,6 @@
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
-#include "logical_query_plan/execute_statement_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -132,8 +131,15 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator) {}
 
-const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLTranslator::value_placeholders() const {
-  return _parameter_id_allocator->value_placeholders();
+std::vector<ParameterID> SQLTranslator::value_placeholder_parameter_ids() const {
+  const auto& value_placeholder_parameter_ids = _parameter_id_allocator->value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{value_placeholder_parameter_ids.size()};
+
+  for (const auto& [value_placeholder_id, parameter_id] : value_placeholder_parameter_ids) {
+    parameter_ids[value_placeholder_id] = parameter_id;
+  }
+
+  return parameter_ids;
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_result(
@@ -1010,12 +1016,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 
   const auto lqp = prepared_statement_translator.translate_parser_result(parse_result).at(0);
 
-  const auto& value_placeholder_parameter_ids = prepared_statement_translator.value_placeholders();
-  auto parameter_ids = std::vector<ParameterID>{value_placeholder_parameter_ids.size()};
-
-  for (const auto& [value_placeholder_id, parameter_id] : value_placeholder_parameter_ids) {
-    parameter_ids[value_placeholder_id] = parameter_id;
-  }
+  const auto parameter_ids = prepared_statement_translator.value_placeholder_parameter_ids();
 
   const auto lqp_prepared_statement = std::make_shared<LQPPreparedStatement>(lqp, parameter_ids);
 
@@ -1038,40 +1039,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   }
 
   auto lqp = prepared_statement->lqp->deep_copy();
-
-  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  _replace_parameters_in_lqp(lqp, parameters_by_id, visited_nodes);
+  lqp_bind_placeholders(lqp, parameters_by_id);
 
   return lqp;
-}
-
-void SQLTranslator::_replace_parameters_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  visit_lqp(lqp, [&](const auto& node) {
-    if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
-
-    visit_lqp_node_expressions(node, [&](auto& expression) {
-      _replace_parameters_in_expression(expression, parameters, visited_nodes);
-    });
-
-    return LQPVisitation::VisitInputs;
-  });
-}
-
-void SQLTranslator::_replace_parameters_in_expression(std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  visit_expression(expression, [&](auto& sub_expression) {
-    if (const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
-    parameter_expression && parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
-      const auto parameter_iter = parameters.find(parameter_expression->parameter_id);
-      Assert(parameter_iter != parameters.end(), "No expression specified for ValuePlaceholder. This should have been caught earlier");
-      sub_expression = parameter_iter->second;
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-      _replace_parameters_in_lqp(select_expression->lqp, parameters, visited_nodes);
-    }
-
-    return ExpressionVisitation::VisitArguments;
-  });
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

@@ -9,6 +9,13 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
+    cache/abstract_cache.hpp
+    cache/gdfs_cache.hpp
+    cache/gds_cache.hpp
+    cache/lru_cache.hpp
+    cache/lru_k_cache.hpp
+    cache/random_cache.hpp
+    cache/hash_cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -108,8 +115,6 @@ set(
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
-    logical_query_plan/execute_statement_node.cpp
-    logical_query_plan/execute_statement_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -204,8 +209,6 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/execute.cpp
-    operators/maintenance/execute.hpp
     operators/maintenance/prepare.cpp
     operators/maintenance/prepare.hpp
     operators/maintenance/show_columns.cpp
@@ -324,16 +327,10 @@ set(
     server/types.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    sql/abstract_cache.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
-    sql/gdfs_cache.hpp
-    sql/gds_cache.hpp
-    sql/lru_cache.hpp
-    sql/lru_k_cache.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
-    sql/random_cache.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_resolver.cpp
@@ -346,9 +343,6 @@ set(
     sql/sql_pipeline_builder.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
-    sql/sql_query_cache.hpp
-    sql/sql_query_plan.cpp
-    sql/sql_query_plan.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     statistics/base_column_statistics.cpp
@@ -524,6 +518,8 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
+    tasks/server/parse_server_prepared_statement_task.cpp
+    tasks/server/parse_server_prepared_statement_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.cpp
@@ -567,8 +563,8 @@ set(
     visualization/lqp_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
-    visualization/sql_query_plan_visualizer.cpp
-    visualization/sql_query_plan_visualizer.hpp
+    visualization/pqp_visualizer.cpp
+    visualization/pqp_visualizer.hpp
     visualization/viz_record_layout.cpp
     visualization/viz_record_layout.hpp
     ${CMAKE_BINARY_DIR}/version.hpp

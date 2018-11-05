@@ -261,10 +261,9 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-  create_pipeline_result->sql_pipeline = sql_pipeline;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+  auto parse_server_prepared_statement_result = std::make_shared<LQPPreparedStatement>();
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -277,11 +276,10 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
   // The session schedules a task to derive a Query Plan from the SQL Pipeline
-  const auto placeholder_plan = sql_pipeline->get_query_plans().front();
-  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
+  const auto placeholder_plan = sql_pipeline->get_physical_plans().front();
 
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(placeholder_plan->deep_copy()))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
 
@@ -427,11 +425,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   EXPECT_CALL(*_connection, receive_bind_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  const auto placeholder_plan = sql_pipeline->get_query_plans().front();
-  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
+  const auto placeholder_plan = sql_pipeline->get_physical_plans().front();
 
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(placeholder_plan->deep_copy()))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
 

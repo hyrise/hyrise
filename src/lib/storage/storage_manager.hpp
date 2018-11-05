@@ -49,6 +49,8 @@ class StorageManager : public Singleton<StorageManager> {
    */
   void add_prepared_statement(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& view);
   std::shared_ptr<LQPPreparedStatement> get_prepared_statement(const std::string& name) const;
+  bool has_prepared_statement(const std::string& name) const;
+  void drop_prepared_statement(const std::string& name);
   /** @} */
 
   // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)

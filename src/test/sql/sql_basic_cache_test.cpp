@@ -1,11 +1,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "sql/gdfs_cache.hpp"
-#include "sql/gds_cache.hpp"
-#include "sql/lru_cache.hpp"
-#include "sql/lru_k_cache.hpp"
-#include "sql/random_cache.hpp"
+#include "cache/gdfs_cache.hpp"
+#include "cache/gds_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/lru_k_cache.hpp"
+#include "cache/random_cache.hpp"
 
 namespace opossum {
 

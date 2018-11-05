@@ -15,6 +15,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
@@ -57,7 +58,7 @@ class SQLPipelineTest : public BaseTest {
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    QueryPlanCache::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -253,14 +254,14 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPExecutionRequired) {
 
 TEST_F(SQLPipelineTest, GetQueryPlans) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
-  const auto& plans = sql_pipeline.get_query_plans();
+  const auto& plans = sql_pipeline.get_physical_plans();
 
   EXPECT_EQ(plans.size(), 1u);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlansMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
-  const auto& plans = sql_pipeline.get_query_plans();
+  const auto& plans = sql_pipeline.get_physical_plans();
 
   EXPECT_EQ(plans.size(), 2u);
 }
@@ -270,11 +271,11 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   const auto& metrics = sql_pipeline.metrics();
 
-  sql_pipeline.get_query_plans();
+  sql_pipeline.get_physical_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
-  const auto& plans = sql_pipeline.get_query_plans();
+  const auto& plans = sql_pipeline.get_physical_plans();
   auto duration2 = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
   // Make sure this was not run twice
@@ -285,7 +286,7 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 TEST_F(SQLPipelineTest, GetQueryPlansExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
   try {
-    sql_pipeline.get_query_plans();
+    sql_pipeline.get_physical_plans();
     // Fail if this did not throw an exception
     FAIL();
   } catch (const std::exception& e) {
@@ -427,7 +428,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
-  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& cache = QueryPlanCache::get();
   EXPECT_EQ(cache.size(), 0u);
 
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
@@ -530,7 +531,7 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& cache = QueryPlanCache::get();
   EXPECT_EQ(cache.size(), 2u);
   EXPECT_TRUE(cache.has(_select_query_a));
   EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));

@@ -18,7 +18,6 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/execute_statement_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -1183,9 +1182,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
       stored_table_node_int_float));
   // clang-format on
 
-  EXPECT_EQ(sql_translator.value_placeholders().size(), 2u);
-  EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{0}), ParameterID{1});
-  EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{1}), ParameterID{0});
+  EXPECT_EQ(sql_translator.value_placeholder_parameter_ids().size(), 2u);
+  EXPECT_EQ(sql_translator.value_placeholder_parameter_ids().at(0), ParameterID{1});
+  EXPECT_EQ(sql_translator.value_placeholder_parameter_ids().at(1), ParameterID{0});
 
   const auto actual_projection_node = std::dynamic_pointer_cast<ProjectionNode>(actual_lqp);
   ASSERT_TRUE(actual_projection_node);

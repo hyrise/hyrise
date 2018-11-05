@@ -24,7 +24,7 @@
 #include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the

@@ -15,7 +15,7 @@
 #include "utils/load_table.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
 
@@ -300,7 +300,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
   if (_config.enable_visualization) {
     const auto query_plans_iter = _query_plans.find(name);
     if (query_plans_iter == _query_plans.end()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_physical_plans()};
       _query_plans.emplace(name, plans);
     }
   }
@@ -323,7 +323,7 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query, const std::f
   if (_config.enable_visualization) {
     const auto query_plans_iter = _query_plans.find(name);
     if (query_plans_iter == _query_plans.end()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_physical_plans()};
       _query_plans.emplace(name, plans);
     }
   }

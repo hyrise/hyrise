@@ -46,7 +46,7 @@
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -676,7 +676,7 @@ int Console::_visualize(const std::string& input) {
         }
 
         // Create plan with all roots
-        const auto& plans = _sql_pipeline->get_query_plans();
+        const auto& plans = _sql_pipeline->get_physical_plans();
         for (const auto& plan : plans) {
           query_plan.append_plan(*plan);
         }

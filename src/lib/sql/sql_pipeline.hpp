@@ -8,7 +8,6 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
 
@@ -59,9 +58,9 @@ class SQLPipeline : public Noncopyable {
   // Returns the optimized LQP root for each statement.
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
-  // Returns the SQLQueryPlan for each statement.
+  // Returns the physical plans for each statement.
   // For now, this always uses the optimized LQP.
-  const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
+  const std::vector<std::shared_ptr<AbstractOperator>>& get_physical_plans();
 
   // Returns all tasks for each statement that need to be executed for this query.
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
@@ -97,7 +96,7 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
-  std::vector<std::shared_ptr<SQLQueryPlan>> _query_plans;
+  std::vector<std::shared_ptr<AbstractOperator>> _physical_plans;
   std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::vector<std::shared_ptr<const Table>> _result_tables;
 
