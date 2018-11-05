@@ -42,6 +42,7 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "operators/maintenance/prepare.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -54,6 +55,7 @@
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
+#include "prepare_statement_node.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
@@ -100,28 +102,29 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // clang-format off
-    case LQPNodeType::Alias:        return _translate_alias_node(node);
-    case LQPNodeType::StoredTable:  return _translate_stored_table_node(node);
-    case LQPNodeType::Predicate:    return _translate_predicate_node(node);
-    case LQPNodeType::Projection:   return _translate_projection_node(node);
-    case LQPNodeType::Sort:         return _translate_sort_node(node);
-    case LQPNodeType::Join:         return _translate_join_node(node);
-    case LQPNodeType::Aggregate:    return _translate_aggregate_node(node);
-    case LQPNodeType::Limit:        return _translate_limit_node(node);
-    case LQPNodeType::Insert:       return _translate_insert_node(node);
-    case LQPNodeType::Delete:       return _translate_delete_node(node);
-    case LQPNodeType::DummyTable:   return _translate_dummy_table_node(node);
-    case LQPNodeType::Update:       return _translate_update_node(node);
-    case LQPNodeType::Validate:     return _translate_validate_node(node);
-    case LQPNodeType::Union:        return _translate_union_node(node);
+    case LQPNodeType::Alias:              return _translate_alias_node(node);
+    case LQPNodeType::StoredTable:        return _translate_stored_table_node(node);
+    case LQPNodeType::Predicate:          return _translate_predicate_node(node);
+    case LQPNodeType::Projection:         return _translate_projection_node(node);
+    case LQPNodeType::Sort:               return _translate_sort_node(node);
+    case LQPNodeType::Join:               return _translate_join_node(node);
+    case LQPNodeType::Aggregate:          return _translate_aggregate_node(node);
+    case LQPNodeType::Limit:              return _translate_limit_node(node);
+    case LQPNodeType::Insert:             return _translate_insert_node(node);
+    case LQPNodeType::Delete:             return _translate_delete_node(node);
+    case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
+    case LQPNodeType::Update:             return _translate_update_node(node);
+    case LQPNodeType::Validate:           return _translate_validate_node(node);
+    case LQPNodeType::Union:              return _translate_union_node(node);
 
       // Maintenance operators
-    case LQPNodeType::ShowTables:  return _translate_show_tables_node(node);
-    case LQPNodeType::ShowColumns: return _translate_show_columns_node(node);
-    case LQPNodeType::CreateView:  return _translate_create_view_node(node);
-    case LQPNodeType::DropView:    return _translate_drop_view_node(node);
-    case LQPNodeType::CreateTable: return _translate_create_table_node(node);
-    case LQPNodeType::DropTable:   return _translate_drop_table_node(node);
+    case LQPNodeType::ShowTables:         return _translate_show_tables_node(node);
+    case LQPNodeType::ShowColumns:        return _translate_show_columns_node(node);
+    case LQPNodeType::CreateView:         return _translate_create_view_node(node);
+    case LQPNodeType::DropView:           return _translate_drop_view_node(node);
+    case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
+    case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
+    case LQPNodeType::PrepareStatement:   return _translate_prepare_node(node);
       // clang-format on
 
     default:
@@ -445,6 +448,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_prepare_node(
+const std::shared_ptr<opossum::AbstractLQPNode> &node) const {
+  const auto prepare_node = std::dynamic_pointer_cast<PrepareStatementNode>(node);
+  return std::make_shared<Prepare>(prepare_node->name, prepare_node->prepared_statement);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(

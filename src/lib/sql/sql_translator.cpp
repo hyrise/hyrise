@@ -167,6 +167,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
     case hsql::kStmtPrepare:
       return _translate_prepare(static_cast<const hsql::PrepareStatement&>(statement));
+    case hsql::kStmtExecute:
+      return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
 
     default:
       FailInput("SQL statement type not supported");
@@ -1017,7 +1019,59 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 
   const auto lqp_prepared_statement = std::make_shared<LQPPreparedStatement>(lqp, parameter_ids);
 
-  return std::make_shared<PrepareStatementNode>(prepare_statement.name, lqp_prepared_statement);
+  return PrepareStatementNode::make(prepare_statement.name, lqp_prepared_statement);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
+  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{execute_statement.parameters->size()};
+  for (auto parameter_idx = size_t{0}; parameter_idx < execute_statement.parameters->size(); ++parameter_idx) {
+    parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx]);
+  }
+
+  const auto prepared_statement = StorageManager::get().get_prepared_statement(execute_statement.name);
+  Assert(parameters.size() == prepared_statement->parameter_ids.size(), "Incorrect number of parameters supplied");
+
+  auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
+  for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {
+    const auto parameter_id = prepared_statement->parameter_ids[parameter_idx];
+    parameters_by_id.emplace(parameter_id, parameters[parameter_idx]);
+  }
+
+  auto lqp = prepared_statement->lqp->deep_copy();
+
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  _replace_parameters_in_lqp(lqp, parameters_by_id, visited_nodes);
+
+  return lqp;
+}
+
+void SQLTranslator::_replace_parameters_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+  visit_lqp(lqp, [&](const auto& node) {
+    if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
+
+    visit_lqp_node_expressions(node, [&](auto& expression) {
+      _replace_parameters_in_expression(expression, parameters, visited_nodes);
+    });
+
+    return LQPVisitation::VisitInputs;
+  });
+}
+
+void SQLTranslator::_replace_parameters_in_expression(std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+  visit_expression(expression, [&](auto& sub_expression) {
+    if (const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
+    parameter_expression && parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
+      const auto parameter_iter = parameters.find(parameter_expression->parameter_id);
+      Assert(parameter_iter != parameters.end(), "No expression specified for ValuePlaceholder. This should have been caught earlier");
+      sub_expression = parameter_iter->second;
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    } else if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
+      _replace_parameters_in_lqp(select_expression->lqp, parameters, visited_nodes);
+    }
+
+    return ExpressionVisitation::VisitArguments;
+  });
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

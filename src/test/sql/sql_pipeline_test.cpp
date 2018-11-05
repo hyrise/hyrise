@@ -128,19 +128,16 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto prepared_cache = std::make_shared<PreparedStatementCache>(5);
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context
   EXPECT_NO_THROW(
       SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                      .with_prepared_statement_cache(prepared_cache)
                       .with_mvcc(UseMvcc::No)
                       .create_pipeline());
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
                       .with_optimizer(optimizer)
-                      .with_prepared_statement_cache(prepared_cache)
                       .with_mvcc(UseMvcc::Yes)
                       .create_pipeline());
 
@@ -153,7 +150,6 @@ TEST_F(SQLPipelineTest, ConstructorCombinations) {
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
                       .with_transaction_context(transaction_context)
                       .with_optimizer(optimizer)
-                      .with_prepared_statement_cache(prepared_cache)
                       .with_mvcc(UseMvcc::Yes)
                       .create_pipeline());
 }

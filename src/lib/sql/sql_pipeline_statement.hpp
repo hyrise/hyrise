@@ -12,8 +12,6 @@
 
 namespace opossum {
 
-using PreparedStatementCache = SQLQueryCache<SQLQueryPlan>;
-
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translate_time_nanos{};
@@ -46,7 +44,6 @@ class SQLPipelineStatement : public Noncopyable {
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
                        const std::shared_ptr<Optimizer>& optimizer,
-                       const std::shared_ptr<PreparedStatementCache>& prepared_statements,
                        const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
@@ -102,9 +99,6 @@ class SQLPipelineStatement : public Noncopyable {
   bool _query_has_output = true;
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
-
-  std::shared_ptr<PreparedStatementCache> _prepared_statements;
-  std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;
 
   // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;

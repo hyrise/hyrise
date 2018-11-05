@@ -8,6 +8,8 @@
 
 namespace opossum {
 
+class AbstractLQPNode;
+
 /**
  * Representing a prepared SQL statement, with the ParameterIDs to be used for the arguments to the prepared statement.
  */

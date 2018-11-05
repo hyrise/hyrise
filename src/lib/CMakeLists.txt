@@ -204,10 +204,10 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/execute_statement.cpp
-    operators/maintenance/execute_statement.hpp
-    operators/maintenance/prepare_statement.cpp
-    operators/maintenance/prepare_statement.hpp
+    operators/maintenance/execute.cpp
+    operators/maintenance/execute.hpp
+    operators/maintenance/prepare.cpp
+    operators/maintenance/prepare.hpp
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp

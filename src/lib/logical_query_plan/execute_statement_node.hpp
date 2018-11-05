@@ -1,10 +1,10 @@
 #pragma once
 
 #include "logical_query_plan/base_non_query_node.hpp"
-#include "all_type_variant.hpp"
 
 namespace opossum {
 
+class AbstractExpression;
 class LQPPreparedStatement;
 
 /**
@@ -12,12 +12,12 @@ class LQPPreparedStatement;
  */
 class ExecuteStatementNode : public EnableMakeForLQPNode<ExecuteStatementNode>, public BaseNonQueryNode {
  public:
-  ExecuteStatementNode(const std::string& name, const std::vector<AllTypeVariant>& parameters);
+  ExecuteStatementNode(const std::string& name, const std::vector<std::shared_ptr<AbstractExpression>>& parameters);
 
   std::string description() const override;
 
   std::string name;
-  std::vector<AllTypeVariant> parameters;
+  std::vector<std::shared_ptr<AbstractExpression>> parameters;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

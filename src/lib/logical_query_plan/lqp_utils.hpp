@@ -6,10 +6,15 @@
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 
 namespace opossum {
 
-class AbstractLQPNode;
 class AbstractExpression;
 enum class LQPInputSide;
 
@@ -84,5 +89,70 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
  *         subselects
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ *
+ */
+template<typename Visitor>
+void visit_lqp_node_expressions(const std::shared_ptr<AbstractLQPNode>& node, Visitor visitor) {
+  switch (node->type) {
+    case LQPNodeType::Aggregate: {
+      //Fail("Handle this");
+
+//      const auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
+//      for (auto& expression : aggregate_node->aggregate_expressions) {
+//        visitor(expression);
+//      }
+//      for (auto& expression : aggregate_node->group_by_expressions) {
+//        visitor(expression);
+//      }
+
+    } break;
+
+    case LQPNodeType::Alias:
+    case LQPNodeType::Projection:
+      //Fail("Handle this");
+      break;
+
+    case LQPNodeType::Sort:
+      //Fail("Handle this");
+      break;
+
+    case LQPNodeType::Update:
+      //Fail("Handle this");
+      break;
+
+    case LQPNodeType::Limit:
+      visitor(std::static_pointer_cast<LimitNode>(node)->num_rows_expression);
+      break;
+
+    case LQPNodeType::Predicate:
+      visitor(std::static_pointer_cast<PredicateNode>(node)->predicate);
+      break;
+
+    case LQPNodeType::Join:
+      visitor(std::static_pointer_cast<JoinNode>(node)->join_predicate);
+      break;
+
+    // Node types that do not contains expressions
+    case LQPNodeType::CreateTable:
+    case LQPNodeType::CreateView:
+    case LQPNodeType::Delete:
+    case LQPNodeType::DropView:
+    case LQPNodeType::DropTable:
+    case LQPNodeType::DummyTable:
+    case LQPNodeType::ExecuteStatement:
+    case LQPNodeType::Insert:
+    case LQPNodeType::PrepareStatement:
+    case LQPNodeType::Root:
+    case LQPNodeType::ShowColumns:
+    case LQPNodeType::ShowTables:
+    case LQPNodeType::StoredTable:
+    case LQPNodeType::Union:
+    case LQPNodeType::Validate:
+    case LQPNodeType::Mock:
+      break;
+  }
+}
 
 }  // namespace opossum
