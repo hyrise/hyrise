@@ -43,6 +43,12 @@ class GroupKeyIndex : public BaseIndex {
   friend class GroupKeyIndexTest;
 
  public:
+  /**
+   * Predicts the memory consumption in bytes of creating this index.
+   * See BaseIndex::estimate_memory_consumption()
+   */
+  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
+
   GroupKeyIndex() = delete;
 
   GroupKeyIndex(const GroupKeyIndex&) = delete;
@@ -70,6 +76,8 @@ class GroupKeyIndex : public BaseIndex {
   Iterator _get_postings_iterator_at(ValueID value_id) const;
 
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
+
+  size_t _memory_consumption() const final;
 
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segments;
