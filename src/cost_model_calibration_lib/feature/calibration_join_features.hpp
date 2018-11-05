@@ -7,6 +7,8 @@
 namespace opossum {
 
 struct CalibrationJoinFeatures {
+  std::string join_type = "";
+
   static const std::vector<std::string> columns;
 
   static const std::vector<AllTypeVariant> serialize(const std::optional<CalibrationJoinFeatures>& features);

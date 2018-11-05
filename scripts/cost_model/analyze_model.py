@@ -30,7 +30,7 @@ class ModelAnalyzer:
     #         print(str(np.array(result).mean()))
 
     @staticmethod
-    def evaluate(model, X_train, X_test, y_train, y_test):
+    def evaluate(model, test_set_name, X_train, X_test, y_train, y_test):
         model.fit(X_train, y_train)
         y_predicted = model.predict(X_test)
 
@@ -45,7 +45,7 @@ class ModelAnalyzer:
 
         labels = [
             'model',
-            'encoding',
+            'test_set_name',
             'explained variance score',
             'mean absolute error',
             'mean squared error',
@@ -56,8 +56,9 @@ class ModelAnalyzer:
             'r2'
         ]
 
-        return pd.DataFrame.from_records([
+        return pd.DataFrame.from_records([(
             model.__class__.__name__,
+            test_set_name,
             explained_variance,
             mae,
             mse,
@@ -66,7 +67,7 @@ class ModelAnalyzer:
             mpe,
             nrmse,
             r2
-        ], columns=labels)
+        )], columns=labels)
 
     @staticmethod
     def feature_importances(model, column_names):

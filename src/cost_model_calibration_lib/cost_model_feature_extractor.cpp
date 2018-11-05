@@ -124,67 +124,14 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
 
   auto left_input_table = op->input_table_left();
   auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
-  auto chunk_count = left_input_table->chunk_count();
-
-  // TODO(Sven): is this necessary? TableScans on empty table should still be predicted, right?
-  //  if (chunk_count <= ChunkID{0}) {
-  //    return {};
-  //  }
+//  auto chunk_count = left_input_table->chunk_count();
 
   const auto& table_condition = table_scan_op->predicate();
   features.number_of_computable_or_column_expressions = count_expensive_child_expressions(table_condition);
 
   if (table_condition->type == ExpressionType::Predicate) {
-    const auto& casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
-
-    features.scan_operator_type = predicate_condition_to_string.left.at(casted_predicate->predicate_condition);
-
-    const auto& predicate_arguments = casted_predicate->arguments;
-
-    // TODO(Sven): for now, only column expressions are evaluated as they are expected to be expensive
-
-    // TODO(Sven): This expects a binary expression, or between
-    if (predicate_arguments.size() == 2 || predicate_arguments.size() == 3) {
-      // Handling first argument
-      const auto& first_argument = predicate_arguments[0];
-
-      if (first_argument->type == ExpressionType::PQPColumn) {
-        const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(first_argument);
-        const auto& column_id = column_expression->column_id;
-
-        features.scan_segment_data_type = data_type_to_string.left.at(column_expression->data_type());
-
-        // TODO(Sven): What should we do when there are different encodings across different chunks?
-        if (chunk_count > ChunkID{0}) {
-          const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
-
-          const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-          features.scan_segment_encoding = encoding_type_to_string.left.at(encoding_reference_pair.first);
-          features.is_scan_segment_reference_segment = encoding_reference_pair.second;
-          features.scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
-        }
-      }
-      // Handling second argument
-      const auto& second_argument = predicate_arguments[1];
-
-      if (second_argument->type == ExpressionType::PQPColumn) {
-        const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(second_argument);
-        const auto& column_id = column_expression->column_id;
-
-        features.is_column_comparison = true;
-        features.second_scan_segment_data_type = data_type_to_string.left.at(column_expression->data_type());
-
-        // TODO(Sven): What should we do when there are different encodings across different chunks?
-        if (chunk_count > ChunkID{0}) {
-          const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
-
-          const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-          features.second_scan_segment_encoding = encoding_type_to_string.left.at(encoding_reference_pair.first);
-          features.is_second_scan_segment_reference_segment = encoding_reference_pair.second;
-          features.second_scan_segment_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
-        }
-      }
-    }
+      const auto& casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
+      _extract_table_scan_features_for_predicate_expression(left_input_table, features, casted_predicate);
   } else if (table_condition->type == ExpressionType::Logical) {
     const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
     if (logical_expression->logical_operator == LogicalOperator::Or) {
@@ -195,6 +142,78 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   }
 
   return features;
+}
+
+ColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
+        std::shared_ptr<const Table>& left_input_table,
+        std::shared_ptr<PQPColumnExpression> column_expression) {
+    auto chunk_count = left_input_table->chunk_count();
+    const auto &column_id = column_expression->column_id;
+
+    // TODO(Sven): What should we do when there are different encodings across different chunks?
+    if (chunk_count > ChunkID{0}) {
+        const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
+
+        const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
+
+        return ColumnFeatures{
+                data_type_to_string.left.at(column_expression->data_type()),
+                encoding_type_to_string.left.at(encoding_reference_pair.first),
+                encoding_reference_pair.second,
+                _get_memory_usage_for_column(left_input_table, column_id)
+        };
+    }
+
+    return ColumnFeatures{
+            data_type_to_string.left.at(column_expression->data_type()),
+            encoding_type_to_string.left.at(EncodingType::Unencoded),
+            false,
+            _get_memory_usage_for_column(left_input_table, column_id)
+    };
+}
+
+void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expression(
+        std::shared_ptr<const Table>& left_input_table,
+        CalibrationTableScanFeatures& features,
+        const std::shared_ptr<AbstractPredicateExpression> &expression) {
+
+    features.scan_operator_type = predicate_condition_to_string.left.at(expression->predicate_condition);
+
+    const auto& predicate_arguments = expression->arguments;
+
+    // TODO(Sven): for now, only column expressions are evaluated as they are expected to be expensive
+
+    // TODO(Sven): This expects a binary expression, or between
+    if (predicate_arguments.size() == 2 || predicate_arguments.size() == 3) {
+        // Handling first argument
+        const auto& first_argument = predicate_arguments[0];
+
+        if (first_argument->type == ExpressionType::PQPColumn) {
+            const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(first_argument);
+            auto column_features = _extract_features_for_column_expression(left_input_table, column_expression);
+
+            features.scan_segment_data_type = column_features.data_type;
+            features.scan_segment_encoding = column_features.encoding_type;
+            features.is_scan_segment_reference_segment = column_features.is_reference_segment;
+            features.scan_segment_memory_usage_bytes = column_features.segment_memory_usage_bytes;
+        }
+        // Handling second argument
+        const auto& second_argument = predicate_arguments[1];
+
+        if (second_argument->type == ExpressionType::PQPColumn) {
+            features.is_column_comparison = true;
+
+            const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(second_argument);
+            auto column_features = _extract_features_for_column_expression(left_input_table, column_expression);
+
+            features.second_scan_segment_data_type = column_features.data_type;
+            features.second_scan_segment_encoding = column_features.encoding_type;
+            features.is_second_scan_segment_reference_segment = column_features.is_reference_segment;
+            features.second_scan_segment_memory_usage_bytes = column_features.segment_memory_usage_bytes;
+        }
+    } else {
+        std::cout << "facing unexpected table scan with 1 or more than 3 predicates: " << *expression << std::endl;
+    }
 }
 
 size_t CostModelFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,

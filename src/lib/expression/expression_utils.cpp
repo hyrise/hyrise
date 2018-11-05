@@ -240,6 +240,13 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
   }
 }
 
+/**
+ * This method is used to estimate the complexity of an expression.
+ * It assumes that PQPColumn Expressions trigger compute-intensive scans.
+ *
+ * @param expression
+ * @return
+ */
 size_t count_expensive_child_expressions(const std::shared_ptr<AbstractExpression>& expression) {
   auto count_recursive_impl = [](const std::shared_ptr<AbstractExpression>& expression, size_t counter,
                                  auto& count_recursive) -> size_t {

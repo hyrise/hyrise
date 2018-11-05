@@ -60,7 +60,7 @@ const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
                                       CalibrationQueryGeneratorPredicates::generate_equi_predicate_for_strings));
   }
 
-  add_query_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
+//  add_query_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
 
   return queries;
 }
@@ -73,7 +73,7 @@ const std::optional<std::string> CalibrationQueryGenerator::_generate_table_scan
   auto select_columns = _generate_select_columns(table_definition.columns);
   auto table_name = table_definition.table_name;
 
-  auto predicates = CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, table_definition, 2,
+  auto predicates = CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, table_definition, 3,
                                                                              predicate_join_keyword);
 
   if (!predicates) {

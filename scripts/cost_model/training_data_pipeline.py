@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import pandas as pd
+from sklearn import preprocessing as pre
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -25,11 +26,24 @@ class TrainingDataPipeline:
 		return x, y
 
 	@staticmethod
-	def prepare_df_table_scan(source):
+	def scale(X_train):
 		"""
 
 		Args:
-			source:
+			X_train:
+
+		Returns:
+
+		"""
+		scaler = pre.StandardScaler()
+		return scaler.fit_transform(X_train)
+
+	@staticmethod
+	def prepare_df_table_scan(df):
+		"""
+
+		Args:
+			df:
 
 		Returns:
 
@@ -38,7 +52,6 @@ class TrainingDataPipeline:
 		boolean_categories = [False, True]
 		data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string']
 
-		df = pd.read_csv(source, compression='bz2')
 		df = df[df['operator_type'] == 'TableScan']
 
 		df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=encoding_categories)
@@ -58,17 +71,23 @@ class TrainingDataPipeline:
 		return df
 
 	@staticmethod
-	def load_data_frame_for_table_scan(source):
+	def load_data_frame_for_table_scan(source, bz2=False):
 		"""
 
 		Args:
+			bz2:
 			source:
 
 		Returns:
 
 		"""
-		df = TrainingDataPipeline.prepare_df_table_scan(source)
-		df = df.drop('scan_operator_description', axis='columns')
+
+		if bz2:
+			df = pd.read_csv(source, compression='bz2')
+		else:
+			df = pd.read_csv(source)
+		df = TrainingDataPipeline.prepare_df_table_scan(df, bz2)
+		df = df.drop('operator_description', axis='columns')
 		return pd.get_dummies(df).dropna(axis='columns')
 
 	@staticmethod

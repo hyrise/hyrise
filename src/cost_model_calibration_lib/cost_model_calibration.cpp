@@ -55,6 +55,7 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
     ChunkEncodingSpec chunk_spec;
 
     for (size_t idx = 0; idx < table->column_count(); idx++) {
+      // Default is DictionaryEncoding
       chunk_spec.push_back(SegmentEncodingSpec{});
     }
 
