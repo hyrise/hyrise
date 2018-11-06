@@ -1654,8 +1654,9 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
 
           result_log << std::to_string(num_bins) << std::to_string(iteration_count) << ","
                      << "," << column_name << "," << predicate_condition_to_string.left.at(predicate_condition) << ","
-                     << value << "," << std::to_string(cqf_time) << "," << std::to_string(height_time) << ","
-                     << std::to_string(distinct_time) << "," << std::to_string(width_time) << "\n";
+                     << value << "," << std::to_string(minmax_time) << "," << std::to_string(cqf_time) << ","
+                     << std::to_string(height_time) << "," << std::to_string(distinct_time) << ","
+                     << std::to_string(width_time) << "\n";
           result_log.flush();
         }
       });
