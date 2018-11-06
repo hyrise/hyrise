@@ -42,6 +42,10 @@ TEST_F(CreateViewNodeTest, Equals) {
   EXPECT_NE(*different_create_view_node_b, *_create_view_node);
 }
 
+TEST_F(CreateViewNodeTest, NodeExpressions) {
+  ASSERT_EQ(_view_node->node_expression_count(), 0u);
+}
+
 TEST_F(CreateViewNodeTest, Copy) {
   const auto same_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
   const auto same_view =

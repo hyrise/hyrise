@@ -20,6 +20,10 @@ const std::string Prepare::description(DescriptionMode description_mode) const {
   return stream.str();
 }
 
+std::shared_ptr<LQPPreparedStatement> Prepare::prepared_statement() const {
+  return _prepared_statement;
+}
+
 std::shared_ptr<const Table> Prepare::_on_execute() {
   StorageManager::get().add_prepared_statement(_name, _prepared_statement);
   return nullptr;

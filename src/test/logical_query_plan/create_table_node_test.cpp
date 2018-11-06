@@ -22,6 +22,10 @@ TEST_F(CreateTableNodeTest, Description) {
   EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table' ('a' int NOT NULL, 'b' float NULL)");
 }
 
+TEST_F(CreateTableNodeTest, NodeExpressions) {
+  ASSERT_EQ(create_table_node->node_expression_count(), 0u);
+}
+
 TEST_F(CreateTableNodeTest, Equals) {
   EXPECT_EQ(*create_table_node, *create_table_node);
 

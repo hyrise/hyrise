@@ -22,4 +22,8 @@ TEST_F(ValidateNodeTest, Equals) { EXPECT_EQ(*_validate_node, *_validate_node); 
 
 TEST_F(ValidateNodeTest, Copy) { EXPECT_EQ(*_validate_node->deep_copy(), *_validate_node); }
 
+TEST_F(ValidateNodeTest, NodeExpressions) {
+  ASSERT_EQ(_validate_node->node_expression_count(), 0u);
+}
+
 }  // namespace opossum

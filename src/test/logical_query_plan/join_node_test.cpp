@@ -106,4 +106,10 @@ TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
   EXPECT_EQ(*_anti_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
 }
 
+TEST_F(JoinNodeTest, NodeExpressions) {
+  ASSERT_EQ(_inner_join_node->node_expression_count(), 1u);
+  EXPECT_EQ(*_inner_join_node->node_expression(0u), *equals_(_t_a_a, _t_b_y));
+  ASSERT_EQ(_join_node->node_expression_count(), 0u);
+}
+
 }  // namespace opossum

@@ -44,6 +44,14 @@ TEST_F(AggregateNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum_(add_(_a, _c)));
 }
 
+TEST_F(AggregateNodeTest, NodeExpressions) {
+  ASSERT_EQ(_aggregate_node->node_expression_count(), 4u);
+  EXPECT_EQ(*_aggregate_node->node_expression(0), *lqp_column_(_a));
+  EXPECT_EQ(*_aggregate_node->node_expression(1), *lqp_column_(_c));
+  EXPECT_EQ(*_aggregate_node->node_expression(2), *sum_(add_(_a, _b)));
+  EXPECT_EQ(*_aggregate_node->node_expression(3), *sum_(add_(_a, _c)));
+}
+
 TEST_F(AggregateNodeTest, Description) {
   auto description = _aggregate_node->description();
 

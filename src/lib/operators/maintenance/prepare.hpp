@@ -12,6 +12,8 @@ class Prepare : public AbstractReadOnlyOperator {
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
+  std::shared_ptr<LQPPreparedStatement> prepared_statement() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 

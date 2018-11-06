@@ -29,4 +29,10 @@ TEST_F(LimitNodeTest, Equals) {
 
 TEST_F(LimitNodeTest, Copy) { EXPECT_EQ(*_limit_node->deep_copy(), *_limit_node); }
 
+TEST_F(LimitNodeTest, NodeExpressions) {
+  ASSERT_EQ(_limit_node->node_expression_count(), 1u);
+  EXPECT_EQ(*_limit_node->node_expression(0u), *value_(10));
+}
+
+
 }  // namespace opossum

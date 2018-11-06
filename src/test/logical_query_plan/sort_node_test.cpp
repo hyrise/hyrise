@@ -73,4 +73,9 @@ TEST_F(SortNodeTest, Copy) {
   EXPECT_EQ(*sort_b->deep_copy(), *sort_b);
 }
 
+TEST_F(SortNodeTest, NodeExpressions) {
+  ASSERT_EQ(_sort_node->node_expression_count(), 1u);
+  EXPECT_EQ(*_sort_node->node_expression(0), *lqp_column_(_a_i));
+}
+
 }  // namespace opossum
