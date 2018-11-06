@@ -261,9 +261,9 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto parse_server_prepared_statement_result = std::make_shared<LQPPreparedStatement>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
+  auto parse_server_prepared_statement_result = std::make_unique<LQPPreparedStatement>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(parse_server_prepared_statement_result))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -342,38 +342,39 @@ TEST_F(ServerSessionTest, SessionHandlesLoadTableRequestInSimpleQueryCommand) {
   _session->start().wait();
 }
 
-//TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
-//  InSequence s;
-//
-//  EXPECT_CALL(*_connection, send_ready_for_query());
-//
-//  RequestHeader parse_request{NetworkMessageType::ParseCommand, 42};
-//  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
-//
-//  ParsePacket parse_packet = {"my_named_statement", "SELECT * FROM foo;"};
-//  EXPECT_CALL(*_connection, receive_parse_packet_body(42))
-//      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
-//
-//  // For this test, we don't actually have to set the SQL Pipeline in the result
-//  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-//  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-//      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
-//
-//  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
-//
-//  // Send the same parse packet again
-//  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
-//  EXPECT_CALL(*_connection, receive_parse_packet_body(42))
-//      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
-//
-//  EXPECT_CALL(*_connection,
-//              send_error("Named prepared statements must be explicitly closed before they can be redefined."));
-//
-//  EXPECT_CALL(*_connection, send_ready_for_query());
-//  EXPECT_CALL(*_connection, receive_packet_header());
-//
-//  _session->start().wait();
-//}
+TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
+  InSequence s;
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+
+  RequestHeader parse_request{NetworkMessageType::ParseCommand, 42};
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
+
+  ParsePacket parse_packet = {"my_named_statement", "SELECT * FROM foo;"};
+  EXPECT_CALL(*_connection, receive_parse_packet_body(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
+
+  // For this test, we don't actually have to set the SQL Pipeline in the result
+  auto sql_pipeline = _create_working_sql_pipeline();
+  auto parse_server_prepared_statement_result = std::make_unique<LQPPreparedStatement>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
+
+  EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
+
+  // Send the same parse packet again
+  EXPECT_CALL(*_connection, receive_packet_header()).WillOnce(Return(ByMove(boost::make_ready_future(parse_request))));
+  EXPECT_CALL(*_connection, receive_parse_packet_body(42))
+      .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
+
+  EXPECT_CALL(*_connection,
+              send_error("Named prepared statements must be explicitly closed before they can be redefined."));
+
+  EXPECT_CALL(*_connection, send_ready_for_query());
+  EXPECT_CALL(*_connection, receive_packet_header());
+
+  _session->start().wait();
+}
 
 TEST_F(ServerSessionTest, SessionSendsErrorWhenBindingUnknownNamedStatement) {
   InSequence s;
@@ -410,10 +411,9 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
       .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
 
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-  create_pipeline_result->sql_pipeline = sql_pipeline;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+  auto parse_server_prepared_statement_result = std::make_unique<LQPPreparedStatement>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
+  .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 

@@ -208,20 +208,29 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   if (StorageManager::get().has_prepared_statement(parse_info.statement_name)) {
-    Assert(parse_info.statement_name.empty(), "Named prepared statements must be explicitly closed before they can be redefined.");
+    // Not using Assert() since it includes file:line info that we don't want to hard code in tests
+    if (!parse_info.statement_name.empty()) {
+      Fail("Named prepared statements must be explicitly closed before they can be redefined.");
+    }
     StorageManager::get().drop_prepared_statement(parse_info.statement_name);
   }
 
-  return _task_runner->dispatch_server_task(std::make_shared<ParseServerPreparedStatementTask>(parse_info.query)) >> then >>
-         [=](const std::shared_ptr<LQPPreparedStatement>& prepared_statement) {
+  auto task = std::make_shared<ParseServerPreparedStatementTask>(parse_info.query);
+  return _task_runner->dispatch_server_task(task) >> then >>
+         [=](std::unique_ptr<LQPPreparedStatement> prepared_statement) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
-           StorageManager::get().add_prepared_statement(parse_info.statement_name, prepared_statement);
+           StorageManager::get().add_prepared_statement(parse_info.statement_name, std::move(prepared_statement));
          } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
+  // Not using Assert() since it includes file:line info that we don't want to hard code in tests
+  if (!StorageManager::get().has_prepared_statement(packet.statement_name)) {
+    Fail("The specified statement does not exist.");
+  }
+
   const auto prepared_statement = StorageManager::get().get_prepared_statement(packet.statement_name);
 
   if (packet.statement_name.empty()) StorageManager::get().drop_prepared_statement(packet.statement_name);
@@ -233,13 +242,14 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   auto portal_it = _portals.find(portal_name);
   if (portal_it != _portals.end()) {
-    Assert(portal_name.empty(), "Named portals must be explicitly closed before they can be redefined.");
+    // Not using Assert() since it includes file:line info that we don't want to hard code in tests
+    if (!portal_name.empty()) Fail("Named portals must be explicitly closed before they can be redefined.");
     _portals.erase(portal_it);
   }
 
   auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_statement, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
-         [=](const std::shared_ptr<AbstractOperator>& physical_plan) {
+         [=](std::shared_ptr<AbstractOperator> physical_plan) {
            _portals.emplace(portal_name, physical_plan);
          } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };

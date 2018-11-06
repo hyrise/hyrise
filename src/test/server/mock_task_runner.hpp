@@ -19,7 +19,7 @@ namespace opossum {
 class MockTaskRunner {
  public:
   MOCK_METHOD1(dispatch_server_task,
-               boost::future<std::shared_ptr<LQPPreparedStatement>>(std::shared_ptr<ParseServerPreparedStatementTask>));
+               boost::future<std::unique_ptr<LQPPreparedStatement>>(std::shared_ptr<ParseServerPreparedStatementTask>));
   MOCK_METHOD1(dispatch_server_task,
                boost::future<std::shared_ptr<AbstractOperator>>(std::shared_ptr<BindServerPreparedStatementTask>));
   MOCK_METHOD1(dispatch_server_task,
