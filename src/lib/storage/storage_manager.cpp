@@ -88,7 +88,8 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
-void StorageManager::add_prepared_statement(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& view) {
+void StorageManager::add_prepared_statement(const std::string& name,
+                                            const std::shared_ptr<LQPPreparedStatement>& view) {
   Assert(_prepared_statements.find(name) == _prepared_statements.end(),
          "Cannot add prepared statement " + name + " - a prepared statement with the same name already exists");
 

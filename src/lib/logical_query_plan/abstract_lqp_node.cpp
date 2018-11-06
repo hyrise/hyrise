@@ -192,9 +192,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_
   return left_input()->column_expressions();
 }
 
-size_t AbstractLQPNode::node_expression_count() const {
-  return 0u;
-}
+size_t AbstractLQPNode::node_expression_count() const { return 0u; }
 
 std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size_t idx) {
   Fail("No node expressions in this node");

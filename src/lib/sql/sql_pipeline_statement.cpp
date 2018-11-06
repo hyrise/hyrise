@@ -11,9 +11,9 @@
 #include "expression/value_expression.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
-#include "sql/query_plan_cache.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 

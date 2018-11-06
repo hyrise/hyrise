@@ -89,7 +89,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   SCOPED_TRACE(query);
 
-  auto sql_pipeline =  SQLPipelineBuilder{query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 

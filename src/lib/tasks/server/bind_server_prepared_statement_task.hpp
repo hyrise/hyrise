@@ -12,7 +12,8 @@ class LQPPreparedStatement;
 // This task is used to bind the actual variables of a prepared statements and return the corresponding query plan.
 class BindServerPreparedStatementTask : public AbstractServerTask<std::shared_ptr<AbstractOperator>> {
  public:
-  BindServerPreparedStatementTask(const std::shared_ptr<LQPPreparedStatement>& prepared_statement, std::vector<AllTypeVariant> params)
+  BindServerPreparedStatementTask(const std::shared_ptr<LQPPreparedStatement>& prepared_statement,
+                                  std::vector<AllTypeVariant> params)
       : _prepared_statement(prepared_statement), _params(std::move(params)) {}
 
  protected:

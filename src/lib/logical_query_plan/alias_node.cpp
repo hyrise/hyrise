@@ -31,9 +31,7 @@ std::string AliasNode::description() const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const { return _expressions; }
 
-size_t AliasNode::node_expression_count() const {
-  return _expressions.size();
-}
+size_t AliasNode::node_expression_count() const { return _expressions.size(); }
 
 std::shared_ptr<AbstractExpression>& AliasNode::node_expression(const size_t idx) {
   Assert(idx < _expressions.size(), "Expression index out of bounds");

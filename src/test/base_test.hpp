@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
+#include "cache/hash_cache.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "cache/hash_cache.hpp"
 #include "sql/query_plan_cache.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"

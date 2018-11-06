@@ -1497,12 +1497,11 @@ TEST_F(SQLTranslatorTest, DropTable) {
 TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
   const auto actual_lqp = compile_query("PREPARE some_prepared_statement FROM 'SELECT a AS x FROM int_float'");
 
-  // clang-format on
+  // clang-format off
   const auto statement_lqp =
   AliasNode::make(expression_vector(int_float_a), std::vector<std::string>{"x"},
-    ProjectionNode::make(expression_vector(int_float_a),
-      stored_table_node_int_float));
-  // clang-format off
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float));
+  // clang-format on
 
   const auto prepared_statement = std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{});
 
@@ -1512,16 +1511,19 @@ TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
 }
 
 TEST_F(SQLTranslatorTest, PrepareWithParameters) {
-  const auto actual_lqp = compile_query("PREPARE some_prepared_statement FROM 'SELECT * FROM int_float WHERE a > ? AND b < ?'");
+  const auto actual_lqp = compile_query(
+      "PREPARE some_prepared_statement FROM 'SELECT * FROM int_float "
+      "WHERE a > ? AND b < ?'");
 
-  // clang-format on
+  // clang-format off
   const auto statement_lqp =
   PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
     PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{1})),
       stored_table_node_int_float));
-  // clang-format off
+  // clang-format on
 
-  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
+  const auto prepared_statement =
+      std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
 
   const auto expected_lqp = PrepareStatementNode::make("some_prepared_statement", prepared_statement);
 
@@ -1532,9 +1534,12 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
   // Correlated subselects and prepared statement's parameters both use the ParameterID system, so let's test that they
   // cooperate
 
-  const auto actual_lqp = compile_query("PREPARE some_prepared_statement FROM 'SELECT * FROM int_float WHERE a > ? AND a < (SELECT MIN(a) FROM int_string WHERE int_float.a = int_string.a) AND b < ?'");
+  const auto actual_lqp = compile_query(
+      "PREPARE some_prepared_statement FROM 'SELECT * FROM int_float WHERE a > ? AND"
+      " a < (SELECT MIN(a) FROM int_string WHERE int_float.a = int_string.a) AND"
+      " b < ?'");
 
-  // clang-format on
+  // clang-format off
   const auto correlated_parameter = correlated_parameter_(ParameterID{1}, int_float_a);
 
   const auto subselect_lqp =
@@ -1544,14 +1549,14 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
 
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{1}, int_float_a));
 
-  const auto statement_lqp =
-  PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
-    PredicateNode::make(less_than_(int_float_a, subselect),
-      PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{2})),
-        stored_table_node_int_float)));
-  // clang-format off
+  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  PredicateNode::make(less_than_(int_float_a, subselect),
+    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{2})),
+       stored_table_node_int_float)));
+  // clang-format on
 
-  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
+  const auto prepared_statement =
+      std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
 
   const auto expected_lqp = PrepareStatementNode::make("some_prepared_statement", prepared_statement);
 
@@ -1559,12 +1564,11 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
 }
 
 TEST_F(SQLTranslatorTest, Execute) {
-  // clang-format on
+  // clang-format off
   const auto uncorrelated_parameter = uncorrelated_parameter_(ParameterID{3});
   const auto correlated_parameter = correlated_parameter_(ParameterID{2}, int_float_a);
 
-  const auto prepared_subselect_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+  const auto prepared_subselect_lqp = AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
     PredicateNode::make(equals_(uncorrelated_parameter, correlated_parameter),
       stored_table_node_int_float));
 
@@ -1573,21 +1577,20 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_statement_lqp =
   PredicateNode::make(greater_than_(int_string_a, uncorrelated_parameter_(ParameterID{1})),
     PredicateNode::make(less_than_(int_string_b, uncorrelated_parameter_(ParameterID{0})),
-      PredicateNode::make(equals_(int_string_a, prepared_subselect),
-        stored_table_node_int_string)));
-  // clang-format off
+      PredicateNode::make(equals_(int_string_a, prepared_subselect), stored_table_node_int_string)));
+  // clang-format on
 
-  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(prepared_statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
+  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(
+      prepared_statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
 
   StorageManager::get().add_prepared_statement("some_prepared_statement", prepared_statement);
 
   const auto actual_lqp = compile_query("EXECUTE some_prepared_statement ('Hello', 1, 42)");
 
-  // clang-format on
+  // clang-format off
   const auto execute_subselect_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
-    PredicateNode::make(equals_(42, correlated_parameter),
-      stored_table_node_int_float));
+      AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+                          PredicateNode::make(equals_(42, correlated_parameter), stored_table_node_int_float));
 
   const auto execute_subselect = lqp_select_(execute_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
 
@@ -1596,7 +1599,7 @@ TEST_F(SQLTranslatorTest, Execute) {
     PredicateNode::make(less_than_(int_string_b, "Hello"),
       PredicateNode::make(equals_(int_string_a, execute_subselect),
         stored_table_node_int_string)));
-  // clang-format off
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

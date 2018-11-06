@@ -7,6 +7,7 @@
 #include "SQLParserResult.h"
 #include "gtest/gtest.h"
 
+#include "cache/hash_cache.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
@@ -15,10 +16,9 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "cache/hash_cache.hpp"
-#include "sql/query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -168,15 +168,11 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   EXPECT_EQ(sql_pipeline1.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline1.get_sql_string(), _select_query_a);
 
-  auto sql_pipeline2 = SQLPipelineBuilder{_select_query_a}
-                           .disable_mvcc()
-                           .create_pipeline_statement();
+  auto sql_pipeline2 = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
   EXPECT_EQ(sql_pipeline2.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline2.get_sql_string(), _select_query_a);
 
-  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}
-                           .with_optimizer(optimizer)
-                           .create_pipeline_statement();
+  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.with_optimizer(optimizer).create_pipeline_statement();
   EXPECT_EQ(sql_pipeline3.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline3.get_sql_string(), _select_query_a);
 
@@ -188,9 +184,8 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   EXPECT_EQ(sql_pipeline4.transaction_context(), transaction_context);
   EXPECT_EQ(sql_pipeline4.get_sql_string(), _select_query_a);
 
-  auto sql_pipeline5 = SQLPipelineBuilder{_select_query_a}
-                           .with_transaction_context(transaction_context)
-                           .create_pipeline_statement();
+  auto sql_pipeline5 =
+      SQLPipelineBuilder{_select_query_a}.with_transaction_context(transaction_context).create_pipeline_statement();
   EXPECT_EQ(sql_pipeline5.transaction_context(), transaction_context);
   EXPECT_EQ(sql_pipeline5.get_sql_string(), _select_query_a);
 

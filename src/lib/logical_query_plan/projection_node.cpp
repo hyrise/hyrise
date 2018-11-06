@@ -25,9 +25,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_e
   return expressions;
 }
 
-size_t ProjectionNode::node_expression_count() const {
-  return expressions.size();
-}
+size_t ProjectionNode::node_expression_count() const { return expressions.size(); }
 
 std::shared_ptr<AbstractExpression>& ProjectionNode::node_expression(const size_t idx) {
   Assert(idx < expressions.size(), "Expression index out of bounds");

@@ -25,9 +25,7 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
-size_t UpdateNode::node_expression_count() const {
-  return update_column_expressions.size();
-}
+size_t UpdateNode::node_expression_count() const { return update_column_expressions.size(); }
 
 std::shared_ptr<AbstractExpression>& UpdateNode::node_expression(const size_t idx) {
   Assert(idx < update_column_expressions.size(), "Expression index out of bounds");

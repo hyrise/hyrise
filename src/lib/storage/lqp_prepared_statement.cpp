@@ -4,8 +4,9 @@
 
 namespace opossum {
 
-LQPPreparedStatement::LQPPreparedStatement(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids):
-  lqp(lqp), parameter_ids(parameter_ids) { }
+LQPPreparedStatement::LQPPreparedStatement(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                           const std::vector<ParameterID>& parameter_ids)
+    : lqp(lqp), parameter_ids(parameter_ids) {}
 
 std::shared_ptr<LQPPreparedStatement> LQPPreparedStatement::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
@@ -27,4 +28,3 @@ bool LQPPreparedStatement::operator==(const LQPPreparedStatement& rhs) const {
 }
 
 }  // namespace opossum
-

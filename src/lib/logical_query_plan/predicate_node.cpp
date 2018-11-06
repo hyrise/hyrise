@@ -28,9 +28,7 @@ std::string PredicateNode::description() const {
   return stream.str();
 }
 
-size_t PredicateNode::node_expression_count() const {
-  return 1u;
-}
+size_t PredicateNode::node_expression_count() const { return 1u; }
 
 std::shared_ptr<AbstractExpression>& PredicateNode::node_expression(const size_t idx) {
   Assert(idx == 0u, "Expression index out of bounds");

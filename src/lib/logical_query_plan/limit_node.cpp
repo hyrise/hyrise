@@ -18,9 +18,7 @@ std::string LimitNode::description() const {
   return stream.str();
 }
 
-size_t LimitNode::node_expression_count() const {
-  return 1u;
-}
+size_t LimitNode::node_expression_count() const { return 1u; }
 
 std::shared_ptr<AbstractExpression>& LimitNode::node_expression(const size_t idx) {
   Assert(idx == 0u, "Expression index out of bounds");

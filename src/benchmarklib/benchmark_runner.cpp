@@ -98,7 +98,7 @@ void BenchmarkRunner::run() {
       for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
         const auto file_prefix = name + "-PQP-" + std::to_string(pqp_idx);
         PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".dot",
-                                                                      file_prefix + ".svg");
+                                                             file_prefix + ".svg");
       }
     }
   }
@@ -533,7 +533,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-  // clang-format off
+// clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

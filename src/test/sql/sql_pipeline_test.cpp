@@ -134,13 +134,9 @@ TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // No transaction context
   EXPECT_NO_THROW(
       SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
-  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                      .with_mvcc(UseMvcc::No)
-                      .create_pipeline());
-  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                      .with_optimizer(optimizer)
-                      .with_mvcc(UseMvcc::Yes)
-                      .create_pipeline());
+  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a).with_mvcc(UseMvcc::No).create_pipeline());
+  EXPECT_NO_THROW(
+      SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
 
   // With transaction context
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)

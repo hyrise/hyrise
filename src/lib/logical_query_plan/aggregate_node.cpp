@@ -73,9 +73,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
   return _column_expressions;
 }
 
-size_t AggregateNode::node_expression_count() const {
-  return _column_expressions.size();
-}
+size_t AggregateNode::node_expression_count() const { return _column_expressions.size(); }
 
 std::shared_ptr<AbstractExpression>& AggregateNode::node_expression(const size_t idx) {
   Assert(idx < _column_expressions.size(), "Expression index out of bounds");
@@ -101,6 +99,7 @@ bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
 
   return expressions_equal_to_expressions_in_different_lqp(column_expressions(), aggregate_node.column_expressions(),
-                                                           node_mapping) && _aggregate_expressions_begin_idx == aggregate_node._aggregate_expressions_begin_idx;
+                                                           node_mapping) &&
+         _aggregate_expressions_begin_idx == aggregate_node._aggregate_expressions_begin_idx;
 }
 }  // namespace opossum

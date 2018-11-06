@@ -52,8 +52,7 @@ std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const
   return result;
 }
 
-std::string QueryResponseBuilder::build_command_complete_message(const AbstractOperator& root_op,
-                                                                 uint64_t row_count) {
+std::string QueryResponseBuilder::build_command_complete_message(const AbstractOperator& root_op, uint64_t row_count) {
   switch (root_op.type()) {
     case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row

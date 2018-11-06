@@ -31,9 +31,7 @@ std::string SortNode::description() const {
   return stream.str();
 }
 
-size_t SortNode::node_expression_count() const {
-  return expressions.size();
-}
+size_t SortNode::node_expression_count() const { return expressions.size(); }
 
 std::shared_ptr<AbstractExpression>& SortNode::node_expression(const size_t idx) {
   Assert(idx < expressions.size(), "Expression index out of bounds");

@@ -55,8 +55,8 @@
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "prepare_statement_node.hpp"
 #include "predicate_node.hpp"
+#include "prepare_statement_node.hpp"
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
 #include "sort_node.hpp"
@@ -322,8 +322,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   const auto aggregate_expressions = aggregate_node->aggregate_expressions();
 
-  const auto aggregate_pqp_expressions =
-      _translate_expressions(aggregate_expressions, node->left_input());
+  const auto aggregate_pqp_expressions = _translate_expressions(aggregate_expressions, node->left_input());
   const auto group_by_pqp_expressions =
       _translate_expressions(aggregate_node->group_by_expressions(), node->left_input());
 
@@ -453,7 +452,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_prepare_node(
-const std::shared_ptr<opossum::AbstractLQPNode> &node) const {
+    const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto prepare_node = std::dynamic_pointer_cast<PrepareStatementNode>(node);
   return std::make_shared<Prepare>(prepare_node->name, prepare_node->prepared_statement);
 }

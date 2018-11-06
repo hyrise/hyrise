@@ -16,11 +16,11 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
-#include "tasks/server/parse_server_prepared_statement_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
+#include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 #include "client_connection.hpp"
 #include "query_response_builder.hpp"
@@ -249,9 +249,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
 
   auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_statement, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
-         [=](std::shared_ptr<AbstractOperator> physical_plan) {
-           _portals.emplace(portal_name, physical_plan);
-         } >>
+         [=](std::shared_ptr<AbstractOperator> physical_plan) { _portals.emplace(portal_name, physical_plan); } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
@@ -292,12 +290,13 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
 
   physical_plan->set_transaction_context_recursively(_transaction);
 
-  return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(physical_plan)) >> then >>
+  return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(physical_plan)) >>
+         then >>
          [=](std::shared_ptr<const Table> result_table) {
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
            if (!result_table) {
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
-                                                                                         []() { return uint64_t(0); };
+                    []() { return uint64_t(0); };
            }
 
            const auto row_description = QueryResponseBuilder::build_row_description(result_table);

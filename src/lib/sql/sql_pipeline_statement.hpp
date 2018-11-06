@@ -3,10 +3,10 @@
 #include <string>
 
 #include "SQLParserResult.h"
+#include "cache/hash_cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
-#include "cache/hash_cache.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -42,8 +42,7 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
-                       const std::shared_ptr<Optimizer>& optimizer,
-                       const CleanupTemporaries cleanup_temporaries);
+                       const std::shared_ptr<Optimizer>& optimizer, const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();

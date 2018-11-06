@@ -15,8 +15,8 @@ namespace opossum {
 
 PQPVisualizer::PQPVisualizer() = default;
 
-PQPVisualizer::PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info,
-                                               VizVertexInfo vertex_info, VizEdgeInfo edge_info)
+PQPVisualizer::PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                             VizEdgeInfo edge_info)
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                          std::move(edge_info)) {}
 
@@ -28,9 +28,8 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
   }
 }
 
-void PQPVisualizer::_build_subtree(
-    const std::shared_ptr<const AbstractOperator>& op,
-    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
+                                   std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
   if (visualized_ops.find(op) != visualized_ops.end()) return;
   visualized_ops.insert(op);
@@ -71,9 +70,9 @@ void PQPVisualizer::_build_subtree(
   }
 }
 
-void PQPVisualizer::_visualize_subselects(
-    const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<AbstractExpression>& expression,
-    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+void PQPVisualizer::_visualize_subselects(const std::shared_ptr<const AbstractOperator>& op,
+                                          const std::shared_ptr<AbstractExpression>& expression,
+                                          std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
     if (!pqp_select_expression) return ExpressionVisitation::VisitArguments;
@@ -91,7 +90,7 @@ void PQPVisualizer::_visualize_subselects(
 }
 
 void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                             const std::shared_ptr<const AbstractOperator>& to) {
+                                    const std::shared_ptr<const AbstractOperator>& to) {
   VizEdgeInfo info = _default_edge;
 
   if (const auto& output = from->get_output()) {

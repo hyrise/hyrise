@@ -7,13 +7,13 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 
 namespace opossum {
 
@@ -92,6 +92,10 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
+/**
+ * In the LQP @param lqp, search for value placeholders and replace them with actual expressions. The will traverse
+ * subselects recursively, as well.
+ */
 void lqp_bind_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
                            const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters);
 
