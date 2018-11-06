@@ -34,6 +34,7 @@ set(
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
+    logical_query_plan/create_prepared_plan_node_test.cpp
     logical_query_plan/create_table_node_test.cpp
     logical_query_plan/delete_node_test.cpp
     logical_query_plan/drop_table_node_test.cpp

@@ -42,10 +42,6 @@ TEST_F(CreateViewNodeTest, Equals) {
   EXPECT_NE(*different_create_view_node_b, *_create_view_node);
 }
 
-TEST_F(CreateViewNodeTest, NodeExpressions) {
-  ASSERT_EQ(_view_node->node_expression_count(), 0u);
-}
-
 TEST_F(CreateViewNodeTest, Copy) {
   const auto same_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
   const auto same_view =
@@ -53,6 +49,10 @@ TEST_F(CreateViewNodeTest, Copy) {
   const auto same_create_view_node = CreateViewNode::make("some_view", _view);
 
   EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
+}
+
+TEST_F(CreateViewNodeTest, NodeExpressions) {
+  ASSERT_EQ(_view_node->node_expression_count(), 0u);
 }
 
 }  // namespace opossum

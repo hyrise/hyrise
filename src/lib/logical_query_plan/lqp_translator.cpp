@@ -124,7 +124,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
     case LQPNodeType::DropTable:          return _translate_drop_table_node(node);
-    case LQPNodeType::PrepareStatement:   return _translate_prepare_node(node);
+    case LQPNodeType::CreatePreparedPlan: return _translate_create_prepared_plan_node(node);
       // clang-format on
 
     default:
