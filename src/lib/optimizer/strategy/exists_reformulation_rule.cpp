@@ -122,7 +122,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
 
     if (parameter_expression->parameter_id != correlated_parameter_id) {
-      // Close, but not close enough. This is a parameter of the prepared statement type
+      // Close, but not close enough. This is a parameter of placeholder type
       return LQPVisitation::VisitInputs;
     }
 

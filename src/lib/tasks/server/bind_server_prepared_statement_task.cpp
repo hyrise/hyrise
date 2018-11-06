@@ -1,4 +1,4 @@
-#include "bind_server_prepared_statement_task.hpp"
+#include "bind_server_prepared_plan_task.hpp"
 
 #include "concurrency/transaction_manager.hpp"
 #include "expression/value_expression.hpp"
@@ -7,23 +7,23 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "storage/lqp_prepared_statement.hpp"
+#include "storage/prepared_plan.hpp"
 
 namespace opossum {
 
 void BindServerPreparedStatementTask::_on_execute() {
   try {
-    Assert(_params.size() == _prepared_statement->parameter_ids.size(), "Prepared statement parameter count mismatch");
+    Assert(_params.size() == _prepared_plan->parameter_ids.size(), "Prepared statement parameter count mismatch");
 
     auto parameters = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
 
     auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{_params.size()};
     for (auto parameter_idx = size_t{0}; parameter_idx < _params.size(); ++parameter_idx) {
-      const auto parameter_id = _prepared_statement->parameter_ids[parameter_idx];
+      const auto parameter_id = _prepared_plan->parameter_ids[parameter_idx];
       parameters.emplace(parameter_id, std::make_shared<ValueExpression>(_params[parameter_idx]));
     }
 
-    const auto lqp = _prepared_statement->lqp->deep_copy();
+    const auto lqp = _prepared_plan->lqp->deep_copy();
     lqp_replace_placeholders(lqp, parameters);
 
     const auto pqp = LQPTranslator{}.translate_node(lqp);

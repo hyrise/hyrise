@@ -2,32 +2,32 @@
 
 #include <sstream>
 
-#include "storage/lqp_prepared_statement.hpp"
+#include "storage/prepared_plan.hpp"
 
 namespace opossum {
 
 PrepareStatementNode::PrepareStatementNode(const std::string& name,
-                                           const std::shared_ptr<LQPPreparedStatement>& prepared_statement)
-    : BaseNonQueryNode(LQPNodeType::PrepareStatement), name(name), prepared_statement(prepared_statement) {}
+                                           const std::shared_ptr<PreparedPlan>& prepared_plan)
+    : BaseNonQueryNode(LQPNodeType::PrepareStatement), name(name), prepared_plan(prepared_plan) {}
 
 std::string PrepareStatementNode::description() const {
   std::stringstream stream;
-  stream << "PrepareStatement '" << name << "' (" << reinterpret_cast<const void*>(prepared_statement->lqp.get())
+  stream << "PrepareStatement '" << name << "' (" << reinterpret_cast<const void*>(prepared_plan->lqp.get())
          << ") ";
   stream << "{\n";
-  prepared_statement->print(stream);
+  prepared_plan->print(stream);
   stream << "}\n";
 
   return stream.str();
 }
 
 std::shared_ptr<AbstractLQPNode> PrepareStatementNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return PrepareStatementNode::make(name, prepared_statement);
+  return PrepareStatementNode::make(name, prepared_plan);
 }
 
 bool PrepareStatementNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& prepare_statement_node = static_cast<const PrepareStatementNode&>(rhs);
-  return name == prepare_statement_node.name && *prepared_statement == *prepare_statement_node.prepared_statement;
+  return name == prepare_statement_node.name && *prepared_plan == *prepare_statement_node.prepared_plan;
 }
 
 }  // namespace opossum

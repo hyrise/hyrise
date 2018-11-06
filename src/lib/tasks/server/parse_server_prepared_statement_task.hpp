@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-class LQPPreparedStatement;
+class PreparedPlan;
 
-class ParseServerPreparedStatementTask : public AbstractServerTask<std::unique_ptr<LQPPreparedStatement>> {
+class ParseServerPreparedStatementTask : public AbstractServerTask<std::unique_ptr<PreparedPlan>> {
  public:
   explicit ParseServerPreparedStatementTask(const std::string& query) : _query(query) {}
 

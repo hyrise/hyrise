@@ -1012,15 +1012,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
   AssertInput(parse_result.size() == 1u, "PREPAREd statement can only contain a single SQL statement");
 
-  auto prepared_statement_translator = SQLTranslator{};
+  auto prepared_plan_translator = SQLTranslator{};
 
-  const auto lqp = prepared_statement_translator.translate_parser_result(parse_result).at(0);
+  const auto lqp = prepared_plan_translator.translate_parser_result(parse_result).at(0);
 
-  const auto parameter_ids = prepared_statement_translator.value_placeholder_parameter_ids();
+  const auto parameter_ids = prepared_plan_translator.value_placeholder_parameter_ids();
 
-  const auto lqp_prepared_statement = std::make_shared<LQPPreparedStatement>(lqp, parameter_ids);
+  const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
 
-  return PrepareStatementNode::make(prepare_statement.name, lqp_prepared_statement);
+  return PrepareStatementNode::make(prepare_statement.name, lqp_prepared_plan);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
@@ -1029,16 +1029,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
     parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx]);
   }
 
-  const auto prepared_statement = StorageManager::get().get_prepared_statement(execute_statement.name);
-  Assert(parameters.size() == prepared_statement->parameter_ids.size(), "Incorrect number of parameters supplied");
+  const auto prepared_plan = StorageManager::get().get_prepared_plan(execute_statement.name);
+  Assert(parameters.size() == prepared_plan->parameter_ids.size(), "Incorrect number of parameters supplied");
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {
-    const auto parameter_id = prepared_statement->parameter_ids[parameter_idx];
+    const auto parameter_id = prepared_plan->parameter_ids[parameter_idx];
     parameters_by_id.emplace(parameter_id, parameters[parameter_idx]);
   }
 
-  auto lqp = prepared_statement->lqp->deep_copy();
+  auto lqp = prepared_plan->lqp->deep_copy();
   lqp_replace_placeholders(lqp, parameters_by_id);
 
   return lqp;

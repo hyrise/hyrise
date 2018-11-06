@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "lqp_prepared_statement.hpp"
+#include "prepared_plan.hpp"
 #include "lqp_view.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
@@ -44,13 +44,13 @@ class StorageManager : public Singleton<StorageManager> {
   /** @} */
 
   /**
-   * @defgroup Manage SQL PREPAREd statements
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements
    * @{
    */
-  void add_prepared_statement(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& view);
-  std::shared_ptr<LQPPreparedStatement> get_prepared_statement(const std::string& name) const;
-  bool has_prepared_statement(const std::string& name) const;
-  void drop_prepared_statement(const std::string& name);
+  void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
+  std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
+  bool has_prepared_plan(const std::string& name) const;
+  void drop_prepared_plan(const std::string& name);
   /** @} */
 
   // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
@@ -77,6 +77,6 @@ class StorageManager : public Singleton<StorageManager> {
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
   std::map<std::string, std::shared_ptr<LQPView>> _views;
-  std::map<std::string, std::shared_ptr<LQPPreparedStatement>> _prepared_statements;
+  std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 };
 }  // namespace opossum

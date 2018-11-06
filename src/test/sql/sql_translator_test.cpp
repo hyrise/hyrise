@@ -1495,7 +1495,7 @@ TEST_F(SQLTranslatorTest, DropTable) {
 }
 
 TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
-  const auto actual_lqp = compile_query("PREPARE some_prepared_statement FROM 'SELECT a AS x FROM int_float'");
+  const auto actual_lqp = compile_query("PREPARE some_prepared_plan FROM 'SELECT a AS x FROM int_float'");
 
   // clang-format off
   const auto statement_lqp =
@@ -1503,16 +1503,16 @@ TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
     ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float));
   // clang-format on
 
-  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{});
+  const auto prepared_plan = std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{});
 
-  const auto expected_lqp = PrepareStatementNode::make("some_prepared_statement", prepared_statement);
+  const auto expected_lqp = PrepareStatementNode::make("some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, PrepareWithParameters) {
   const auto actual_lqp = compile_query(
-      "PREPARE some_prepared_statement FROM 'SELECT * FROM int_float "
+      "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float "
       "WHERE a > ? AND b < ?'");
 
   // clang-format off
@@ -1522,10 +1522,10 @@ TEST_F(SQLTranslatorTest, PrepareWithParameters) {
       stored_table_node_int_float));
   // clang-format on
 
-  const auto prepared_statement =
-      std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
+  const auto prepared_plan =
+      std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
 
-  const auto expected_lqp = PrepareStatementNode::make("some_prepared_statement", prepared_statement);
+  const auto expected_lqp = PrepareStatementNode::make("some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1535,7 +1535,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
   // cooperate
 
   const auto actual_lqp = compile_query(
-      "PREPARE some_prepared_statement FROM 'SELECT * FROM int_float WHERE a > ? AND"
+      "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float WHERE a > ? AND"
       " a < (SELECT MIN(a) FROM int_string WHERE int_float.a = int_string.a) AND"
       " b < ?'");
 
@@ -1555,10 +1555,10 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
        stored_table_node_int_float)));
   // clang-format on
 
-  const auto prepared_statement =
-      std::make_shared<LQPPreparedStatement>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
+  const auto prepared_plan =
+      std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
 
-  const auto expected_lqp = PrepareStatementNode::make("some_prepared_statement", prepared_statement);
+  const auto expected_lqp = PrepareStatementNode::make("some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1574,18 +1574,18 @@ TEST_F(SQLTranslatorTest, Execute) {
 
   const auto prepared_subselect = lqp_select_(prepared_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
 
-  const auto prepared_statement_lqp =
+  const auto prepared_plan_lqp =
   PredicateNode::make(greater_than_(int_string_a, uncorrelated_parameter_(ParameterID{1})),
     PredicateNode::make(less_than_(int_string_b, uncorrelated_parameter_(ParameterID{0})),
       PredicateNode::make(equals_(int_string_a, prepared_subselect), stored_table_node_int_string)));
   // clang-format on
 
-  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(
-      prepared_statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
+  const auto prepared_plan = std::make_shared<PreparedPlan>(
+      prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
 
-  StorageManager::get().add_prepared_statement("some_prepared_statement", prepared_statement);
+  StorageManager::get().add_prepared_plan("some_prepared_plan", prepared_plan);
 
-  const auto actual_lqp = compile_query("EXECUTE some_prepared_statement ('Hello', 1, 42)");
+  const auto actual_lqp = compile_query("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
   // clang-format off
   const auto execute_subselect_lqp =

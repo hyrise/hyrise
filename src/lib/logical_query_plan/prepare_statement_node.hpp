@@ -4,19 +4,19 @@
 
 namespace opossum {
 
-class LQPPreparedStatement;
+class PreparedPlan;
 
 /**
  * LQP equivalent to the PrepareStatement operator.
  */
 class PrepareStatementNode : public EnableMakeForLQPNode<PrepareStatementNode>, public BaseNonQueryNode {
  public:
-  PrepareStatementNode(const std::string& name, const std::shared_ptr<LQPPreparedStatement>& prepared_statement);
+  PrepareStatementNode(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
 
   std::string description() const override;
 
   std::string name;
-  std::shared_ptr<LQPPreparedStatement> prepared_statement;
+  std::shared_ptr<PreparedPlan> prepared_plan;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

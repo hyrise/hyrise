@@ -88,30 +88,30 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
-void StorageManager::add_prepared_statement(const std::string& name,
-                                            const std::shared_ptr<LQPPreparedStatement>& view) {
-  Assert(_prepared_statements.find(name) == _prepared_statements.end(),
-         "Cannot add prepared statement " + name + " - a prepared statement with the same name already exists");
+void StorageManager::add_prepared_plan(const std::string& name,
+                                            const std::shared_ptr<PreparedPlan>& prepared_plan) {
+  Assert(_prepared_plans.find(name) == _prepared_plans.end(),
+         "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
 
-  _prepared_statements.emplace(name, view);
+  _prepared_plans.emplace(name, prepared_plan);
 }
 
-std::shared_ptr<LQPPreparedStatement> StorageManager::get_prepared_statement(const std::string& name) const {
-  const auto iter = _prepared_statements.find(name);
-  Assert(iter != _prepared_statements.end(), "No such prepared statement named '" + name + "'");
+std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::string& name) const {
+  const auto iter = _prepared_plans.find(name);
+  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
 
   return iter->second->deep_copy();
 }
 
-bool StorageManager::has_prepared_statement(const std::string& name) const {
-  return _prepared_statements.find(name) != _prepared_statements.end();
+bool StorageManager::has_prepared_plan(const std::string& name) const {
+  return _prepared_plans.find(name) != _prepared_plans.end();
 }
 
-void StorageManager::drop_prepared_statement(const std::string& name) {
-  const auto iter = _prepared_statements.find(name);
-  Assert(iter != _prepared_statements.end(), "No such prepared statement named '" + name + "'");
+void StorageManager::drop_prepared_plan(const std::string& name) {
+  const auto iter = _prepared_plans.find(name);
+  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
 
-  _prepared_statements.erase(iter);
+  _prepared_plans.erase(iter);
 }
 
 void StorageManager::print(std::ostream& out) const {

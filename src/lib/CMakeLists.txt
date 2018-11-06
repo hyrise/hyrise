@@ -435,8 +435,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
     storage/index/segment_index_type.hpp
-    storage/lqp_prepared_statement.cpp
-    storage/lqp_prepared_statement.hpp
+    storage/prepared_plan.cpp
+    storage/prepared_plan.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/materialize.hpp

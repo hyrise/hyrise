@@ -261,10 +261,10 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto parse_server_prepared_statement_result = std::make_unique<LQPPreparedStatement>(
+  auto parse_server_prepared_plan_result = std::make_unique<PreparedPlan>(
       sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_plan_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -357,10 +357,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
 
   // For this test, we don't actually have to set the SQL Pipeline in the result
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto parse_server_prepared_statement_result = std::make_unique<LQPPreparedStatement>(
+  auto parse_server_prepared_plan_result = std::make_unique<PreparedPlan>(
       sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_plan_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -413,10 +413,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
       .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
 
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto parse_server_prepared_statement_result = std::make_unique<LQPPreparedStatement>(
+  auto parse_server_prepared_plan_result = std::make_unique<PreparedPlan>(
       sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_statement_result)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_plan_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 

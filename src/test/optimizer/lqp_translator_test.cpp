@@ -45,7 +45,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/lqp_prepared_statement.hpp"
+#include "storage/prepared_plan.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -826,8 +826,8 @@ TEST_F(LQPTranslatorTest, DropTable) {
 }
 
 TEST_F(LQPTranslatorTest, Prepare) {
-  const auto prepared_statement = std::make_shared<LQPPreparedStatement>(DummyTableNode::make(), std::vector<ParameterID>{});
-  const auto lqp = PrepareStatementNode::make("p", prepared_statement);
+  const auto prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
+  const auto lqp = PrepareStatementNode::make("p", prepared_plan);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
@@ -835,7 +835,7 @@ TEST_F(LQPTranslatorTest, Prepare) {
   EXPECT_EQ(pqp->input_left(), nullptr);
 
   const auto prepare = std::dynamic_pointer_cast<Prepare>(pqp);
-  EXPECT_EQ(prepare->prepared_statement(), prepared_statement);
+  EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
 }
 
 }  // namespace opossum

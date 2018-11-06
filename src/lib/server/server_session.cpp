@@ -15,12 +15,12 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
-#include "tasks/server/bind_server_prepared_statement_task.hpp"
+#include "tasks/server/bind_server_prepared_plan_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
-#include "tasks/server/execute_server_prepared_statement_task.hpp"
+#include "tasks/server/execute_server_prepared_plan_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
-#include "tasks/server/parse_server_prepared_statement_task.hpp"
+#include "tasks/server/parse_server_prepared_plan_task.hpp"
 
 #include "client_connection.hpp"
 #include "query_response_builder.hpp"
@@ -190,7 +190,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
   };
 
   // A simple query command invalidates unnamed statements and portals
-  if (StorageManager::get().has_prepared_statement("")) StorageManager::get().drop_prepared_statement("");
+  if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
   _portals.erase("");
 
   return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
@@ -207,19 +207,19 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(const ParsePacket& parse_info) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
-  if (StorageManager::get().has_prepared_statement(parse_info.statement_name)) {
+  if (StorageManager::get().has_prepared_plan(parse_info.statement_name)) {
     // Not using Assert() since it includes file:line info that we don't want to hard code in tests
     if (!parse_info.statement_name.empty()) {
       Fail("Named prepared statements must be explicitly closed before they can be redefined.");
     }
-    StorageManager::get().drop_prepared_statement(parse_info.statement_name);
+    StorageManager::get().drop_prepared_plan(parse_info.statement_name);
   }
 
   auto task = std::make_shared<ParseServerPreparedStatementTask>(parse_info.query);
   return _task_runner->dispatch_server_task(task) >> then >>
-         [=](std::unique_ptr<LQPPreparedStatement> prepared_statement) {
+         [=](std::unique_ptr<PreparedPlan> prepared_plan) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
-           StorageManager::get().add_prepared_statement(parse_info.statement_name, std::move(prepared_statement));
+           StorageManager::get().add_prepared_plan(parse_info.statement_name, std::move(prepared_plan));
          } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
@@ -227,13 +227,13 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
   // Not using Assert() since it includes file:line info that we don't want to hard code in tests
-  if (!StorageManager::get().has_prepared_statement(packet.statement_name)) {
+  if (!StorageManager::get().has_prepared_plan(packet.statement_name)) {
     Fail("The specified statement does not exist.");
   }
 
-  const auto prepared_statement = StorageManager::get().get_prepared_statement(packet.statement_name);
+  const auto prepared_plan = StorageManager::get().get_prepared_plan(packet.statement_name);
 
-  if (packet.statement_name.empty()) StorageManager::get().drop_prepared_statement(packet.statement_name);
+  if (packet.statement_name.empty()) StorageManager::get().drop_prepared_plan(packet.statement_name);
 
   auto portal_name = packet.destination_portal;
 
@@ -247,7 +247,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
     _portals.erase(portal_it);
   }
 
-  auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_statement, packet.params);
+  auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_plan, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
          [=](std::shared_ptr<AbstractOperator> physical_plan) { _portals.emplace(portal_name, physical_plan); } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };

@@ -454,7 +454,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_prepare_node(
     const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto prepare_node = std::dynamic_pointer_cast<PrepareStatementNode>(node);
-  return std::make_shared<Prepare>(prepare_node->name, prepare_node->prepared_statement);
+  return std::make_shared<Prepare>(prepare_node->name, prepare_node->prepared_plan);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
