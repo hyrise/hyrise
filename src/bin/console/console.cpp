@@ -36,6 +36,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
+#include "sql/query_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_db_generator.hpp"
@@ -137,8 +138,6 @@ Console::Console()
   for (const auto& generator : tpcc_generators) {
     _tpcc_commands.push_back(generator.first);
   }
-
-  _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
 }
 
 int Console::read() {
@@ -238,8 +237,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     auto builder = SQLPipelineBuilder{sql}
-                       .dont_cleanup_temporaries()  // keep tables for debugging and visualization
-                       .with_prepared_statement_cache(_prepared_statements);
+                       .dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context != nullptr) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
@@ -667,27 +665,23 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      // Visualize the Physical Query Plan
-      SQLQueryPlan query_plan{CleanupTemporaries::No};
+      auto physical_plans = std::vector<std::shared_ptr<AbstractOperator>>{};
 
       try {
         if (!no_execute) {
           _sql_pipeline->get_result_table();
         }
 
-        // Create plan with all roots
-        const auto& plans = _sql_pipeline->get_physical_plans();
-        for (const auto& plan : plans) {
-          query_plan.append_plan(*plan);
-        }
+        PQPVisualizer visualizer;
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), graph_filename, img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
         _handle_rollback();
         return ReturnCode::Error;
       }
 
-      SQLQueryPlanVisualizer visualizer;
-      visualizer.visualize(query_plan, graph_filename, img_filename);
+      PQPVisualizer visualizer;
+      visualizer.visualize(physical_plans, graph_filename, img_filename);
     } break;
 
     case PlanType::Joins: {
@@ -898,7 +892,7 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  SQLQueryCache<SQLQueryPlan>::get().clear();
+  QueryPlanCache::get().clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 

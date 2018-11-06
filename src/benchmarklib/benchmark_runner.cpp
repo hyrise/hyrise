@@ -97,7 +97,7 @@ void BenchmarkRunner::run() {
       }
       for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
         const auto file_prefix = name + "-PQP-" + std::to_string(pqp_idx);
-        SQLQueryPlanVisualizer{graphviz_config, {}, {}, {}}.visualize(*pqps[pqp_idx], file_prefix + ".dot",
+        PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".dot",
                                                                       file_prefix + ".svg");
       }
     }
