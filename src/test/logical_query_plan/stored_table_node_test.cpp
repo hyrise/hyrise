@@ -49,8 +49,6 @@ TEST_F(StoredTableNodeTest, Equals) {
 
 TEST_F(StoredTableNodeTest, Copy) { EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node); }
 
-TEST_F(StoredTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(_stored_table_node->node_expression_count(), 0u);
-}
+TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expression_count(), 0u); }
 
 }  // namespace opossum

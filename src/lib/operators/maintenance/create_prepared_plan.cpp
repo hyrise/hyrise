@@ -5,27 +5,27 @@
 
 namespace opossum {
 
-CreatePreparedPlan::CreatePreparedPlan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan)
-    : AbstractReadOnlyOperator(OperatorType::CreatePreparedPlan), _name(name), _prepared_plan(prepared_plan) {}
+CreatePreparedPlan::CreatePreparedPlan(const std::string& prepared_plan_name,
+                                       const std::shared_ptr<PreparedPlan>& prepared_plan)
+    : AbstractReadOnlyOperator(OperatorType::CreatePreparedPlan),
+      _prepared_plan_name(prepared_plan_name),
+      _prepared_plan(prepared_plan) {}
 
-const std::string CreatePreparedPlan::name() const { return "Prepare"; }
+const std::string CreatePreparedPlan::name() const { return "CreatePreparedPlan"; }
 
 const std::string CreatePreparedPlan::description(DescriptionMode description_mode) const {
   std::stringstream stream;
-  stream << name() << "'" << _name << "' (" << reinterpret_cast<const void*>(_prepared_plan->lqp.get()) << ") ";
-  stream << "{\n";
+  stream << name() << " '" << _prepared_plan_name << "' {\n";
   _prepared_plan->print(stream);
-  stream << "}\n";
+  stream << "}";
 
   return stream.str();
 }
 
-std::shared_ptr<PreparedPlan> CreatePreparedPlan::prepared_plan() const {
-  return _prepared_plan;
-}
+std::shared_ptr<PreparedPlan> CreatePreparedPlan::prepared_plan() const { return _prepared_plan; }
 
 std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
-  StorageManager::get().add_prepared_plan(_name, _prepared_plan);
+  StorageManager::get().add_prepared_plan(_prepared_plan_name, _prepared_plan);
   return nullptr;
 }
 
@@ -34,7 +34,7 @@ void CreatePreparedPlan::_on_set_parameters(const std::unordered_map<ParameterID
 std::shared_ptr<AbstractOperator> CreatePreparedPlan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<CreatePreparedPlan>(_name, _prepared_plan->deep_copy());
+  return std::make_shared<CreatePreparedPlan>(_prepared_plan_name, _prepared_plan->deep_copy());
 }
 
 }  // namespace opossum

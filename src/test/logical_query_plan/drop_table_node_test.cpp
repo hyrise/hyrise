@@ -20,9 +20,7 @@ TEST_F(DropTableNodeTest, Equals) {
   EXPECT_NE(*different_drop_table_node, *drop_table_node);
 }
 
-TEST_F(DropTableNodeTest, NodeExpressions) {
-  ASSERT_EQ(drop_table_node->node_expression_count(), 0u);
-}
+TEST_F(DropTableNodeTest, NodeExpressions) { ASSERT_EQ(drop_table_node->node_expression_count(), 0u); }
 
 TEST_F(DropTableNodeTest, Copy) { EXPECT_EQ(*drop_table_node, *drop_table_node->deep_copy()); }
 

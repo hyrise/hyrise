@@ -78,6 +78,7 @@ set(
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
+    operators/maintenance/create_prepared_plan_test.cpp
     operators/maintenance/create_table_test.cpp
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/drop_table_test.cpp

@@ -88,8 +88,7 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
-void StorageManager::add_prepared_plan(const std::string& name,
-                                            const std::shared_ptr<PreparedPlan>& prepared_plan) {
+void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
   Assert(_prepared_plans.find(name) == _prepared_plans.end(),
          "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
 
@@ -100,7 +99,7 @@ std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::strin
   const auto iter = _prepared_plans.find(name);
   Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
 
-  return iter->second->deep_copy();
+  return iter->second;
 }
 
 bool StorageManager::has_prepared_plan(const std::string& name) const {
@@ -130,6 +129,14 @@ void StorageManager::print(std::ostream& out) const {
 
   for (auto const& view : _views) {
     out << "==== view >> " << view.first << " <<";
+    out << std::endl;
+  }
+
+  out << "==================" << std::endl;
+  out << "= PreparedPlans ==" << std::endl << std::endl;
+
+  for (auto const& prepared_plan : _prepared_plans) {
+    out << "==== prepared plan >> " << prepared_plan.first << " <<";
     out << std::endl;
   }
 }

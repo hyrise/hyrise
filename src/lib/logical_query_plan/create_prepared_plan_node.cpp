@@ -7,16 +7,14 @@
 namespace opossum {
 
 CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& name,
-                                           const std::shared_ptr<PreparedPlan>& prepared_plan)
+                                               const std::shared_ptr<PreparedPlan>& prepared_plan)
     : BaseNonQueryNode(LQPNodeType::CreatePreparedPlan), name(name), prepared_plan(prepared_plan) {}
 
 std::string CreatePreparedPlanNode::description() const {
   std::stringstream stream;
-  stream << "PrepareStatement '" << name << "' (" << reinterpret_cast<const void*>(prepared_plan->lqp.get())
-         << ") ";
-  stream << "{\n";
+  stream << "[CreatePreparedPlan] '" << name << "' {\n";
   prepared_plan->print(stream);
-  stream << "}\n";
+  stream << "}";
 
   return stream.str();
 }

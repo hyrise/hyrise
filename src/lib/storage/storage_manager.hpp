@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "prepared_plan.hpp"
 #include "lqp_view.hpp"
+#include "prepared_plan.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
 

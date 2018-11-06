@@ -4,8 +4,7 @@
 
 namespace opossum {
 
-PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                           const std::vector<ParameterID>& parameter_ids)
+PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids)
     : lqp(lqp), parameter_ids(parameter_ids) {}
 
 std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {

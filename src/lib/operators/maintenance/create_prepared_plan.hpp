@@ -7,11 +7,12 @@ namespace opossum {
 
 class CreatePreparedPlan : public AbstractReadOnlyOperator {
  public:
-  CreatePreparedPlan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
+  CreatePreparedPlan(const std::string& prepared_plan_name, const std::shared_ptr<PreparedPlan>& prepared_plan);
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
+  std::string prepared_plan_name() const;
   std::shared_ptr<PreparedPlan> prepared_plan() const;
 
  protected:
@@ -24,7 +25,7 @@ class CreatePreparedPlan : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
  private:
-  const std::string _name;
+  const std::string _prepared_plan_name;
   const std::shared_ptr<PreparedPlan> _prepared_plan;
 };
 

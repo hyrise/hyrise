@@ -7,52 +7,51 @@
 
 namespace opossum {
 
-class CreateViewNodeTest : public ::testing::Test {
+class CreatePreparedPlanNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
     lqp = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
-    _view = std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"a"}}});
-    _create_view_node = CreateViewNode::make("some_view", _view);
+    prepared_plan = std::make_shared<PreparedPlan>(lqp, std::vector<ParameterID>{});
+    create_prepared_plan_node = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
   }
 
-  std::shared_ptr<CreateViewNode> create_prepared_plan_node;
+  std::shared_ptr<CreatePreparedPlanNode> create_prepared_plan_node;
   std::shared_ptr<PreparedPlan> prepared_plan;
   std::shared_ptr<MockNode> lqp;
 };
 
-TEST_F(CreateViewNodeTest, Description) {
-  EXPECT_EQ(_create_view_node->description(),
-            "[CreateView] Name: 'some_view' (\n"
-            "[0] [MockNode 'Unnamed']\n"
-            ")");
+TEST_F(CreatePreparedPlanNodeTest, Description) {
+  std::cout << create_prepared_plan_node->description() << std::endl;
+
+  EXPECT_EQ(create_prepared_plan_node->description(),
+            R"([CreatePreparedPlan] 'some_prepared_plan' {
+ParameterIDs: []
+[0] [MockNode 'Unnamed']
+})");
 }
 
-TEST_F(CreateViewNodeTest, Equals) {
-  EXPECT_EQ(*_create_view_node, *_create_view_node);
+TEST_F(CreatePreparedPlanNodeTest, Equals) {
+  EXPECT_EQ(*create_prepared_plan_node, *create_prepared_plan_node);
 
-  const auto same_create_view_node = CreateViewNode::make("some_view", _view);
-  const auto different_create_view_node_a = CreateViewNode::make("some_view2", _view);
+  const auto same_prepared_plan_node = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+  const auto different_prepared_plan_node_a = CreatePreparedPlanNode::make("some_prepared_plan2", prepared_plan);
 
-  const auto different_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
-  const auto different_view =
-      std::make_shared<LQPView>(different_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"b"}}});
-  const auto different_create_view_node_b = CreateViewNode::make("some_view", different_view);
+  const auto different_lqp = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
+  const auto different_prepared_plan =
+      std::make_shared<PreparedPlan>(different_lqp, std::vector<ParameterID>{ParameterID{1}});
+  const auto different_prepared_plan_node_b =
+      CreatePreparedPlanNode::make("some_prepared_plan", different_prepared_plan);
 
-  EXPECT_NE(*different_create_view_node_a, *_create_view_node);
-  EXPECT_NE(*different_create_view_node_b, *_create_view_node);
+  EXPECT_NE(*different_prepared_plan_node_a, *create_prepared_plan_node);
+  EXPECT_NE(*different_prepared_plan_node_b, *create_prepared_plan_node);
 }
 
-TEST_F(CreateViewNodeTest, Copy) {
-  const auto same_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
-  const auto same_view =
-      std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"a"}}});
-  const auto same_create_view_node = CreateViewNode::make("some_view", _view);
-
-  EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
+TEST_F(CreatePreparedPlanNodeTest, Copy) {
+  EXPECT_EQ(*create_prepared_plan_node, *create_prepared_plan_node->deep_copy());
 }
 
-TEST_F(CreateViewNodeTest, NodeExpressions) {
-  ASSERT_EQ(_view_node->node_expression_count(), 0u);
+TEST_F(CreatePreparedPlanNodeTest, NodeExpressions) {
+  ASSERT_EQ(create_prepared_plan_node->node_expression_count(), 0u);
 }
 
 }  // namespace opossum

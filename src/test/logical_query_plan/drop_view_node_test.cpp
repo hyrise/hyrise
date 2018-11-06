@@ -27,8 +27,6 @@ TEST_F(DropViewNodeTest, Equals) {
 
 TEST_F(DropViewNodeTest, Copy) { EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node); }
 
-TEST_F(DropViewNodeTest, NodeExpressions) {
-  ASSERT_EQ(_drop_view_node->node_expression_count(), 0u);
-}
+TEST_F(DropViewNodeTest, NodeExpressions) { ASSERT_EQ(_drop_view_node->node_expression_count(), 0u); }
 
 }  // namespace opossum

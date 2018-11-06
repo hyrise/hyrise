@@ -8,6 +8,7 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
+#include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"
 #include "create_view_node.hpp"
 #include "delete_node.hpp"
@@ -38,11 +39,11 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
-#include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -56,7 +57,6 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "predicate_node.hpp"
-#include "create_prepared_plan_node.hpp"
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
 #include "sort_node.hpp"
@@ -454,7 +454,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
     const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
-  return std::make_shared<CreatePreparedPlan>(create_prepared_plan_node->name, create_prepared_plan_node->prepared_plan);
+  return std::make_shared<CreatePreparedPlan>(create_prepared_plan_node->name,
+                                              create_prepared_plan_node->prepared_plan);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(

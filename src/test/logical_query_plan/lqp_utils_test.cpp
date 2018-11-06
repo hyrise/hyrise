@@ -153,7 +153,9 @@ TEST_F(LQPUtilsTest, LQPReplacePlaceholders) {
 
   const auto subselect_a_lqp = PredicateNode::make(equals_(b_x, placeholder_parameter_a), node_b);
   const auto subselect_a = lqp_select_(subselect_a_lqp);
-  const auto subselect_b_lqp = PredicateNode::make(greater_than_(subselect_a, correlated_parameter), DummyTableNode::make());
+  const auto subselect_b_lqp =
+  PredicateNode::make(greater_than_(subselect_a, correlated_parameter),
+    DummyTableNode::make());
   const auto subselect_b = lqp_select_(subselect_b_lqp, std::make_pair(ParameterID{1}, a_a));
 
   const auto lqp =
@@ -163,8 +165,8 @@ TEST_F(LQPUtilsTest, LQPReplacePlaceholders) {
   // clang-format on
 
   auto palceholder_expressions = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{
-  {ParameterID{0}, value_(15)},
-  {ParameterID{2}, add_(42, 1337)},
+      {ParameterID{0}, value_(15)},
+      {ParameterID{2}, add_(42, 1337)},
   };
 
   lqp_replace_placeholders(lqp, palceholder_expressions);
@@ -172,7 +174,9 @@ TEST_F(LQPUtilsTest, LQPReplacePlaceholders) {
   // clang-format off
   const auto expected_subselect_a_lqp = PredicateNode::make(equals_(b_x, 15), node_b);
   const auto expected_subselect_a = lqp_select_(subselect_a_lqp);
-  const auto expected_subselect_b_lqp = PredicateNode::make(greater_than_(subselect_a, correlated_parameter), DummyTableNode::make());
+  const auto expected_subselect_b_lqp =
+  PredicateNode::make(greater_than_(subselect_a, correlated_parameter),
+    DummyTableNode::make());
   const auto expected_subselect_b = lqp_select_(subselect_b_lqp, std::make_pair(ParameterID{1}, a_a));
 
   const auto expected_lqp =

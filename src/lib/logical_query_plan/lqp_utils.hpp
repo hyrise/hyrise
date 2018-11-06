@@ -97,6 +97,6 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
  * subselects recursively, as well.
  */
 void lqp_replace_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
-                           const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters);
+                              const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters);
 
 }  // namespace opossum

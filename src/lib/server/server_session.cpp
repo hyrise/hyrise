@@ -17,10 +17,10 @@
 #include "storage/storage_manager.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
-#include "tasks/server/execute_server_prepared_plan_task.hpp"
+#include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
-#include "tasks/server/parse_server_prepared_plan_task.hpp"
+#include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 #include "client_connection.hpp"
 #include "query_response_builder.hpp"

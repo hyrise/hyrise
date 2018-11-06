@@ -34,5 +34,4 @@ TEST_F(LimitNodeTest, NodeExpressions) {
   EXPECT_EQ(*_limit_node->node_expression(0u), *value_(10));
 }
 
-
 }  // namespace opossum
