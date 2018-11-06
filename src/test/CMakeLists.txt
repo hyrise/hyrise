@@ -10,6 +10,7 @@ set(
 set(
     HYRISE_UNIT_TEST_SOURCES
     ${SHARED_SOURCES}
+    cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     cost_model/cost_estimator_test.cpp
@@ -120,7 +121,6 @@ set(
     server/mock_task_runner.hpp
     server/postgres_wire_handler_test.cpp
     server/server_session_test.cpp
-    sql/sql_basic_cache_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
