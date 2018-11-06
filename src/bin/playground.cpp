@@ -16,6 +16,8 @@
 #include <utility>
 #include <vector>
 
+#include "boost/algorithm/string/replace.hpp"
+
 #include "constant_mappings.hpp"
 #include "types.hpp"
 
@@ -1569,7 +1571,7 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
             continue;
           }
 
-          const auto value = pair.second;
+          auto value = pair.second;
 
           const auto iteration_count = 1000u;
 
@@ -1652,9 +1654,22 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
           const auto width_time =
               std::chrono::duration_cast<std::chrono::microseconds>(width_end - width_start).count();
 
-          result_log << std::to_string(num_bins) << std::to_string(iteration_count) << ","
-                     << "," << column_name << "," << predicate_condition_to_string.left.at(predicate_condition) << ","
-                     << value << "," << std::to_string(minmax_time) << "," << std::to_string(cqf_time) << ","
+          result_log << std::to_string(num_bins) << "," << std::to_string(iteration_count) << "," << column_name << ","
+                     << predicate_condition_to_string.left.at(predicate_condition) << ",";
+
+          if constexpr (std::is_same_v<T, std::string>) {
+            const auto patterns = std::array<std::pair<const char*, const char*>, 2u>{{{"\\", "\\\\"}, {"\"", "\\\""}}};
+
+            for (const auto& pair : patterns) {
+              boost::replace_all(value, pair.first, pair.second);
+            }
+
+            result_log << "\"" << value << "\",";
+          } else {
+            result_log << std::to_string(value) << ",";
+          }
+
+          result_log << std::to_string(minmax_time) << "," << std::to_string(cqf_time) << ","
                      << std::to_string(height_time) << "," << std::to_string(distinct_time) << ","
                      << std::to_string(width_time) << "\n";
           result_log.flush();
