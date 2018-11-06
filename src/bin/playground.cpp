@@ -1247,8 +1247,8 @@ void run_pruning_cqf(const std::shared_ptr<const Table> table, const std::vector
 }
 
 void run_estimation_minmaxdistinct(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
-                           const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                           std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
+                                   const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                                   std::ofstream& result_log, std::ofstream& bin_log, std::ofstream& memory_log) {
   log("Running MinMaxDistinct estimation...");
 
   const auto chunk_size = table->max_chunk_size();
@@ -1539,6 +1539,130 @@ void run_pruning_range(const std::shared_ptr<const Table> table, const std::vect
   }
 }
 
+void time_estimation(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+                     const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                     std::ofstream& result_log) {
+  log("Timing estimation...");
+
+  const auto filters_by_column = get_filters_by_column(filters);
+
+  for (auto num_bins : num_bins_list) {
+    log("  " + std::to_string(num_bins) + " bins...");
+
+    for (auto it : filters_by_column) {
+      const auto column_id = it.first;
+      const auto column_name = table->column_name(column_id);
+
+      const auto column_data_type = table->column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using T = typename decltype(type)::type;
+
+        const auto minmax = generate_column_statistics<T>(*table, column_id);
+        const auto cqfs = create_cqfs_for_column<T>(table, column_id);
+        const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
+
+        for (const auto& pair : it.second) {
+          const auto predicate_condition = pair.first;
+
+          if (predicate_condition != PredicateCondition::Equals) {
+            log("Skipping filter because CQFs can only handle equality predicates...");
+            continue;
+          }
+
+          const auto value = pair.second;
+
+          const auto iteration_count = 1000u;
+
+          const auto minmax_start = std::chrono::high_resolution_clock::now();
+          for (auto i = 0u; i < iteration_count; i++) {
+            minmax->estimate_predicate_with_value(predicate_condition, value).selectivity* total_count;
+          }
+          const auto minmax_end = std::chrono::high_resolution_clock::now();
+          const auto minmax_time =
+              std::chrono::duration_cast<std::chrono::microseconds>(minmax_end - minmax_start).count();
+
+          // float cqf_count;
+          const auto cqf_start = std::chrono::high_resolution_clock::now();
+          for (auto i = 0u; i < iteration_count; i++) {
+            // cqf_count =
+            std::accumulate(
+                cqfs.cbegin(), cqfs.cend(), float{0},
+                [&](float a, const std::shared_ptr<CountingQuotientFilter<T>>& b) { return a + b->count(value); });
+          }
+          const auto cqf_end = std::chrono::high_resolution_clock::now();
+          const auto cqf_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_end - cqf_start).count();
+
+          // float equal_distinct_count_hist_count;
+          const auto distinct_start = std::chrono::high_resolution_clock::now();
+          for (auto i = 0u; i < iteration_count; i++) {
+            // equal_distinct_count_hist_count =
+            std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                            [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                          std::shared_ptr<EqualHeightHistogram<T>>,
+                                                          std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                              const auto hist = std::get<0>(b);
+                              // hist is a nullptr if segment only contains null values.
+                              if (!hist) {
+                                return a;
+                              }
+                              return a + hist->estimate_cardinality(predicate_condition, value);
+                            });
+          }
+          const auto distinct_end = std::chrono::high_resolution_clock::now();
+          const auto distinct_time =
+              std::chrono::duration_cast<std::chrono::microseconds>(distinct_end - distinct_start).count();
+
+          // float equal_height_hist_count;
+          const auto height_start = std::chrono::high_resolution_clock::now();
+          for (auto i = 0u; i < iteration_count; i++) {
+            // equal_height_hist_count =
+            std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                            [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                          std::shared_ptr<EqualHeightHistogram<T>>,
+                                                          std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                              const auto hist = std::get<1>(b);
+                              // hist is a nullptr if segment only contains null values.
+                              if (!hist) {
+                                return a;
+                              }
+                              return a + hist->estimate_cardinality(predicate_condition, value);
+                            });
+          }
+          const auto height_end = std::chrono::high_resolution_clock::now();
+          const auto height_time =
+              std::chrono::duration_cast<std::chrono::microseconds>(height_end - height_start).count();
+
+          // float equal_width_hist_count;
+          const auto width_start = std::chrono::high_resolution_clock::now();
+          for (auto i = 0u; i < iteration_count; i++) {
+            // equal_width_hist_count =
+            std::accumulate(histograms.cbegin(), histograms.cend(), float{0},
+                            [&](float a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                                          std::shared_ptr<EqualHeightHistogram<T>>,
+                                                          std::shared_ptr<EqualWidthHistogram<T>>>& b) {
+                              const auto hist = std::get<2>(b);
+                              // hist is a nullptr if segment only contains null values.
+                              if (!hist) {
+                                return a;
+                              }
+                              return a + hist->estimate_cardinality(predicate_condition, value);
+                            });
+          }
+          const auto width_end = std::chrono::high_resolution_clock::now();
+          const auto width_time =
+              std::chrono::duration_cast<std::chrono::microseconds>(width_end - width_start).count();
+
+          result_log << std::to_string(num_bins) << std::to_string(iteration_count) << ","
+                     << "," << column_name << "," << predicate_condition_to_string.left.at(predicate_condition) << ","
+                     << value << "," << std::to_string(cqf_time) << "," << std::to_string(height_time) << ","
+                     << std::to_string(distinct_time) << "," << std::to_string(width_time) << "\n";
+          result_log.flush();
+        }
+      });
+    }
+  }
+}
+
 template <typename T>
 std::pair<HistogramType, BinID> histogram_heuristic(T& min, T& max, HistogramCountType total_count,
                                                     HistogramCountType distinct_count) {
@@ -1717,9 +1841,11 @@ int main(int argc, char** argv) {
                   "equal_width_hist_prunable\n";
     memory_log << "column_name,bin_count,bin_id,cqf,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--estimation-minmaxdistinct")) {
-    result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
-                  "min_max_distinct_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
-    memory_log << "column_name,bin_count,bin_id,min_max_distinct,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+    result_log
+        << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
+           "min_max_distinct_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
+    memory_log << "column_name,bin_count,bin_id,min_max_distinct,equal_height_hist,equal_distinct_count_hist,equal_"
+                  "width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--pruning-minmax")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "min_max_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
@@ -1730,6 +1856,9 @@ int main(int argc, char** argv) {
                   "range_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
     memory_log << "column_name,bin_count,bin_id,range,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
+  } else if (cmd_option_exists(argv, argv_end, "--time-estimation")) {
+    result_log << "bin_count,iteration_count,column_name,predicate_condition,value,"
+                  "minmaxdistinct_time,cqf_time,height_time,distinct_time,width_time\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
   }
@@ -1777,6 +1906,8 @@ int main(int argc, char** argv) {
       run_pruning_minmax(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning-range")) {
       run_pruning_range(table, num_bins_list, filters, result_log, bin_log, memory_log);
+    } else if (cmd_option_exists(argv, argv_end, "--time-estimation")) {
+      time_estimation(table, num_bins_list, filters, result_log);
     }
   }
 
