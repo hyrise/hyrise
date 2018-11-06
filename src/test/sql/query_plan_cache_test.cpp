@@ -8,7 +8,7 @@
 #include "cache/hash_cache.hpp"
 #include "cache/lru_cache.hpp"
 #include "cache/lru_k_cache.hpp"
-#include "sql/query_plan_cache.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/storage_manager.hpp"
@@ -26,7 +26,7 @@ class QueryPlanCacheTest : public BaseTest {
 
     _query_plan_cache_hits = 0;
 
-    QueryPlanCache::get().clear();
+    SQLPlanCache::get().clear();
   }
 
   void execute_query(const std::string& query) {
@@ -46,7 +46,7 @@ class QueryPlanCacheTest : public BaseTest {
 };
 
 TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
-  auto& cache = QueryPlanCache::get();
+  auto& cache = SQLPlanCache::get();
 
   EXPECT_FALSE(cache.has(Q1));
   EXPECT_FALSE(cache.has(Q2));
@@ -66,7 +66,7 @@ TEST_F(QueryPlanCacheTest, QueryPlanCacheTest) {
 
 // Test query plan cache with LRU implementation.
 TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
-  auto& cache = QueryPlanCache::get();
+  auto& cache = SQLPlanCache::get();
   cache.replace_cache_impl<LRUCache<std::string, std::shared_ptr<AbstractOperator>>>(2);
 
   // Execute the queries in arbitrary order.
@@ -92,7 +92,7 @@ TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRU) {
 
 // Test query plan cache with GDFS implementation.
 TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
-  auto& cache = QueryPlanCache::get();
+  auto& cache = SQLPlanCache::get();
   cache.replace_cache_impl<GDFSCache<std::string, std::shared_ptr<AbstractOperator>>>(2);
 
   // Execute the queries in arbitrary order.
@@ -122,7 +122,7 @@ TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
 
 // Test query plan cache with LRUK implementation.
 TEST_F(QueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
-  auto& cache = QueryPlanCache::get();
+  auto& cache = SQLPlanCache::get();
   cache.replace_cache_impl<LRUKCache<2, std::string, std::shared_ptr<AbstractOperator>>>(2);
 
   // Execute the queries in arbitrary order.

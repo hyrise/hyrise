@@ -16,7 +16,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/query_plan_cache.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/storage_manager.hpp"
@@ -72,7 +72,7 @@ class SQLPipelineStatementTest : public BaseTest {
     _multi_statement_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
-    QueryPlanCache::get().clear();
+    SQLPlanCache::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -459,7 +459,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetTimes) {
-  const auto& cache = QueryPlanCache::get();
+  const auto& cache = SQLPlanCache::get();
   EXPECT_EQ(cache.size(), 0u);
 
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
@@ -502,7 +502,7 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
   sql_pipeline.get_result_table();
 
-  const auto& cache = QueryPlanCache::get();
+  const auto& cache = SQLPlanCache::get();
   EXPECT_EQ(cache.size(), 1u);
   EXPECT_TRUE(cache.has(_select_query_a));
 }

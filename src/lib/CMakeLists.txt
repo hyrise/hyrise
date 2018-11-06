@@ -331,7 +331,7 @@ set(
     sql/create_sql_parser_error_message.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
-    sql/query_plan_cache.hpp
+    sql/sql_plan_cache.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_resolver.cpp

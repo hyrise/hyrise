@@ -19,7 +19,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/query_plan_cache.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
@@ -63,7 +63,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
     opossum::Topology::use_numa_topology();
     opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
 
-    QueryPlanCache::get().clear();
+    SQLPlanCache::get().clear();
   }
 
   std::unique_ptr<SQLiteWrapper> _sqlite;

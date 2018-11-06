@@ -11,7 +11,7 @@
 #include "expression/value_expression.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/query_plan_cache.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
@@ -124,7 +124,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   auto started = std::chrono::high_resolution_clock::now();
   auto done = started;  // dummy value needed for initialization
 
-  if (const auto cached_physical_plan = QueryPlanCache::get().try_get(_sql_string)) {
+  if (const auto cached_physical_plan = SQLPlanCache::get().try_get(_sql_string)) {
     if ((*cached_physical_plan)->transaction_context_is_set()) {
       Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
     } else {
@@ -149,7 +149,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   // Cache newly created plan for the according sql statement (only if not already cached)
   if (!_metrics->query_plan_cache_hit) {
-    QueryPlanCache::get().set(_sql_string, _physical_plan);
+    SQLPlanCache::get().set(_sql_string, _physical_plan);
   }
 
   _metrics->lqp_translate_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);

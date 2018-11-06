@@ -15,7 +15,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/query_plan_cache.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
@@ -58,7 +58,7 @@ class SQLPipelineTest : public BaseTest {
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
-    QueryPlanCache::get().clear();
+    SQLPlanCache::get().clear();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -424,7 +424,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
-  const auto& cache = QueryPlanCache::get();
+  const auto& cache = SQLPlanCache::get();
   EXPECT_EQ(cache.size(), 0u);
 
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
@@ -527,7 +527,7 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  const auto& cache = QueryPlanCache::get();
+  const auto& cache = SQLPlanCache::get();
   EXPECT_EQ(cache.size(), 2u);
   EXPECT_TRUE(cache.has(_select_query_a));
   EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));

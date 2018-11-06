@@ -9,6 +9,6 @@ namespace opossum {
 
 class AbstractOperator;
 
-using QueryPlanCache = HashCache<std::shared_ptr<AbstractOperator>, std::string>;
+using SQLPlanCache = HashCache<std::shared_ptr<AbstractOperator>, std::string>;
 
 }  // namespace opossum
