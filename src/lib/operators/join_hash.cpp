@@ -194,7 +194,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
      */
-    auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
+    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
 
     // Pre-partitioning
     // Save chunk offsets into the input relation
@@ -262,9 +262,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      // materialize left table
-      materialized_left =
-          materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left, _radix_bits);
+      // materialize left table (NULLs are always discarded for the build side)
+      materialized_left = materialize_input<LeftType, HashedType, false>(left_in_table, _column_ids.first,
+                                                                         histograms_left, _radix_bits);
 
       if (_radix_bits > 0) {
         // radix partition the left table
@@ -281,16 +281,32 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.back()->schedule();
 
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      // Materialize right table. 'keep_nulls' makes sure that the relation on
-      // the right materializes NULL values when executing an OUTER join.
-      materialized_right = materialize_input<RightType, HashedType>(right_in_table, _column_ids.second,
-                                                                    histograms_right, _radix_bits, keep_nulls);
+      // Materialize right table. The third template parameter signals if the relation on the right (probe
+      // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
+      /*
+      TODO (anyone):
+        Clang 6.0.1 does not allow "materialize_input<RightType, HashedType, static_cast<bool>(keep_nulls)>" (error:
+        invalid explicitly-specified argument), which works on GCC (see https://stackoverflow.com/q/33872039/1147726).
+      */
+      if (keep_nulls) {
+        materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
+                                                                            histograms_right, _radix_bits);
+      } else {
+        materialized_right = materialize_input<RightType, HashedType>(right_in_table, _column_ids.second,
+                                                                             histograms_right, _radix_bits);
+      }
 
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        radix_right = partition_radix_parallel<RightType, HashedType>(materialized_right, right_chunk_offsets,
-                                                                      histograms_right, _radix_bits, keep_nulls);
+        // TODO (anyone): see "invalid explicitly-specified argument"
+        if (keep_nulls) {
+          radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
+                                                                      histograms_right, _radix_bits);
+        } else {
+          radix_right = partition_radix_parallel<RightType, HashedType>(materialized_right, right_chunk_offsets,
+                                                                      histograms_right, _radix_bits);
+        }
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_right = std::move(materialized_right);
@@ -321,7 +337,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
       probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode);
     } else {
-      probe<RightType, HashedType>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
+        probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      } else {
+        probe<RightType, HashedType>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      }
     }
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
