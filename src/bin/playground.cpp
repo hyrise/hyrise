@@ -1575,7 +1575,7 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
 
           const auto minmax_start = std::chrono::high_resolution_clock::now();
           for (auto i = 0u; i < iteration_count; i++) {
-            minmax->estimate_predicate_with_value(predicate_condition, value).selectivity* total_count;
+            minmax->estimate_predicate_with_value(predicate_condition, value);
           }
           const auto minmax_end = std::chrono::high_resolution_clock::now();
           const auto minmax_time =
