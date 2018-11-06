@@ -16,7 +16,7 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/drop_table_node.hpp"
-#include "logical_query_plan/prepare_statement_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -38,7 +38,7 @@
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
-#include "operators/maintenance/prepare.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -825,16 +825,16 @@ TEST_F(LQPTranslatorTest, DropTable) {
   EXPECT_EQ(drop_table->table_name, "t");
 }
 
-TEST_F(LQPTranslatorTest, Prepare) {
+TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
   const auto prepared_plan = std::make_shared<PreparedPlan>(DummyTableNode::make(), std::vector<ParameterID>{});
-  const auto lqp = PrepareStatementNode::make("p", prepared_plan);
+  const auto lqp = CreatePreparedPlanNode::make("p", prepared_plan);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
-  EXPECT_EQ(pqp->type(), OperatorType::Prepare);
+  EXPECT_EQ(pqp->type(), OperatorType::CreatePreparedPlan);
   EXPECT_EQ(pqp->input_left(), nullptr);
 
-  const auto prepare = std::dynamic_pointer_cast<Prepare>(pqp);
+  const auto prepare = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
   EXPECT_EQ(prepare->prepared_plan(), prepared_plan);
 }
 

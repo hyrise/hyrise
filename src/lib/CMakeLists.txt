@@ -133,8 +133,8 @@ set(
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
-    logical_query_plan/prepare_statement_node.cpp
-    logical_query_plan/prepare_statement_node.hpp
+        logical_query_plan/create_prepared_plan_node.cpp
+        logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
     logical_query_plan/show_columns_node.cpp
@@ -209,8 +209,8 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/prepare.cpp
-    operators/maintenance/prepare.hpp
+        operators/maintenance/create_prepared_plan.cpp
+        operators/maintenance/create_prepared_plan.hpp
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp

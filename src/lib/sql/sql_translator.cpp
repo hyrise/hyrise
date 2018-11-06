@@ -42,7 +42,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/prepare_statement_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
@@ -1020,7 +1020,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 
   const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
 
-  return PrepareStatementNode::make(prepare_statement.name, lqp_prepared_plan);
+  return CreatePreparedPlanNode::make(prepare_statement.name, lqp_prepared_plan);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {

@@ -23,7 +23,7 @@
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/prepare_statement_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
@@ -1505,7 +1505,7 @@ TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{});
 
-  const auto expected_lqp = PrepareStatementNode::make("some_prepared_plan", prepared_plan);
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1525,7 +1525,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParameters) {
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
 
-  const auto expected_lqp = PrepareStatementNode::make("some_prepared_plan", prepared_plan);
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1558,7 +1558,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
 
-  const auto expected_lqp = PrepareStatementNode::make("some_prepared_plan", prepared_plan);
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
