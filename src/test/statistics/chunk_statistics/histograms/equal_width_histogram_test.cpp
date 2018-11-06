@@ -517,6 +517,14 @@ TEST_F(EqualWidthHistogramTest, FloatRounding) {
   EXPECT_NO_THROW(hist.estimate_cardinality(PredicateCondition::GreaterThanEquals, max));
 }
 
+TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
+  const auto value = 501506.55f;
+  const auto table = load_table("src/test/tables/float3.tbl");
+  const auto hist =
+      EqualWidthHistogram<float>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 5'000u);
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Equals, value));
+}
+
 TEST_F(EqualWidthHistogramTest, StringLessThan) {
   auto hist = EqualWidthHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);

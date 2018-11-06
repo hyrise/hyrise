@@ -239,11 +239,6 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     return INVALID_BIN_ID;
   }
 
-  // Avoid floating point rounding errors.
-  if (value == _bin_data.maximum) {
-    return BinID{_bin_data.bin_heights.size() - 1u};
-  }
-
   if constexpr (std::is_same_v<T, std::string>) {
     const auto num_value = this->_convert_string_to_number_representation(value);
 
@@ -275,7 +270,13 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     if (_bin_data.bin_count_with_larger_range == 0u ||
         value <= _bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
       // All bins up to that point have the exact same width, so we can use index 0.
-      return (value - _bin_data.minimum) / _bin_width(0u);
+      const auto bin_id = (value - _bin_data.minimum) / _bin_width(0u);
+
+      // The above calculation can lead to an index that is equal to or larger than the number of bins there are,
+      // due to floating point arithmetic.
+      // We checked before that the value is not larger than the maximum of the histogram,
+      // so simply return the last bin.
+      return std::min(static_cast<BinID>(bin_id), BinID{_bin_data.bin_heights.size() - 1});
     }
 
     // All bins after that point have the exact same width as well, so we use that as the new base and add it up.
