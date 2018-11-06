@@ -1547,6 +1547,7 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
   log("Timing estimation...");
 
   const auto filters_by_column = get_filters_by_column(filters);
+  const auto chunk_count = table->chunk_count();
 
   for (auto num_bins : num_bins_list) {
     log("  " + std::to_string(num_bins) + " bins...");
@@ -1654,7 +1655,8 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
           const auto width_time =
               std::chrono::duration_cast<std::chrono::microseconds>(width_end - width_start).count();
 
-          result_log << std::to_string(num_bins) << "," << std::to_string(iteration_count) << "," << column_name << ","
+          result_log << std::to_string(chunk_count) << "," << std::to_string(num_bins) << ","
+                     << std::to_string(iteration_count) << "," << column_name << ","
                      << predicate_condition_to_string.left.at(predicate_condition) << ",";
 
           auto t_value = type_cast<T>(value);
@@ -1875,7 +1877,7 @@ int main(int argc, char** argv) {
                   "equal_width_hist_prunable\n";
     memory_log << "column_name,bin_count,bin_id,range,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--time-estimation")) {
-    result_log << "bin_count,iteration_count,column_name,predicate_condition,value,"
+    result_log << "chunk_count,bin_count,iteration_count,column_name,predicate_condition,value,"
                   "minmaxdistinct_time,cqf_time,height_time,distinct_time,width_time\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
