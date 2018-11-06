@@ -11,10 +11,10 @@ namespace opossum {
 
 // Test for the different cache implementations in lib/sql.
 // Not using SQL types in this test, only testing cache eviction.
-class CacheTest : public BaseTest {};
+class CachePolicyTest : public BaseTest {};
 
 // LRU Strategy
-TEST_F(CacheTest, LRUCacheTest) {
+TEST_F(CachePolicyTest, LRUCacheTest) {
   LRUCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -50,7 +50,7 @@ TEST_F(CacheTest, LRUCacheTest) {
 }
 
 // LRU-K (K = 2)
-TEST_F(CacheTest, LRU2CacheTest) {
+TEST_F(CachePolicyTest, LRU2CacheTest) {
   LRUKCache<2, int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -86,7 +86,7 @@ TEST_F(CacheTest, LRU2CacheTest) {
 }
 
 // GDS Strategy
-TEST_F(CacheTest, GDSCacheTest) {
+TEST_F(CachePolicyTest, GDSCacheTest) {
   GDSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -137,7 +137,7 @@ TEST_F(CacheTest, GDSCacheTest) {
 }
 
 // GDFS Strategy
-TEST_F(CacheTest, GDFSCacheTest) {
+TEST_F(CachePolicyTest, GDFSCacheTest) {
   GDFSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -188,7 +188,7 @@ TEST_F(CacheTest, GDFSCacheTest) {
 }
 
 // Random Replacement Strategy
-TEST_F(CacheTest, RandomCacheTest) {
+TEST_F(CachePolicyTest, RandomCacheTest) {
   RandomCache<int, int> cache(3);
 
   ASSERT_FALSE(cache.has(1));
