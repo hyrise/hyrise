@@ -275,7 +275,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
       // The above calculation can lead to an index that is equal to or larger than the number of bins there are,
       // due to floating point arithmetic.
       // We checked before that the value is not larger than the maximum of the histogram,
-      // so simply return the last bin.
+      // so in that case, simply return the last bin.
       return std::min(static_cast<BinID>(bin_id), BinID{_bin_data.bin_heights.size() - 1});
     }
 
