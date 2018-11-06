@@ -24,7 +24,7 @@ void BindServerPreparedStatementTask::_on_execute() {
     }
 
     const auto lqp = _prepared_statement->lqp->deep_copy();
-    lqp_bind_placeholders(lqp, parameters);
+    lqp_replace_placeholders(lqp, parameters);
 
     const auto pqp = LQPTranslator{}.translate_node(lqp);
 

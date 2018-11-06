@@ -58,7 +58,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on each node of the @param lqp.
+ * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subselects.
  * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
@@ -96,7 +96,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
  * In the LQP @param lqp, search for value placeholders and replace them with actual expressions. The will traverse
  * subselects recursively, as well.
  */
-void lqp_bind_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
+void lqp_replace_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
                            const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters);
 
 }  // namespace opossum

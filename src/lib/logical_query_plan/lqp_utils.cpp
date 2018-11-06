@@ -258,7 +258,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   return root_nodes;
 }
 
-void lqp_bind_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
+void lqp_replace_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
                            const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   lqp_bind_placeholders_impl(lqp, parameters, visited_nodes);

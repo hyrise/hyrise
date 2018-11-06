@@ -11,6 +11,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -142,6 +143,45 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   EXPECT_EQ(roots[0], lqp);
   EXPECT_EQ(roots[1], subselect_b_lqp);
   EXPECT_EQ(roots[2], subselect_a_lqp);
+}
+
+TEST_F(LQPUtilsTest, LQPReplacePlaceholders) {
+  // clang-format off
+  const auto placeholder_parameter_a = uncorrelated_parameter_(ParameterID{0});
+  const auto placeholder_parameter_b = uncorrelated_parameter_(ParameterID{2});
+  const auto correlated_parameter = correlated_parameter_(ParameterID{1}, a_a);
+
+  const auto subselect_a_lqp = PredicateNode::make(equals_(b_x, placeholder_parameter_a), node_b);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto subselect_b_lqp = PredicateNode::make(greater_than_(subselect_a, correlated_parameter), DummyTableNode::make());
+  const auto subselect_b = lqp_select_(subselect_b_lqp, std::make_pair(ParameterID{1}, a_a));
+
+  const auto lqp =
+  PredicateNode::make(greater_than_(a_a, placeholder_parameter_b),
+    PredicateNode::make(less_than_(subselect_b, 4),
+      node_a));
+  // clang-format on
+
+  auto palceholder_expressions = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{
+  {ParameterID{0}, value_(15)},
+  {ParameterID{2}, add_(42, 1337)},
+  };
+
+  lqp_replace_placeholders(lqp, palceholder_expressions);
+
+  // clang-format off
+  const auto expected_subselect_a_lqp = PredicateNode::make(equals_(b_x, 15), node_b);
+  const auto expected_subselect_a = lqp_select_(subselect_a_lqp);
+  const auto expected_subselect_b_lqp = PredicateNode::make(greater_than_(subselect_a, correlated_parameter), DummyTableNode::make());
+  const auto expected_subselect_b = lqp_select_(subselect_b_lqp, std::make_pair(ParameterID{1}, a_a));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(a_a, add_(42, 1337)),
+    PredicateNode::make(less_than_(subselect_b, 4),
+      node_a));
+  // clang-format on
+
+  EXPECT_LQP_EQ(lqp, expected_lqp);
 }
 
 }  // namespace opossum

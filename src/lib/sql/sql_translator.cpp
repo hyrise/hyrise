@@ -1039,7 +1039,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   }
 
   auto lqp = prepared_statement->lqp->deep_copy();
-  lqp_bind_placeholders(lqp, parameters_by_id);
+  lqp_replace_placeholders(lqp, parameters_by_id);
 
   return lqp;
 }
