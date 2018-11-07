@@ -1,11 +1,7 @@
 #include "../base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/join_hash.hpp"
-#include "operators/join_hash/join_hash_steps.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
