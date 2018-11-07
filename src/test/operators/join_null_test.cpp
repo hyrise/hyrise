@@ -7,7 +7,6 @@
 #include <utility>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 #include "join_test.hpp"
 
 #include "operators/get_table.hpp"
