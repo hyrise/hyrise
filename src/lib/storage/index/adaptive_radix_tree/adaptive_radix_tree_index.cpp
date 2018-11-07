@@ -16,6 +16,11 @@
 
 namespace opossum {
 
+size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
+                                                           uint32_t value_bytes) {
+  Fail("AdaptiveRadixTreeIndex::estimate_memory_consumption() is not implemented yet");
+}
+
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _indexed_segment(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
@@ -122,6 +127,11 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
 
 std::vector<std::shared_ptr<const BaseSegment>> AdaptiveRadixTreeIndex::_get_indexed_segments() const {
   return {_indexed_segment};
+}
+
+size_t AdaptiveRadixTreeIndex::_memory_consumption() const {
+  // ToDo(anyone): If you use this index in combination with the Tuning subsystem, you need to properly implement this.
+  Fail("AdaptiveRadixTreeIndex::_memory_consumption() is not implemented yet");
 }
 
 AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _parts(sizeof(value)) {
