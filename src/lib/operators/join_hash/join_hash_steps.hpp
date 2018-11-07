@@ -89,6 +89,7 @@ inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> 
 template <typename T, typename HashedType, bool consider_null_values = false>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+  const std::hash<HashedType> hash_function;
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
@@ -142,7 +143,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
         iterable.for_each([&, chunk_id](const auto& value) {
           if (!value.is_null() || consider_null_values) {
-            const Hash hashed_value = std::hash<HashedType>{}(type_cast<HashedType>(value.value()));
+            const Hash hashed_value = hash_function(type_cast<HashedType>(value.value()));
 
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
@@ -255,6 +256,8 @@ template <typename T, typename HashedType, bool consider_null_values = false>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+  const std::hash<HashedType> hash_function;
+
   // materialized items of radix container
   const Partition<T>& container_elements = *radix_container.elements;
   [[maybe_unused]] const std::vector<bool>& container_null_values = *radix_container.position_is_null_value;
@@ -320,7 +323,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
           continue;
         }
 
-        const size_t radix = std::hash<HashedType>{}(type_cast<HashedType>(element.value)) & mask;
+        const size_t radix = hash_function(type_cast<HashedType>(element.value)) & mask;
 
         // In case NULL values have been materialized in materialize_input(),
         // we need to keep them during the radix clustering phase.
