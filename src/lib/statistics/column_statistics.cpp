@@ -45,7 +45,7 @@ template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
-  const auto value = type_cast<ColumnDataType>(variant_value);
+  const auto value = type_cast_variant<ColumnDataType>(variant_value);
 
   switch (predicate_condition) {
     case PredicateCondition::Equals:
@@ -84,7 +84,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
 
     case PredicateCondition::Between: {
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
-      auto casted_value2 = type_cast<ColumnDataType>(*value2);
+      auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
       return estimate_range(value, casted_value2);
     }
 
@@ -105,7 +105,7 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
     return {0.f, without_null_values()};
   }
 
-  auto casted_value = type_cast<std::string>(variant_value);
+  auto casted_value = type_cast_variant<std::string>(variant_value);
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
       return estimate_equals_with_value(casted_value);
@@ -141,7 +141,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
       // first, statistics for the operation <= value are calculated
       // then, the open ended selectivity is applied on the result
       DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
-      auto casted_value2 = type_cast<ColumnDataType>(*value2);
+      auto casted_value2 = type_cast_variant<ColumnDataType>(*value2);
       auto output = estimate_range(_min, casted_value2);
       // return, if value2 < min
       if (output.selectivity == 0.f) {

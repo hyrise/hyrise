@@ -183,7 +183,7 @@ set(
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
-    utils/string_functions_test.cpp
+    utils/string_utils_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
