@@ -199,7 +199,9 @@ std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size
 }
 
 const std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size_t idx) const {
-  // NOLINTNEXTLINE
+  // Use const_cast<> here so that deriving classes don't need to implement a const and a non-const override of this
+  // function.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   return const_cast<AbstractLQPNode*>(this)->node_expression(idx);
 }
 

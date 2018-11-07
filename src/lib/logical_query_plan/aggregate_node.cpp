@@ -28,7 +28,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 #endif
 
   // To fill _column_expressions, we need a non-const reference to it
-  // NOLINTNEXTLINE
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   auto& column_expressions = const_cast<std::vector<std::shared_ptr<AbstractExpression>>&>(_column_expressions);  //
   column_expressions.insert(column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
   column_expressions.insert(column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
@@ -79,7 +79,7 @@ size_t AggregateNode::node_expression_count() const { return _column_expressions
 std::shared_ptr<AbstractExpression>& AggregateNode::node_expression(const size_t idx) {
   Assert(idx < _column_expressions.size(), "Expression index out of bounds");
   // Modifying an element of the vector is fine, changing the length is not
-  // NOLINTNEXTLINE
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   return const_cast<std::shared_ptr<AbstractExpression>&>(_column_expressions[idx]);
 }
 
