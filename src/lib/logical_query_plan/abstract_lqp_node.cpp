@@ -199,6 +199,7 @@ std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size
 }
 
 const std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size_t idx) const {
+  // NOLINTNEXTLINE
   return const_cast<AbstractLQPNode*>(this)->node_expression(idx);
 }
 

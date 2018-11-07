@@ -35,7 +35,8 @@ size_t SortNode::node_expression_count() const { return expressions.size(); }
 
 std::shared_ptr<AbstractExpression>& SortNode::node_expression(const size_t idx) {
   Assert(idx < expressions.size(), "Expression index out of bounds");
-  // Modifying an element of the vector is fine.
+  // Modifying an element of the vector is fine, the length is locked to `order_by_modes`
+  // NOLINTNEXTLINE
   return const_cast<std::shared_ptr<AbstractExpression>&>(expressions[idx]);
 }
 
