@@ -74,6 +74,18 @@ struct RadixContainer {
   std::shared_ptr<std::vector<bool>> position_is_null_value;
 };
 
+inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> table) {
+  const size_t chunk_count = table->chunk_count();
+  auto chunk_offsets = std::vector<size_t>(chunk_count);
+
+  size_t offset = 0;
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    chunk_offsets[chunk_id] = offset;
+    offset += table->get_chunk(chunk_id)->size();
+  }
+  return chunk_offsets;
+}
+
 template <typename T, typename HashedType, bool consider_null_values = false>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {

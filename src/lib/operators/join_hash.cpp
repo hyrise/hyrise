@@ -196,28 +196,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      */
     const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
 
-    // Pre-partitioning
-    // Save chunk offsets into the input relation
-    size_t left_chunk_count = left_in_table->chunk_count();
-    size_t right_chunk_count = right_in_table->chunk_count();
-
-    auto left_chunk_offsets = std::make_shared<std::vector<size_t>>();
-    auto right_chunk_offsets = std::make_shared<std::vector<size_t>>();
-
-    left_chunk_offsets->resize(left_chunk_count);
-    right_chunk_offsets->resize(right_chunk_count);
-
-    size_t offset_left = 0;
-    for (ChunkID i{0}; i < left_chunk_count; ++i) {
-      left_chunk_offsets->operator[](i) = offset_left;
-      offset_left += left_in_table->get_chunk(i)->size();
-    }
-
-    size_t offset_right = 0;
-    for (ChunkID i{0}; i < right_chunk_count; ++i) {
-      right_chunk_offsets->operator[](i) = offset_right;
-      offset_right += right_in_table->get_chunk(i)->size();
-    }
+    // Pre-partitioning:
+    // Save chunk offsets into the input relation.
+    const auto left_chunk_offsets = determine_chunk_offsets(left_in_table);
+    const auto right_chunk_offsets = determine_chunk_offsets(right_in_table);
 
     Timer performance_timer;
 
