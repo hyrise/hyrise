@@ -274,20 +274,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
                                                                             histograms_right, _radix_bits);
       } else {
-        materialized_right = materialize_input<RightType, HashedType>(right_in_table, _column_ids.second,
-                                                                             histograms_right, _radix_bits);
+        materialized_right =
+            materialize_input<RightType, HashedType>(right_in_table, _column_ids.second, histograms_right, _radix_bits);
       }
 
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        // TODO (anyone): see "invalid explicitly-specified argument"
+        // TODO(anyone): see "invalid explicitly-specified argument"
         if (keep_nulls) {
           radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
-                                                                      histograms_right, _radix_bits);
+                                                                              histograms_right, _radix_bits);
         } else {
           radix_right = partition_radix_parallel<RightType, HashedType>(materialized_right, right_chunk_offsets,
-                                                                      histograms_right, _radix_bits);
+                                                                        histograms_right, _radix_bits);
         }
       } else {
         // short cut: skip radix partitioning and use materialized data directly
