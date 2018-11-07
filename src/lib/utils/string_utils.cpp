@@ -15,6 +15,18 @@ std::vector<std::string> trim_and_split(const std::string& input) {
   return arguments;
 }
 
+std::vector<std::string> split_string_by_delimiter(const std::string& str, char delimiter) {
+  std::vector<std::string> internal;
+  std::stringstream ss(str);
+  std::string tok;
+
+  while (std::getline(ss, tok, delimiter)) {
+    internal.push_back(tok);
+  }
+
+  return internal;
+}
+
 const std::string plugin_name_from_path(const filesystem::path& path) {
   const auto filename = path.stem().string();
 
