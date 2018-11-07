@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "histogram_utils.hpp"
+#include "statistics/statistics_utils.hpp"
 
 namespace opossum {
 
@@ -304,14 +305,15 @@ BinID EqualWidthHistogram<T>::_next_bin_for_value(const T& value) const {
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> EqualWidthHistogram<T>::scale_with_selectivity(
     const Selectivity selectivity) const {
-  auto bin_distinct_counts = _bin_data.bin_distinct_counts;
-
   // Scale the number of values in the bin with the given selectivity.
   // Round up the numbers such that we tend to over- rather than underestimate.
   // Also, we avoid 0 as a height.
   auto bin_heights = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
+  auto bin_distinct_counts = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
   for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
     bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
+    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(std::ceil(
+        scale_distinct_count(selectivity, _bin_data.bin_heights[bin_id], _bin_data.bin_distinct_counts[bin_id])));
   }
 
   return std::make_shared<EqualWidthHistogram<T>>(_bin_data.minimum, _bin_data.maximum, std::move(bin_heights),

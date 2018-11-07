@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "histogram_utils.hpp"
+#include "statistics/statistics_utils.hpp"
 
 namespace opossum {
 
@@ -142,7 +143,8 @@ HistogramCountType SingleBinHistogram<T>::total_distinct_count() const {
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> SingleBinHistogram<T>::scale_with_selectivity(
     const Selectivity selectivity) const {
-  return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, _total_count * selectivity, _distinct_count);
+  const auto distinct_count = scale_distinct_count(selectivity, _total_count, _distinct_count);
+  return std::make_shared<SingleBinHistogram<T>>(_minimum, _maximum, _total_count * selectivity, distinct_count);
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(SingleBinHistogram);
