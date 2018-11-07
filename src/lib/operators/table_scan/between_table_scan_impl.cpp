@@ -89,7 +89,7 @@ void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
   const auto value_id_diff = right_value_id - left_value_id;
   const auto comparator = [left_value_id, value_id_diff](const auto& iterator_value) {
     // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
-    // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)) - cf. https://stackoverflow.com/a/17095534/2204581
+    // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
     return (iterator_value.value() - left_value_id) < value_id_diff;
   };
 

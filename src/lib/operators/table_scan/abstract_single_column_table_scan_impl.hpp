@@ -33,7 +33,9 @@ class AbstractSingleColumnTableScanImpl : public AbstractTableScanImpl {
   void _scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id, PosList& matches) const;
 
   // Implemented by the separate Impls. They do not need to deal with ReferenceSegments anymore, as this class
-  // takes care of that.
+  // takes care of that. We take `matches` as an in/out parameter instead of returning it because scans on multiple
+  // referenced segments of a single ReferenceSegment should result in only one PosList. Storing it as a member is
+  // no option because it would break multithreading.
   virtual void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                         const std::shared_ptr<const PosList>& position_filter) const = 0;
 
