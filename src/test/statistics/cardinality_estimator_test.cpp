@@ -206,8 +206,8 @@ TEST_F(CardinalityEstimatorTest, Validate) {
   ASSERT_EQ(chunk_statistics->segment_statistics.size(), 2u);
 
   const auto segment_statistics_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(0));
-  ASSERT_TRUE(segment_statistics_a->equal_distinct_count_histogram);
-  EXPECT_EQ(segment_statistics_a->equal_distinct_count_histogram->total_count(), 100u - 4u);
+  ASSERT_TRUE(segment_statistics_a->generic_histogram);
+  EXPECT_EQ(segment_statistics_a->generic_histogram->total_count(), 100u - 4u);
 
   const auto segment_statistics_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics.at(1));
   ASSERT_TRUE(segment_statistics_b->equal_width_histogram);
@@ -285,7 +285,7 @@ TEST_F(CardinalityEstimatorTest, TwoPredicatesDifferentColumn) {
       node_a));
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 13.257575f);
 }
 
 TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
@@ -305,25 +305,54 @@ TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
     ASSERT_EQ(chunk_statistics->segment_statistics.size(), 4u);
 
     const auto segment_statistics_b_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[0]);
-    const auto join_histogram_b_a = std::dynamic_pointer_cast<GenericHistogram<int32_t>>(segment_statistics_b_a->generic_histogram);
+    const auto join_histogram_b_a = segment_statistics_b_a->generic_histogram;
     EXPECT_EQ(join_histogram_b_a->bin_count(), 4u);
 
     const auto segment_statistics_b_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[1]);
-    const auto scaled_histogram_b_b = std::dynamic_pointer_cast<GenericHistogram<int32_t>>(segment_statistics_b_b->generic_histogram);
+    const auto scaled_histogram_b_b = segment_statistics_b_b->generic_histogram;
     EXPECT_EQ(scaled_histogram_b_b->total_count(), 32 * 4);
 
     const auto segment_statistics_c_x = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[2]);
-    const auto join_histogram_c_x = std::dynamic_pointer_cast<GenericHistogram<int32_t>>(segment_statistics_c_x->generic_histogram);
+    const auto join_histogram_c_x = segment_statistics_c_x->generic_histogram;
     EXPECT_EQ(join_histogram_c_x->bin_count(), 4u);
 
     const auto segment_statistics_c_y = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[3]);
-    const auto scaled_histogram_c_y = std::dynamic_pointer_cast<EqualWidthHistogram<int32_t>>(segment_statistics_c_y->equal_width_histogram);
+    const auto scaled_histogram_c_y = segment_statistics_c_y->equal_width_histogram;
     EXPECT_EQ(scaled_histogram_c_y->total_count(), 64 * 2);
   }
 }
 
+TEST_F(CardinalityEstimatorTest, CrossJoin) {
+  // clang-format off
+  const auto input_lqp =
+  JoinNode::make(JoinMode::Cross,
+    node_b,
+    node_c);
+  // clang-format on
 
-TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithArithmeticHistograms) {
+  const auto result_statistics = estimator.estimate_statistics(input_lqp);
+
+  ASSERT_EQ(result_statistics->chunk_statistics.size(), 6u);
+  ASSERT_EQ(result_statistics->row_count(), (32u * 64u) * 6u);
+
+  for (auto& chunk_statistics : result_statistics->chunk_statistics) {
+    ASSERT_EQ(chunk_statistics->segment_statistics.size(), 4u);
+
+    const auto segment_statistics_b_a = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[0]);
+    EXPECT_EQ(segment_statistics_b_a->generic_histogram->total_count(), 32u * 64u);
+
+    const auto segment_statistics_b_b = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[1]);
+    EXPECT_EQ(segment_statistics_b_b->generic_histogram->total_count(), 32u * 64u);
+
+    const auto segment_statistics_c_x = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[2]);
+    EXPECT_EQ(segment_statistics_c_x->generic_histogram->total_count(), 32u * 64u);
+
+    const auto segment_statistics_c_y = std::dynamic_pointer_cast<SegmentStatistics2<int32_t>>(chunk_statistics->segment_statistics[3]);
+    EXPECT_EQ(segment_statistics_c_y->equal_width_histogram->total_count(), 32u * 64u);
+  }
+}
+
+TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjustedHistograms) {
   const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
       std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 5, 1});
@@ -333,7 +362,7 @@ TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithArithmeticH
       std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-      CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_arithmetic_histograms<int32_t>(
+      CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms<int32_t>(
           histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);

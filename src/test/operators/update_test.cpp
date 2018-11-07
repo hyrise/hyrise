@@ -13,7 +13,8 @@
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -82,9 +83,10 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   // Approximation should be exact here because we do not have to deal with parallelism issues in tests.
   auto updated_table = std::make_shared<GetTable>("updateTestTable");
   updated_table->execute();
-  ASSERT_NE(updated_table->get_output()->table_statistics(), nullptr);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 3u);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->approx_valid_row_count(), 0u);
+  ASSERT_NE(updated_table->get_output()->table_statistics2(), nullptr);
+  EXPECT_EQ(updated_table->get_output()->table_statistics2()->row_count(), 3u);
+  ASSERT_EQ(updated_table->get_output()->table_statistics2()->chunk_statistics.size(), 1u);
+  EXPECT_EQ(updated_table->get_output()->table_statistics2()->chunk_statistics.at(0)->approx_invalid_row_count, 3u);
   EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 

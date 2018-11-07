@@ -18,6 +18,8 @@
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
+#include "statistics/table_statistics2.hpp"
+#include "statistics/chunk_statistics2.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -71,8 +73,9 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = transaction_context->commit_id();
 
     // Delete successful, one row left.
-    EXPECT_EQ(_table->table_statistics()->row_count(), 3u);
-    EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 1u);
+    EXPECT_EQ(_table->table_statistics2()->row_count(), 3u);
+    ASSERT_EQ(_table->table_statistics2()->chunk_statistics.size(), 1u);
+    EXPECT_EQ(_table->table_statistics2()->chunk_statistics.at(0)->approx_invalid_row_count, 2u);
   } else {
     transaction_context->rollback();
     expected_end_cid = MvccData::MAX_COMMIT_ID;

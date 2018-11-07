@@ -94,6 +94,8 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     append_mutable_chunk();
   }
 
+  DebugAssert(_table_statistics2->chunk_statistics.size() == _chunks.size(), "Chunks and corresponding statistics are out of sync");
+  ++_table_statistics2->chunk_statistics.back()->row_count;
   _chunks.back()->append(values);
 }
 

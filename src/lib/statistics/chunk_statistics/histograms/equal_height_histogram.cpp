@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "histogram_utils.hpp"
+#include "statistics/statistics_utils.hpp"
 
 namespace opossum {
 
@@ -221,7 +222,13 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> EqualHeightHistogram<T>::scale_with_selectivity(
     const Selectivity selectivity) const {
   auto bin_maxima = _bin_data.bin_maxima;
-  auto bin_distinct_counts = _bin_data.bin_distinct_counts;
+
+  const auto bin_count = _bin_data.bin_distinct_counts.size();
+  const auto count_per_bin = _bin_data.total_count / bin_count;
+  auto bin_distinct_counts = std::vector<HistogramCountType>(bin_count);
+  for (auto bin_id = BinID{0}; bin_id < bin_count; ++bin_id) {
+    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(std::ceil(scale_distinct_count(selectivity, count_per_bin, _bin_data.bin_distinct_counts[bin_id])));
+  }
 
   return std::make_shared<EqualHeightHistogram<T>>(
       _bin_data.minimum, std::move(bin_maxima),

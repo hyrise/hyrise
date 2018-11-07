@@ -395,6 +395,8 @@ set(
     statistics/selectivity.hpp
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
+    statistics/statistics_utils.cpp
+    statistics/statistics_utils.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     statistics/table_statistics2.cpp

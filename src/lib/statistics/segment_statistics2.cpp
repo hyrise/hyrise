@@ -7,6 +7,7 @@
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/empty_statistics_object.hpp"
 #include "statistics/chunk_statistics/min_max_filter.hpp"
 #include "statistics/chunk_statistics/range_filter.hpp"
 
@@ -33,6 +34,8 @@ void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<Abstract
     }
   } else if (const auto min_max_object = std::dynamic_pointer_cast<MinMaxFilter<T>>(statistics_object)) {
     min_max_filter = min_max_object;
+  } else if (std::dynamic_pointer_cast<EmptyStatisticsObject>(statistics_object)) {
+    // EmptyStatisticsObjects are simply dropped
   } else {
     if constexpr (std::is_arithmetic_v<T>) {
       if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
