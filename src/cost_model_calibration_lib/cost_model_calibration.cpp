@@ -25,8 +25,10 @@
 namespace opossum {
 
 CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration)
-    : _configuration(configuration) {
-  const auto table_specifications = configuration.table_specifications;
+  : _configuration(configuration) {}
+
+void CostModelCalibration::load_tables() const {
+  const auto table_specifications = _configuration.table_specifications;
 
   for (const auto& table_specification : table_specifications) {
     std::cout << "Loading table " << table_specification.table_name << std::endl;
@@ -45,7 +47,9 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
 
     std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;
   }
+}
 
+void CostModelCalibration::load_tpch_tables() const {
   const auto tables = opossum::TpchDbGenerator(0.01f, 100000).generate();
 
   for (auto& tpch_table : tables) {
@@ -99,6 +103,7 @@ void CostModelCalibration::run_tpch() const {
     for (const auto& query : opossum::tpch_queries) {
       const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
       _write_csv_header(tpch_file_output_path);
+      std::cout << "Running TPCH " << std::to_string(query.first) << std::endl;
 
       const auto examples = _calibrate_query(query.second);
 

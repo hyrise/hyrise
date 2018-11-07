@@ -26,17 +26,17 @@ class TrainingDataPipeline:
 		return x, y
 
 	@staticmethod
-	def scale(X_train):
+	def scale(x_train, x_test):
 		"""
 
 		Args:
-			X_train:
+			x_train, x_test:
 
 		Returns:
 
 		"""
-		scaler = pre.StandardScaler()
-		return scaler.fit_transform(X_train)
+		scaler = pre.StandardScaler().fit(x_train)
+		return scaler.transform(x_train), scaler.transform(x_test)
 
 	@staticmethod
 	def prepare_df_table_scan(df):
@@ -57,7 +57,7 @@ class TrainingDataPipeline:
 		df['scan_segment_encoding'] = df['scan_segment_encoding'].astype('category', categories=encoding_categories)
 		df['second_scan_segment_encoding'] = df['second_scan_segment_encoding']\
 			.astype('category', categories=encoding_categories)
-		df['isColumnComparison'] = df['isColumnComparison'].astype('category', categories=boolean_categories)
+		df['is_column_comparison'] = df['is_column_comparison'].astype('category', categories=boolean_categories)
 		df['is_scan_segment_reference_segment'] = df['is_scan_segment_reference_segment']\
 			.astype('category', categories=boolean_categories)
 		df['is_second_scan_segment_reference_segment'] = df['is_second_scan_segment_reference_segment']\
@@ -86,7 +86,7 @@ class TrainingDataPipeline:
 			df = pd.read_csv(source, compression='bz2')
 		else:
 			df = pd.read_csv(source)
-		df = TrainingDataPipeline.prepare_df_table_scan(df, bz2)
+		df = TrainingDataPipeline.prepare_df_table_scan(df)
 		df = df.drop('operator_description', axis='columns')
 		return pd.get_dummies(df).dropna(axis='columns')
 

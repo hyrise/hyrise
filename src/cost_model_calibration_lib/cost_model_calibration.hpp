@@ -15,6 +15,9 @@ class CostModelCalibration {
  public:
   explicit CostModelCalibration(CalibrationConfiguration configuration);
 
+  void load_tables() const;
+  void load_tpch_tables() const;
+
   void calibrate() const;
   void run_tpch() const;
 

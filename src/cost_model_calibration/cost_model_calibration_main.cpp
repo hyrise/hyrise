@@ -38,6 +38,9 @@ int main(int argc, char* argv[]) {
 
   std::cout << calibration_config.output_path << std::endl;
   const auto cost_model_calibration = opossum::CostModelCalibration(calibration_config);
+  cost_model_calibration.load_tables();
+  cost_model_calibration.load_tpch_tables();
+
   cost_model_calibration.calibrate();
-  //  cost_model_calibration.run_tpch();
+  cost_model_calibration.run_tpch();
 }
