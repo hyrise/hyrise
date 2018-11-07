@@ -1567,11 +1567,6 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
         for (const auto& pair : it.second) {
           const auto predicate_condition = pair.first;
 
-          if (predicate_condition != PredicateCondition::Equals) {
-            log("Skipping filter because CQFs can only handle equality predicates...");
-            continue;
-          }
-
           const auto value = pair.second;
 
           const auto iteration_count = 1000u;
@@ -1586,11 +1581,14 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
 
           // float cqf_count;
           const auto cqf_start = std::chrono::high_resolution_clock::now();
-          for (auto i = 0u; i < iteration_count; i++) {
-            // cqf_count =
-            std::accumulate(
-                cqfs.cbegin(), cqfs.cend(), float{0},
-                [&](float a, const std::shared_ptr<CountingQuotientFilter<T>>& b) { return a + b->count(value); });
+          if (predicate_condition == PredicateCondition::Equals) {
+            for (auto i = 0u; i < iteration_count; i++) {
+              // cqf_count =
+              std::accumulate(
+                      cqfs.cbegin(), cqfs.cend(), float{0},
+                      [&](float a, const std::shared_ptr<CountingQuotientFilter < T>> & b)
+              { return a + b->count(value); });
+            }
           }
           const auto cqf_end = std::chrono::high_resolution_clock::now();
           const auto cqf_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_end - cqf_start).count();
