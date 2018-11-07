@@ -1681,6 +1681,159 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
   }
 }
 
+void time_pruning(const std::shared_ptr<const Table> table, const std::vector<uint64_t> num_bins_list,
+                     const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                     std::ofstream& result_log) {
+  log("Timing pruning...");
+
+  const auto filters_by_column = get_filters_by_column(filters);
+  const auto chunk_count = table->chunk_count();
+
+  for (auto num_bins : num_bins_list) {
+    log("  " + std::to_string(num_bins) + " bins...");
+
+    for (auto it : filters_by_column) {
+      const auto column_id = it.first;
+      const auto column_name = table->column_name(column_id);
+
+      const auto column_data_type = table->column_data_type(column_id);
+      resolve_data_type(column_data_type, [&](auto type) {
+        using T = typename decltype(type)::type;
+
+        if constexpr (std::is_arithmetic_v<T>) {
+
+          const auto minmax = create_minmax_for_column<T>(table, column_id);
+          const auto range = create_rangefilter_for_column<T>(table, column_id, num_bins);
+          const auto cqfs = create_cqfs_for_column<T>(table, column_id);
+          const auto histograms = create_histograms_for_column<T>(table, column_id, num_bins);
+
+          for (const auto &pair : it.second) {
+            const auto predicate_condition = pair.first;
+
+            const auto value = pair.second;
+
+            const auto iteration_count = 1000u;
+
+            const auto minmax_start = std::chrono::high_resolution_clock::now();
+            for (auto i = 0u; i < iteration_count; i++) {
+              std::accumulate(
+                       minmax.cbegin(),  minmax.cend(), uint64_t{0},
+                      [&](uint64_t a, const std::shared_ptr<MinMaxFilter<T>> &b) {
+                        return a + b->can_prune(predicate_condition, value);
+                      });
+            }
+            const auto minmax_end = std::chrono::high_resolution_clock::now();
+            const auto minmax_time =
+                    std::chrono::duration_cast<std::chrono::microseconds>(minmax_end - minmax_start).count();
+
+            const auto range_start = std::chrono::high_resolution_clock::now();
+            for (auto i = 0u; i < iteration_count; i++) {
+              std::accumulate(
+                      range.cbegin(), range.cend(), uint64_t{0},
+                      [&](uint64_t a, const std::unique_ptr<RangeFilter<T>> &b) {
+                        return a + b->can_prune(predicate_condition, value);
+                      });
+            }
+            const auto range_end = std::chrono::high_resolution_clock::now();
+            const auto range_time =
+                    std::chrono::duration_cast<std::chrono::microseconds>(range_end - range_start).count();
+
+            const auto cqf_start = std::chrono::high_resolution_clock::now();
+            if (predicate_condition == PredicateCondition::Equals) {
+              for (auto i = 0u; i < iteration_count; i++) {
+                std::accumulate(
+                        cqfs.cbegin(), cqfs.cend(), uint64_t{0},
+                        [&](uint64_t a, const std::shared_ptr<CountingQuotientFilter<T>> &b) {
+                          return a + b->can_prune(predicate_condition, value);
+                        });
+              }
+            }
+            const auto cqf_end = std::chrono::high_resolution_clock::now();
+            const auto cqf_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_end - cqf_start).count();
+
+            const auto distinct_start = std::chrono::high_resolution_clock::now();
+            for (auto i = 0u; i < iteration_count; i++) {
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                      std::shared_ptr<EqualHeightHistogram<T>>,
+                                      std::shared_ptr<EqualWidthHistogram<T>>> &b) {
+                                const auto hist = std::get<0>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+            }
+            const auto distinct_end = std::chrono::high_resolution_clock::now();
+            const auto distinct_time =
+                    std::chrono::duration_cast<std::chrono::microseconds>(distinct_end - distinct_start).count();
+
+            const auto height_start = std::chrono::high_resolution_clock::now();
+            for (auto i = 0u; i < iteration_count; i++) {
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                      std::shared_ptr<EqualHeightHistogram<T>>,
+                                      std::shared_ptr<EqualWidthHistogram<T>>> &b) {
+                                const auto hist = std::get<1>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+            }
+            const auto height_end = std::chrono::high_resolution_clock::now();
+            const auto height_time =
+                    std::chrono::duration_cast<std::chrono::microseconds>(height_end - height_start).count();
+
+            const auto width_start = std::chrono::high_resolution_clock::now();
+            for (auto i = 0u; i < iteration_count; i++) {
+              std::accumulate(histograms.cbegin(), histograms.cend(), uint64_t{0},
+                              [&](uint64_t a, const std::tuple<std::shared_ptr<EqualDistinctCountHistogram<T>>,
+                                      std::shared_ptr<EqualHeightHistogram<T>>,
+                                      std::shared_ptr<EqualWidthHistogram<T>>> &b) {
+                                const auto hist = std::get<2>(b);
+                                // hist is a nullptr if segment only contains null values.
+                                if (!hist) {
+                                  return a;
+                                }
+                                return a + hist->can_prune(predicate_condition, value);
+                              });
+            }
+            const auto width_end = std::chrono::high_resolution_clock::now();
+            const auto width_time =
+                    std::chrono::duration_cast<std::chrono::microseconds>(width_end - width_start).count();
+
+            result_log << std::to_string(chunk_count) << "," << std::to_string(num_bins) << ","
+                       << std::to_string(iteration_count) << "," << column_name << ","
+                       << predicate_condition_to_string.left.at(predicate_condition) << ",";
+
+            auto t_value = type_cast<T>(value);
+
+            if constexpr (std::is_same_v<T, std::string>) {
+              const auto patterns = std::array<std::pair<const char *, const char *>, 2u>{{{"\\", "\\\\"}, {"\"", "\\\""}}};
+
+              for (const auto &pair : patterns) {
+                boost::replace_all(t_value, pair.first, pair.second);
+              }
+
+              result_log << "\"" << t_value << "\",";
+            } else {
+              result_log << std::to_string(t_value) << ",";
+            }
+
+            result_log << std::to_string(minmax_time) << "," << std::to_string(range_time) << ","
+                       << std::to_string(cqf_time) << "," << std::to_string(height_time) << ","
+                       << std::to_string(distinct_time) << "," << std::to_string(width_time) << "\n";
+            result_log.flush();
+          }
+        }
+      });
+    }
+  }
+}
+
 template <typename T>
 std::pair<HistogramType, BinID> histogram_heuristic(T& min, T& max, HistogramCountType total_count,
                                                     HistogramCountType distinct_count) {
@@ -1877,6 +2030,9 @@ int main(int argc, char** argv) {
   } else if (cmd_option_exists(argv, argv_end, "--time-estimation")) {
     result_log << "chunk_count,bin_count,iteration_count,column_name,predicate_condition,value,"
                   "minmaxdistinct_time,cqf_time,height_time,distinct_time,width_time\n";
+  } else if (cmd_option_exists(argv, argv_end, "--time-pruning")) {
+    result_log << "chunk_count,bin_count,iteration_count,column_name,predicate_condition,value,"
+                  "minmaxdistinct_time,range_time,cqf_time,height_time,distinct_time,width_time\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
   }
@@ -1926,6 +2082,8 @@ int main(int argc, char** argv) {
       run_pruning_range(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--time-estimation")) {
       time_estimation(table, num_bins_list, filters, result_log);
+    } else if (cmd_option_exists(argv, argv_end, "--time-pruning")) {
+      time_pruning(table, num_bins_list, filters, result_log);
     }
   }
 
