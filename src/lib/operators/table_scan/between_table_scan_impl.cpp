@@ -44,8 +44,8 @@ void BetweenTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
     auto left_segment_iterable = create_iterable_from_segment(left_segment);
 
     left_segment_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-      _between_scan_with_value<true>(left_it, left_end, type_cast<ColumnDataType>(_left_value),
-                                     type_cast<ColumnDataType>(_right_value), chunk_id, matches_out);
+      _between_scan_with_value<true>(left_it, left_end, type_cast_variant<ColumnDataType>(_left_value),
+                                     type_cast_variant<ColumnDataType>(_right_value), chunk_id, matches_out);
     });
   });
 }
@@ -66,8 +66,8 @@ void BetweenTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment
       auto left_segment_iterable = create_iterable_from_segment(typed_segment);
 
       left_segment_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        _between_scan_with_value<true>(left_it, left_end, type_cast<Type>(_left_value), type_cast<Type>(_right_value),
-                                       chunk_id, matches_out);
+        _between_scan_with_value<true>(left_it, left_end, type_cast_variant<Type>(_left_value),
+                                       type_cast_variant<Type>(_right_value), chunk_id, matches_out);
       });
     });
   });
