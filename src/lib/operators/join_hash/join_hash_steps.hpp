@@ -8,7 +8,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/abstract_segment_visitor.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
@@ -254,8 +253,14 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
 
 template <typename T, typename HashedType, bool consider_null_values = false>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
-                                           const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
+                                           const std::vector<size_t>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
+  if constexpr (consider_null_values) {
+    DebugAssert(radix_container.position_is_null_value->size() == radix_container.elements->size(),
+                "partition_radix_parallel() called with NULL consideration but radix container does not store any NULL "
+                "value information");
+  }
+
   const std::hash<HashedType> hash_function;
 
   // materialized items of radix container
@@ -278,8 +283,6 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
     output_nulls->resize(container_null_values.size());
   }
 
-  auto& offsets = static_cast<std::vector<size_t>&>(*chunk_offsets);
-
   RadixContainer<T> radix_output;
   radix_output.elements = output;
   radix_output.partition_offsets.resize(num_partitions);
@@ -287,9 +290,9 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   // use histograms to calculate partition offsets
   size_t offset = 0;
-  std::vector<std::vector<size_t>> output_offsets_by_chunk(offsets.size(), std::vector<size_t>(num_partitions));
+  std::vector<std::vector<size_t>> output_offsets_by_chunk(chunk_offsets.size(), std::vector<size_t>(num_partitions));
   for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-    for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
       output_offsets_by_chunk[chunk_id][partition_id] = offset;
       offset += histograms[chunk_id][partition_id];
     }
@@ -297,16 +300,16 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   }
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(offsets.size());
+  jobs.reserve(chunk_offsets.size());
 
-  for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      size_t input_offset = offsets[chunk_id];
+      size_t input_offset = chunk_offsets[chunk_id];
       auto& output_offsets = output_offsets_by_chunk[chunk_id];
 
       size_t input_size = 0;
-      if (chunk_id < offsets.size() - 1) {
-        input_size = offsets[chunk_id + 1] - input_offset;
+      if (chunk_id < chunk_offsets.size() - 1) {
+        input_size = chunk_offsets[chunk_id + 1] - input_offset;
       } else {
         input_size = container_elements.size() - input_offset;
       }
@@ -380,8 +383,9 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_right_local;
 
       if constexpr (consider_null_values) {
-        DebugAssert(radix_container.position_is_null_value->size() == radix_container.elements->size(),
-          "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
+        DebugAssert(
+            radix_container.position_is_null_value->size() == radix_container.elements->size(),
+            "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
       }
 
       if (hashtables[current_partition_id].has_value()) {
