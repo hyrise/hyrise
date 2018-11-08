@@ -35,20 +35,25 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   auto table = _create_table_from_meta();
 
   std::ifstream csvfile{filename};
-  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
 
   // return empty table if input file is empty
   if (!csvfile) return table;
 
-  // make sure content ends with a delimiter for better row processing later
-  if (content.back() != _meta.config.delimiter) content.push_back(_meta.config.delimiter);
-
+  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
   std::string_view content_view{content.c_str(), content.size()};
+
+  // Remove trailing delimiters, they could easily be left over at the end of the file, we don't want to fail
+  // just because they are there
+  while (!content_view.empty() && content_view.back() == _meta.config.delimiter) {
+    content_view.remove_suffix(1);
+  }
 
   // Save chunks in list to avoid memory relocation
   std::list<Segments> segments_by_chunks;
   std::vector<std::shared_ptr<AbstractTask>> tasks;
+  // A "field" is a single value in the CSV
   std::vector<size_t> field_ends;
+
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
     // create empty chunk
     segments_by_chunks.emplace_back();
@@ -57,14 +62,18 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     // Only pass the part of the string that is actually needed to the parsing task
     std::string_view relevant_content = content_view.substr(0, field_ends.back());
 
-    // Remove processed part of the csv content
-    content_view = content_view.substr(field_ends.back() + 1);
-
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &segments]() {
       _parse_into_chunk(relevant_content, field_ends, *table, segments);
     }));
     tasks.back()->schedule();
+
+    // Remove processed part of the csv content
+    if (field_ends.back() == content_view.size()) {
+      break;
+    } else {
+      content_view = content_view.substr(field_ends.back() + 1);
+    }
   }
 
   CurrentScheduler::wait_for_tasks(tasks);
@@ -107,45 +116,57 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     return false;
   }
 
-  std::string search_for{_meta.config.separator, _meta.config.delimiter, _meta.config.quote};
+  auto in_quotes = false;
+  auto in_escape = false;
+  auto field_count_in_row = size_t{0};
+  auto row_count = size_t{0};
+  auto chunk_finished = false;
+  auto row_started = true;
 
-  size_t pos, from = 0;
-  unsigned int rows = 0, field_count = 1;
-  bool in_quotes = false;
-  while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
-    // Find either of row separator, column delimiter, quote identifier
-    pos = csv_content.find_first_of(search_for, from);
-    if (std::string::npos == pos) {
-      break;
-    }
-    from = pos + 1;
-    const char elem = csv_content.at(pos);
+  for (auto pos = size_t{0}; !chunk_finished; ++pos) {
+    auto field_finished = false;
+    auto row_finished = false;
 
-    // Make sure to "toggle" in_quotes ONLY if the quotes are not part of the string (i.e. escaped)
-    if (elem == _meta.config.quote) {
-      bool quote_is_escaped = false;
-      if (_meta.config.quote != _meta.config.escape) {
-        quote_is_escaped = pos != 0 && csv_content.at(pos - 1) == _meta.config.escape;
+    if (pos == csv_content.size()) {
+      field_finished = true;
+      row_finished = true;
+      chunk_finished = true;
+    } else {
+      row_started = true;
+      const char elem = csv_content.at(pos);
+
+      if (elem == _meta.config.escape) {
+        Assert(in_quotes, "Cannot escape out of quotes");
+        in_escape = !in_escape;
+      } else {
+        if (in_quotes) {
+          if (!in_escape && elem == _meta.config.quote) {
+            in_quotes = false;
+          }
+        } else if (elem == _meta.config.separator) {
+          field_finished = true;
+        } else if (elem == _meta.config.delimiter) {
+          field_finished = true;
+          row_finished = true;
+        } else if (elem == _meta.config.quote) {
+          in_quotes = true;
+        }
+        in_escape = false;
       }
-      if (!quote_is_escaped) {
-        in_quotes = !in_quotes;
-      }
     }
 
-    // Determine if delimiter marks end of row or is part of the (string) value
-    if (elem == _meta.config.delimiter && !in_quotes) {
-      Assert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
-      ++rows;
-      field_count = 0;
+    if (field_finished) {
+      ++field_count_in_row;
+      field_ends.push_back(pos);
     }
 
-    // Determine if separator marks end of field or is part of the (string) value
-    if (in_quotes || elem == _meta.config.quote) {
-      continue;
+    if (row_started && row_finished) {
+      Assert(field_count_in_row == table.column_count(), "Number of CSV fields does not match number of columns.");
+      field_count_in_row = 0;
+      ++row_count;
+      if (row_count == table.max_chunk_size()) chunk_finished = true;
+      row_started = false;
     }
-
-    ++field_count;
-    field_ends.push_back(pos);
   }
 
   return true;
