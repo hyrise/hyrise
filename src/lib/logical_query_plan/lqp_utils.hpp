@@ -43,6 +43,11 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
+ * @return all names of tables that have been accessed in modifying nodes (e.g., InsertNode, UpdateNode)
+ */
+std::vector<std::string> get_tables_modified_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes
  * @return      the expression, or nullptr if no expression could be created
  */
