@@ -606,7 +606,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
 
-  const auto actual_lqp_count_1 =  compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
+  const auto actual_lqp_count_1 = compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
   // clang-format off
   const auto expected_lqp_count_1 =
   AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
