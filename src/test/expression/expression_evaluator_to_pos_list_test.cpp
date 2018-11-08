@@ -89,6 +89,25 @@ TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithoutNulls) {
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_like_(s1, "%a%"), {1}));
 }
 
+TEST_F(ExpressionEvaluatorToPosListTest, PredicatesWithOnlyLiterals) {
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *like_("hello", "%ll%"), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *like_("hello", "%lol%"), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *in_(5, list_(1, 2)), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *in_(5, list_(1, 2, 5)), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *greater_than_(5, 1), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *greater_than_(5, 1), {0, 1, 2}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *between_(2, 5, 6), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *between_(2, 1, 6), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *value_(1), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *value_(0), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *is_null_(0), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *is_null_(null_()), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *or_(0, 1), {0, 1, 2, 3}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *or_(0, 0), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *and_(0, 1), {}));
+  EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *and_(1, 1), {0, 1, 2, 3}));
+}
+
 TEST_F(ExpressionEvaluatorToPosListTest, PredicateWithNulls) {
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *equals_(c, 33), {0}));
   EXPECT_TRUE(test_expression(table_a, ChunkID{0}, *not_equals_(c, 33), {2}));
