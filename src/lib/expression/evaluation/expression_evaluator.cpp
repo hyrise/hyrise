@@ -1025,11 +1025,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
                 if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result.size(); ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             }
@@ -1048,7 +1048,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_view.size(); ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
@@ -1075,9 +1075,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                          std::back_inserter(result_pos_list));
           break;
       }
-
-      return result_pos_list;
-    }
+    } break;
 
     case ExpressionType::Exists: {
       const auto& exists_expression = static_cast<const ExistsExpression&>(expression);
@@ -1102,6 +1100,20 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
             }
           }
           break;
+      }
+    } break;
+
+    // Boolean literals
+    case ExpressionType::Value: {
+      const auto& value_expression = static_cast<const ValueExpression&>(expression);
+      Assert(value_expression.value.type() == typeid(ExpressionEvaluator::Bool),
+             "Cannot evaluate non-boolean literal to PosList");
+      // TRUE literal returns the entire Chunk, FALSE literal returns empty PosList
+      if (boost::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
+        result_pos_list.resize(_chunk->size());
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+          result_pos_list[chunk_offset] = {_chunk_id, chunk_offset};
+        }
       }
     } break;
 

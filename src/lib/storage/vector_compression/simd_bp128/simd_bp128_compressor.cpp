@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-std::unique_ptr<const BaseCompressedVector> SimdBp128Compressor::encode(const pmr_vector<uint32_t>& vector,
-                                                                        const PolymorphicAllocator<size_t>& alloc,
-                                                                        const UncompressedVectorInfo& meta_info) {
+std::unique_ptr<const BaseCompressedVector> SimdBp128Compressor::compress(const pmr_vector<uint32_t>& vector,
+                                                                          const PolymorphicAllocator<size_t>& alloc,
+                                                                          const UncompressedVectorInfo& meta_info) {
   _init(vector.size(), alloc);
   for (auto value : vector) _append(value);
   _finish();

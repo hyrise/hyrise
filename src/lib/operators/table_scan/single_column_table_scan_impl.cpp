@@ -55,7 +55,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
 
     left_segment_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       with_comparator(_predicate_condition, [&](auto comparator) {
-        _unary_scan_with_value(comparator, left_it, left_end, type_cast<ColumnDataType>(_right_value), chunk_id,
+        _unary_scan_with_value(comparator, left_it, left_end, type_cast_variant<ColumnDataType>(_right_value), chunk_id,
                                matches_out);
       });
     });
@@ -79,7 +79,8 @@ void SingleColumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_se
 
       left_segment_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
         with_comparator(_predicate_condition, [&](auto comparator) {
-          _unary_scan_with_value(comparator, left_it, left_end, type_cast<Type>(_right_value), chunk_id, matches_out);
+          _unary_scan_with_value(comparator, left_it, left_end, type_cast_variant<Type>(_right_value), chunk_id,
+                                 matches_out);
         });
       });
     });

@@ -9,18 +9,19 @@
 namespace opossum {
 
 template <typename DataType>
-BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index) {
+BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index)
+    : _heap_bytes_used{0} {
   _bulk_insert(segments_to_index);
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  return lower_bound(type_cast<DataType>(values[0]));
+  return lower_bound(type_cast_variant<DataType>(values[0]));
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  return upper_bound(type_cast<DataType>(values[0]));
+  return upper_bound(type_cast_variant<DataType>(values[0]));
 }
 
 template <typename DataType>
@@ -54,8 +55,9 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
 }
 
 template <typename DataType>
-uint64_t BTreeIndexImpl<DataType>::memory_consumption() const {
-  return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.size() + _btree.bytes_used();
+size_t BTreeIndexImpl<DataType>::memory_consumption() const {
+  return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.size() + _btree.bytes_used() +
+         _heap_bytes_used;
 }
 
 template <typename DataType>
@@ -81,11 +83,27 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   // Build index
   DataType current_value = values[0].second;
   _btree[current_value] = 0;
+  _add_to_heap_memory_usage(current_value);
   for (size_t i = 0; i < values.size(); i++) {
     if (values[i].second != current_value) {
       current_value = values[i].second;
       _btree[current_value] = i;
+      _add_to_heap_memory_usage(current_value);
     }
+  }
+}
+
+template <typename DataType>
+void BTreeIndexImpl<DataType>::_add_to_heap_memory_usage(const DataType&) {
+  // Except for std::string (see below), no supported data type uses heap allocations
+}
+
+template <>
+void BTreeIndexImpl<std::string>::_add_to_heap_memory_usage(const std::string& value) {
+  // Track only strings that are longer than the reserved stack space for short string optimization (SSO)
+  static const auto short_string_threshold = std::string("").capacity();
+  if (value.size() > short_string_threshold) {
+    _heap_bytes_used += value.size();
   }
 }
 

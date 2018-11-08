@@ -19,6 +19,11 @@
 
 namespace opossum {
 
+size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
+                                                           uint32_t value_bytes) {
+  return ((row_count + distinct_count) * sizeof(ChunkOffset) + distinct_count * value_bytes);
+}
+
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
@@ -63,7 +68,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     std::transform(
         _indexed_segments.cbegin(), _indexed_segments.cend(), decompressors.begin(), [](const auto& segment) {
           const auto byte_width = byte_width_for_fixed_size_byte_aligned_type(segment->compressed_vector_type());
-          auto decompressor = segment->attribute_vector()->create_base_decoder();
+          auto decompressor = segment->attribute_vector()->create_base_decompressor();
           return std::make_pair(byte_width, std::move(decompressor));
         });
 
@@ -173,6 +178,13 @@ std::vector<std::shared_ptr<const BaseSegment>> CompositeGroupKeyIndex::_get_ind
     result.emplace_back(indexed_segment);
   }
   return result;
+}
+
+size_t CompositeGroupKeyIndex::_memory_consumption() const {
+  size_t byte_count = _keys.size() * _keys.key_size();
+  byte_count += _key_offsets.size() * sizeof(ChunkOffset);
+  byte_count += _position_list.size() * sizeof(ChunkOffset);
+  return byte_count;
 }
 
 }  // namespace opossum

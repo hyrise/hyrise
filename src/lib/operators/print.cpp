@@ -143,7 +143,8 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 }
 
 std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
-  auto cell_string = type_cast<std::string>(cell);
+  // Use lexical_cast instead of type_cast here so that floats get truncated
+  auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {
     return cell_string.substr(0, max_width - 3) + "...";
