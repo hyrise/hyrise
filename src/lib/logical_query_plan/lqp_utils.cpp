@@ -214,6 +214,7 @@ std::vector<std::string> get_tables_modified_in_lqp(const std::shared_ptr<Abstra
       case LQPNodeType::Mock:
         return LQPVisitation::VisitInputs;
     }
+    return LQPVisitation::DoNotVisitInputs;
   });
 
   return modified_tables;
