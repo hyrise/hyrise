@@ -25,6 +25,7 @@
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
+#include "logical_query_plan/lqp_utils.cpp"
 
 namespace opossum {
 
@@ -52,7 +53,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       // Store loaded tables in a map that basically caches the loaded tables. In case the table
       // needs to be reloaded (e.g., due to modifications), we also store the file path.
-      _tables_to_test_map.emplace(table_name, TestTable{load_table(table_file, 10), table_file});
+      _test_table_cache.emplace(table_name, TestTable{load_table(table_file, 10), table_file, false});
 
       // Prepare table copy which is later used as the master to copy from.
       _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
@@ -63,47 +64,27 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
   }
 
  protected:
-  // Determines whether a table has been modified.
-  bool is_table_modified(const std::shared_ptr<Table> table) const {
-    // we iterate backwards, hoping for early exists in case of modifications
-    for (auto it = table->chunks().rbegin(); it != table->chunks().rend(); ++it) {
-      const auto& chunk = *it;
-      const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-      // Be aware that we cannot reach values smaller 0 with a size_t:
-      // https://stackoverflow.com/questions/665745/whats-the-best-way-to-do-a-reverse-for-loop-with-an-unsigned-index
-      for (auto row = size_t{chunk->size() - 1}; row + 1 > 0; --row) {
-        const auto begin = mvcc_data->begin_cids[row];
-        const auto end = mvcc_data->end_cids[row];
-        const auto tid = mvcc_data->tids[row];
-
-        if (begin != 0 || end != MvccData::MAX_COMMIT_ID || tid != 0) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   void SetUp() override {  // called once before each test
     // For proper testing, we reset the storage manager before EVERY test.
     StorageManager::get().reset();
 
-    for (auto const& [table_name, test_table] : _tables_to_test_map) {
-      // Opossum: we add the cached tables to the storage manager and check if it has
-      // been modified in the meanwhile (using the MVCC information). If so, load
-      // table using the initial tbl files.
-      // SQLite: drop table and copy the whole table from the master
-      // table to reset all accessed tables.
-      StorageManager::get().add_table(table_name, test_table.table);
-
-      if (is_table_modified(test_table.table)) {
-        StorageManager::get().drop_table(table_name);
-
+    for (auto const& [table_name, test_table] : _test_table_cache) {
+      /*
+        Opossum:
+          We start off with cached tables (SetUpTestCase) and add them to the resetted
+          storage manager before each test here. In case tables have been modified, they are
+          removed from the cache and we thus need to reload them from the initial tbl file.
+        SQLite:
+          Drop table and copy the whole table from the master table to reset all accessed tables.
+      */
+      if (test_table.is_dirty) {
         // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
         auto reloaded_table = load_table(test_table.filename, 10);
         StorageManager::get().add_table(table_name, reloaded_table);
-        _tables_to_test_map[table_name].table = reloaded_table;
+        _test_table_cache[table_name].table = reloaded_table;
+        _test_table_cache[table_name].is_dirty = false;
+      } else {
+        StorageManager::get().add_table(table_name, test_table.table);
       }
 
       _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
@@ -117,10 +98,11 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
   struct TestTable {
     std::shared_ptr<Table> table;
     std::string filename;
+    bool is_dirty;
   };
 
   inline static std::unique_ptr<SQLiteWrapper> _sqlite;
-  inline static std::map<std::string, TestTable> _tables_to_test_map;
+  inline static std::map<std::string, TestTable> _test_table_cache;
   inline static std::string _master_table_suffix = "_master_copy";
 };
 
@@ -150,6 +132,13 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
+
+  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
+    for (const auto& table_name : get_tables_modified_in_lqp(plan)) {
+      // mark table cache entry as dirty, when table has been modified
+      _test_table_cache[table_name].is_dirty = true;
+    }
+  }
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 
