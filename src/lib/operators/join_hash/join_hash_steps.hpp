@@ -74,7 +74,7 @@ struct RadixContainer {
 };
 
 inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> table) {
-  const size_t chunk_count = table->chunk_count();
+  const auto chunk_count = table->chunk_count();
   auto chunk_offsets = std::vector<size_t>(chunk_count);
 
   size_t offset = 0;
@@ -158,7 +158,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             // In case we care about NULL values, store the NULL flag
             if constexpr (consider_null_values) {
               if (value.is_null()) {
-                *(null_vector_iterator) = true;
+                *null_vector_iterator = true;
               }
             }
 
@@ -264,8 +264,8 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   const std::hash<HashedType> hash_function;
 
   // materialized items of radix container
-  const Partition<T>& container_elements = *radix_container.elements;
-  [[maybe_unused]] const std::vector<bool>& container_null_values = *radix_container.position_is_null_value;
+  const auto& container_elements = *radix_container.elements;
+  [[maybe_unused]] const auto& container_null_values = *radix_container.position_is_null_value;
 
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
@@ -413,7 +413,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             const auto& matching_rows = rows_iter->second;
 
             // Since we cannot store NULL values directly in off-the-shelf containers,
-            // We need to the check the NULL bit vector here because a NULL value (represented
+            // we need to the check the NULL bit vector here because a NULL value (represented
             // as a zero) yields the same rows as an actual zero value.
             // For inner joins, we skip NULL values and output them for outer joins.
             // Note, if the materialization/radix partitioning phase did not explicitely consider
