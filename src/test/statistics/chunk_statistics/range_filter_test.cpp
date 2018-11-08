@@ -36,8 +36,6 @@ class RangeFilterTest : public ::testing::Test {
     auto filter = RangeFilter<T>::build_filter(values, static_cast<uint32_t>(gap_count + 1));
 
     for (const auto& value : values) {
-      std::cout << "can prune? " << value << std::endl;
-      
       EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {value}));
     }
 
