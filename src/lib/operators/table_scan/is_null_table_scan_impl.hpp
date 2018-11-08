@@ -13,7 +13,7 @@ namespace opossum {
 class Table;
 class BaseValueSegment;
 
-class IsNullTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class IsNullTableScanImpl : public AbstractTableScanImpl {
  public:
   IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                       const PredicateCondition& predicate_condition);
@@ -25,8 +25,8 @@ class IsNullTableScanImpl : public AbstractSingleColumnTableScanImpl {
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
  protected:
-  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                const std::shared_ptr<const PosList>& position_filter) const override;
+  void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                                   const std::shared_ptr<const PosList>& position_filter) const override;
 
   void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;

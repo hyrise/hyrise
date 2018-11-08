@@ -20,8 +20,9 @@ LiteralTableScanImpl::LiteralTableScanImpl(const std::shared_ptr<const Table>& i
 
 std::string LiteralTableScanImpl::description() const { return "LiteralTableScan"; }
 
-void LiteralTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                    const std::shared_ptr<const PosList>& position_filter) const {
+void LiteralTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
   if (variant_is_null(_value)) {
     /**

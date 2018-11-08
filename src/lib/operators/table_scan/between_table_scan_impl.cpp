@@ -24,8 +24,9 @@ BetweenTableScanImpl::BetweenTableScanImpl(const std::shared_ptr<const Table>& i
 
 std::string BetweenTableScanImpl::description() const { return "BetweenScan"; }
 
-void BetweenTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                    const std::shared_ptr<const PosList>& position_filter) const {
+void BetweenTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
   if (variant_is_null(_left_value) || variant_is_null(_right_value)) {
     /**

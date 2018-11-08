@@ -26,8 +26,9 @@ LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_tabl
 
 std::string LikeTableScanImpl::description() const { return "LikeScan"; }
 
-void LikeTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                 const std::shared_ptr<const PosList>& position_filter) const {
+void LikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                    PosList& matches,
+                                                    const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     _scan_segment(typed_segment, chunk_id, matches, position_filter);
   });

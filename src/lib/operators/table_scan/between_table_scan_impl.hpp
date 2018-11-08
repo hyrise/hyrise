@@ -29,8 +29,8 @@ class BetweenTableScanImpl : public AbstractSingleColumnTableScanImpl {
   std::string description() const override;
 
  protected:
-  void _on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                const std::shared_ptr<const PosList>& position_filter) const override;
+  void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                                   const std::shared_ptr<const PosList>& position_filter) const override;
 
   void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;

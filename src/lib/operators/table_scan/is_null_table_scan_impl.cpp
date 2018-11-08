@@ -28,13 +28,14 @@ std::shared_ptr<PosList> IsNullTableScanImpl::scan_chunk(const ChunkID chunk_id)
 
   auto matches = std::make_shared<PosList>();
 
-  _on_scan(*segment, chunk_id, *matches, nullptr);
+  _scan_non_reference_segment(*segment, chunk_id, *matches, nullptr);
 
   return matches;
 }
 
-void IsNullTableScanImpl::_on_scan(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                   const std::shared_ptr<const PosList>& position_filter) const {
+void IsNullTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                      PosList& matches,
+                                                      const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     _scan_segment(typed_segment, chunk_id, matches, position_filter);
   });

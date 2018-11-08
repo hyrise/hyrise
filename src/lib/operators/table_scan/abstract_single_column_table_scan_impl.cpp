@@ -28,7 +28,7 @@ std::shared_ptr<PosList> AbstractSingleColumnTableScanImpl::scan_chunk(const Chu
   if (const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
     _scan_reference_segment(*reference_segment, chunk_id, *matches);
   } else {
-    _on_scan(*segment, chunk_id, *matches, nullptr);
+    _scan_non_reference_segment(*segment, chunk_id, *matches, nullptr);
   }
 
   return matches;
@@ -44,7 +44,7 @@ void AbstractSingleColumnTableScanImpl::_scan_reference_segment(const ReferenceS
     const auto chunk = segment.referenced_table()->get_chunk(pos_list->common_chunk_id());
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
-    _on_scan(*referenced_segment, chunk_id, matches, pos_list);
+    _scan_non_reference_segment(*referenced_segment, chunk_id, matches, pos_list);
 
     return;
   }
@@ -64,7 +64,7 @@ void AbstractSingleColumnTableScanImpl::_scan_reference_segment(const ReferenceS
 
     const auto num_previous_matches = matches.size();
 
-    _on_scan(*referenced_segment, chunk_id, matches, position_filter);
+    _scan_non_reference_segment(*referenced_segment, chunk_id, matches, position_filter);
 
     // The scan has filled `matches` assuming that `position_filter` was the entire ReferenceSegment, so we need to fix
     // that:
