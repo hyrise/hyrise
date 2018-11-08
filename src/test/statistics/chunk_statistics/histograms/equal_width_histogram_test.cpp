@@ -507,8 +507,11 @@ TEST_F(EqualWidthHistogramTest, FloatLessThan) {
                   4.f + 7.f + 3.f);
 }
 
-TEST_F(EqualWidthHistogramTest, FloatRounding) {
-  // Values are adapted from an actual error.
+TEST_F(EqualWidthHistogramTest, FloatBinForValueLargeValues) {
+  // The calculation to find out which bin a value belongs to can return a BinID that is equal to or larger than
+  // the number of bins there are in the histogram.
+  // See EqualWidthHistogram::_bin_for_value() for details.
+  // Values are adapted from an actual error that could have existed previously.
   const auto min = 1023.79f;
   const auto max = 694486.f;
   const auto bin_count = 10000u;
@@ -518,6 +521,15 @@ TEST_F(EqualWidthHistogramTest, FloatRounding) {
 }
 
 TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
+  // The calculation for the bin edges needs to be the same in every location in the code.
+  // Previously, during creation of the histogram, we added the bin_width to the bin_minimum to
+  // calculate the bin boundaries, while we divided by the bin_width to calculate the
+  // boundaries for a given bin in _bin_for_value().
+  // Adding the bin_width (a float for float histograms) in a loop introduces an error
+  // that increses in every iteration due to floating point arithmetic.
+  // In cases where there are many bins this can result in significantly different bin boundaries,
+  // such that bins are put into a different bin than they were retrieved from.
+  // This test checks that this is not the case.
   const auto value = 501506.55f;
   const auto table = load_table("src/test/tables/float3.tbl");
   const auto hist =
