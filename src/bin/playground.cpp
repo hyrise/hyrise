@@ -699,8 +699,8 @@ get_row_count_for_filters(
 }
 
 template <typename T>
-std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>>
-create_distinct_histograms_for_column(const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
+std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>> create_distinct_histograms_for_column(
+    const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
   std::vector<std::shared_ptr<EqualDistinctCountHistogram<T>>> histograms;
 
   for (const auto chunk : table->chunks()) {
@@ -711,8 +711,8 @@ create_distinct_histograms_for_column(const std::shared_ptr<const Table> table, 
 }
 
 template <typename T>
-std::vector<std::shared_ptr<EqualHeightHistogram<T>>>
-create_height_histograms_for_column(const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
+std::vector<std::shared_ptr<EqualHeightHistogram<T>>> create_height_histograms_for_column(
+    const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
   std::vector<std::shared_ptr<EqualHeightHistogram<T>>> histograms;
 
   for (const auto chunk : table->chunks()) {
@@ -723,8 +723,8 @@ create_height_histograms_for_column(const std::shared_ptr<const Table> table, co
 }
 
 template <typename T>
-std::vector<std::shared_ptr<EqualWidthHistogram<T>>>
-create_width_histograms_for_column(const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
+std::vector<std::shared_ptr<EqualWidthHistogram<T>>> create_width_histograms_for_column(
+    const std::shared_ptr<const Table> table, const ColumnID column_id, BinID num_bins) {
   std::vector<std::shared_ptr<EqualWidthHistogram<T>>> histograms;
 
   for (const auto chunk : table->chunks()) {
@@ -757,9 +757,10 @@ create_histograms_for_column(const std::shared_ptr<const Table> table, const Col
 template <typename T>
 std::shared_ptr<CountingQuotientFilter<T>> build_cqf(const std::shared_ptr<const BaseSegment>& segment,
                                                      const uint8_t remainder = 8u) {
-  const auto distinct_count = get_distinct_values<T>(segment).size();
-  const auto quotient_size = static_cast<size_t>(std::ceil(
-      std::log2(distinct_count * (1 + std::log2(static_cast<double>(segment->size()) / distinct_count) / remainder))));
+  // const auto distinct_count = get_distinct_values<T>(segment).size();
+  // const auto quotient_size = static_cast<size_t>(std::ceil(
+  //     std::log2(distinct_count * (1 + std::log2(static_cast<double>(segment->size()) / distinct_count) / remainder))));
+  const auto quotient_size = 17u;
   const auto cqf = std::make_shared<CountingQuotientFilter<T>>(quotient_size, remainder);
   cqf->populate(segment);
   return cqf;
@@ -1630,7 +1631,7 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
         const auto minmax = generate_column_statistics<T>(*table, column_id);
         const auto minmax_creation_end = std::chrono::high_resolution_clock::now();
         const auto minmax_creation_time =
-                std::chrono::duration_cast<std::chrono::microseconds>(minmax_creation_end - minmax_creation_start).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(minmax_creation_end - minmax_creation_start).count();
 
         const auto minmax_estimation_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
@@ -1638,71 +1639,83 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
         }
         const auto minmax_estimation_end = std::chrono::high_resolution_clock::now();
         const auto minmax_estimation_time =
-                std::chrono::duration_cast<std::chrono::microseconds>(minmax_estimation_end - minmax_estimation_start).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(minmax_estimation_end - minmax_estimation_start)
+                .count();
 
         const auto cqf_creation_start = std::chrono::high_resolution_clock::now();
         const auto cqfs = create_cqfs_for_column<T>(table, column_id);
         const auto cqf_creation_end = std::chrono::high_resolution_clock::now();
-        const auto cqf_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_creation_end - cqf_creation_start).count();
+        const auto cqf_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(cqf_creation_end - cqf_creation_start).count();
 
         const auto cqf_estimation_start = std::chrono::high_resolution_clock::now();
         if (it.second.front().first == PredicateCondition::Equals) {
           for (const auto& pair : it.second) {
-            total += std::accumulate(
-                    cqfs.cbegin(), cqfs.cend(), float{0},
-                    [&](float a, const std::shared_ptr<CountingQuotientFilter<T>> &b) { return a + b->count(pair.second); });
+            total += std::accumulate(cqfs.cbegin(), cqfs.cend(), float{0},
+                                     [&](float a, const std::shared_ptr<CountingQuotientFilter<T>>& b) {
+                                       return a + b->count(pair.second);
+                                     });
           }
         }
         const auto cqf_estimation_end = std::chrono::high_resolution_clock::now();
-        const auto cqf_estimation_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_estimation_end - cqf_estimation_start).count();
+        const auto cqf_estimation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(cqf_estimation_end - cqf_estimation_start).count();
 
         const auto distinct_creation_start = std::chrono::high_resolution_clock::now();
         const auto distinct_histograms = create_distinct_histograms_for_column<T>(table, column_id, bin_count);
         const auto distinct_creation_end = std::chrono::high_resolution_clock::now();
-        const auto distinct_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(distinct_creation_end - distinct_creation_start).count();
+        const auto distinct_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(distinct_creation_end - distinct_creation_start)
+                .count();
 
         const auto distinct_estimation_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
-            total += std::accumulate(distinct_histograms.cbegin(), distinct_histograms.cend(), float{0},
-                                     [&](float a, const std::shared_ptr<EqualDistinctCountHistogram<T>> &b) {
-                                       // hist is a nullptr if segment only contains null values.
-                                       if (!b) {
-                                         return a;
-                                       }
-                                       return a + b->estimate_cardinality(pair.first, pair.second);
-                                     });
+          total += std::accumulate(distinct_histograms.cbegin(), distinct_histograms.cend(), float{0},
+                                   [&](float a, const std::shared_ptr<EqualDistinctCountHistogram<T>>& b) {
+                                     // hist is a nullptr if segment only contains null values.
+                                     if (!b) {
+                                       return a;
+                                     }
+                                     return a + b->estimate_cardinality(pair.first, pair.second);
+                                   });
         }
         const auto distinct_estimation_end = std::chrono::high_resolution_clock::now();
-        const auto distinct_estimation_time = std::chrono::duration_cast<std::chrono::microseconds>(distinct_estimation_end - distinct_estimation_start).count();
+        const auto distinct_estimation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(distinct_estimation_end - distinct_estimation_start)
+                .count();
 
         const auto height_creation_start = std::chrono::high_resolution_clock::now();
         const auto height_histograms = create_height_histograms_for_column<T>(table, column_id, bin_count);
         const auto height_creation_end = std::chrono::high_resolution_clock::now();
-        const auto height_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(height_creation_end - height_creation_start).count();
+        const auto height_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(height_creation_end - height_creation_start).count();
 
         const auto height_estimation_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
-            total += std::accumulate(height_histograms.cbegin(), height_histograms.cend(), float{0},
-                                     [&](float a, const std::shared_ptr<EqualHeightHistogram<T>> &b) {
-                                       // hist is a nullptr if segment only contains null values.
-                                       if (!b) {
-                                         return a;
-                                       }
-                                       return a + b->estimate_cardinality(pair.first, pair.second);
-                                     });
+          total += std::accumulate(height_histograms.cbegin(), height_histograms.cend(), float{0},
+                                   [&](float a, const std::shared_ptr<EqualHeightHistogram<T>>& b) {
+                                     // hist is a nullptr if segment only contains null values.
+                                     if (!b) {
+                                       return a;
+                                     }
+                                     return a + b->estimate_cardinality(pair.first, pair.second);
+                                   });
         }
         const auto height_estimation_end = std::chrono::high_resolution_clock::now();
-        const auto height_estimation_time = std::chrono::duration_cast<std::chrono::microseconds>(height_estimation_end - height_estimation_start).count();
+        const auto height_estimation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(height_estimation_end - height_estimation_start)
+                .count();
 
         const auto width_creation_start = std::chrono::high_resolution_clock::now();
         const auto width_histograms = create_width_histograms_for_column<T>(table, column_id, bin_count);
         const auto width_creation_end = std::chrono::high_resolution_clock::now();
-        const auto width_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(width_creation_end - width_creation_start).count();
+        const auto width_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(width_creation_end - width_creation_start).count();
 
         const auto width_estimation_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
           total += std::accumulate(width_histograms.cbegin(), width_histograms.cend(), float{0},
-                                   [&](float a, const std::shared_ptr<EqualWidthHistogram<T>> &b) {
+                                   [&](float a, const std::shared_ptr<EqualWidthHistogram<T>>& b) {
                                      // hist is a nullptr if segment only contains null values.
                                      if (!b) {
                                        return a;
@@ -1711,17 +1724,19 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
                                    });
         }
         const auto width_estimation_end = std::chrono::high_resolution_clock::now();
-        const auto width_estimation_time = std::chrono::duration_cast<std::chrono::microseconds>(width_estimation_end - width_estimation_start).count();
+        const auto width_estimation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(width_estimation_end - width_estimation_start)
+                .count();
 
-        result_log << std::to_string(total_count) << "," << std::to_string(chunk_count) << "," << std::to_string(bin_count) << ","
-                   << std::to_string(total) << "," << std::to_string(it.second.size()) << "," << column_name << ","
+        result_log << std::to_string(total_count) << "," << std::to_string(chunk_count) << ","
+                   << std::to_string(bin_count) << "," << std::to_string(total) << ","
+                   << std::to_string(it.second.size()) << "," << column_name << ","
                    << predicate_condition_to_string.left.at(it.second.front().first) << ","
                    << std::to_string(minmax_creation_time) << "," << std::to_string(cqf_creation_time) << ","
                    << std::to_string(height_creation_time) << "," << std::to_string(distinct_creation_time) << ","
-                   << std::to_string(width_creation_time) << ","
-                   << std::to_string(minmax_estimation_time) << "," << std::to_string(cqf_estimation_time) << ","
-                   << std::to_string(height_estimation_time) << "," << std::to_string(distinct_estimation_time) << ","
-                   << std::to_string(width_estimation_time) << "\n";
+                   << std::to_string(width_creation_time) << "," << std::to_string(minmax_estimation_time) << ","
+                   << std::to_string(cqf_estimation_time) << "," << std::to_string(height_estimation_time) << ","
+                   << std::to_string(distinct_estimation_time) << "," << std::to_string(width_estimation_time) << "\n";
         result_log.flush();
       });
     }
@@ -1729,8 +1744,8 @@ void time_estimation(const std::shared_ptr<const Table> table, const std::vector
 }
 
 void time_pruning(const std::shared_ptr<const Table> table, const std::vector<uint64_t> bin_counts,
-                     const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
-                     std::ofstream& result_log) {
+                  const std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant>>& filters,
+                  std::ofstream& result_log) {
   log("Timing pruning...");
 
   const auto filters_by_column = get_filters_by_column(filters);
@@ -1754,17 +1769,18 @@ void time_pruning(const std::shared_ptr<const Table> table, const std::vector<ui
         const auto minmaxs = create_minmax_for_column<T>(table, column_id);
         const auto minmax_creation_end = std::chrono::high_resolution_clock::now();
         const auto minmax_creation_time =
-                std::chrono::duration_cast<std::chrono::microseconds>(minmax_creation_end - minmax_creation_start).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(minmax_creation_end - minmax_creation_start).count();
 
         const auto minmax_pruning_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
-          total += std::accumulate(
-                  minmaxs.cbegin(), minmaxs.cend(), uint64_t{0},
-                  [&](uint64_t a, const std::shared_ptr<MinMaxFilter<T>> &b) { return a + b->can_prune(pair.first, pair.second); });
+          total += std::accumulate(minmaxs.cbegin(), minmaxs.cend(), uint64_t{0},
+                                   [&](uint64_t a, const std::shared_ptr<MinMaxFilter<T>>& b) {
+                                     return a + b->can_prune(pair.first, pair.second);
+                                   });
         }
         const auto minmax_pruning_end = std::chrono::high_resolution_clock::now();
         const auto minmax_pruning_time =
-                std::chrono::duration_cast<std::chrono::microseconds>(minmax_pruning_end - minmax_pruning_start).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(minmax_pruning_end - minmax_pruning_start).count();
 
         auto range_creation_end = std::chrono::high_resolution_clock::now();
         auto range_pruning_start = std::chrono::high_resolution_clock::now();
@@ -1774,45 +1790,49 @@ void time_pruning(const std::shared_ptr<const Table> table, const std::vector<ui
           range_creation_end = std::chrono::high_resolution_clock::now();
 
           range_pruning_start = std::chrono::high_resolution_clock::now();
-          for (const auto &pair : it.second) {
-            total += std::accumulate(
-                    ranges.cbegin(), ranges.cend(), uint64_t{0},
-                    [&](uint64_t a, const std::unique_ptr<RangeFilter<T>> &b) { return a + b->can_prune(pair.first,
-                                                                                                        pair.second);
-                    });
+          for (const auto& pair : it.second) {
+            total += std::accumulate(ranges.cbegin(), ranges.cend(), uint64_t{0},
+                                     [&](uint64_t a, const std::unique_ptr<RangeFilter<T>>& b) {
+                                       return a + b->can_prune(pair.first, pair.second);
+                                     });
           }
         }
         const auto range_pruning_end = std::chrono::high_resolution_clock::now();
         const auto range_pruning_time =
-                std::chrono::duration_cast<std::chrono::microseconds>(range_pruning_end - range_pruning_start).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(range_pruning_end - range_pruning_start).count();
         const auto range_creation_time =
-                std::chrono::duration_cast<std::chrono::microseconds>(range_creation_end - range_creation_start).count();
+            std::chrono::duration_cast<std::chrono::microseconds>(range_creation_end - range_creation_start).count();
 
         const auto cqf_creation_start = std::chrono::high_resolution_clock::now();
         const auto cqfs = create_cqfs_for_column<T>(table, column_id);
         const auto cqf_creation_end = std::chrono::high_resolution_clock::now();
-        const auto cqf_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_creation_end - cqf_creation_start).count();
+        const auto cqf_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(cqf_creation_end - cqf_creation_start).count();
 
         const auto cqf_pruning_start = std::chrono::high_resolution_clock::now();
         if (it.second.front().first == PredicateCondition::Equals) {
           for (const auto& pair : it.second) {
-            total += std::accumulate(
-                    cqfs.cbegin(), cqfs.cend(), uint64_t{0},
-                    [&](uint64_t a, const std::shared_ptr<CountingQuotientFilter<T>> &b) { return a + b->can_prune(pair.first, pair.second); });
+            total += std::accumulate(cqfs.cbegin(), cqfs.cend(), uint64_t{0},
+                                     [&](uint64_t a, const std::shared_ptr<CountingQuotientFilter<T>>& b) {
+                                       return a + b->can_prune(pair.first, pair.second);
+                                     });
           }
         }
         const auto cqf_pruning_end = std::chrono::high_resolution_clock::now();
-        const auto cqf_pruning_time = std::chrono::duration_cast<std::chrono::microseconds>(cqf_pruning_end - cqf_pruning_start).count();
+        const auto cqf_pruning_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(cqf_pruning_end - cqf_pruning_start).count();
 
         const auto distinct_creation_start = std::chrono::high_resolution_clock::now();
         const auto distinct_histograms = create_distinct_histograms_for_column<T>(table, column_id, bin_count);
         const auto distinct_creation_end = std::chrono::high_resolution_clock::now();
-        const auto distinct_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(distinct_creation_end - distinct_creation_start).count();
+        const auto distinct_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(distinct_creation_end - distinct_creation_start)
+                .count();
 
         const auto distinct_pruning_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
           total += std::accumulate(distinct_histograms.cbegin(), distinct_histograms.cend(), uint64_t{0},
-                                   [&](uint64_t a, const std::shared_ptr<EqualDistinctCountHistogram<T>> &b) {
+                                   [&](uint64_t a, const std::shared_ptr<EqualDistinctCountHistogram<T>>& b) {
                                      // hist is a nullptr if segment only contains null values.
                                      if (!b) {
                                        return a;
@@ -1821,17 +1841,20 @@ void time_pruning(const std::shared_ptr<const Table> table, const std::vector<ui
                                    });
         }
         const auto distinct_pruning_end = std::chrono::high_resolution_clock::now();
-        const auto distinct_pruning_time = std::chrono::duration_cast<std::chrono::microseconds>(distinct_pruning_end - distinct_pruning_start).count();
+        const auto distinct_pruning_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(distinct_pruning_end - distinct_pruning_start)
+                .count();
 
         const auto height_creation_start = std::chrono::high_resolution_clock::now();
         const auto height_histograms = create_height_histograms_for_column<T>(table, column_id, bin_count);
         const auto height_creation_end = std::chrono::high_resolution_clock::now();
-        const auto height_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(height_creation_end - height_creation_start).count();
+        const auto height_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(height_creation_end - height_creation_start).count();
 
         const auto height_pruning_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
           total += std::accumulate(height_histograms.cbegin(), height_histograms.cend(), uint64_t{0},
-                                   [&](uint64_t a, const std::shared_ptr<EqualHeightHistogram<T>> &b) {
+                                   [&](uint64_t a, const std::shared_ptr<EqualHeightHistogram<T>>& b) {
                                      // hist is a nullptr if segment only contains null values.
                                      if (!b) {
                                        return a;
@@ -1840,17 +1863,19 @@ void time_pruning(const std::shared_ptr<const Table> table, const std::vector<ui
                                    });
         }
         const auto height_pruning_end = std::chrono::high_resolution_clock::now();
-        const auto height_pruning_time = std::chrono::duration_cast<std::chrono::microseconds>(height_pruning_end - height_pruning_start).count();
+        const auto height_pruning_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(height_pruning_end - height_pruning_start).count();
 
         const auto width_creation_start = std::chrono::high_resolution_clock::now();
         const auto width_histograms = create_width_histograms_for_column<T>(table, column_id, bin_count);
         const auto width_creation_end = std::chrono::high_resolution_clock::now();
-        const auto width_creation_time = std::chrono::duration_cast<std::chrono::microseconds>(width_creation_end - width_creation_start).count();
+        const auto width_creation_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(width_creation_end - width_creation_start).count();
 
         const auto width_pruning_start = std::chrono::high_resolution_clock::now();
         for (const auto& pair : it.second) {
           total += std::accumulate(width_histograms.cbegin(), width_histograms.cend(), uint64_t{0},
-                                   [&](uint64_t a, const std::shared_ptr<EqualWidthHistogram<T>> &b) {
+                                   [&](uint64_t a, const std::shared_ptr<EqualWidthHistogram<T>>& b) {
                                      // hist is a nullptr if segment only contains null values.
                                      if (!b) {
                                        return a;
@@ -1859,10 +1884,12 @@ void time_pruning(const std::shared_ptr<const Table> table, const std::vector<ui
                                    });
         }
         const auto width_pruning_end = std::chrono::high_resolution_clock::now();
-        const auto width_pruning_time = std::chrono::duration_cast<std::chrono::microseconds>(width_pruning_end - width_pruning_start).count();
+        const auto width_pruning_time =
+            std::chrono::duration_cast<std::chrono::microseconds>(width_pruning_end - width_pruning_start).count();
 
-        result_log << std::to_string(total_count) << "," << std::to_string(chunk_count) << "," << std::to_string(bin_count) << ","
-                   << std::to_string(total) << "," << std::to_string(it.second.size()) << "," << column_name << ","
+        result_log << std::to_string(total_count) << "," << std::to_string(chunk_count) << ","
+                   << std::to_string(bin_count) << "," << std::to_string(total) << ","
+                   << std::to_string(it.second.size()) << "," << column_name << ","
                    << predicate_condition_to_string.left.at(it.second.front().first) << ","
                    << std::to_string(minmax_creation_time) << "," << std::to_string(range_creation_time) << ","
                    << std::to_string(cqf_creation_time) << "," << std::to_string(height_creation_time) << ","
