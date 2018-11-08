@@ -48,7 +48,7 @@ Cost CostModelLogical::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode
 }
 
 float CostModelLogical::_get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression) {
-  // Number of operations +  number of different columns accessed to factor in expression complexity
+  // Number of operations + number of different columns accessed to factor in expression complexity
 
   auto multiplier = 0.0f;
 

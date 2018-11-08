@@ -101,12 +101,12 @@ void CostModelCalibration::run_tpch() const {
   // Run just a single iteration for TPCH
   for (size_t i = 0; i < 1; i++) {
     for (const auto& query : opossum::tpch_queries) {
-      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
-      _write_csv_header(tpch_file_output_path);
       std::cout << "Running TPCH " << std::to_string(query.first) << std::endl;
 
       const auto examples = _calibrate_query(query.second);
 
+      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
+      _write_csv_header(tpch_file_output_path);
       _append_to_result_csv(tpch_file_output_path, examples);
     }
   }
