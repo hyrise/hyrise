@@ -150,7 +150,7 @@ void SimdBp128Packing::pack_block(const uint32_t* in, uint128_t* out, const uint
 
   simd_type in_reg = {0, 0, 0, 0};
   simd_type out_reg = {0, 0, 0, 0};
-  unsigned int one_mask = (1u << bit_size) - 1;
+  auto one_mask = static_cast<unsigned int>((1ul << bit_size) - 1);
   const simd_type mask = {one_mask, one_mask, one_mask, one_mask};
 
   switch (bit_size) {
@@ -302,7 +302,7 @@ void SimdBp128Packing::unpack_block(const uint128_t* in, uint32_t* out, const ui
 
   simd_type in_reg = *simd_in++;
   simd_type out_reg = {0, 0, 0, 0};
-  unsigned int one_mask = (1u << bit_size) - 1;
+  auto one_mask = static_cast<unsigned int>((1ul << bit_size) - 1);
   const simd_type mask = {one_mask, one_mask, one_mask, one_mask};
 
   switch (bit_size) {

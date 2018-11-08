@@ -73,7 +73,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
-    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
@@ -88,6 +87,7 @@ include_directories(
     ${TBB_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
+    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
     ${PROJECT_SOURCE_DIR}/third_party/json

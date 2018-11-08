@@ -25,7 +25,7 @@ SimdBp128Iterator::SimdBp128Iterator(const SimdBp128Iterator& other)
 void SimdBp128Iterator::_unpack_next_meta_block() {
   _read_meta_info();
 
-  for (auto meta_info_index = uint8_t{0}; meta_info_index < Packing::blocks_in_meta_block; ++meta_info_index) {
+  for (uint8_t meta_info_index = 0u; meta_info_index < Packing::blocks_in_meta_block; ++meta_info_index) {
     _unpack_block(meta_info_index);
   }
 
