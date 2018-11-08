@@ -25,7 +25,7 @@
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
-#include "logical_query_plan/lqp_utils.cpp"
+#include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {
 
