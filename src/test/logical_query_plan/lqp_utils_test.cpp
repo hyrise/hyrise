@@ -11,6 +11,8 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/delete_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -142,6 +144,30 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   EXPECT_EQ(roots[0], lqp);
   EXPECT_EQ(roots[1], subselect_b_lqp);
   EXPECT_EQ(roots[2], subselect_a_lqp);
+}
+
+TEST_F(LQPUtilsTest, GetModifiedTables) {
+  const auto read_only_lqp =
+  PredicateNode::make(greater_than_(a_a, 5),
+      ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
+        PredicateNode::make(less_than_(a_b, 4),
+          SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending}, node_a))));
+
+  EXPECT_EQ(get_tables_modified_in_lqp(read_only_lqp).size(), 0);
+
+  const auto insert_lqp =
+    InsertNode::make("insert_table_name",
+      PredicateNode::make(greater_than_(a_a, 5),
+        node_a));
+
+  EXPECT_EQ(get_tables_modified_in_lqp(insert_lqp).size(), 1);
+  EXPECT_EQ(get_tables_modified_in_lqp(insert_lqp)[0], "insert_table_name");
+
+  const auto delete_lqp =
+    DeleteNode::make("delete_table_name", node_a);
+
+  EXPECT_EQ(get_tables_modified_in_lqp(delete_lqp).size(), 1);
+  EXPECT_EQ(get_tables_modified_in_lqp(delete_lqp)[0], "delete_table_name");
 }
 
 }  // namespace opossum
