@@ -85,7 +85,7 @@ inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> 
   return chunk_offsets;
 }
 
-template <typename T, typename HashedType, bool consider_null_values = false>
+template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   const std::hash<HashedType> hash_function;
@@ -251,7 +251,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   return hashtables;
 }
 
-template <typename T, typename HashedType, bool consider_null_values = false>
+template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::vector<size_t>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
@@ -351,7 +351,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   with the values in the hash table. Since Left and Right are hashed using the same hash function, we can reduce the
   number of hash tables that need to be looked into to just 1.
   */
-template <typename RightType, typename HashedType, bool consider_null_values = false>
+template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode) {

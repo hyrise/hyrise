@@ -250,8 +250,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (_radix_bits > 0) {
         // radix partition the left table
-        radix_left = partition_radix_parallel<LeftType, HashedType>(materialized_left, left_chunk_offsets,
-                                                                    histograms_left, _radix_bits);
+        radix_left = partition_radix_parallel<LeftType, HashedType, false>(materialized_left, left_chunk_offsets,
+                                                                           histograms_left, _radix_bits);
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_left = std::move(materialized_left);
@@ -274,8 +274,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
                                                                             histograms_right, _radix_bits);
       } else {
-        materialized_right =
-            materialize_input<RightType, HashedType>(right_in_table, _column_ids.second, histograms_right, _radix_bits);
+        materialized_right = materialize_input<RightType, HashedType, false>(right_in_table, _column_ids.second,
+                                                                             histograms_right, _radix_bits);
       }
 
       if (_radix_bits > 0) {
@@ -286,8 +286,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
                                                                               histograms_right, _radix_bits);
         } else {
-          radix_right = partition_radix_parallel<RightType, HashedType>(materialized_right, right_chunk_offsets,
-                                                                        histograms_right, _radix_bits);
+          radix_right = partition_radix_parallel<RightType, HashedType, false>(materialized_right, right_chunk_offsets,
+                                                                               histograms_right, _radix_bits);
         }
       } else {
         // short cut: skip radix partitioning and use materialized data directly
@@ -322,7 +322,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
         probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
       } else {
-        probe<RightType, HashedType>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+        probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
       }
     }
 
