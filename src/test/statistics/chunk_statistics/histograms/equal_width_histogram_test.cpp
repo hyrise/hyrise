@@ -512,9 +512,9 @@ TEST_F(EqualWidthHistogramTest, FloatBinForValueLargeValues) {
   // the number of bins there are in the histogram.
   // See EqualWidthHistogram::_bin_for_value() for details.
   // Values are adapted from an actual error that existed previously.
-  const auto min = 1023.79f;
-  const auto max = 694486.f;
-  const auto bin_count = 10000u;
+  const auto min = 1'023.79f;
+  const auto max = 694'486.f;
+  const auto bin_count = 10'000u;
   const auto hist = EqualWidthHistogram<float>(min, max, std::vector<HistogramCountType>(bin_count, 1u),
                                                std::vector<HistogramCountType>(bin_count, 1u), 0u);
   EXPECT_NO_THROW(hist.estimate_cardinality(PredicateCondition::GreaterThanEquals, max));
@@ -526,11 +526,11 @@ TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
   // calculate the bin boundaries in a loop, while we divided by the bin_width to calculate the
   // boundaries for a given bin in _bin_for_value().
   // Adding the bin_width (a float for float histograms) in a loop introduces an error
-  // that increses in every iteration due to floating point arithmetic.
+  // that increases in every iteration due to floating point arithmetic.
   // In cases where there are many bins, this can result in significantly different bin boundaries,
   // such that values are put into a different bin than they were retrieved from.
   // This test checks that this is not the case.
-  const auto value = 501506.55f;
+  const auto value = 501'506.55f;
   const auto table = load_table("src/test/tables/float3.tbl");
   const auto hist =
       EqualWidthHistogram<float>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 5'000u);
