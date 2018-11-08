@@ -126,7 +126,8 @@ void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue
 
   // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
-  const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
+  const auto store_result_wrapper = [&](const auto& typed_lhs,
+                                        const auto& typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
     result.template set<ResultType>(op_func(typed_lhs, typed_rhs), context);
   };
@@ -135,7 +136,7 @@ void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
-    // catching_func is called in this switch:
+  // catching_func is called in this switch:
   switch (combined_types) { BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO)) }
 }
 
@@ -155,7 +156,7 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
-    // catching_func is called in this switch:
+  // catching_func is called in this switch:
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:

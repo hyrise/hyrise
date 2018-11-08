@@ -26,8 +26,8 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
   for (const auto& input_literal : _input_literals) {
     auto data_type = input_literal.tuple_value.data_type();
     resolve_data_type(data_type, [&](auto type) {
-      using DataType = typename decltype(type)::type;
-      context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
+      using Type = typename decltype(type)::type;
+      context.tuple.set<Type>(input_literal.tuple_value.tuple_index(), boost::get<Type>(input_literal.value));
     });
   }
 }
@@ -43,15 +43,15 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
     const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullable = in_table.column_is_nullable(column_id);
     resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
-      using ColumnDataType = typename decltype(type)::type;
-      create_iterable_from_segment<ColumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
+      using Type = typename decltype(type)::type;
+      create_iterable_from_segment<Type>(typed_segment).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
         if (is_nullable) {
           context.inputs.push_back(
-              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value));
+              std::make_shared<JitSegmentReader<IteratorType, Type, true>>(it, input_column.tuple_value));
         } else {
           context.inputs.push_back(
-              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value));
+              std::make_shared<JitSegmentReader<IteratorType, Type, false>>(it, input_column.tuple_value));
         }
       });
     });
