@@ -40,7 +40,7 @@ const T& get(const AllTypeVariant& value) {
 template <typename T, typename U,
           typename = std::enable_if_t<std::is_constructible_v<std::decay_t<T>, std::decay_t<U>>>>
 inline __attribute__((always_inline)) T type_cast(U&& value) {
-  return static_cast<T>(std::forward<T>(value));
+  return static_cast<T>(std::forward<U>(value));
 }
 
 // Simple (i.e., copy constructible) conversions
