@@ -24,7 +24,7 @@ class CostModelFeatureExtractorTest : public BaseTest {
     a = PQPColumnExpression::from_table(*int_int, "a");
     b = PQPColumnExpression::from_table(*int_int, "b");
 
-    _int_int = std::make_shared<TableWrapper>(std::move(int_int));
+    _int_int = std::make_shared<TableWrapper>(int_int);
     _int_int->execute();
   }
 
@@ -33,13 +33,6 @@ class CostModelFeatureExtractorTest : public BaseTest {
 
   std::shared_ptr<PQPColumnExpression> a, b;
 };
-
-TEST_F(CostModelFeatureExtractorTest, ExtractFeatures) {
-  // set up some TableScanOperator
-
-  //  auto result_json = CostModelFeatureExtractor::extract_features(op);
-  std::cout << "Ran CostModelFeatureExtractorTest::ExtractFeatures successfully" << std::endl;
-}
 
 TEST_F(CostModelFeatureExtractorTest, ExtractSimpleComparison) {
   // set up some TableScanOperator
@@ -52,8 +45,8 @@ TEST_F(CostModelFeatureExtractorTest, ExtractSimpleComparison) {
   const auto calibration_example = CostModelFeatureExtractor::extract_features(table_scan);
 
   EXPECT_TRUE(calibration_example.table_scan_features);
-  EXPECT_EQ(calibration_example.table_scan_features->scan_segment_encoding, "Unencoded");
-  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 1);
+  EXPECT_EQ("Unencoded", calibration_example.table_scan_features->scan_segment_encoding);
+  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 2);
 }
 
 TEST_F(CostModelFeatureExtractorTest, ExtractBetween) {
@@ -69,7 +62,7 @@ TEST_F(CostModelFeatureExtractorTest, ExtractBetween) {
   EXPECT_TRUE(calibration_example.table_scan_features);
   EXPECT_EQ(calibration_example.table_scan_features->scan_segment_encoding, "Unencoded");
   EXPECT_EQ(calibration_example.table_scan_features->second_scan_segment_encoding, "undefined");
-  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 1);
+  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 2);
 }
 
 TEST_F(CostModelFeatureExtractorTest, ExtractOr) {
@@ -83,9 +76,9 @@ TEST_F(CostModelFeatureExtractorTest, ExtractOr) {
   const auto calibration_example = CostModelFeatureExtractor::extract_features(table_scan);
 
   EXPECT_TRUE(calibration_example.table_scan_features);
-  EXPECT_EQ(calibration_example.table_scan_features->scan_segment_encoding, "Unencoded");
-  EXPECT_EQ(calibration_example.table_scan_features->second_scan_segment_encoding, "Unencoded");
-  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 2);
+  EXPECT_EQ(calibration_example.table_scan_features->scan_segment_encoding, "undefined");
+  EXPECT_EQ(calibration_example.table_scan_features->second_scan_segment_encoding, "undefined");
+  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 5);
 }
 
 }  // namespace opossum

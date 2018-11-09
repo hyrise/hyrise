@@ -12,9 +12,12 @@
 
 #include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
+#include "expression/expression_functional.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "constant_mappings.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -32,6 +35,8 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
   for (size_t i = 0; i < number_of_predicates; i++) {
     CalibrationTableSpecification local_table_definition{table_definition.table_path, table_definition.table_name,
                                                          table_definition.table_size, column_definitions_copy};
+
+    if (column_definitions_copy.size() == 0) continue;
 
     // select scan column
     std::uniform_int_distribution<long> filter_column_dist(0, column_definitions_copy.size() - 1);
@@ -209,7 +214,7 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_p
   const auto filter_column_name = column_name_prefix + filter_column.first;
   const auto predicate_sign = "LIKE";
 
-  if (filter_column.second.type != "string") return {};
+  if (filter_column.second.type != DataType::String) return {};
 
   auto filter_column_value = _generate_table_scan_predicate_value(filter_column.second);
   // remove trailing apostrophe
@@ -225,7 +230,7 @@ const std::optional<std::string> CalibrationQueryGeneratorPredicates::generate_e
     const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
     const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix) {
   // We just want Equi Scans on String columns for now
-  if (filter_column.second.type != "string") return {};
+  if (filter_column.second.type != DataType::String) return {};
 
   std::random_device random_device;
   std::mt19937 engine{random_device()};
@@ -252,11 +257,20 @@ const std::string CalibrationQueryGeneratorPredicates::_generate_table_scan_pred
   std::uniform_real_distribution<> float_dist(0, 1);
   std::uniform_int_distribution<uint16_t> char_dist(0, 25);
 
-  if (column_type == "int") return std::to_string(int_dist(engine));
-  if (column_type == "string") return "'" + std::string(1, 'A' + char_dist(engine)) + "'";
-  if (column_type == "float") return std::to_string(float_dist(engine));
+//  if (column_type == DataType::Int) return std::to_string(int_dist(engine));
+//  if (column_type == DataType::String) return "'" + std::string(1, 'A' + char_dist(engine)) + "'";
+//  if (column_type == DataType::Float) return std::to_string(float_dist(engine));
 
-  Fail("Unsupported data type in CalibrationQueryGenerator, found " + column_type);
+  switch (column_type) {
+      case DataType::Int:
+          return std::to_string(int_dist(engine));
+      case DataType::String:
+          return "'" + std::string(1, 'A' + char_dist(engine)) + "'";
+      case DataType::Float:
+          return std::to_string(float_dist(engine));
+      default:
+          Fail("Unsupported data type in CalibrationQueryGenerator, found " + data_type_to_string.left.at(column_type));
+  }
 }
 
 }  // namespace opossum

@@ -25,10 +25,10 @@ class CalibrationQueryGeneratorPredicatesTest : public BaseTest {
   }
 };
 
-TEST_F(CalibrationQueryGeneratorPredicatesTest, SimpleTest) {
+TEST_F(CalibrationQueryGeneratorPredicatesTest, GenerateEquiPredicateForStrings) {
   std::map<std::string, CalibrationColumnSpecification> columns = {
-      {"a", CalibrationColumnSpecification{"int", "uniform", false, 100, EncodingType::Unencoded}},
-      {"b", CalibrationColumnSpecification{"string", "uniform", false, 100, EncodingType::Unencoded}}};
+      {"a", CalibrationColumnSpecification{DataType::Int, "uniform", false, 100, EncodingType::Unencoded}},
+      {"b", CalibrationColumnSpecification{DataType::String, "uniform", false, 100, EncodingType::Unencoded}}};
 
   CalibrationTableSpecification table_definition{"SomePath", "SomeTable", 1000, columns};
 
@@ -39,5 +39,20 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, SimpleTest) {
   EXPECT_TRUE(predicate);
   EXPECT_EQ(*predicate, "b = 'A'");
 }
+
+    TEST_F(CalibrationQueryGeneratorPredicatesTest, SimpleTest) {
+        std::map<std::string, CalibrationColumnSpecification> columns = {
+                {"a", CalibrationColumnSpecification{DataType::Int, "uniform", false, 100, EncodingType::Unencoded}},
+                {"b", CalibrationColumnSpecification{DataType::String, "uniform", false, 100, EncodingType::Unencoded}}};
+
+        CalibrationTableSpecification table_definition{"SomePath", "SomeTable", 1000, columns};
+
+        const auto filter_column = table_definition.columns.find("b");
+        auto predicate =
+                CalibrationQueryGeneratorPredicates::generate_equi_predicate_for_strings(*filter_column, table_definition, "");
+
+        EXPECT_TRUE(predicate);
+        EXPECT_EQ(*predicate, "b = 'A'");
+    }
 
 }  // namespace opossum

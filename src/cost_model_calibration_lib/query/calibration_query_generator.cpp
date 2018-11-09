@@ -60,7 +60,8 @@ const std::vector<std::string> CalibrationQueryGenerator::generate_queries(
                                       CalibrationQueryGeneratorPredicates::generate_equi_predicate_for_strings));
   }
 
-//  add_query_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
+  add_query_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
+  add_query_if_present(queries, CalibrationQueryGenerator::_generate_foreign_key_join(table_definitions));
 
   return queries;
 }
@@ -95,8 +96,8 @@ const std::optional<std::string> CalibrationQueryGenerator::_generate_join(
   auto left_table = std::next(table_definitions.begin(), table_dist(engine));
   auto right_table = std::next(table_definitions.begin(), table_dist(engine));
 
+  // Generate Projection columns
   std::map<std::string, CalibrationColumnSpecification> columns;
-
   for (const auto& column : left_table->columns) {
     const auto column_name = "l." + column.first;
     columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
@@ -133,6 +134,56 @@ const std::optional<std::string> CalibrationQueryGenerator::_generate_join(
                     join_columns->first.first % join_columns->second.first % *left_predicate % *right_predicate);
 }
 
+    const std::optional<std::string> CalibrationQueryGenerator::_generate_foreign_key_join(
+            const std::vector<CalibrationTableSpecification>& table_definitions) {
+        // Both Join Inputs are filtered randomly beforehand
+        auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5% WHERE (%6%) AND (%7%);";
+
+        std::random_device random_device;
+        std::mt19937 engine{random_device()};
+        std::uniform_int_distribution<u_int64_t> table_dist(0, table_definitions.size() - 1);
+
+        auto left_table = std::next(table_definitions.begin(), table_dist(engine));
+        auto right_table = std::next(table_definitions.begin(), table_dist(engine));
+
+        // Generate Projection columns
+        std::map<std::string, CalibrationColumnSpecification> columns;
+        for (const auto& column : left_table->columns) {
+            const auto column_name = "l." + column.first;
+            columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
+        }
+
+        for (const auto& column : right_table->columns) {
+            const auto column_name = "r." + column.first;
+            columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
+        }
+
+        const auto join_columns = _generate_join_columns(left_table->columns, right_table->columns);
+
+        if (!join_columns) {
+            // Missing potential join columns, will not produce cross join here.
+            std::cout << "There are no join partners for query generation. "
+                         "Check the table configuration, whether there are two columns with the same datatype."
+                      << std::endl;
+            return {};
+        }
+
+        const auto left_predicate =
+                CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->first, *left_table, "l.");
+        const auto right_predicate =
+                CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->second, *right_table, "r.");
+
+        auto select_columns = _generate_select_columns(columns);
+
+        if (!left_predicate || !right_predicate) {
+            std::cout << "Failed to generate join predicates." << std::endl;
+            return {};
+        }
+
+        return boost::str(boost::format(string_template) % select_columns % left_table->table_name % right_table->table_name %
+                          join_columns->first.first % join_columns->second.first % *left_predicate % *right_predicate);
+    }
+
 const std::optional<std::pair<std::pair<std::string, CalibrationColumnSpecification>,
                               std::pair<std::string, CalibrationColumnSpecification>>>
 CalibrationQueryGenerator::_generate_join_columns(
@@ -151,9 +202,9 @@ CalibrationQueryGenerator::_generate_join_columns(
 
   for (const auto& left_column : left_columns) {
     for (const auto& right_column : right_columns) {
-      const auto left_type = data_type_to_string.right.at(left_column.second.type);
+      const auto left_type = left_column.second.type;
 
-      if (left_column.second.type == right_column.second.type && left_type != DataType::String) {
+      if (left_type == right_column.second.type && left_type != DataType::String) {
         return std::pair{left_column, right_column};
       }
     }

@@ -23,6 +23,8 @@ class CalibrationQueryGenerator {
   static const std::optional<std::string> _generate_aggregate(const CalibrationTableSpecification& table_definition);
   static const std::optional<std::string> _generate_join(
       const std::vector<CalibrationTableSpecification>& table_definitions);
+  static const std::optional<std::string> _generate_foreign_key_join(
+      const std::vector<CalibrationTableSpecification>& table_definitions);
 
   static const std::string _generate_select_columns(
       const std::map<std::string, CalibrationColumnSpecification>& column_definitions);
