@@ -46,7 +46,7 @@ class JitBaseSegmentIterator {};
  * };
  */
 template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>,
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::random_access_traversal_tag, Value>,
                             public JitBaseSegmentIterator {};
 
 /**
@@ -66,6 +66,10 @@ struct ChunkOffsetMapping {
  * i.e., its underlying value or dictionary segment is iterated over.
  * The passed position_filter is used to select which of the iterable's values
  * are returned.
+ *
+ * All iterators have a member IsVectorizable, which is used to determine if SIMD
+ * can be used when decompressing the data. Generally, accesses to simple data
+ * structures (e.g., vectors) can be vectorized; more complex decodings can not.
  */
 
 template <typename Derived, typename Value>
@@ -87,8 +91,15 @@ class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_position_filter_it; }
+
+  void advance(std::ptrdiff_t n) { _position_filter_it += n; }
+
   bool equal(const BasePointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);
+  }
+
+  std::ptrdiff_t distance_to(const BasePointAccessSegmentIterator& other) const {
+    return other._position_filter_it - _position_filter_it;
   }
 
  private:

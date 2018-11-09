@@ -58,7 +58,7 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
       return position.value() >= typed_left_value && position.value() <= typed_right_value;
     };
 
-    _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+    _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, true);
   });
 }
 
@@ -75,7 +75,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     // all values match
     column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, left_it, left_end, chunk_id, matches);
+      _scan_with_iterators<false>(always_true, left_it, left_end, chunk_id, matches, true);
     });
 
     return;
@@ -94,7 +94,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-    _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches);
+    _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches, true);
   });
 }
 

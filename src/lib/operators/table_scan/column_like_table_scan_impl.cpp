@@ -52,7 +52,7 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, 
     } else {
       _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
         const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
-        _scan_with_iterators<true>(functor, it, end, chunk_id, matches);
+        _scan_with_iterators<true>(functor, it, end, chunk_id, matches, false);
       });
     }
   });
@@ -80,7 +80,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
+      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches, true);
     });
 
     return;
@@ -96,7 +96,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
   };
 
   attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, matches);
+    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, matches, true);
   });
 }
 

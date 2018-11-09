@@ -68,6 +68,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _attribute_it{attribute_it},
           _chunk_offset{chunk_offset} {}
 
+    static constexpr bool IsVectorizable = false;  // If we iterate over the segment, not its attribute vector, we have
+                                                   // look up every value in the dictionary
+
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -76,7 +79,14 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       ++_chunk_offset;
     }
 
+    void advance(std::ptrdiff_t n) {
+      _attribute_it += n;
+      _chunk_offset += n;
+    }
+
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
+
+    std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
 
     SegmentPosition<T> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
@@ -114,6 +124,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor} {}
+
+    static constexpr bool IsVectorizable = false;  // see above
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

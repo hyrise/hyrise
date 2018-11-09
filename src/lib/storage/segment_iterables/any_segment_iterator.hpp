@@ -19,7 +19,9 @@ class AnySegmentIteratorWrapperBase {
   virtual ~AnySegmentIteratorWrapperBase() = default;
 
   virtual void increment() = 0;
+  virtual void advance(std::ptrdiff_t n) = 0;
   virtual bool equal(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
+  virtual std::ptrdiff_t distance_to(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
   virtual SegmentPosition<T> dereference() const = 0;
 
   /**
@@ -40,7 +42,11 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
  public:
   explicit AnySegmentIteratorWrapper(const Iterator& iterator) : _iterator{iterator} {}
 
+  static constexpr bool IsVectorizable = false;  // Because of the virtual method calls
+
   void increment() final { ++_iterator; }
+
+  void advance(std::ptrdiff_t n) final { _iterator += n; }
 
   /**
    * Although `other` could have a different type, it is practically impossible,
@@ -49,6 +55,11 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
   bool equal(const AnySegmentIteratorWrapperBase<T>* other) const final {
     const auto casted_other = static_cast<const AnySegmentIteratorWrapper<T, Iterator>*>(other);
     return _iterator == casted_other->_iterator;
+  }
+
+  std::ptrdiff_t distance_to(const AnySegmentIteratorWrapperBase<T>* other) const final {
+    const auto casted_other = static_cast<const AnySegmentIteratorWrapper<T, Iterator>*>(other);
+    return casted_other->_iterator - _iterator;
   }
 
   SegmentPosition<T> dereference() const final {
@@ -108,11 +119,15 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
  public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
 
+  static constexpr bool IsVectorizable = false;  // Because of the virtual method calls
+
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { _wrapper->increment(); }
+  void advance(std::ptrdiff_t n) { _wrapper->advance(n); }
   bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
+  std::ptrdiff_t distance_to(const AnySegmentIterator& other) const { return *other._wrapper.get() - *_wrapper.get(); }
   SegmentPosition<T> dereference() const { return _wrapper->dereference(); }
 
  private:
