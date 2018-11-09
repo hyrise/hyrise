@@ -265,11 +265,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // Materialize right table. The third template parameter signals if the relation on the right (probe
       // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
-      /*
-      TODO (anyone):
-        Clang 6.0.1 does not allow "materialize_input<RightType, HashedType, static_cast<bool>(keep_nulls)>" (error:
-        invalid explicitly-specified argument), which works on GCC (see https://stackoverflow.com/q/33872039/1147726).
-      */
       if (keep_nulls) {
         materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
                                                                             histograms_right, _radix_bits);
@@ -281,7 +276,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        // TODO(anyone): see "invalid explicitly-specified argument"
         if (keep_nulls) {
           radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
                                                                               histograms_right, _radix_bits);
