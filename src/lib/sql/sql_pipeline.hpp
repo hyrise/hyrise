@@ -25,8 +25,8 @@ struct SQLPipelineMetrics {
 };
 
 /**
- * The SQLPipeline represents the flow from the basic SQL string to the result table with all intermediate steps. Use
- * the SQLPipelineBuilder to construct it.
+ * The SQLPipeline represents the flow from the basic SQL string (containing one or more statements) to the result
+ * table(s) with all intermediate steps. Use the SQLPipelineBuilder to construct it.
  *
  * The SQLPipeline splits a given SQL string into its single SQL statements and wraps each statement in an
  * SQLPipelineStatement.

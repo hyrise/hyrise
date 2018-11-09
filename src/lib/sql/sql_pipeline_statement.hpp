@@ -26,12 +26,12 @@ struct SQLPipelineStatementMetrics {
 
 /**
  * The SQLPipelineStatement represents the flow from a *single* SQL statement to the result table with all intermediate
- * steps. These intermediate steps call the previous step that is required. The intermediate
- * results are all cached so calling a method twice will return the already existing value.
+ * steps. Don't construct this class directly, use the SQLPipelineBuilder instead
  *
- * E.g: calling sql_pipeline_statement.get_result_table() will result in the following "call stack"
- * get_result_table() -> get_tasks() -> get_pyhsical_plan_plan() -> get_optimized_logical_plan() ->
- * get_unoptimized_logical_plan() -> get_parsed_sql()
+ * Note:
+ *  Calling get_result_table() will result in the following "call stack"
+ *  get_result_table() -> get_tasks() -> get_pyhsical_plan_plan() -> get_optimized_logical_plan() ->
+ *  get_unoptimized_logical_plan() -> get_parsed_sql()
  *
  * NOTE:
  *  If a physical plan for an SQL statement is in the SQLPlanCache, it will be used instead of translating the optimized
