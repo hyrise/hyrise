@@ -75,7 +75,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of std::string.
-#ifdef __GLIBCXX_
+#ifdef __GLIBCXX__
   // libstdc++:
   //   848 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
@@ -97,7 +97,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
       << "Short String Optimization (SSO) is expected to hold at least 7 characters";
 
 // Index memory consumption depends on implementation of std::string.
-#ifdef __GLIBCXX_
+#ifdef __GLIBCXX__
   // libstdc++:
   //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
@@ -124,7 +124,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of std::string.
-#ifdef __GLIBCXX_
+#ifdef __GLIBCXX__
   // libstdc++:
   //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
