@@ -55,7 +55,8 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
       // needs to be reloaded (e.g., due to modifications), we also store the file path.
       _test_table_cache.emplace(table_name, TestTable{load_table(table_file, 10), table_file, false});
 
-      // Prepare table copy which is later used as the master to copy from.
+      // Create test table and also table copy which is later used as the master to copy from.
+      _sqlite->create_table_from_tbl(table_file, table_name);
       _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
     }
 
