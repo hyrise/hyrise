@@ -26,7 +26,7 @@ class IsNullTableScanImpl : public AbstractTableScanImpl {
 
  protected:
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                   const std::shared_ptr<const PosList>& position_filter) const override;
+                                   const std::shared_ptr<const PosList>& position_filter) const;
 
   void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;
@@ -46,6 +46,10 @@ class IsNullTableScanImpl : public AbstractTableScanImpl {
                 const size_t segment_size) const;
 
   /**@}*/
+
+  const std::shared_ptr<const Table> _in_table;
+  const ColumnID _column_id;
+  const PredicateCondition _predicate_condition;
 };
 
 }  // namespace opossum

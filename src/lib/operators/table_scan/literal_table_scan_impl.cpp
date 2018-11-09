@@ -44,7 +44,7 @@ void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
       Fail("Expected ReferenceSegments to be handled before calling this method");
     } else {
       using ColumnDataType = typename decltype(type)::type;
-      auto typed_value = type_cast<ColumnDataType>(_value);
+      auto typed_value = type_cast_variant<ColumnDataType>(_value);
 
       auto segment_iterable = create_iterable_from_segment(typed_segment);
 

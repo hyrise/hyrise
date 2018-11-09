@@ -49,8 +49,8 @@ void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
     } else {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto typed_left_value = type_cast<ColumnDataType>(_left_value);
-      auto typed_right_value = type_cast<ColumnDataType>(_right_value);
+      auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
+      auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
       auto comparator = [typed_left_value, typed_right_value](const auto& iterator_value) {
         return iterator_value.value() >= typed_left_value && iterator_value.value() <= typed_right_value;
       };
