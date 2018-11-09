@@ -83,11 +83,11 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
         StorageManager::get().add_table(table_name, reloaded_table);
         _test_table_cache[table_name].table = reloaded_table;
         _test_table_cache[table_name].is_dirty = false;
+        // When tables in Hyrise have (potentially) modified, the should might be true for SQLite.
+        _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
       } else {
         StorageManager::get().add_table(table_name, test_table.table);
       }
-
-      _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
     }
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
