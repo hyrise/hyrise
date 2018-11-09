@@ -21,9 +21,9 @@ namespace opossum {
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
  *   enables us to detect if all or none of the values in the segment satisfy the expression.
  */
-class LiteralTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
-  LiteralTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+  ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                        const PredicateCondition& predicate_condition, const AllTypeVariant& value);
 
   std::string description() const override;

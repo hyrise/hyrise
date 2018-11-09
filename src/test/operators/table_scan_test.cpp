@@ -15,11 +15,11 @@
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_scan/between_table_scan_impl.hpp"
-#include "operators/table_scan/column_comparison_table_scan_impl.hpp"
+#include "operators/table_scan/column_vs_column_table_scan_impl.hpp"
 #include "operators/table_scan/expression_evaluator_table_scan_impl.hpp"
-#include "operators/table_scan/is_null_table_scan_impl.hpp"
-#include "operators/table_scan/like_table_scan_impl.hpp"
-#include "operators/table_scan/literal_table_scan_impl.hpp"
+#include "operators/table_scan/column_is_null_table_scan_impl.hpp"
+#include "operators/table_scan/column_like_table_scan_impl.hpp"
+#include "operators/table_scan/column_vs_value_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -673,11 +673,11 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
 
   // clang-format off
-  EXPECT_TRUE(dynamic_cast<LiteralTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<LiteralTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnComparisonTableScanImpl*>(TableScan{get_table_op(),
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnVsColumnTableScanImpl*>(TableScan{get_table_op(),
                                                                      equals_(column_b, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<LikeTableScanImpl*>(TableScan{get_int_string_table_op(),
+  EXPECT_TRUE(dynamic_cast<ColumnLikeTableScanImpl*>(TableScan{get_int_string_table_op(),
                                                          like_(column_s, "%s%")}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_table_op(),
                                                                         like_("hello", "%s%")}.create_impl().get()));  // NOLINT
@@ -688,8 +688,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), and_(greater_than_(column_a, 5),
                                                                                              less_than_(column_b,
                                                                                                         6))}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
   // clang-format on
 }
 

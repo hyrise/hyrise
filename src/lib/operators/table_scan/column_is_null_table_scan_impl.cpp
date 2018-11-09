@@ -1,4 +1,4 @@
-#include "is_null_table_scan_impl.hpp"
+#include "column_is_null_table_scan_impl.hpp"
 
 #include <memory>
 
@@ -13,15 +13,15 @@
 
 namespace opossum {
 
-IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                          const PredicateCondition& predicate_condition) : _in_table(in_table), _column_id(column_id), _predicate_condition(predicate_condition) {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
 
-std::string IsNullTableScanImpl::description() const { return "IsNullScan"; }
+std::string ColumnIsNullTableScanImpl::description() const { return "IsNullScan"; }
 
-std::shared_ptr<PosList> IsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
+std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
   const auto& chunk = _in_table->get_chunk(chunk_id);
   const auto& segment = chunk->get_segment(_column_id);
 
@@ -32,7 +32,7 @@ std::shared_ptr<PosList> IsNullTableScanImpl::scan_chunk(const ChunkID chunk_id)
   return matches;
 }
 
-void IsNullTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnIsNullTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                       PosList& matches,
                                                       const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
@@ -40,7 +40,7 @@ void IsNullTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment
   });
 }
 
-void IsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                         const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using Type = typename decltype(type)::type;
@@ -62,7 +62,7 @@ void IsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkI
   });
 }
 
-void IsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnIsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
                                         const std::shared_ptr<const PosList>& position_filter) const {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter, segment.size());
@@ -83,7 +83,7 @@ void IsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const C
                           [&](auto it, auto end) { _scan_with_iterators<false>(functor, it, end, chunk_id, matches); });
 }
 
-bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
+bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return false;
@@ -96,7 +96,7 @@ bool IsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
   }
 }
 
-bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) const {
+bool ColumnIsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::IsNull:
       return !segment.is_nullable();
@@ -109,7 +109,7 @@ bool IsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) const {
   }
 }
 
-void IsNullTableScanImpl::_add_all(const ChunkID chunk_id, PosList& matches,
+void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter,
                                    const size_t segment_size) const {
   const auto num_rows = position_filter ? position_filter->size() : segment_size;

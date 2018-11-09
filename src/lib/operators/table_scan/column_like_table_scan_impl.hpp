@@ -29,9 +29,9 @@ class Table;
  * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
  *                    e.g., StartsWithPattern. 
  */
-class LikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
-  LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+  ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                     const PredicateCondition predicate_condition, const std::string& pattern);
 
   std::string description() const override;

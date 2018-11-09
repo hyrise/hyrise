@@ -22,9 +22,9 @@ class Table;
  *       reference segments and data segments, comparing a reference to a
  *       data segment is not supported.
  */
-class ColumnComparisonTableScanImpl : public AbstractTableScanImpl {
+class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
  public:
-  ColumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+  ColumnVsColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                                 const PredicateCondition& predicate_condition, const ColumnID right_column_id);
 
   std::string description() const override;

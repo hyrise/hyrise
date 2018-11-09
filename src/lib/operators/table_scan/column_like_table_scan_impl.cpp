@@ -1,4 +1,4 @@
-#include "like_table_scan_impl.hpp"
+#include "column_like_table_scan_impl.hpp"
 
 #include <algorithm>
 #include <array>
@@ -18,15 +18,15 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                      const PredicateCondition predicate_condition, const std::string& pattern)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition},
       _matcher{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
-std::string LikeTableScanImpl::description() const { return "LikeScan"; }
+std::string ColumnLikeTableScanImpl::description() const { return "LikeScan"; }
 
-void LikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                     PosList& matches,
                                                     const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
@@ -34,7 +34,7 @@ void LikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, 
   });
 }
 
-void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnLikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                       const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using Type = typename decltype(type)::type;
@@ -55,7 +55,7 @@ void LikeTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID 
   });
 }
 
-void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnLikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                       const std::shared_ptr<const PosList>& position_filter) const {
   std::pair<size_t, std::vector<bool>> result;
 
@@ -96,7 +96,7 @@ void LikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, cons
   });
 }
 
-std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(
+std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_dictionary(
     const pmr_vector<std::string>& dictionary) const {
   auto result = std::pair<size_t, std::vector<bool>>{};
 

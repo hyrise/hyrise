@@ -1,4 +1,4 @@
-#include "literal_table_scan_impl.hpp"
+#include "column_vs_value_table_scan_impl.hpp"
 
 #include <memory>
 #include <utility>
@@ -14,13 +14,13 @@
 
 namespace opossum {
 
-LiteralTableScanImpl::LiteralTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                            const PredicateCondition& predicate_condition, const AllTypeVariant& value)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {}
 
-std::string LiteralTableScanImpl::description() const { return "LiteralTableScan"; }
+std::string ColumnVsValueTableScanImpl::description() const { return "LiteralTableScan"; }
 
-void LiteralTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnVsValueTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
@@ -37,7 +37,7 @@ void LiteralTableScanImpl::_scan_non_reference_segment(const BaseSegment& segmen
   });
 }
 
-void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnVsValueTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
@@ -60,7 +60,7 @@ void LiteralTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
   });
 }
 
-void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   /*
    * ValueID value_id; // left value id
@@ -124,7 +124,7 @@ void LiteralTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, c
   });
 }
 
-ValueID LiteralTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {
+ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
@@ -141,7 +141,7 @@ ValueID LiteralTableScanImpl::_get_search_value_id(const BaseDictionarySegment& 
   }
 }
 
-bool LiteralTableScanImpl::_value_matches_all(const BaseDictionarySegment& segment,
+bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment& segment,
                                               const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
@@ -163,7 +163,7 @@ bool LiteralTableScanImpl::_value_matches_all(const BaseDictionarySegment& segme
   }
 }
 
-bool LiteralTableScanImpl::_value_matches_none(const BaseDictionarySegment& segment,
+bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment& segment,
                                                const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:

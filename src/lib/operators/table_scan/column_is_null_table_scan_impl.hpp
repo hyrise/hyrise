@@ -13,9 +13,9 @@ namespace opossum {
 class Table;
 class BaseValueSegment;
 
-class IsNullTableScanImpl : public AbstractTableScanImpl {
+class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
  public:
-  IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+  ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                       const PredicateCondition& predicate_condition);
 
   std::string description() const override;

@@ -1,4 +1,4 @@
-#include "column_comparison_table_scan_impl.hpp"
+#include "column_vs_column_table_scan_impl.hpp"
 
 #include <memory>
 #include <string>
@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_ptr<const Table>& in_table,
+ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                              const ColumnID left_column_id,
                                                              const PredicateCondition& predicate_condition,
                                                              const ColumnID right_column_id)
@@ -24,9 +24,9 @@ ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_p
       _predicate_condition(predicate_condition),
       _right_column_id{right_column_id} {}
 
-std::string ColumnComparisonTableScanImpl::description() const { return "ColumnComparison"; }
+std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnComparison"; }
 
-std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) const {
+std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
   const auto left_segment = chunk->get_segment(_left_column_id);
