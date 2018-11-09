@@ -4,6 +4,7 @@
 #include <boost/algorithm/string/trim.hpp>
 
 #include <fstream>
+#include <iomanip>
 #include <memory>
 #include <string>
 #include <vector>
@@ -127,6 +128,9 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       std::stringstream insert_query;
+
+      // stringstream has than annoying property of truncating floats by default
+      insert_query << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << std::endl;
 
       insert_query << "INSERT INTO " << table_name << " VALUES (";
       for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {

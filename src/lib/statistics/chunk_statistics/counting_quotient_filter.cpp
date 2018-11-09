@@ -59,7 +59,7 @@ void CountingQuotientFilter<ElementType>::insert(ElementType value, size_t count
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::count(const AllTypeVariant& value) const {
   DebugAssert(value.type() == typeid(ElementType), "Value does not have the same type as the filter elements");
-  return count(type_cast<ElementType>(value));
+  return count(type_cast_variant<ElementType>(value));
 }
 
 template <typename ElementType>
