@@ -81,6 +81,7 @@ class BaseTestWithParam
     StorageManager::reset();
     TransactionManager::reset();
     SQLQueryCache<SQLQueryPlan>::get().clear();
+    SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get().clear();
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,
