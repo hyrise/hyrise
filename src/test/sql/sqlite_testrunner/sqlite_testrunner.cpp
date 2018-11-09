@@ -78,12 +78,13 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
         SQLite:
           Drop table and copy the whole table from the master table to reset all accessed tables.
       */
-      if (test_table.is_dirty) {
+      if (test_table.dirty) {
         // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
         auto reloaded_table = load_table(test_table.filename, 10);
         StorageManager::get().add_table(table_name, reloaded_table);
         _test_table_cache[table_name].table = reloaded_table;
-        _test_table_cache[table_name].is_dirty = false;
+        _test_table_cache[table_name].dirty = false;
+
         // When tables in Hyrise have (potentially) modified, the should might be true for SQLite.
         _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
       } else {
@@ -99,7 +100,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
   struct TestTable {
     std::shared_ptr<Table> table;
     std::string filename;
-    bool is_dirty;
+    bool dirty;
   };
 
   inline static std::unique_ptr<SQLiteWrapper> _sqlite;
@@ -137,7 +138,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     for (const auto& table_name : get_tables_modified_in_lqp(plan)) {
       // mark table cache entry as dirty, when table has been modified
-      _test_table_cache[table_name].is_dirty = true;
+      _test_table_cache[table_name].dirty = true;
     }
   }
 
