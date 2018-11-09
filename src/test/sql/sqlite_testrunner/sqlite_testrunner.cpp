@@ -136,7 +136,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& result_table = sql_pipeline.get_result_table();
 
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
-    for (const auto& table_name : get_tables_modified_in_lqp(plan)) {
+    for (const auto& table_name : lqp_find_modified_tables(plan)) {
       // mark table cache entry as dirty, when table has been modified
       _test_table_cache[table_name].dirty = true;
     }

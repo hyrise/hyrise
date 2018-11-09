@@ -178,19 +178,19 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
 }
 
-std::vector<std::string> get_tables_modified_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  std::vector<std::string> modified_tables;
+std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  std::set<std::string> modified_tables;
 
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
       case LQPNodeType::Insert:
-        modified_tables.push_back(std::static_pointer_cast<InsertNode>(node)->table_name);
+        modified_tables.insert(std::static_pointer_cast<InsertNode>(node)->table_name);
         return LQPVisitation::VisitInputs;
       case LQPNodeType::Update:
-        modified_tables.push_back(std::static_pointer_cast<UpdateNode>(node)->table_name);
+        modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
         return LQPVisitation::VisitInputs;
       case LQPNodeType::Delete:
-        modified_tables.push_back(std::static_pointer_cast<DeleteNode>(node)->table_name);
+        modified_tables.insert(std::static_pointer_cast<DeleteNode>(node)->table_name);
         return LQPVisitation::VisitInputs;
 
       case LQPNodeType::CreateTable:

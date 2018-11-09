@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <set>
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -45,7 +46,7 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 /**
  * @return all names of tables that have been accessed in modifying nodes (e.g., InsertNode, UpdateNode)
  */
-std::vector<std::string> get_tables_modified_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes

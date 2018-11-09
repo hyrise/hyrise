@@ -153,21 +153,23 @@ TEST_F(LQPUtilsTest, GetModifiedTables) {
         PredicateNode::make(less_than_(a_b, 4),
           SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending}, node_a))));
 
-  EXPECT_EQ(get_tables_modified_in_lqp(read_only_lqp).size(), 0);
+  EXPECT_EQ(lqp_find_modified_tables(read_only_lqp).size(), 0);
 
   const auto insert_lqp =
     InsertNode::make("insert_table_name",
       PredicateNode::make(greater_than_(a_a, 5),
         node_a));
+  const auto insert_tables = lqp_find_modified_tables(insert_lqp);
 
-  EXPECT_EQ(get_tables_modified_in_lqp(insert_lqp).size(), 1);
-  EXPECT_EQ(get_tables_modified_in_lqp(insert_lqp)[0], "insert_table_name");
+  EXPECT_EQ(insert_tables.size(), 1);
+  EXPECT_NE(insert_tables.find("insert_table_name"), insert_tables.end());
 
   const auto delete_lqp =
     DeleteNode::make("delete_table_name", node_a);
+  const auto delete_tables = lqp_find_modified_tables(delete_lqp);
 
-  EXPECT_EQ(get_tables_modified_in_lqp(delete_lqp).size(), 1);
-  EXPECT_EQ(get_tables_modified_in_lqp(delete_lqp)[0], "delete_table_name");
+  EXPECT_EQ(delete_tables.size(), 1);
+  EXPECT_NE(delete_tables.find("delete_table_name"), delete_tables.end());
 }
 
 }  // namespace opossum
