@@ -146,7 +146,7 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   EXPECT_EQ(roots[2], subselect_a_lqp);
 }
 
-TEST_F(LQPUtilsTest, GetModifiedTables) {
+TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   const auto read_only_lqp =
   PredicateNode::make(greater_than_(a_a, 5),
       ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
