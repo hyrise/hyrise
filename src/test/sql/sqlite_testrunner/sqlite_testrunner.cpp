@@ -53,7 +53,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       // Store loaded tables in a map that basically caches the loaded tables. In case the table
       // needs to be reloaded (e.g., due to modifications), we also store the file path.
-      _test_table_cache.emplace(table_name, TestTable{load_table(table_file, 10), table_file, false});
+      _test_table_cache.emplace(table_name, TableCacheEntry{load_table(table_file, 10), table_file});
 
       // Create test table and also table copy which is later used as the master to copy from.
       _sqlite->create_table_from_tbl(table_file, table_name);
@@ -82,8 +82,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
         // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
         auto reloaded_table = load_table(test_table.filename, 10);
         StorageManager::get().add_table(table_name, reloaded_table);
-        _test_table_cache[table_name].table = reloaded_table;
-        _test_table_cache[table_name].dirty = false;
+        _test_table_cache.emplace(table_name, TableCacheEntry{reloaded_table, test_table.filename});
 
         // When tables in Hyrise have (potentially) modified, the should might be true for SQLite.
         _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
@@ -97,14 +96,14 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
   // Structure to cache initially loaded tables and store their file paths
   // to reload the the table from the given tbl file whenever required.
-  struct TestTable {
+  struct TableCacheEntry {
     std::shared_ptr<Table> table;
     std::string filename;
-    bool dirty;
+    bool dirty{false};
   };
 
   inline static std::unique_ptr<SQLiteWrapper> _sqlite;
-  inline static std::map<std::string, TestTable> _test_table_cache;
+  inline static std::map<std::string, TableCacheEntry> _test_table_cache;
   inline static std::string _master_table_suffix = "_master_copy";
 };
 
