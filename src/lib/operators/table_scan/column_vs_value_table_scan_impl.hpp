@@ -24,7 +24,7 @@ namespace opossum {
 class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
  public:
   ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                       const PredicateCondition& predicate_condition, const AllTypeVariant& value);
+                             const PredicateCondition& predicate_condition, const AllTypeVariant& value);
 
   std::string description() const override;
 

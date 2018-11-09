@@ -13,8 +13,10 @@
 
 namespace opossum {
 
-ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                         const PredicateCondition& predicate_condition) : _in_table(in_table), _column_id(column_id), _predicate_condition(predicate_condition) {
+ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table,
+                                                     const ColumnID column_id,
+                                                     const PredicateCondition& predicate_condition)
+    : _in_table(in_table), _column_id(column_id), _predicate_condition(predicate_condition) {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
@@ -32,16 +34,16 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
   return matches;
 }
 
-void ColumnIsNullTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                      PosList& matches,
-                                                      const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
+    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     _scan_segment(typed_segment, chunk_id, matches, position_filter);
   });
 }
 
 void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                        const std::shared_ptr<const PosList>& position_filter) const {
+                                              const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using Type = typename decltype(type)::type;
     auto iterable = create_iterable_from_segment<Type>(typed_segment);
@@ -63,7 +65,7 @@ void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const 
 }
 
 void ColumnIsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                        const std::shared_ptr<const PosList>& position_filter) const {
+                                              const std::shared_ptr<const PosList>& position_filter) const {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter, segment.size());
     return;
@@ -110,8 +112,8 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) c
 }
 
 void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, PosList& matches,
-                                   const std::shared_ptr<const PosList>& position_filter,
-                                   const size_t segment_size) const {
+                                         const std::shared_ptr<const PosList>& position_filter,
+                                         const size_t segment_size) const {
   const auto num_rows = position_filter ? position_filter->size() : segment_size;
   for (auto chunk_offset = 0u; chunk_offset < num_rows; ++chunk_offset) {
     matches.emplace_back(RowID{chunk_id, chunk_offset});

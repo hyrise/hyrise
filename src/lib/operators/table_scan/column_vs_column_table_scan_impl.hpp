@@ -25,7 +25,7 @@ class Table;
 class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
  public:
   ColumnVsColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
-                                const PredicateCondition& predicate_condition, const ColumnID right_column_id);
+                              const PredicateCondition& predicate_condition, const ColumnID right_column_id);
 
   std::string description() const override;
 

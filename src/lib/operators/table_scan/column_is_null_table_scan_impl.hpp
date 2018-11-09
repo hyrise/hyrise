@@ -16,7 +16,7 @@ class BaseValueSegment;
 class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
  public:
   ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                      const PredicateCondition& predicate_condition);
+                            const PredicateCondition& predicate_condition);
 
   std::string description() const override;
 
