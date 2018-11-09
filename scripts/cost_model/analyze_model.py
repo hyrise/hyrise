@@ -43,6 +43,14 @@ class ModelAnalyzer:
         greater_is_better=False)
 
     @staticmethod
+    def lnq_error(y, y_pred):
+        return np.mean(np.log(y_pred / y))
+
+    lnq_error_scorer = make_scorer(
+        score_func=lnq_error,
+        greater_is_better=False)
+
+    @staticmethod
     def normalized_root_mean_squared_error(y, y_pred):
         return ModelAnalyzer.root_mean_squared_error(y, y_pred) / np.mean(y)
 
@@ -110,6 +118,7 @@ class ModelAnalyzer:
         mape = ModelAnalyzer.mean_absolute_percentage_error(y_test, y_predicted)
         mpe = ModelAnalyzer.mean_percentage_error(y_test, y_predicted)
         nrmse = ModelAnalyzer.normalized_root_mean_squared_error(y_test, y_predicted)
+        lnq = ModelAnalyzer.lnq_error(y_test, y_predicted)
         r2 = r2_score(y_test, y_predicted)
 
         labels = [
@@ -122,7 +131,8 @@ class ModelAnalyzer:
             'mean absolute percentage error',
             'mean percentage error',
             'normalized rmse',
-            'r2'
+            'lnq',
+            'r2',
         ]
 
         return pd.DataFrame.from_records([(
@@ -135,6 +145,7 @@ class ModelAnalyzer:
             mape,
             mpe,
             nrmse,
+            lnq,
             r2
         )], columns=labels)
 
