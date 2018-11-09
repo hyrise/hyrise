@@ -6,6 +6,7 @@
 #include "constant_mappings.hpp"
 #include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
@@ -452,23 +453,27 @@ NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) 
 
   return queries;
 }
-
+  
 NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   auto query_id = 0u;
 
   std::ifstream file(query_path);
   const auto filename = filesystem::path{query_path}.stem().string();
 
-  NamedQueries queries;
-  std::string query;
-  while (std::getline(file, query)) {
-    if (query.empty() || query.substr(0, 2) == "--") {
-      continue;
-    }
+  std::string content{std::istreambuf_iterator<char>(file), {}};
 
-    const auto query_name = filename + '.' + std::to_string(query_id);
-    queries.emplace_back(query_name, std::move(query));
-    query_id++;
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parse(content, &parse_result);
+  Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
+
+  size_t sql_string_offset{0u};
+  NamedQueries queries;
+  for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
+    const auto query_name = filename + '.' + std::to_string(statement_idx);
+    const auto statement_string_length = parse_result.->stringLength;
+    const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
+    sql_string_offset += statement_string_length;
+    queries.emplace_back(query_name, std::move(statement_string));
   }
 
   // More convenient names if there is only one query per file

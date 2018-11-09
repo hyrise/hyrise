@@ -127,32 +127,33 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     auto field_finished = false;
     auto row_finished = false;
 
+    auto elem = char{};
     if (pos == csv_content.size()) {
-      field_finished = true;
-      row_finished = true;
+      // Treat EOF just like newline
+      elem = _meta.config.delimiter;
       chunk_finished = true;
     } else {
+      elem = csv_content.at(pos);
       row_started = true;
-      const char elem = csv_content.at(pos);
+    }
 
-      if (elem == _meta.config.escape) {
-        Assert(in_quotes, "Cannot escape out of quotes");
-        in_escape = !in_escape;
-      } else {
-        if (in_quotes) {
-          if (!in_escape && elem == _meta.config.quote) {
-            in_quotes = false;
-          }
-        } else if (elem == _meta.config.separator) {
-          field_finished = true;
-        } else if (elem == _meta.config.delimiter) {
-          field_finished = true;
-          row_finished = true;
-        } else if (elem == _meta.config.quote) {
-          in_quotes = true;
+    if (elem == _meta.config.escape) {
+      Assert(in_quotes, "Cannot escape out of quotes");
+      in_escape = !in_escape;
+    } else {
+      if (in_quotes) {
+        if (!in_escape && elem == _meta.config.quote) {
+          in_quotes = false;
         }
-        in_escape = false;
+      } else if (elem == _meta.config.separator) {
+        field_finished = true;
+      } else if (elem == _meta.config.delimiter) {
+        field_finished = true;
+        row_finished = true;
+      } else if (elem == _meta.config.quote) {
+        in_quotes = true;
       }
+      in_escape = false;
     }
 
     if (field_finished) {
