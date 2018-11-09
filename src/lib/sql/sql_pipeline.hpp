@@ -47,11 +47,13 @@ class SQLPipeline : public Noncopyable {
   // The plans are either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQPs
   const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
 
+  // Returns all tasks for each statement that need to be executed for this query.
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
-  // get_result_tables().back()
-  std::shared_ptr<const Table> get_result_table();
+  // // Executes all tasks, waits for them to finish, and returns the resulting tables
   const std::vector<std::shared_ptr<const Table>>& get_result_tables();
+  // Shorthand for `get_result_tables().back()`
+  std::shared_ptr<const Table> get_result_table();
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
