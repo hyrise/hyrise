@@ -66,22 +66,52 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
-  values = {"h", "d", "f", "d", "a", "c", "c", "i"};
+  values = {"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   segment = std::make_shared<ValueSegment<std::string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
-  EXPECT_EQ(index->memory_consumption(), 320u);
+#ifdef __GLIBCXX_
+  // Index memory consumption depends on implementation of std::string.
+  // libstdc++:
+  //   264 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
+  // =  332
+  EXPECT_EQ(index->memory_consumption(), 332u);
+#else
+  // libc++:
+  //   808 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
+  // =  876
+  EXPECT_EQ(index->memory_consumption(), 876u);
+#endif
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
-  ASSERT_GE(std::string("").capacity(), 6u)
+  ASSERT_GE(std::string("").capacity(), 7u)
       << "Short String Optimization (SSO) is expected to hold at least 7 characters";
 
+#ifdef __GLIBCXX_
+  // Index memory consumption depends on implementation of std::string.
+  // libstdc++:
+  //   264 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
+  // =  320
   EXPECT_EQ(index->memory_consumption(), 320u);
+#else
+  // libc++:
+  //   248 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
+  // =  304
+  EXPECT_EQ(index->memory_consumption(), 304u);
+#endif
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
-  ASSERT_LT(std::string("").capacity(), 20u)
+  ASSERT_LE(std::string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold less than 20 characters";
 
   values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
@@ -89,17 +119,29 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   segment = std::make_shared<ValueSegment<std::string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
-  // Index usage:
-  //   320 (reported by cpp_btree implementation)
+#ifdef __GLIBCXX_
+  // Index memory consumption depends on implementation of std::string.
+  // libstdc++:
+  //   264 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
   // +  20 "appleappleappleapple"
   // +  21 "charliecharliecharlie"
   // +  20 "deltadeltadeltadelta"
   // +  20 "frankfrankfrankfrank"
-  // +  25 "hotelhotelhotelhotelhotel"
   // +  20 "inboxinboxinboxinbox"
-  // = 446
-
+  // +  25 "hotelhotelhotelhotelhotel"
+  // =  446
   EXPECT_EQ(index->memory_consumption(), 446u);
+#else
+  // libc++:
+  //   248 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
+  // +  25 "hotelhotelhotelhotelhotel"
+  // =  329
+  EXPECT_EQ(index->memory_consumption(), 329u);
+#endif
 }
 
 }  // namespace opossum
