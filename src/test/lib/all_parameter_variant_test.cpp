@@ -59,27 +59,27 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
   }
   {
     AllParameterVariant parameter("string");
-    auto value = type_cast<std::string>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<std::string>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, "string");
   }
   {
     AllParameterVariant parameter(static_cast<int32_t>(123));
-    auto value = type_cast<int32_t>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<int32_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int32_t>(123));
   }
   {
     AllParameterVariant parameter(static_cast<int64_t>(123456789l));
-    auto value = type_cast<int64_t>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<int64_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int64_t>(123456789l));
   }
   {
     AllParameterVariant parameter(123.4f);
-    auto value = type_cast<float>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<float>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, 123.4f);
   }
   {
     AllParameterVariant parameter(123.4);
-    auto value = type_cast<double>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<double>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, 123.4);
   }
 }

@@ -69,7 +69,7 @@ Note, that the tests/sanitizers/etc need to be executed from the project root in
 *Supports only clang on MacOS and only gcc on linux*
 
 ### Address/UndefinedBehavior Sanitizers
-`cmake -ENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
+`cmake -DENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
 Compile and run them as normal - if any issues are detected, they will be printed to the console.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
@@ -77,7 +77,7 @@ To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to 
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
 The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseTest`.
 
-`cmake -ENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer. Some sanitizers are mutually exclusive, which is why we use two configurations for this.
+`cmake -DENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer. Some sanitizers are mutually exclusive, which is why we use two configurations for this.
 
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
@@ -103,6 +103,7 @@ Contact: firstname.lastname@hpi.de
 -	Martin   Fischer
 -	Pedro    Flemming
 -	Johannes Frohnhofen
+-	Adrian   Holfter
 -	Sven     Ihde
 -	Michael  Janke
 -	Max      Jendruk
@@ -113,9 +114,11 @@ Contact: firstname.lastname@hpi.de
 -	Torben   Meyer
 -	Leander  Neiß
 -	David    Schumann
+-	Arthur   Silber
 -	Daniel   Stolpe
 -	Jonathan Striebel
 -	Nils     Thamm
 -	Carsten  Walther
+-	Lukas    Wenzel
 -	Fabian   Wiebe
 -	Tim      Zimmermann

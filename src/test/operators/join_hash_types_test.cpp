@@ -1,7 +1,5 @@
-#include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/join_hash.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
 
 namespace opossum {
@@ -13,18 +11,19 @@ namespace opossum {
  * All these tests are executed for the main numeric types.
  */
 template <typename T>
-class JoinHashTypesTest : public BaseTest {};
+class JoinHashTypesTest : public ::testing::Test {};
 
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {
   Partition<T> elements;
-  for (size_t i = 0; i < values.size(); ++i) {
-    RowID row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(i)}};
-    elements.emplace_back(PartitionedElement<T>{row_id, 17, static_cast<T>(values.at(i))});
+  for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
+    RowID row_id{ChunkID{17}, i};
+    elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
   }
 
-  auto hash_map = build<T, HashType>(
-      RadixContainer<T>{std::make_shared<Partition<T>>(elements), std::vector<size_t>{elements.size()}});
+  auto hash_map = build<T, HashType>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
+                                                       std::vector<size_t>{elements.size()},
+                                                       std::make_shared<std::vector<bool>>()});
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_map.size(), 1);
@@ -37,14 +36,14 @@ void test_hash_map(const std::vector<T>& values) {
 
   ASSERT_FALSE(hash_map.at(0).value().empty());  // hash map for first (and only) chunk exists
 
-  unsigned int counter = 0;
+  ChunkOffset offset = ChunkOffset{0};
   for (const auto& element : elements) {
-    auto probe_value = element.value;
+    const auto probe_value = element.value;
 
-    auto result_list = hash_map.at(0).value().at(probe_value);
-    RowID probe_row_id{ChunkID{17}, ChunkOffset{static_cast<unsigned int>(counter)}};
+    const auto result_list = hash_map.at(0).value().at(probe_value);
+    const RowID probe_row_id{ChunkID{17}, offset};
     EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
-    ++counter;
+    ++offset;
   }
 }
 

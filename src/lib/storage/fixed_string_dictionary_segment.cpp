@@ -20,7 +20,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
-      _decoder{_attribute_vector->create_base_decoder()} {}
+      _decompressor{_attribute_vector->create_base_decompressor()} {}
 
 template <typename T>
 const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -36,7 +36,7 @@ const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffs
 
 template <typename T>
 const std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto value_id = _decoder->get(chunk_offset);
+  const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
     return std::nullopt;
   }
@@ -88,7 +88,7 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast<std::string>(value);
+  const auto typed_value = type_cast_variant<std::string>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
@@ -99,7 +99,7 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast<std::string>(value);
+  const auto typed_value = type_cast_variant<std::string>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;

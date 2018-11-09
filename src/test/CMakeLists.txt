@@ -69,6 +69,7 @@ set(
     operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
+    operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
     operators/join_null_test.cpp
@@ -110,9 +111,10 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
+    optimizer/strategy/logical_reduction_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
-    optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.cpp
+    optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
@@ -173,6 +175,7 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/are_args_cxxopts_compatible_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
@@ -180,7 +183,7 @@ set(
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
-    utils/string_functions_test.cpp
+    utils/string_utils_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})

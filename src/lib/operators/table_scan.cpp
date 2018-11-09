@@ -212,7 +212,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
         right_value) {
       return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                 predicate_condition, type_cast<std::string>(*right_value));
+                                                 predicate_condition, type_cast_variant<std::string>(*right_value));
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>

@@ -234,6 +234,32 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
             (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
+TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
+  // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
+  // have been created with the function: <IterableClass>.with_iterators(<Callback>)
+
+  const auto table = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+
+  auto pos_list = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 0u}});
+  pos_list->guarantee_single_chunk();
+
+  auto reference_segment_a = std::make_unique<ReferenceSegment>(table, ColumnID{0u}, pos_list);
+  auto reference_segment_b = std::make_unique<ReferenceSegment>(table, ColumnID{1u}, pos_list);
+
+  // Iterators are stored in the lambda context to hide their actual type
+  std::function<int()> dereference_iterator_a;
+  std::function<int()> dereference_iterator_b;
+
+  ReferenceSegmentIterable<int>{*reference_segment_a}.with_iterators(
+      [&](auto it, auto end) { dereference_iterator_a = [=]() { return (*it).value(); }; });
+  ReferenceSegmentIterable<int>{*reference_segment_b}.with_iterators(
+      [&](auto it, auto end) { dereference_iterator_b = [=]() { return (*it).value(); }; });
+
+  // Check values of dereferenced iterators after both iterators have been created
+  EXPECT_EQ(dereference_iterator_a(), 12345);
+  EXPECT_EQ(dereference_iterator_b(), 1);
+}
+
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   auto chunk = table->get_chunk(ChunkID{0u});
 

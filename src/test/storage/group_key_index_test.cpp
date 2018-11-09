@@ -43,6 +43,8 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
   EXPECT_EQ(expected_offsets, *index_offsets);
 }
 
+TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) { EXPECT_EQ(index->memory_consumption(), 104u); }
+
 TEST_F(GroupKeyIndexTest, IndexPostings) {
   // check if there are no duplicates in postings
   auto distinct_values = std::unordered_set<ChunkOffset>(index_postings->begin(), index_postings->end());

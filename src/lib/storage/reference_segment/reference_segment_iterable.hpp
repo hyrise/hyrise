@@ -97,7 +97,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    const Accessor& _accessor;
+    const Accessor _accessor;
   };
 
   // The iterator for cases where we potentially iterate over multiple referenced chunks
