@@ -194,10 +194,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(
   for (const auto& join_predicate : join_predicates) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
     join_predicates_and_cost.emplace_back(join_predicate, _cost_estimator->estimate_plan_cost(join_node));
-
-    // need to do this since nodes do not get properly (by design :(( ) removed from plan on their destruction
-    join_node->set_left_input(nullptr);
-    join_node->set_right_input(nullptr);
   }
 
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
