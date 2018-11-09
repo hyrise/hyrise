@@ -25,19 +25,17 @@ struct SQLPipelineStatementMetrics {
 };
 
 /**
- * This is the unified interface to handle SQL queries and related operations.
- * This should rarely be used directly - use SQLPipeline instead, as it creates the correct SQLPipelineStatement(s).
- *
- * The basic idea of the SQLPipelineStatement is that it represents the flow from a single SQL statement to the result
- * table with all intermediate steps. These intermediate steps call the previous step that is required. The intermediate
+ * The SQLPipelineStatement represents the flow from a *single* SQL statement to the result table with all intermediate
+ * steps. These intermediate steps call the previous step that is required. The intermediate
  * results are all cached so calling a method twice will return the already existing value.
  *
- * The SQLPipelineStatement holds all results and only hands them out as const references. If the SQLPipelineStatement
- * goes out of scope while the results are still needed, the result references are invalid (except maybe the
- * result table).
- *
  * E.g: calling sql_pipeline_statement.get_result_table() will result in the following "call stack"
- * get_result_table -> get_tasks -> get_query_plan -> get_optimized_logical_plan -> get_parsed_sql
+ * get_result_table() -> get_tasks() -> get_pyhsical_plan_plan() -> get_optimized_logical_plan() ->
+ * get_unoptimized_logical_plan() -> get_parsed_sql()
+ *
+ * NOTE:
+ *  If a physical plan for an SQL statement is in the SQLPlanCache, it will be used instead of translating the optimized
+ *  LQP (get_optimized_logical_plans()) into a PQP. Thus, in this case, the optimized LQP and PQP could be different.
  */
 class SQLPipelineStatement : public Noncopyable {
  public:
@@ -49,25 +47,15 @@ class SQLPipelineStatement : public Noncopyable {
                        const std::shared_ptr<PreparedStatementCache>& prepared_statements,
                        const CleanupTemporaries cleanup_temporaries);
 
-  // Returns the raw SQL string.
   const std::string& get_sql_string();
-
-  // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
-
-  // Returns all unoptimized LQP roots.
   const std::shared_ptr<AbstractLQPNode>& get_unoptimized_logical_plan();
-
-  // Returns all optimized LQP roots.
   const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
 
-  // For now, this always uses the optimized LQP.
+  // The physical plan is either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQP
   const std::shared_ptr<SQLQueryPlan>& get_query_plan();
 
-  // Returns all task sets that need to be executed for this query.
   const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
-
-  // Executes all tasks, waits for them to finish, and returns the resulting table.
   const std::shared_ptr<const Table>& get_result_table();
 
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
@@ -86,9 +74,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
 
-  // The translator to be used to translate the abstract LQP into an executable PQP
   const std::shared_ptr<LQPTranslator> _lqp_translator;
-
   const std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
@@ -106,7 +92,6 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<PreparedStatementCache> _prepared_statements;
   std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;
 
-  // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;
 };
 
