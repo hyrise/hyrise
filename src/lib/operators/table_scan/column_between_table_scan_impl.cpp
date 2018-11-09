@@ -1,4 +1,4 @@
-#include "between_table_scan_impl.hpp"
+#include "column_between_table_scan_impl.hpp"
 
 #include <memory>
 #include <string>
@@ -16,15 +16,15 @@
 
 namespace opossum {
 
-BetweenTableScanImpl::BetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
+ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                            const AllTypeVariant& left_value, const AllTypeVariant& right_value)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, PredicateCondition::Between},
       _left_value{left_value},
       _right_value{right_value} {}
 
-std::string BetweenTableScanImpl::description() const { return "BetweenScan"; }
+std::string ColumnBetweenTableScanImpl::description() const { return "BetweenScan"; }
 
-void BetweenTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
+void ColumnBetweenTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
@@ -41,7 +41,7 @@ void BetweenTableScanImpl::_scan_non_reference_segment(const BaseSegment& segmen
   });
 }
 
-void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
@@ -64,7 +64,7 @@ void BetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const Chunk
   });
 }
 
-void BetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                          const std::shared_ptr<const PosList>& position_filter) const {
   const auto left_value_id = segment.lower_bound(_left_value);
   const auto right_value_id = segment.upper_bound(_right_value);
