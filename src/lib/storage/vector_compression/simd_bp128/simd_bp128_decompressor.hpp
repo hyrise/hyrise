@@ -34,6 +34,8 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   SimdBp128Decompressor(SimdBp128Decompressor&& other) = default;
   ~SimdBp128Decompressor() = default;
 
+  static constexpr bool IsVectorizable = false;  // get is not trivial
+
   uint32_t get(size_t i) final {
     if (_is_index_within_cached_block(i)) {
       return _get_within_cached_block(i);
