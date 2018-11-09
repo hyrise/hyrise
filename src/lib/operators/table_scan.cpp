@@ -27,7 +27,7 @@
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_scan/between_table_scan_impl.hpp"
+#include "table_scan/column_between_table_scan_impl"
 #include "table_scan/column_is_null_table_scan_impl.hpp"
 #include "table_scan/column_like_table_scan_impl.hpp"
 #include "table_scan/column_vs_column_table_scan_impl.hpp"

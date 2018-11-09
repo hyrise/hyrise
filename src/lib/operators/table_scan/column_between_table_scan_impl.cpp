@@ -16,17 +16,18 @@
 
 namespace opossum {
 
-ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                           const AllTypeVariant& left_value, const AllTypeVariant& right_value)
+ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
+                                                       const ColumnID column_id, const AllTypeVariant& left_value,
+                                                       const AllTypeVariant& right_value)
     : AbstractSingleColumnTableScanImpl{in_table, column_id, PredicateCondition::Between},
       _left_value{left_value},
       _right_value{right_value} {}
 
 std::string ColumnBetweenTableScanImpl::description() const { return "BetweenScan"; }
 
-void ColumnBetweenTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
-                                                       PosList& matches,
-                                                       const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
+    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const std::shared_ptr<const PosList>& position_filter) const {
   // early outs for specific NULL semantics
   if (variant_is_null(_left_value) || variant_is_null(_right_value)) {
     /**
@@ -42,7 +43,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(const BaseSegment& 
 }
 
 void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                         const std::shared_ptr<const PosList>& position_filter) const {
+                                               const std::shared_ptr<const PosList>& position_filter) const {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
       Fail("Expected ReferenceSegments to be handled before calling this method");
@@ -64,8 +65,9 @@ void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const
   });
 }
 
-void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
-                                         const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+                                               PosList& matches,
+                                               const std::shared_ptr<const PosList>& position_filter) const {
   const auto left_value_id = segment.lower_bound(_left_value);
   const auto right_value_id = segment.upper_bound(_right_value);
 

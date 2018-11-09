@@ -14,7 +14,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/table_scancolumn_between_table_scan_impl"
+#include "operators/table_scan/column_between_table_scan_impl"
 #include "operators/table_scan/column_is_null_table_scan_impl.hpp"
 #include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "operators/table_scan/column_vs_column_table_scan_impl.hpp"
