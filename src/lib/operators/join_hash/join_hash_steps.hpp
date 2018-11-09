@@ -70,7 +70,7 @@ struct RadixContainer {
   std::vector<size_t> partition_offsets;
 
   // bit vector to store NULL flags
-  std::shared_ptr<std::vector<bool>> position_is_null_value;
+  std::shared_ptr<std::vector<bool>> null_value_bitvector;
 };
 
 inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> table) {
@@ -92,9 +92,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
-  [[maybe_unused]] auto position_is_null_value = std::make_shared<std::vector<bool>>();
+  [[maybe_unused]] auto null_value_bitvector = std::make_shared<std::vector<bool>>();
   if constexpr (consider_null_values) {
-    position_is_null_value->resize(in_table->row_count());
+    null_value_bitvector->resize(in_table->row_count());
   }
 
   // fan-out
@@ -128,9 +128,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto output_iterator = elements->begin() + output_offset;
       auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
 
-      [[maybe_unused]] auto null_vector_iterator = position_is_null_value->begin();
+      [[maybe_unused]] auto null_value_bitvector_iterator = null_value_bitvector->begin();
       if constexpr (consider_null_values) {
-        null_vector_iterator += output_offset;
+        null_value_bitvector_iterator += output_offset;
       }
 
       // prepare histogram
@@ -158,13 +158,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             // In case we care about NULL values, store the NULL flag
             if constexpr (consider_null_values) {
               if (value.is_null()) {
-                *null_vector_iterator = true;
+                *null_value_bitvector_iterator = true;
               }
             }
 
             const Hash radix = hashed_value & mask;
             ++histogram[radix];
-            ++null_vector_iterator;
+            ++null_value_bitvector_iterator;
           }
           // reference_chunk_offset is only used for ReferenceSegments
           if constexpr (std::is_same_v<std::decay<decltype(typed_segment)>, ReferenceSegment>) {
@@ -187,7 +187,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}, position_is_null_value};
+  return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}, null_value_bitvector};
 }
 
 /*
@@ -256,7 +256,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
                                            const std::vector<size_t>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   if constexpr (consider_null_values) {
-    DebugAssert(radix_container.position_is_null_value->size() == radix_container.elements->size(),
+    DebugAssert(radix_container.null_value_bitvector->size() == radix_container.elements->size(),
                 "partition_radix_parallel() called with NULL consideration but radix container does not store any NULL "
                 "value information");
   }
@@ -265,7 +265,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   // materialized items of radix container
   const auto& container_elements = *radix_container.elements;
-  [[maybe_unused]] const auto& container_null_values = *radix_container.position_is_null_value;
+  [[maybe_unused]] const auto& null_value_bitvector = *radix_container.null_value_bitvector;
 
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
@@ -280,13 +280,13 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   [[maybe_unused]] auto output_nulls = std::make_shared<std::vector<bool>>();
   if constexpr (consider_null_values) {
-    output_nulls->resize(container_null_values.size());
+    output_nulls->resize(null_value_bitvector.size());
   }
 
   RadixContainer<T> radix_output;
   radix_output.elements = output;
   radix_output.partition_offsets.resize(num_partitions);
-  radix_output.position_is_null_value = output_nulls;
+  radix_output.null_value_bitvector = output_nulls;
 
   // use histograms to calculate partition offsets
   size_t offset = 0;
@@ -331,7 +331,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
         // In case NULL values have been materialized in materialize_input(),
         // we need to keep them during the radix clustering phase.
         if constexpr (consider_null_values) {
-          (*output_nulls)[output_offsets[radix]] = container_null_values[chunk_offset];
+          (*output_nulls)[output_offsets[radix]] = null_value_bitvector[chunk_offset];
         }
 
         (*output)[output_offsets[radix]] = element;
@@ -384,7 +384,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
       if constexpr (consider_null_values) {
         DebugAssert(
-            radix_container.position_is_null_value->size() == radix_container.elements->size(),
+            radix_container.null_value_bitvector->size() == radix_container.elements->size(),
             "Hash join probe called with NULL consideration but inputs do not store any NULL value information");
       }
 
@@ -419,7 +419,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             // Note, if the materialization/radix partitioning phase did not explicitely consider
             // NULL values, they will not be handed to the probe function.
             if constexpr (consider_null_values) {
-              if ((*radix_container.position_is_null_value)[partition_offset]) {
+              if ((*radix_container.null_value_bitvector)[partition_offset]) {
                 if (mode == JoinMode::Left || mode == JoinMode::Right) {
                   pos_list_left_local.emplace_back(NULL_ROW_ID);
                   pos_list_right_local.emplace_back(row.row_id);

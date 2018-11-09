@@ -81,8 +81,8 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   EXPECT_EQ(materialized_without_nulls.elements->at(6).value, 9);
   EXPECT_EQ(materialized_with_nulls.elements->at(6).value, 13);
 
-  EXPECT_EQ(materialized_with_nulls.position_is_null_value->size(), materialized_with_nulls.elements->size());
-  EXPECT_EQ(materialized_without_nulls.position_is_null_value->size(), 0);
+  EXPECT_EQ(materialized_with_nulls.null_value_bitvector->size(), materialized_with_nulls.elements->size());
+  EXPECT_EQ(materialized_without_nulls.null_value_bitvector->size(), 0);
 
   // The main difference is that the vector storing NULL
   // value flags should be set. Test if bits are set.
@@ -96,7 +96,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
       size_t counter = 0;
       iterable.with_iterators([&](auto it, auto end) {
         for (; it != end; ++it) {
-          const bool null_flag = (*materialized_with_nulls.position_is_null_value)[counter++];
+          const bool null_flag = (*materialized_with_nulls.null_value_bitvector)[counter++];
           EXPECT_EQ(null_flag, it->is_null());
         }
       });
@@ -163,7 +163,7 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const auto materialized_without_null_handling =
       materialize_input<int, int, true>(_table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count);
   // Ensure we created NULL value information
-  EXPECT_EQ(materialized_without_null_handling.position_is_null_value->size(),
+  EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(),
             materialized_without_null_handling.elements->size());
 
   const auto chunk_offsets = determine_chunk_offsets(_table_int_with_nulls->get_output());
@@ -173,7 +173,7 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   // Loaded table does not include int=0 values, so all int=0 values are NULLs
   for (auto i = size_t{0}; i < radix_cluster_result.elements->size(); ++i) {
     const auto value = radix_cluster_result.elements->at(i).value;
-    const bool null_flag = (*radix_cluster_result.position_is_null_value)[i++];
+    const bool null_flag = (*radix_cluster_result.null_value_bitvector)[i++];
     if (value == 0) {
       EXPECT_TRUE(null_flag);
     } else {
@@ -199,7 +199,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count);
   // We want to test a non-NULL-considering Radix Container, ensure we did it correctly
-  EXPECT_EQ(materialized_without_null_handling.position_is_null_value->size(), 0);
+  EXPECT_EQ(materialized_without_null_handling.null_value_bitvector->size(), 0);
 
   const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros->get_output());
 
