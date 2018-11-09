@@ -185,10 +185,13 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
     switch (node->type) {
       case LQPNodeType::Insert:
         modified_tables.insert(std::static_pointer_cast<InsertNode>(node)->table_name);
+        break;
       case LQPNodeType::Update:
         modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
+        break;
       case LQPNodeType::Delete:
         modified_tables.insert(std::static_pointer_cast<DeleteNode>(node)->table_name);
+        break;
       case LQPNodeType::CreateTable:
       case LQPNodeType::DropTable:
       case LQPNodeType::Validate:
