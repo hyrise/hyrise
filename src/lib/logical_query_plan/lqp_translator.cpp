@@ -36,6 +36,8 @@
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_mpsm.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -301,6 +303,23 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   Assert(operator_join_predicate, "Couldn't translate join predicate: "s + join_node->join_predicate->as_column_name());
 
   const auto predicate_condition = operator_join_predicate->predicate_condition;
+
+  if (join_node->join_type) {
+    switch(*(join_node->join_type)){
+        case JoinType::Hash:
+          return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+                                            operator_join_predicate->column_ids, predicate_condition);
+        case JoinType::MPSM:
+          return std::make_shared<JoinMPSM>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                 operator_join_predicate->column_ids, predicate_condition);
+        case JoinType::NestedLoop:
+          return std::make_shared<JoinNestedLoop>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                 operator_join_predicate->column_ids, predicate_condition);
+        case JoinType::SortMerge:
+          return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                 operator_join_predicate->column_ids, predicate_condition);
+    }
+  }
 
   if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
