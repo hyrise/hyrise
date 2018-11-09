@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Difference)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Difference)(benchmark::State& state) {
   _clear_cache();
   auto warm_up = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   warm_up->execute();

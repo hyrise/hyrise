@@ -38,27 +38,27 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
   }
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
   _clear_cache();
   benchmark_tablescan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
   _clear_cache();
   benchmark_tablescan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanConstant_OnDict)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant_OnDict)(benchmark::State& state) {
   _clear_cache();
   benchmark_tablescan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State& state) {
   _clear_cache();
   benchmark_tablescan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
   const auto lineitem_table = load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl");
 
   const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);

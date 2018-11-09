@@ -8,7 +8,7 @@ namespace opossum {
 class TableWrapper;
 
 // Defining the base fixture class
-class BenchmarkBasicFixture : public benchmark::Fixture {
+class MicroBenchmarkBasicFixture : public benchmark::Fixture {
  public:
   void SetUp(::benchmark::State& state) override;
   void TearDown(::benchmark::State&) override;

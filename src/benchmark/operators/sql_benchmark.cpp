@@ -16,7 +16,7 @@ namespace opossum {
 using hsql::SQLParser;
 using hsql::SQLParserResult;
 
-class SQLBenchmark : public BenchmarkBasicFixture {
+class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
     // Disable and clear all SQL caches.

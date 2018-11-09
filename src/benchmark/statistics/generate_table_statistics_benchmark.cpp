@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)(benchmark::State& state) {
   _clear_cache();
 
   const auto tables = TpchDbGenerator{state.range(0) / 1000.0f}.generate();
@@ -19,6 +19,6 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)(bench
 }
 
 // Args are scale_factor * 1000 since Args only takes ints
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)->Range(10, 750);
+BENCHMARK_REGISTER_F(MicroBenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)->Range(10, 750);
 
 }  // namespace opossum

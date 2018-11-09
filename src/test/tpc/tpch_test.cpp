@@ -88,6 +88,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 }
 
 // clang-format off
+// TODO: Use tpch generator
 INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(tpch_queries), );  // NOLINT
 // clang-format on
 

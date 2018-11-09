@@ -1,14 +1,65 @@
+#include "file_based_benchmark.hpp"
+
+#include <boost/algorithm/string.hpp>
 #include <cxxopts.hpp>
 
 #include "benchmark_runner.hpp"
 #include "benchmark_utils.hpp"
+#include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "tpch/tpch_queries.hpp"
 #include "types.hpp"
 #include "utils/are_args_cxxopts_compatible.hpp"
+#include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
+
+namespace {
+
+void _load_table_folder(const std::string& table_path) {
+  const auto is_table_file = [](const std::string& filename) {
+    return (boost::algorithm::ends_with(filename, ".csv") || boost::algorithm::ends_with(filename, ".tbl"));
+  };
+
+  filesystem::path path{table_path};
+  Assert(filesystem::exists(path), "No such file or directory '" + table_path + "'");
+
+  std::vector<std::string> tables;
+
+  // If only one file was specified, add it and return
+  if (filesystem::is_regular_file(path)) {
+    Assert(is_table_file(table_path), "Specified file '" + table_path + "' is not a .csv or .tbl file");
+    tables.push_back(table_path);
+    return tables;
+  }
+
+  // Recursively walk through the specified directory and add all files on the way
+  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
+    const auto filename = entry.path().string();
+    if (filesystem::is_regular_file(entry) && is_table_file(filename)) {
+      tables.push_back(filename);
+    }
+  }
+
+  Assert(!tables.empty(), "No tables found in '" + table_path + "'");
+
+  for (const auto& table_path_str : tables) {
+    const auto table_name = filesystem::path{table_path_str}.stem().string();
+
+    std::shared_ptr<Table> table;
+    if (boost::algorithm::ends_with(table_path_str, ".tbl")) {
+      table = load_table(table_path_str, config.chunk_size);
+    } else {
+      table = CsvParser{}.parse(table_path_str);
+    }
+
+    config.out << "- Adding table '" << table_name << "'" << std::endl;
+    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
+    StorageManager::get().add_table(table_name, table);
+  }
+}
+
+}  // namespace
 
 int main(int argc, char* argv[]) {
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
@@ -60,6 +111,9 @@ int main(int argc, char* argv[]) {
   config->out << "- Benchmarking queries from " << query_path << std::endl;
   config->out << "- Running on tables from " << table_path << std::endl;
 
+  // Load the data
+  _load_table_folder(table_path);
+
   // Run the benchmark
-  opossum::BenchmarkRunner::create(*config, table_path, query_path).run();
+  opossum::BenchmarkRunner::create(*config, query_path).run();
 }

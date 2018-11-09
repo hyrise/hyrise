@@ -21,6 +21,7 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "tpch/tpch_query_generator.hpp"
 #include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -86,19 +87,21 @@ int main(int argc, char* argv[]) {
   // Build list of query ids to be benchmarked and display it
   if (comma_separated_queries.empty()) {
     std::transform(opossum::tpch_queries.begin(), opossum::tpch_queries.end(), std::back_inserter(query_ids),
-                   [](auto& pair) { return pair.first; });
+                   [](auto& pair) { return opossum::QueryID{pair.first - 1}; });
   } else {
     // Split the input into query ids, ignoring leading, trailing, or duplicate commas
     auto query_ids_str = std::vector<std::string>();
     boost::trim_if(comma_separated_queries, boost::is_any_of(","));
     boost::split(query_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
-    std::transform(query_ids_str.begin(), query_ids_str.end(), std::back_inserter(query_ids),
-                   boost::lexical_cast<opossum::QueryID, std::string>);
+    std::transform(
+        query_ids_str.begin(), query_ids_str.end(), std::back_inserter(query_ids), [](const auto& query_id_str) {
+          return opossum::QueryID{boost::lexical_cast<opossum::QueryID::base_type, std::string>(query_id_str) - 1};
+        });
   }
 
   config->out << "- Benchmarking Queries: [ ";
   for (const auto query_id : query_ids) {
-    config->out << (query_id) << ", ";
+    config->out << (query_id + 1) << ", ";
   }
   config->out << "]" << std::endl;
 
@@ -109,13 +112,6 @@ int main(int argc, char* argv[]) {
   }
 
   // Set up TPCH benchmark
-  opossum::NamedQueries queries;
-  queries.reserve(query_ids.size());
-
-  for (const auto query_id : query_ids) {
-    queries.emplace_back("TPC-H " + std::to_string(query_id), opossum::tpch_queries.at(query_id));
-  }
-
   config->out << "- Generating TPCH Tables with scale_factor=" << scale_factor << " ..." << std::endl;
 
   const auto tables = opossum::TpchDbGenerator(scale_factor, config->chunk_size).generate();
@@ -135,5 +131,5 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(*config, queries, context).run();
+  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(), context).run();
 }
