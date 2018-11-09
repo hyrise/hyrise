@@ -49,23 +49,23 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
-  
+
   // Returns the parsed SQL string.
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
-  
+
   // Returns the unoptimized LQP for this statement.
   const std::shared_ptr<AbstractLQPNode>& get_unoptimized_logical_plan();
-    
+
   // Returns the optimized LQP for this statement.
   const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
-  
+
   // Returns the PQP for this statement.
   // The physical plan is either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQP
   const std::shared_ptr<SQLQueryPlan>& get_query_plan();
-  
+
   // Returns all tasks that need to be executed for this query.
   const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
-  
+
   // Executes all tasks, waits for them to finish, and returns the resulting table.
   const std::shared_ptr<const Table>& get_result_table();
 

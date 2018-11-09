@@ -38,19 +38,19 @@ class SQLPipeline : public Noncopyable {
               const std::shared_ptr<LQPTranslator>& lqp_translator, const std::shared_ptr<Optimizer>& optimizer,
               const std::shared_ptr<PreparedStatementCache>& prepared_statements,
               const CleanupTemporaries cleanup_temporaries);
-  
+
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_strings();
-  
+
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
-  
+
   // Returns the unoptimized LQP root for each statement.
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
-    
+
   // Returns the optimized LQP root for each statement
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
-  
+
   // Returns the Physical Plans for each statement.
   // The plans are either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQPs
   const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
