@@ -471,7 +471,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
     const auto query_name = filename + '.' + std::to_string(statement_idx);
     const auto statement_string_length = parse_result.->stringLength;
-    const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
+    const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
     queries.emplace_back(query_name, std::move(statement_string));
   }
