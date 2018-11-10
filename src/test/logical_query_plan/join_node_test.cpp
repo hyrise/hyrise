@@ -30,8 +30,8 @@ class JoinNodeTest : public ::testing::Test {
     _t_b_y = {_mock_node_b, ColumnID{1}};
 
     _join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-//    _join_node->set_left_input(_mock_node_a);
-//    _join_node->set_right_input(_mock_node_b);
+    //    _join_node->set_left_input(_mock_node_a);
+    //    _join_node->set_right_input(_mock_node_b);
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -107,11 +107,13 @@ TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
 }
 
 TEST_F(JoinNodeTest, JoinType) {
-    auto foo = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b)->join_type;
+  auto foo = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b)->join_type;
   EXPECT_EQ(foo, std::nullopt);
-  auto bar = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::Hash, _mock_node_a, _mock_node_b)->join_type;
+  auto bar =
+      JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::Hash, _mock_node_a, _mock_node_b)->join_type;
   EXPECT_EQ(bar, JoinType::Hash);
-  auto foobar = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::MPSM, _mock_node_a, _mock_node_b)->join_type;
+  auto foobar =
+      JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::MPSM, _mock_node_a, _mock_node_b)->join_type;
   EXPECT_EQ(foobar, JoinType::MPSM);
 }
 

@@ -17,6 +17,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   LQPColumnReference get_column(const std::string& name) const;
 
+  const std::vector<std::shared_ptr<LQPColumnReference>> get_columns() const;
+
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunks);
   const std::vector<ChunkID>& excluded_chunk_ids() const;
 

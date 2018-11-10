@@ -305,19 +305,19 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto predicate_condition = operator_join_predicate->predicate_condition;
 
   if (join_node->join_type) {
-    switch(*(join_node->join_type)){
-        case JoinType::Hash:
-          return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                            operator_join_predicate->column_ids, predicate_condition);
-        case JoinType::MPSM:
-          return std::make_shared<JoinMPSM>(input_left_operator, input_right_operator, join_node->join_mode,
-                                                 operator_join_predicate->column_ids, predicate_condition);
-        case JoinType::NestedLoop:
-          return std::make_shared<JoinNestedLoop>(input_left_operator, input_right_operator, join_node->join_mode,
-                                                 operator_join_predicate->column_ids, predicate_condition);
-        case JoinType::SortMerge:
-          return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-                                                 operator_join_predicate->column_ids, predicate_condition);
+    switch (*(join_node->join_type)) {
+      case JoinType::Hash:
+        return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+                                          operator_join_predicate->column_ids, predicate_condition);
+      case JoinType::MPSM:
+        return std::make_shared<JoinMPSM>(input_left_operator, input_right_operator, join_node->join_mode,
+                                          operator_join_predicate->column_ids, predicate_condition);
+      case JoinType::NestedLoop:
+        return std::make_shared<JoinNestedLoop>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                operator_join_predicate->column_ids, predicate_condition);
+      case JoinType::SortMerge:
+        return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+                                               operator_join_predicate->column_ids, predicate_condition);
     }
   }
 

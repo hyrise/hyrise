@@ -33,12 +33,10 @@ TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
   std::vector<CalibrationTableSpecification> tables = {
       CalibrationTableSpecification{"SomePath", "SomeTable", 1000, columns}};
 
-  for (int i = 0; i < 10; i++) {
-    auto queries = CalibrationQueryGenerator::generate_queries(tables);
+  auto queries = CalibrationQueryGenerator::generate_queries(tables);
 
-    for (const auto& query : queries) {
-      std::cout << query << std::endl;
-    }
+  for (const auto& query : queries) {
+    std::cout << query << std::endl;
   }
 }
 

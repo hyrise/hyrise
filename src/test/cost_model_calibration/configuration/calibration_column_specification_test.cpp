@@ -16,27 +16,29 @@
 
 namespace opossum {
 
-    class CalibrationColumnSpecificationTest : public BaseTest {
-    protected:
-        void SetUp() override {}
-    };
+class CalibrationColumnSpecificationTest : public BaseTest {
+ protected:
+  void SetUp() override {}
+};
 
-    TEST_F(CalibrationColumnSpecificationTest, ParseJson) {
-        const auto input = nlohmann::json::parse(R"({"type": "int", "encoding": "Dictionary","distinct_values": 10000})");
-        opossum::CalibrationColumnSpecification column_specification(input);
+TEST_F(CalibrationColumnSpecificationTest, ParseJson) {
+  const auto input = nlohmann::json::parse(R"({"type": "int", "encoding": "Dictionary","distinct_values": 10000})");
+  opossum::CalibrationColumnSpecification column_specification(input);
 
-        CalibrationColumnSpecification expected {DataType::Int, "uniform", false, 10000, EncodingType::Dictionary};
-        EXPECT_EQ(expected, column_specification);
-    }
+  CalibrationColumnSpecification expected{DataType::Int, "uniform", false, 10000, EncodingType::Dictionary};
+  EXPECT_EQ(expected, column_specification);
+}
 
-    TEST_F(CalibrationColumnSpecificationTest, ParseJsonWithInvalidDataType) {
-        const auto input = nlohmann::json::parse(R"({"type": "unknownType", "encoding": "Dictionary","distinct_values": 10000})");
-        EXPECT_THROW(opossum::CalibrationColumnSpecification _(input), std::exception);
-    }
+TEST_F(CalibrationColumnSpecificationTest, ParseJsonWithInvalidDataType) {
+  const auto input =
+      nlohmann::json::parse(R"({"type": "unknownType", "encoding": "Dictionary","distinct_values": 10000})");
+  EXPECT_THROW(opossum::CalibrationColumnSpecification _(input), std::exception);
+}
 
-    TEST_F(CalibrationColumnSpecificationTest, ParseJsonWithInvalidEncoding) {
-        const auto input = nlohmann::json::parse(R"({"type": "int", "encoding": "unknownEncoding","distinct_values": 10000})");
-        EXPECT_THROW(opossum::CalibrationColumnSpecification _(input), std::exception);
-    }
+TEST_F(CalibrationColumnSpecificationTest, ParseJsonWithInvalidEncoding) {
+  const auto input =
+      nlohmann::json::parse(R"({"type": "int", "encoding": "unknownEncoding","distinct_values": 10000})");
+  EXPECT_THROW(opossum::CalibrationColumnSpecification _(input), std::exception);
+}
 
 }  // namespace opossum

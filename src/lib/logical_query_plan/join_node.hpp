@@ -23,9 +23,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   explicit JoinNode(const JoinMode join_mode);
 
   // Constructor for predicated joins
-  explicit JoinNode(const JoinMode join_mode,
-          const std::shared_ptr<AbstractExpression>& join_predicate,
-          const std::optional<JoinType> join_type = {});
+  explicit JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate,
+                    const std::optional<JoinType> join_type = {});
 
   std::string description() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;

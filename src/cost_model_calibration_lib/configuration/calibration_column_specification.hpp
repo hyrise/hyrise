@@ -25,8 +25,7 @@ inline void to_json(nlohmann::json& j, const CalibrationColumnSpecification& s) 
   };
 }
 
-inline bool operator==(const CalibrationColumnSpecification& lhs, const CalibrationColumnSpecification& rhs)
-{
+inline bool operator==(const CalibrationColumnSpecification& lhs, const CalibrationColumnSpecification& rhs) {
   return std::tie(lhs.type, lhs.value_distribution, lhs.sorted, lhs.distinct_values, lhs.encoding) ==
          std::tie(rhs.type, rhs.value_distribution, rhs.sorted, rhs.distinct_values, rhs.encoding);
 }
@@ -34,7 +33,7 @@ inline bool operator==(const CalibrationColumnSpecification& lhs, const Calibrat
 inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s) {
   auto data_type_string = j.value("type", "int");
   if (data_type_to_string.right.find(data_type_string) == data_type_to_string.right.end()) {
-      Fail("Unsupported data type");
+    Fail("Unsupported data type");
   }
   s.type = data_type_to_string.right.at(data_type_string);
   s.value_distribution = j.value("value_distribution", "uniform");

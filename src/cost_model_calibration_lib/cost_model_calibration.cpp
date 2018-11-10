@@ -25,7 +25,7 @@
 namespace opossum {
 
 CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration)
-  : _configuration(configuration) {}
+    : _configuration(configuration) {}
 
 void CostModelCalibration::load_tables() const {
   const auto table_specifications = _configuration.table_specifications;
@@ -70,7 +70,8 @@ void CostModelCalibration::load_tpch_tables() const {
   }
 }
 
-const std::vector<CalibrationExample> CostModelCalibration::_calibrate_query(const std::string& query) const {
+const std::vector<CalibrationExample> CostModelCalibration::_calibrate_query(
+    const std::shared_ptr<AbstractLQPNode>& query) const {
   std::cout << query << std::endl;
   std::vector<CalibrationExample> examples{};
 

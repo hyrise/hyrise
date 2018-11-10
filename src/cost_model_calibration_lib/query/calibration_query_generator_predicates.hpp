@@ -9,64 +9,65 @@
 #include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
 
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+
 namespace opossum {
 
-using PredicateGeneratorFunctor =
-    std::function<std::optional<std::string>(const std::pair<std::string, CalibrationColumnSpecification>&,
-                                             const CalibrationTableSpecification&, const std::string&)>;
+using PredicateGeneratorFunctor = std::function<std::shared_ptr<AbstractExpression>(
+    const std::shared_ptr<StoredTableNode>&, const std::pair<std::string, CalibrationColumnSpecification>&)>;
 
-using BetweenPredicateGeneratorFunctor = std::function<std::optional<std::pair<std::string, std::string>>(
-    const std::pair<std::string, CalibrationColumnSpecification>&, const CalibrationTableSpecification&,
-    const std::string&)>;
+// Interal helper
+using BetweenPredicateGeneratorFunctor =
+    std::function<std::optional<std::pair<std::shared_ptr<AbstractExpression>, std::shared_ptr<AbstractExpression>>>(
+        const std::shared_ptr<StoredTableNode>&, const std::pair<std::string, CalibrationColumnSpecification>&)>;
 
 class CalibrationQueryGeneratorPredicates {
  public:
-  static const std::optional<std::string> generate_predicates(const PredicateGeneratorFunctor& predicate_generator,
-                                                              const CalibrationTableSpecification& table_definition,
-                                                              const size_t number_of_predicates,
-                                                              const std::string& predicate_join_keyword = "AND",
-                                                              const std::string& column_name_prefix = "");
+  static const std::shared_ptr<AbstractExpression> generate_predicates(
+      const PredicateGeneratorFunctor& predicate_generator,
+      const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+      const std::shared_ptr<StoredTableNode>& table, const size_t number_of_predicates);
 
   /*
-   * Functors to generate predicates
+   * Functors to generate predicates.
+   * They all implement 'PredicateGeneratorFunctor'
    */
-  static const std::optional<std::string> generate_between_predicate_value(
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> generate_predicate_between_value_value(
+      const std::shared_ptr<StoredTableNode>& table,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
-  static const std::optional<std::string> generate_between_predicate_column(
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> generate_predicate_between_column_column(
+      const std::shared_ptr<StoredTableNode>& table,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
-  static const std::optional<std::string> generate_predicate_column_value(
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> generate_predicate_column_value(
+      const std::shared_ptr<StoredTableNode>& table,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
-  static const std::optional<std::string> generate_predicate_column_column(
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> generate_predicate_column_column(
+      const std::shared_ptr<StoredTableNode>& table,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
-  static const std::optional<std::string> generate_predicate_like(
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> generate_predicate_like(
+      const std::shared_ptr<StoredTableNode>& table,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
-  static const std::optional<std::string> generate_equi_predicate_for_strings(
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> generate_predicate_equi_on_strings(
+      const std::shared_ptr<StoredTableNode>& table,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
  private:
-  static const std::string _generate_table_scan_predicate_value(
-      const CalibrationColumnSpecification& column_definition);
+  static const std::shared_ptr<ValueExpression> _generate_value_expression(
+      const CalibrationColumnSpecification& column_definition, const bool trailing_like = false);
 
-  static const std::optional<std::string> _generate_between(
-      const BetweenPredicateGeneratorFunctor& between_predicate_generator,
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> _generate_between(
+      const std::shared_ptr<StoredTableNode>& table, const BetweenPredicateGeneratorFunctor& predicate_generator,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
-  static const std::optional<std::string> _generate_column_predicate(
-      const PredicateGeneratorFunctor& predicate_generator,
-      const std::pair<std::string, CalibrationColumnSpecification>& filter_column,
-      const CalibrationTableSpecification& table_definition, const std::string& column_name_prefix);
+  static const std::shared_ptr<AbstractExpression> _generate_column_predicate(
+      const std::shared_ptr<StoredTableNode>& table, const PredicateGeneratorFunctor& predicate_generator,
+      const std::pair<std::string, CalibrationColumnSpecification>& filter_column);
 
   CalibrationQueryGeneratorPredicates() = default;
 };
