@@ -81,7 +81,7 @@ class AbstractTableScanImpl {
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // noinline reduces compile time drastically
   void __attribute__((noinline))
-  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
+  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it_x, const LeftIterator left_end,
                             const ChunkID chunk_id, PosList& matches_out,
                             [[maybe_unused]] RightIterator right_it) {
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled outside of this
@@ -92,6 +92,8 @@ class AbstractTableScanImpl {
     auto matches_out_index = matches_out.size();
     constexpr long SIMD_SIZE = 64;  // Assuming a SIMD register size of 512 bit
     constexpr long BLOCK_SIZE = SIMD_SIZE / sizeof(ValueID);
+   
+    auto left_it = left_it_x;
 
     // Continue doing this until we have too few rows left to run over a whole block
     while (left_end - left_it > BLOCK_SIZE) {
@@ -167,6 +169,7 @@ class AbstractTableScanImpl {
     matches_out.resize(matches_out_index);
 
     // The remainder is now done by the regular scan
+   left_it_x = left_it;
   }
 
   /**@}*/
