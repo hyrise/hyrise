@@ -81,7 +81,7 @@ class AbstractTableScanImpl {
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // noinline reduces compile time drastically
   void __attribute__((noinline))
-  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
+  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                             const ChunkID chunk_id, PosList& matches_out,
                             [[maybe_unused]] RightIterator& right_it) const {
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled outside of this
