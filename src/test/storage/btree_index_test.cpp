@@ -116,7 +116,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
 
 TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   ASSERT_LE(std::string("").capacity(), 22u)
-      << "Short String Optimization (SSO) is expected to hold at maximum 20 characters";
+      << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
   values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
             "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
