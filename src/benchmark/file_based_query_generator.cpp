@@ -5,7 +5,6 @@
 
 #include "utils/assert.hpp"
 #include "utils/filesystem.hpp"
-#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -27,6 +26,9 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
       _parse_query_file(filename);
     }
   }
+
+  _selected_queries.resize(_query_names.size());
+  std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
 void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file) {
@@ -48,10 +50,14 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file) {
   }
 
   // More convenient names if there is only one query per file
-  if (query_id == QueryID{1}) {
-    auto& query_name = *_query_names.back();
-    query_name->erase(query_name.end() - 2, query_name.end());  // -2 because .0 at end of name
+  if (query_id == 1) {
+    auto& query_name = _query_names.back();
+    query_name.erase(query_name.end() - 2, query_name.end());  // -2 because .0 at end of name
   }
+}
+
+std::string FileBasedQueryGenerator::build_query(const QueryID query_id) {
+  return _queries[query_id];
 }
 
 }  // namespace opossum

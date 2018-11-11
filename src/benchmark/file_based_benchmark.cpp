@@ -5,18 +5,23 @@
 
 #include "benchmark_runner.hpp"
 #include "benchmark_utils.hpp"
+#include "file_based_query_generator.hpp"
 #include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/storage_manager.hpp"
 #include "types.hpp"
 #include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/filesystem.hpp"
+#include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
 
-void _load_table_folder(const std::string& table_path) {
+using namespace opossum;  // NOLINT
+
+void _load_table_folder(const BenchmarkConfig& config, const std::string& table_path) {
   const auto is_table_file = [](const std::string& filename) {
     return (boost::algorithm::ends_with(filename, ".csv") || boost::algorithm::ends_with(filename, ".tbl"));
   };
@@ -30,14 +35,13 @@ void _load_table_folder(const std::string& table_path) {
   if (filesystem::is_regular_file(path)) {
     Assert(is_table_file(table_path), "Specified file '" + table_path + "' is not a .csv or .tbl file");
     tables.push_back(table_path);
-    return tables;
-  }
-
-  // Recursively walk through the specified directory and add all files on the way
-  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
-    const auto filename = entry.path().string();
-    if (filesystem::is_regular_file(entry) && is_table_file(filename)) {
-      tables.push_back(filename);
+  } else {
+    // Recursively walk through the specified directory and add all files on the way
+    for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
+      const auto filename = entry.path().string();
+      if (filesystem::is_regular_file(entry) && is_table_file(filename)) {
+        tables.push_back(filename);
+      }
     }
   }
 
@@ -112,8 +116,9 @@ int main(int argc, char* argv[]) {
   config->out << "- Running on tables from " << table_path << std::endl;
 
   // Load the data
-  _load_table_folder(table_path);
+  _load_table_folder(*config, table_path);
 
   // Run the benchmark
-  opossum::BenchmarkRunner::create(*config, query_path).run();
+  auto context = opossum::BenchmarkRunner::create_context(*config);
+  opossum::BenchmarkRunner{*config, std::make_unique<FileBasedQueryGenerator>(*config, query_path), context}.run();
 }
