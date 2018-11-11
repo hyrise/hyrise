@@ -3,7 +3,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../benchmark_basic_fixture.hpp"
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/projection.hpp"

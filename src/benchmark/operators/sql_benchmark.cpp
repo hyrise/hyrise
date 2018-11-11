@@ -1,7 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "../benchmark_basic_fixture.hpp"
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
 #include "logical_query_plan/lqp_translator.hpp"

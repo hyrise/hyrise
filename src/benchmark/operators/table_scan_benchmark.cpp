@@ -1,6 +1,6 @@
 #include <memory>
 
-#include "../benchmark_basic_fixture.hpp"
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
 #include "expression/expression_functional.hpp"
 #include "operators/table_scan.hpp"
