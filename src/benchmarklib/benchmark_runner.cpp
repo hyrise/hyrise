@@ -104,10 +104,7 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  // Can't use resize because we don't have a copy constructor
-  for (auto query_id = QueryID{0}; query_id < _query_generator->num_available_queries(); ++query_id) {
-    _query_results.emplace_back();
-  }
+  _query_results.resize(_query_generator->num_available_queries());
 
   const auto number_of_queries = _query_generator->num_selected_queries();
   auto query_ids = _query_generator->selected_queries();
@@ -183,7 +180,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
     // let a simulated client schedule the next query, as well as the total number of finished queries so far
     auto currently_running_clients = std::atomic_uint{0};
-    auto& result = _query_results[query_id];  // Initializes if it does not exist
+    auto& result = _query_results[query_id];
 
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     auto state = BenchmarkState{_config.max_duration};
@@ -429,7 +426,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-  // clang-format off
+// clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

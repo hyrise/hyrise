@@ -95,7 +95,10 @@ int main(int argc, char* argv[]) {
     boost::split(query_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
     std::transform(
         query_ids_str.begin(), query_ids_str.end(), std::back_inserter(query_ids), [](const auto& query_id_str) {
-          return opossum::QueryID{boost::lexical_cast<opossum::QueryID::base_type, std::string>(query_id_str) - 1};
+          const auto query_id =
+              opossum::QueryID{boost::lexical_cast<opossum::QueryID::base_type, std::string>(query_id_str) - 1};
+          DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
+          return query_id;
         });
   }
 
@@ -131,5 +134,5 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(), context).run();
+  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(query_ids), context).run();
 }
