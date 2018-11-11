@@ -56,8 +56,6 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file) {
   }
 }
 
-std::string FileBasedQueryGenerator::build_query(const QueryID query_id) {
-  return _queries[query_id];
-}
+std::string FileBasedQueryGenerator::build_query(const QueryID query_id) { return _queries[query_id]; }
 
 }  // namespace opossum

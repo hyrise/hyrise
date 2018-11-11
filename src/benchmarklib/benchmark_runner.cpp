@@ -104,8 +104,6 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  // TODO warmup
-
   // Can't use resize because we don't have a copy constructor
   for (auto query_id = QueryID{0}; query_id < _query_generator->num_available_queries(); ++query_id) {
     _query_results.emplace_back();
@@ -113,6 +111,10 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 
   const auto number_of_queries = _query_generator->num_selected_queries();
   auto query_ids = _query_generator->selected_queries();
+
+  for (const auto& query_id : query_ids) {
+    _warmup_query(query_id);
+  }
 
   // For shuffling the query order
   std::random_device random_device;
@@ -427,7 +429,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-// clang-format off
+  // clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
