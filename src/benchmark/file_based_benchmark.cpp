@@ -1,5 +1,3 @@
-#include "file_based_benchmark.hpp"
-
 #include <boost/algorithm/string.hpp>
 #include <cxxopts.hpp>
 

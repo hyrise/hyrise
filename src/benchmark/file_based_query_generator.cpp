@@ -17,13 +17,13 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
   if (filesystem::is_regular_file(path)) {
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
     _parse_query_file(query_path);
-  }
-
-  // Recursively walk through the specified directory and add all files on the way
-  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
-    const auto filename = entry.path().string();
-    if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
-      _parse_query_file(filename);
+  } else {
+    // Recursively walk through the specified directory and add all files on the way
+    for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
+      const auto filename = entry.path().string();
+      if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
+        _parse_query_file(filename);
+      }
     }
   }
 

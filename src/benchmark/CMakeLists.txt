@@ -48,7 +48,6 @@ add_executable(
     hyriseBenchmarkFiles
 
     file_based_benchmark.cpp
-    file_based_benchmark.hpp
     file_based_query_generator.cpp
     file_based_query_generator.hpp
 )
