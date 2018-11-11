@@ -455,8 +455,6 @@ NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) 
 }
   
 NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
-  auto query_id = 0u;
-
   std::ifstream file(query_path);
   const auto filename = filesystem::path{query_path}.stem().string();
 
@@ -470,7 +468,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   NamedQueries queries;
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
     const auto query_name = filename + '.' + std::to_string(statement_idx);
-    const auto statement_string_length = parse_result.->stringLength;
+    const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
     queries.emplace_back(query_name, std::move(statement_string));
