@@ -14,6 +14,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -25,7 +26,6 @@
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {
 
