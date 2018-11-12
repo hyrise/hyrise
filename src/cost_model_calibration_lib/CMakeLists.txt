@@ -8,6 +8,10 @@ set(
         configuration/calibration_table_specification.hpp
         cost_model_calibration.cpp
         cost_model_calibration.hpp
+        cost_model_calibration_query_runner.cpp
+        cost_model_calibration_query_runner.hpp
+        cost_model_calibration_table_generator.cpp
+        cost_model_calibration_table_generator.hpp
         cost_model_feature_extractor.cpp
         cost_model_feature_extractor.hpp
         feature/calibration_constant_hardware_features.hpp
@@ -19,6 +23,10 @@ set(
         feature/calibration_table_scan_features.hpp
         query/calibration_query_generator.cpp
         query/calibration_query_generator.hpp
+        query/calibration_query_generator_aggregates.cpp
+        query/calibration_query_generator_aggregates.hpp
+        query/calibration_query_generator_join.cpp
+        query/calibration_query_generator_join.hpp
         query/calibration_query_generator_predicates.cpp
         query/calibration_query_generator_predicates.hpp
 )

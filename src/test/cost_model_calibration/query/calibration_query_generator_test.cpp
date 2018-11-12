@@ -36,7 +36,7 @@ TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
   auto queries = CalibrationQueryGenerator::generate_queries(tables);
 
   for (const auto& query : queries) {
-    std::cout << query << std::endl;
+    query->print();
   }
 }
 

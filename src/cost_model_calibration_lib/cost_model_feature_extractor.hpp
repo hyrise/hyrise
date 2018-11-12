@@ -1,10 +1,11 @@
 #pragma once
 
-#include <json.hpp>
+#include <string>
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 
+#include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/projection.hpp"

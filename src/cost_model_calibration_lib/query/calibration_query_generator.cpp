@@ -1,24 +1,12 @@
 #include "calibration_query_generator.hpp"
 
-#include <boost/algorithm/string/join.hpp>
-#include <boost/format.hpp>
-#include <experimental/iterator>
-
-#include <algorithm>
-#include <iostream>
-#include <iterator>
 #include <random>
-#include <vector>
 
-#include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
+#include "calibration_query_generator_aggregates.hpp"
+#include "calibration_query_generator_join.hpp"
 #include "calibration_query_generator_predicates.hpp"
-#include "constant_mappings.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "utils/assert.hpp"
+#include "expression/expression_functional.hpp"
 
 namespace opossum {
 
@@ -35,7 +23,7 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
   };
 
   for (const auto& table_definition : table_definitions) {
-    // add_query_if_present(queries, CalibrationQueryGenerator::_generate_aggregate(table_definition));
+    add_query_if_present(queries, CalibrationQueryGenerator::_generate_aggregate(table_definition));
 
     add_query_if_present(
         queries,
@@ -56,9 +44,8 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
     add_query_if_present(
         queries, _generate_table_scan(table_definition, CalibrationQueryGeneratorPredicates::generate_predicate_like));
 
-    //     add_query_if_present(
-    //         queries, _generate_table_scan(table_definition,
-    //                                       CalibrationQueryGeneratorPredicates::generate_predicate_column_value, "OR"));
+    add_query_if_present(
+        queries, _generate_table_scan(table_definition, CalibrationQueryGeneratorPredicates::generate_predicate_or));
 
     add_query_if_present(queries,
                          _generate_table_scan(table_definition,
@@ -73,18 +60,19 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
 
 const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scan(
     const CalibrationTableSpecification& table_definition, const PredicateGeneratorFunctor& predicate_generator) {
-  auto table_name = table_definition.table_name;
-  const auto table = StoredTableNode::make(table_name);
-  auto select_columns = _generate_select_columns(table->get_columns());
+  const auto table = StoredTableNode::make(table_definition.table_name);
+  auto projection_node = _generate_projection(table->get_columns());
 
-  auto predicates =
+  auto predicate =
       CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, table_definition.columns, table, 3);
 
-  if (!predicates) {
+  // We are not interested in queries without Predicate
+  if (!predicate) {
     return {};
   }
 
-  return ProjectionNode::make(select_columns, PredicateNode::make(predicates, table));
+  projection_node->set_left_input(predicate);
+  return projection_node;
 }
 
 // const std::optional<std::string> CalibrationQueryGenerator::_generate_join(
@@ -166,46 +154,38 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_tabl
 //   return {};
 // }
 
-// const std::optional<std::string> CalibrationQueryGenerator::_generate_aggregate(
-//     const CalibrationTableSpecification& table_definition) {
-//   auto string_template = "SELECT COUNT(*) FROM %1% WHERE %2%;";
-//   auto table_name = table_definition.table_name;
+const std::shared_ptr<AggregateNode> CalibrationQueryGenerator::_generate_aggregate(
+    const CalibrationTableSpecification& table_definition) {
+  const auto table = StoredTableNode::make(table_definition.table_name);
 
-//   auto predicates = CalibrationQueryGeneratorPredicates::generate_predicates(
-//       CalibrationQueryGeneratorPredicates::generate_predicate_column_value, table_definition, 1);
+  const auto aggregate_node = CalibrationQueryGeneratorAggregates::generate_aggregates();
 
-//   if (!predicates) {
-//     std::cout << "Failed to generate predicate for Aggregate" << std::endl;
-//     return {};
-//   }
+  auto predicate = CalibrationQueryGeneratorPredicates::generate_predicates(
+      CalibrationQueryGeneratorPredicates::generate_predicate_column_value, table_definition.columns, table, 1);
 
-//   return boost::str(boost::format(string_template) % table_name % *predicates);
-// }
+  if (!predicate) {
+    std::cout << "Failed to generate predicate for Aggregate" << std::endl;
+    return {};
+  }
 
-// const std::vector<std::string> CalibrationQueryGenerator::_get_column_names(
-//     const std::map<std::string, CalibrationColumnSpecification>& column_definitions) {
-//   std::vector<std::string> column_names;
-//   column_names.reserve(column_definitions.size());
+  aggregate_node->set_left_input(predicate);
+  return aggregate_node;
+}
 
-//   for (const auto& elem : column_definitions) {
-//     column_names.push_back(elem.first);
-//   }
-
-//   return column_names;
-// }
-
-const std::vector<std::shared_ptr<LQPColumnReference>> CalibrationQueryGenerator::_generate_select_columns(
-    const std::vector<std::shared_ptr<LQPColumnReference>>& columns) {
+const std::shared_ptr<ProjectionNode> CalibrationQueryGenerator::_generate_projection(
+    const std::vector<LQPColumnReference>& columns) {
   static std::mt19937 engine((std::random_device()()));
 
-  std::uniform_int_distribution<u_int64_t> dist(0, columns.size() - 1);
+  std::uniform_int_distribution<u_int64_t> dist(1, columns.size());
 
-  std::vector<std::shared_ptr<LQPColumnReference>> out;
-  std::sample(columns.begin(), columns.end(), std::back_inserter(out), dist(engine), engine);
-  //  return boost::algorithm::join(out, ", ");
+  std::vector<LQPColumnReference> sampled;
+  std::sample(columns.begin(), columns.end(), std::back_inserter(sampled), dist(engine), engine);
 
-  return out;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions;
+  for (const auto& column_ref : sampled) {
+    column_expressions.push_back(expression_functional::lqp_column_(column_ref));
+  }
 
-  //  return ProjectionNode::make(expression_vector(out), );
+  return ProjectionNode::make(column_expressions);
 }
 }  // namespace opossum

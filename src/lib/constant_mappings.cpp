@@ -11,6 +11,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -66,6 +67,43 @@ const std::unordered_map<JoinType, std::string> join_type_to_string = {
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
+
+const std::unordered_map<OperatorType, std::string> operator_type_to_string = {
+    {OperatorType::Aggregate, "Aggregate"},
+    {OperatorType::Alias, "Alias"},
+    {OperatorType::Delete, "Delete"},
+    {OperatorType::Difference, "Difference"},
+    {OperatorType::ExportBinary, "ExportBinary"},
+    {OperatorType::ExportCsv, "ExportCsv"},
+    {OperatorType::GetTable, "GetTable"},
+    {OperatorType::ImportBinary, "ImportBinary"},
+    {OperatorType::ImportCsv, "ImportCsv"},
+    {OperatorType::IndexScan, "IndexScan"},
+    {OperatorType::Insert, "Insert"},
+    {OperatorType::JitOperatorWrapper, "JitOperatorWrapper"},
+    {OperatorType::JoinHash, "JoinHash"},
+    {OperatorType::JoinIndex, "JoinIndex"},
+    {OperatorType::JoinMPSM, "JoinMPSM"},
+    {OperatorType::JoinNestedLoop, "JoinNestedLoop"},
+    {OperatorType::JoinSortMerge, "JoinSortMerge"},
+    {OperatorType::Limit, "Limit"},
+    {OperatorType::Print, "Print"},
+    {OperatorType::Product, "Product"},
+    {OperatorType::Projection, "Projection"},
+    {OperatorType::Sort, "Sort"},
+    {OperatorType::TableScan, "TableScan"},
+    {OperatorType::TableWrapper, "TableWrapper"},
+    {OperatorType::UnionAll, "UnionAll"},
+    {OperatorType::UnionPositions, "UnionPositions"},
+    {OperatorType::Update, "Update"},
+    {OperatorType::Validate, "Validate"},
+    {OperatorType::CreateTable, "CreateTable"},
+    {OperatorType::CreateView, "CreateView"},
+    {OperatorType::DropTable, "DropTable"},
+    {OperatorType::DropView, "DropView"},
+    {OperatorType::ShowColumns, "ShowColumns"},
+    {OperatorType::ShowTables, "ShowTables"},
+    {OperatorType::Mock, "Mock"}};
 
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({

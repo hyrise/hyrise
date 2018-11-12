@@ -19,6 +19,7 @@ enum class AggregateFunction;
 enum class ExpressionType;
 enum class LogicalOperator;
 enum class TableType;
+enum class OperatorType;
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
 extern const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string;
@@ -27,6 +28,7 @@ extern const std::unordered_map<ExpressionType, std::string> expression_type_to_
 extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<JoinType, std::string> join_type_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
+extern const std::unordered_map<OperatorType, std::string> operator_type_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;

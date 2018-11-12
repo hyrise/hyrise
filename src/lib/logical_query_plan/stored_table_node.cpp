@@ -16,12 +16,12 @@ LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
 }
 
 // TODO(Sven): Write test
-const std::vector<std::shared_ptr<LQPColumnReference>> StoredTableNode::get_columns() const {
+const std::vector<LQPColumnReference> StoredTableNode::get_columns() const {
   const auto table = StorageManager::get().get_table(table_name);
 
-  std::vector<std::shared_ptr<LQPColumnReference>> lqp_column_references;
+  std::vector<LQPColumnReference> lqp_column_references;
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    lqp_column_references.push_back(std::make_shared<LQPColumnReference>(shared_from_this(), column_id));
+    lqp_column_references.push_back({shared_from_this(), column_id});
   }
   return lqp_column_references;
 }

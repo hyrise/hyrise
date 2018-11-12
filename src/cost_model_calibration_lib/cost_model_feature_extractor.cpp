@@ -1,24 +1,9 @@
 #include "cost_model_feature_extractor.hpp"
 
-#include <sys/resource.h>
-
-#include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
-#include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "feature/calibration_constant_hardware_features.hpp"
-#include "feature/calibration_example.hpp"
-#include "feature/calibration_runtime_hardware_features.hpp"
-#include "feature/calibration_table_scan_features.hpp"
-#include "operators/get_table.hpp"
-#include "operators/join_hash.hpp"
-#include "operators/projection.hpp"
-#include "operators/table_scan.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
 
 namespace opossum {
@@ -31,16 +16,29 @@ const CalibrationExample CostModelFeatureExtractor::extract_features(
   calibration_result.hardware_features = _extract_constant_hardware_features();
   calibration_result.runtime_features = _extract_runtime_hardware_features();
 
-  auto description = op->name();
-  if (description == "TableScan") {
-    auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
-    calibration_result.table_scan_features = _extract_features_for_operator(table_scan_op);
-  } else if (description == "Projection") {
-    auto projection_op = std::static_pointer_cast<const Projection>(op);
-    calibration_result.projection_features = _extract_features_for_operator(projection_op);
-  } else if (description == "JoinHash") {
-    auto join_hash_op = std::static_pointer_cast<const JoinHash>(op);
-    calibration_result.join_features = _extract_features_for_operator(join_hash_op);
+  auto operator_type = op->type();
+
+  // TODO(Sven): add test
+  switch (operator_type) {
+    case OperatorType::TableScan: {
+      auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
+      calibration_result.table_scan_features = _extract_features_for_operator(table_scan_op);
+      break;
+    }
+    case OperatorType::Projection: {
+      auto projection_op = std::static_pointer_cast<const Projection>(op);
+      calibration_result.projection_features = _extract_features_for_operator(projection_op);
+      break;
+    }
+    case OperatorType::JoinHash: {
+      auto join_hash_op = std::static_pointer_cast<const JoinHash>(op);
+      calibration_result.join_features = _extract_features_for_operator(join_hash_op);
+      break;
+    }
+    default: {
+      std::cout << "Unhandled operator type in CostModelFeatureExtractor: " << operator_type_to_string.at(operator_type)
+                << std::endl;
+    }
   }
 
   return calibration_result;
@@ -53,8 +51,7 @@ const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
   operator_features.execution_time_ns = execution_time_ns;
-  const auto operator_type = op->name();
-  operator_features.operator_type = operator_type;
+  operator_features.operator_type = operator_type_to_string.at(op->type());
   // Mainly for debug purposes
   operator_features.operator_description = op->description(DescriptionMode::SingleLine);
   // Inputs
@@ -149,7 +146,7 @@ ColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expressio
   auto chunk_count = left_input_table->chunk_count();
   const auto& column_id = column_expression->column_id;
 
-  // TODO(Sven): What should we do when there are different encodings across different chunks?
+  // TODO(Sven): What shall we do when there are different encodings across different chunks?
   if (chunk_count > ChunkID{0}) {
     const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
 
@@ -174,11 +171,9 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
 
   // TODO(Sven): for now, only column expressions are evaluated as they are expected to be expensive
 
-  // TODO(Sven): This expects a binary expression, or between
+  // TODO(Sven): This expects a binary or between expression
   if (predicate_arguments.size() == 2 || predicate_arguments.size() == 3) {
-    // Handling first argument
     const auto& first_argument = predicate_arguments[0];
-
     if (first_argument->type == ExpressionType::PQPColumn) {
       const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(first_argument);
       auto column_features = _extract_features_for_column_expression(left_input_table, column_expression);
@@ -188,9 +183,8 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
       features.is_scan_segment_reference_segment = column_features.is_reference_segment;
       features.scan_segment_memory_usage_bytes = column_features.segment_memory_usage_bytes;
     }
-    // Handling second argument
-    const auto& second_argument = predicate_arguments[1];
 
+    const auto& second_argument = predicate_arguments[1];
     if (second_argument->type == ExpressionType::PQPColumn) {
       features.is_column_comparison = true;
 
