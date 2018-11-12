@@ -247,10 +247,14 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/join_ordering/abstract_join_ordering_algorithm.cpp
+    optimizer/join_ordering/abstract_join_ordering_algorithm.hpp
     optimizer/join_ordering/dp_ccp.cpp
     optimizer/join_ordering/dp_ccp.hpp
     optimizer/join_ordering/enumerate_ccp.cpp
     optimizer/join_ordering/enumerate_ccp.hpp
+    optimizer/join_ordering/greedy_operator_ordering.cpp
+    optimizer/join_ordering/greedy_operator_ordering.hpp
     optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_graph_builder.cpp

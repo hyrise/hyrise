@@ -455,7 +455,7 @@ NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) 
 
   return queries;
 }
-  
+
 NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   std::ifstream file(query_path);
   const auto filename = filesystem::path{query_path}.stem().string();
@@ -538,7 +538,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-  // clang-format off
+// clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

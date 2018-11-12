@@ -336,5 +336,4 @@ TEST_F(OperatorsImportCsvTest, EmptyFile) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-
 }  // namespace opossum
