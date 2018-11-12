@@ -8,11 +8,14 @@
 
 namespace opossum {
 
+class AbstractStatisticsObject;
 enum class PredicateCondition;
 
 class BaseSegmentStatistics2 {
  public:
   virtual ~BaseSegmentStatistics2() = default;
+
+  virtual void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) = 0;
 
   virtual std::shared_ptr<BaseSegmentStatistics2> scale_with_selectivity(const Selectivity selectivity) const = 0;
   virtual std::shared_ptr<BaseSegmentStatistics2> slice_with_predicate(

@@ -87,7 +87,6 @@ void Delete::_on_commit_records(const CommitID cid) {
 void Delete::_finish_commit() {
   const auto table_statistics = _table->table_statistics2();
   DebugAssert(table_statistics, "No TableStatistics in table that was deleted from");
-  Assert(table_statistics->chunk_statistics.size() == _rows_deleted_by_chunk.size(), "Chunk count mismatch between Statistics and actual Table");
 
   for (auto chunk_id = ChunkID{0}; chunk_id < _rows_deleted_by_chunk.size(); ++chunk_id) {
     table_statistics->chunk_statistics[chunk_id]->approx_invalid_row_count += _rows_deleted_by_chunk[chunk_id];

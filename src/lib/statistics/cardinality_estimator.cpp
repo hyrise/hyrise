@@ -179,6 +179,10 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
                                                       right_input_table_statistics->chunk_statistics.size());
 
     switch (join_node->join_mode) {
+      // TODO(anybody) For now, handle outer joins just as inner joins
+      case JoinMode::Left:
+      case JoinMode::Right:
+      case JoinMode::Outer:
       case JoinMode::Inner: {
         const auto operator_join_predicate = OperatorJoinPredicate::from_join_node(*join_node);
         if (!operator_join_predicate) {
@@ -191,6 +195,8 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
           const auto left_data_type = join_node->left_input()->column_expressions().at(left_column_id)->data_type();
           const auto right_data_type = join_node->right_input()->column_expressions().at(right_column_id)->data_type();
           Assert(left_data_type == right_data_type, "NYI");
+
+
 
           resolve_data_type(left_data_type, [&](const auto data_type_t) {
             using ColumnDataType = typename decltype(data_type_t)::type;
@@ -205,18 +211,27 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
                 const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
                 right_input_chunk_statistics->segment_statistics[right_column_id]);
 
-                const auto left_histogram = CardinalityEstimator::get_best_available_histogram(*left_input_segment_statistics);
-                const auto right_histogram = CardinalityEstimator::get_best_available_histogram(*right_input_segment_statistics);
-                Assert(left_histogram && right_histogram, "NYI");
+                auto cardinality = Cardinality{0};
+                auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
 
-                const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
-                const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
+                if (left_data_type == DataType::String) {
+                  cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
+                } else {
+                  const auto left_histogram = CardinalityEstimator::get_best_available_histogram(
+                  *left_input_segment_statistics);
+                  const auto right_histogram = CardinalityEstimator::get_best_available_histogram(
+                  *right_input_segment_statistics);
+                  Assert(left_histogram && right_histogram, "NYI");
 
-                const auto join_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-                unified_left_histogram, unified_right_histogram);
-                if (!join_histogram) continue;
+                  const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
+                  const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
 
-                const auto cardinality = join_histogram->total_count();
+                  join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
+                  unified_left_histogram, unified_right_histogram);
+                  if (!join_column_histogram) continue;
+
+                  cardinality = join_column_histogram->total_count();
+                }
 
                 const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);
                 output_chunk_statistics->segment_statistics.reserve(
@@ -231,9 +246,9 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
                  */
                 for (auto column_id = ColumnID{0}; column_id < left_input_chunk_statistics->segment_statistics.size();
                      ++column_id) {
-                  if (column_id == left_column_id) {
+                  if (join_column_histogram && column_id == left_column_id) {
                     const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
-                    segment_statistics->set_statistics_object(join_histogram);
+                    segment_statistics->set_statistics_object(join_column_histogram);
                     output_chunk_statistics->segment_statistics.emplace_back(segment_statistics);
                   } else {
                     const auto &left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
@@ -244,9 +259,9 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
                 for (auto column_id = ColumnID{0}; column_id < right_input_chunk_statistics->segment_statistics.size();
                      ++column_id) {
-                  if (column_id == right_column_id) {
+                  if (join_column_histogram && column_id == right_column_id) {
                     const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
-                    segment_statistics->set_statistics_object(join_histogram);
+                    segment_statistics->set_statistics_object(join_column_histogram);
                     output_chunk_statistics->segment_statistics.emplace_back(segment_statistics);
                   } else {
                     const auto &right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
@@ -285,8 +300,15 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
   auto output_chunk_statistics = input_chunk_statistics;
 
   for (const auto &operator_scan_predicate : operator_scan_predicates) {
+    // TODO(anybody) use IsNullStatisticsObject
+    if (operator_scan_predicate.predicate_condition == PredicateCondition::IsNull) {
+      return nullptr;
+    } else if (operator_scan_predicate.predicate_condition == PredicateCondition::IsNotNull) {
+      continue;
+    }
+
     const auto predicate_input_chunk_statistics = output_chunk_statistics;
-    const auto predicate_output_chunk_statistics = std::make_shared<ChunkStatistics2>();
+    auto predicate_output_chunk_statistics = std::make_shared<ChunkStatistics2>();
     predicate_output_chunk_statistics->segment_statistics.resize(
     predicate_input_chunk_statistics->segment_statistics.size());
 
@@ -311,15 +333,28 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
       std::static_pointer_cast<SegmentStatistics2<ColumnDataType>>(base_segment_statistics);
 
       auto primary_scan_statistics_object = CardinalityEstimator::get_best_available_histogram(*segment_statistics);
+      // If there are no statistics available for this segment, assume a selectivity of 1
+      if (!primary_scan_statistics_object) {
+        predicate_output_chunk_statistics = predicate_input_chunk_statistics;
+        return;
+      }
 
       if (operator_scan_predicate.value.type() == typeid(ColumnID)) {
         right_column_id = boost::get<ColumnID>(operator_scan_predicate.value);
 
-        Assert(predicate_node->column_expressions().at(
-        left_column_id)->data_type() ==predicate_node->column_expressions().at(
-        *right_column_id)->data_type(), "CardinalityEstimator cannot handle different column data types for column-to-column-scan");
-        Assert(operator_scan_predicate.predicate_condition == PredicateCondition::Equals,
-               "CardinalityEstimator cannot handle non-equi column-to-column scans right now");
+        if (predicate_node->column_expressions().at(
+        left_column_id)->data_type() != predicate_node->column_expressions().at(
+        *right_column_id)->data_type()) {
+          predicate_output_chunk_statistics = predicate_input_chunk_statistics;
+          return;
+        }
+
+        if (operator_scan_predicate.predicate_condition != PredicateCondition::Equals) {
+          // TODO(anyone) CardinalityEstimator cannot handle non-equi column-to-column scans right now
+            predicate_output_chunk_statistics = predicate_input_chunk_statistics;
+            return;
+          }
+
 
         const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
         input_chunk_statistics->segment_statistics[left_column_id]);
@@ -337,7 +372,7 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
         bin_adjusted_left_histogram, bin_adjusted_right_histogram);
         if (!column_to_column_histogram) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
-          output_chunk_statistics = nullptr;
+          predicate_output_chunk_statistics = nullptr;
           return;
         }
 
@@ -352,9 +387,13 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
         predicate_output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics;
         predicate_output_chunk_statistics->segment_statistics[*right_column_id] = segment_statistics;
 
+      } else if (operator_scan_predicate.value.type() == typeid(ParameterID)) {
+        predicate_output_chunk_statistics = predicate_input_chunk_statistics;
+        return;
+
       } else {
         Assert(operator_scan_predicate.value.type() == typeid(AllTypeVariant),
-               "Histogram can't handle column-to-placeholder scans right now");
+               "Expected AllTypeVariant");
 
         auto value2_all_type_variant = std::optional<AllTypeVariant>{};
         if (operator_scan_predicate.value2) {
@@ -374,7 +413,7 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
         if (predicate_input_chunk_statistics->row_count == 0 ||
             cardinality_estimate.type == EstimateType::MatchesNone) {
           // No matches in this Chunk estimated; prune the ChunkStatistics
-          output_chunk_statistics = nullptr;
+          predicate_output_chunk_statistics = nullptr;
           return;
         } else {
           predicate_chunk_selectivity =
@@ -390,25 +429,28 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
     });
 
     // No matches in this Chunk estimated; prune the ChunkStatistics
-    if (!output_chunk_statistics) return nullptr;
+    if (!predicate_output_chunk_statistics) return nullptr;
 
-    /**
-     * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
-     */
-    for (auto column_id = ColumnID{0}; column_id < predicate_input_chunk_statistics->segment_statistics.size();
-         ++column_id) {
-      if (column_id == left_column_id || (right_column_id && column_id == *right_column_id)) continue;
+    // If predicate has a selectivity of != 1, scale the other columns' SegmentStatistics
+    if (predicate_output_chunk_statistics != predicate_input_chunk_statistics) {
+      /**
+       * Manipulate statistics of all columns that we DIDN'T scan on with this predicate
+       */
+      for (auto column_id = ColumnID{0}; column_id < predicate_input_chunk_statistics->segment_statistics.size();
+           ++column_id) {
+        if (column_id == left_column_id || (right_column_id && column_id == *right_column_id)) continue;
 
-      predicate_output_chunk_statistics->segment_statistics[column_id] =
-      predicate_input_chunk_statistics->segment_statistics[column_id]->scale_with_selectivity(
-      predicate_chunk_selectivity);
+        predicate_output_chunk_statistics->segment_statistics[column_id] =
+        predicate_input_chunk_statistics->segment_statistics[column_id]->scale_with_selectivity(
+        predicate_chunk_selectivity);
+      }
+
+      /**
+       * Adjust ChunkStatistics row_count
+       */
+      predicate_output_chunk_statistics->row_count =
+      predicate_input_chunk_statistics->row_count * predicate_chunk_selectivity;
     }
-
-    /**
-     * Adjust ChunkStatistics row_count
-     */
-    predicate_output_chunk_statistics->row_count =
-    predicate_input_chunk_statistics->row_count * predicate_chunk_selectivity;
 
     output_chunk_statistics = predicate_output_chunk_statistics;
   }
@@ -468,7 +510,7 @@ std::shared_ptr<AbstractHistogram<T>> CardinalityEstimator::get_best_available_h
   } else if (segment_statistics.single_bin_histogram) {
     return segment_statistics.single_bin_histogram;
   } else {
-    Fail("No statistics object available");
+    return nullptr;
   }
 }
 

@@ -761,6 +761,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
 
     case PredicateCondition::NotEquals: {
       const auto value_bin_id = _bin_for_value(value);
+      if (value_bin_id == INVALID_BIN_ID) return clone();
 
       // Do not create empty bin.
       const auto new_bin_count = bin_distinct_count(value_bin_id) == 1u ? bin_count() - 1 : bin_count();
@@ -770,15 +771,17 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
       bin_heights.resize(new_bin_count);
       bin_distinct_counts.resize(new_bin_count);
 
-      for (auto bin_id = BinID{0}; bin_id < new_bin_count; ++bin_id) {
+      auto old_bin_id = BinID{0};
+      auto new_bin_id = BinID{0};
+      for (; old_bin_id < bin_count(); ++old_bin_id) {
         // TODO(anyone) we currently do not manipulate the bin bounds if `variant_value` equals such a bound. We would
         //              expect the accuracy improvement to be minimal, if we did. Also, this would be hard to do for
         //              strings.
-        bin_minima[bin_id] = bin_minimum(bin_id);
-        bin_maxima[bin_id] = bin_maximum(bin_id);
+        bin_minima[new_bin_id] = bin_minimum(old_bin_id);
+        bin_maxima[new_bin_id] = bin_maximum(old_bin_id);
 
-        if (bin_id == value_bin_id) {
-          const auto distinct_count = bin_distinct_count(bin_id);
+        if (old_bin_id == value_bin_id) {
+          const auto distinct_count = bin_distinct_count(old_bin_id);
 
           // Do not create empty bin.
           if (distinct_count == 1) {
@@ -788,12 +791,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
           const auto value_count =
               estimate_cardinality(PredicateCondition::Equals, variant_value, variant_value2).cardinality;
 
-          bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(bin_height(bin_id) - value_count));
-          bin_distinct_counts[bin_id] = distinct_count - 1;
+          bin_heights[new_bin_id] = static_cast<HistogramCountType>(std::ceil(bin_height(old_bin_id) - value_count));
+          bin_distinct_counts[new_bin_id] = distinct_count - 1;
         } else {
-          bin_heights[bin_id] = bin_height(bin_id);
-          bin_distinct_counts[bin_id] = bin_distinct_count(bin_id);
+          bin_heights[new_bin_id] = bin_height(old_bin_id);
+          bin_distinct_counts[new_bin_id] = bin_distinct_count(old_bin_id);
         }
+
+        ++new_bin_id;
       }
     } break;
 
@@ -923,7 +928,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      Fail("PredicateCondition not yet supported by Histograms");
+      return clone();
 
     case PredicateCondition::In:
     case PredicateCondition::NotIn:

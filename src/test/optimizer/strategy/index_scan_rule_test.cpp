@@ -14,8 +14,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
+#include "statistics/segment_statistics2.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
@@ -43,12 +45,13 @@ class IndexScanRuleTest : public StrategyBaseTest {
     c = stored_table_node->get_column("c");
   }
 
-  std::shared_ptr<TableStatistics> generate_mock_statistics(float row_count = 0.0f) {
-    std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
-    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
-    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
-    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20'000));
-    return std::make_shared<TableStatistics>(TableStatistics{TableType::Data, row_count, column_statistics});
+  void generate_mock_statistics(float row_count = 10.0f) {
+    const auto chunk_statistics = table->table_statistics2()->chunk_statistics[0];
+    chunk_statistics->row_count = row_count;
+
+    chunk_statistics->segment_statistics[0]->set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
+    chunk_statistics->segment_statistics[1]->set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
+    chunk_statistics->segment_statistics[2]->set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 20'000, row_count, 10));
   }
 
   std::shared_ptr<IndexScanRule> rule;
@@ -58,8 +61,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
-  auto statistics_mock = generate_mock_statistics();
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics();
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -72,8 +74,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = generate_mock_statistics();
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics();
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -86,8 +87,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
   table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
 
-  auto statistics_mock = generate_mock_statistics();
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics();
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -98,8 +98,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
-  auto statistics_mock = generate_mock_statistics();
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics();
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(c, b));
   predicate_node_0->set_left_input(stored_table_node);
@@ -112,8 +111,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = generate_mock_statistics(80'000);
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics(80'000);
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -126,8 +124,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
   table->create_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
 
-  auto statistics_mock = generate_mock_statistics(1'000'000);
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics(1'000'000);
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -140,8 +137,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = generate_mock_statistics(1'000'000);
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics(1'000'000);
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
   predicate_node_0->set_left_input(stored_table_node);
@@ -154,8 +150,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = generate_mock_statistics(1'000'000);
-  table->set_table_statistics(statistics_mock);
+  generate_mock_statistics(1'000'000);
 
   auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
   predicate_node_0->set_left_input(stored_table_node);

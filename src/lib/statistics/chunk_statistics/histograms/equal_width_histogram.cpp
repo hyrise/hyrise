@@ -299,6 +299,8 @@ BinID EqualWidthHistogram<T>::_next_bin_for_value(const T& value) const {
   }
 
   const auto index = _bin_for_value(value);
+  if (index == INVALID_BIN_ID) return INVALID_BIN_ID;
+
   return index < bin_count() - 1 ? index + 1 : INVALID_BIN_ID;
 }
 

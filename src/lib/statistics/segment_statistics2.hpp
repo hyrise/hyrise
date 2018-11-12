@@ -26,7 +26,7 @@ class RangeFilter;
 template <typename T>
 class SegmentStatistics2 : public BaseSegmentStatistics2 {
  public:
-  void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object);
+  void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) override;
   std::shared_ptr<BaseSegmentStatistics2> scale_with_selectivity(const Selectivity selectivity) const override;
   std::shared_ptr<BaseSegmentStatistics2> slice_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
