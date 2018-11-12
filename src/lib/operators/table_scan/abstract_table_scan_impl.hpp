@@ -45,9 +45,12 @@ class AbstractTableScanImpl {
     // AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for `IS_DEBUG`
     // is redudant, it makes people aware of this.
     //
-    // Unfortunately, vectorization is only really beneficial when we can use AVX-512VL. However, since the SIMD branch
-    // is not slower on CPUs without AVX-512VL, we use it in any case. This reduces the divergence across different
-    // systems. Finally, we only use the vectorized scan for tables with a certain size. This is because firing up the
+    // Unfortunately, vectorization is only really beneficial when we can use AVX-512VL. In some cases, running it
+    // without AVX-512VL is slower than the straight-forward SISD version. To account for this while still making sure
+    // that the scan can be developed and tested on non-AVX-512VL machines, we do at least one SIMD iteration even on
+    // non-AVX512VL machines, if it would be used on machines with that feature, too.
+    //
+    // Furthermore, we only use the vectorized scan for tables with a certain size. This is because firing up the
     // AVX units has some cost on current CPUs. The chosen boundary is just an educated guess - a machine-dependent
     // fine-tuning could find better values, but as long as scans with a handful of results are not vectorized, the
     // benefits of fine-tuning should not be too big.
@@ -158,6 +161,10 @@ class AbstractTableScanImpl {
           matches_out[matches_out_index++].chunk_offset = offsets[i] - 1;
         }
       }
+
+      // We have done one iteration. As described above, we stop the SIMD code here, because it won't be faster but
+      // might be significantly slower.
+      break;
 #else
       // Fast path for AVX512VL systems
       auto& offsets_m512i = *reinterpret_cast<__m512i*>(&offsets);
