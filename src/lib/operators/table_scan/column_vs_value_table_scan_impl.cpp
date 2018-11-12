@@ -55,7 +55,7 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseSegment& segment, const
           return predicate_comparator(iterator_value.value(), typed_value);
         };
         segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, false);
+          _scan_with_iterators<true, false>(comparator, it, end, chunk_id, matches);
         });
       });
     }
@@ -99,7 +99,7 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches, true);
+      _scan_with_iterators<false, true>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -118,10 +118,10 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
           _predicate_condition == PredicateCondition::GreaterThanEquals) {
         // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
         // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, false);
+        _scan_with_iterators<true, false>(comparator, it, end, chunk_id, matches);
       } else {
         // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
-        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);
+        _scan_with_iterators<false, true>(comparator, it, end, chunk_id, matches);
       }
     });
   });

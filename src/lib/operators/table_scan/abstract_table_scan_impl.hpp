@@ -24,22 +24,22 @@ class AbstractTableScanImpl {
    * @{
    */
 
-  template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator>
+  template <bool CheckForNull, bool FunctorIsVectorizable, typename BinaryFunctor, typename LeftIterator>
   void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, bool functor_is_vectorizable) const {
+                       const ChunkID chunk_id, PosList& matches_out) const {
     // Can't use a default argument for this because default arguments are non-type deduced contexts
     auto false_type = std::false_type{};
-    _scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, functor_is_vectorizable,
-                                       false_type);
+    _scan_with_iterators<CheckForNull, FunctorIsVectorizable>(func, left_it, left_end, chunk_id, matches_out,
+                                                              false_type);
   }
 
-  template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
+  template <bool CheckForNull, bool FunctorIsVectorizable, typename BinaryFunctor, typename LeftIterator,
+            typename RightIterator>
   // noinline reduces compile time drastically
   void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] bool functor_is_vectorizable,
-                       [[maybe_unused]] RightIterator right_it) const {
+                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) const {
     // SIMD has no benefit for iterators that are too complex (mostly iterators that do not operate on contiguous
     // storage). Currently, it is only enabled for std::vector (as used by FixedSizeByteAlignedVector). Also, the
     // AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for `IS_DEBUG`
@@ -55,8 +55,8 @@ class AbstractTableScanImpl {
     // See the SIMD method for a comment on IsVectorizable.
 
 #if !IS_DEBUG
-    if constexpr (LeftIterator::IsVectorizable) {
-      if (functor_is_vectorizable && left_end - left_it > 10'000) {
+    if constexpr (LeftIterator::IsVectorizable && FunctorIsVectorizable) {
+      if (left_end - left_it > 10'000) {
         _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
       }
     }
@@ -84,10 +84,9 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // noinline reduces compile time drastically
-  void
-  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
-                            const ChunkID chunk_id, PosList& matches_out,
-                            [[maybe_unused]] RightIterator& right_it) const {
+  void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
+                                 const ChunkID chunk_id, PosList& matches_out,
+                                 [[maybe_unused]] RightIterator& right_it) const {
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled outside of this
     // optimization. For each row, we write 0 to `offsets` if the row does not match, or `chunk_offset + 1` if the row
     // matches. The reason why we need `+1` is given below. This can be parallelized using auto-vectorization/SIMD.
@@ -107,7 +106,6 @@ class AbstractTableScanImpl {
 
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
-
       // The pragmas promise to the compiler that there are no data dependencies within the loop. If you run into any
       // issues with the optimization, make sure that you only have only set IsVectorizable on iterators that use
       // linear storage and where the access methods do not change any state.

@@ -59,7 +59,7 @@ void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const
       auto iterable = create_iterable_from_segment(typed_segment);
 
       iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-        _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches, false);
+        _scan_with_iterators<true, false>(comparator, left_it, left_end, chunk_id, matches);
       });
     }
   });
@@ -78,7 +78,7 @@ void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
     // all values match
     column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches, true);
+      _scan_with_iterators<true, true>(always_true, left_it, left_end, chunk_id, matches);
     });
 
     return;
@@ -105,7 +105,7 @@ void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
     // No need to check for NULL because NULL would be represented as a value ID outside of our range
-    _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches, true);
+    _scan_with_iterators<false, true>(comparator, left_it, left_end, chunk_id, matches);
   });
 }
 

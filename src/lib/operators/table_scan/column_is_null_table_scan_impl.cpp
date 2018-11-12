@@ -54,11 +54,11 @@ void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const 
     if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
       iterable.with_iterators([&](auto it, auto end) {
         // _scan_with_iterators should not check for null - we do that ourselves
-        _scan_with_iterators<false>(functor, it, end, chunk_id, matches, false);
+        _scan_with_iterators<false, false>(functor, it, end, chunk_id, matches);
       });
     } else {
       iterable.with_iterators(position_filter, [&](auto it, auto end) {
-        _scan_with_iterators<false>(functor, it, end, chunk_id, matches, false);
+        _scan_with_iterators<false, false>(functor, it, end, chunk_id, matches);
       });
     }
   });
@@ -82,7 +82,7 @@ void ColumnIsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, c
   const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
   iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<false>(functor, it, end, chunk_id, matches, false);
+    _scan_with_iterators<false, false>(functor, it, end, chunk_id, matches);
   });
 }
 

@@ -49,7 +49,7 @@ void ColumnLikeTableScanImpl::_scan_segment(const BaseSegment& segment, const Ch
 
         auto iterable = create_iterable_from_segment(typed_segment);
         iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(functor, it, end, chunk_id, matches, false);
+          _scan_with_iterators<true, false>(functor, it, end, chunk_id, matches);
         });
       });
     }
@@ -78,7 +78,7 @@ void ColumnLikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches, true);
+      _scan_with_iterators<false, true>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -94,7 +94,7 @@ void ColumnLikeTableScanImpl::_scan_segment(const BaseDictionarySegment& segment
   };
 
   attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, matches, false);
+    _scan_with_iterators<true, false>(dictionary_lookup, it, end, chunk_id, matches);
   });
 }
 
