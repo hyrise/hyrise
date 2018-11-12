@@ -388,14 +388,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
-  return std::make_shared<Insert>(insert_node->table_name(), input_operator);
+  return std::make_shared<Insert>(insert_node->table_name, input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
-  return std::make_shared<Delete>(delete_node->table_name(), input_operator);
+  return std::make_shared<Delete>(delete_node->table_name, input_operator);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
@@ -439,7 +439,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   DebugAssert(node->left_input() == nullptr, "ShowColumns should not have an input operator.");
   const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
-  return std::make_shared<ShowColumns>(show_columns_node->table_name());
+  return std::make_shared<ShowColumns>(show_columns_node->table_name);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(

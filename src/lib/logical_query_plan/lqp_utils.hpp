@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <queue>
+#include <set>
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -41,6 +42,11 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ * @return all names of tables that have been accessed in modifying nodes (e.g., InsertNode, UpdateNode)
+ */
+std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes
