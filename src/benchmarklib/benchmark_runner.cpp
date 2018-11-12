@@ -451,6 +451,8 @@ NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) 
     }
   }
 
+  std::sort(queries.begin(), queries.end(), [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+
   return queries;
 }
   
