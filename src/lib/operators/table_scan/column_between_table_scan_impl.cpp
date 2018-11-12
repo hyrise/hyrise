@@ -94,7 +94,8 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-    _scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, matches, true);
+    // No need to check for NULL because NULL would be represented as a value ID outside of our range
+    _scan_with_iterators<false>(comparator, left_it, left_end, chunk_id, matches, true);
   });
 }
 
