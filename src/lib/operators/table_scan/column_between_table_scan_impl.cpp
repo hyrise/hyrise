@@ -81,13 +81,13 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  // TODO doc/cleanup NULL ValueID ambiguity
   if (left_value_id >= static_cast<ValueID>(segment.unique_values_count()) || left_value_id == right_value_id) {
     // no values match
     return;
   }
 
   if (right_value_id == INVALID_VALUE_ID) {
+    // *_bound returns INVALID_VALUE_ID for NULL, while the dictionary uses segment.unique_values_count (#1283).
     right_value_id = static_cast<ValueID>(segment.unique_values_count());
   }
 
