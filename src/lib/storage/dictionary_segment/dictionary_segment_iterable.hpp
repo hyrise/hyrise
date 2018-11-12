@@ -64,7 +64,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _chunk_offset{chunk_offset} {}
 
     static constexpr bool IsVectorizable = false;  // If we iterate over the segment, not its attribute vector, we have
-                                                   // look up every value in the dictionary
+                                                   // to look up every value in the dictionary
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

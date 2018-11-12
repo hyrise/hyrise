@@ -118,7 +118,7 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
           _predicate_condition == PredicateCondition::GreaterThanEquals) {
         // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
         // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, true);
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, false);
       } else {
         // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
         _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);

@@ -12,7 +12,7 @@ class FixedSizeByteAlignedDecompressor : public BaseVectorDecompressor {
   explicit FixedSizeByteAlignedDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
   ~FixedSizeByteAlignedDecompressor() final = default;
 
-  static constexpr bool IsVectorizable = !std::is_same_v<UnsignedIntType, uint8_t>;
+  static constexpr bool IsVectorizable = true;
 
   uint32_t get(size_t i) final { return _data[i]; }
   size_t size() const final { return _data.size(); }
