@@ -18,13 +18,13 @@
 #include "storage/storage_manager.hpp"
 
 #include "tpch/tpch_db_generator.hpp"
-#include "tpch/tpch_queries.hpp"
+#include "tpch/tpch_query_generator.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> {
+class TPCHTest : public BaseTestWithParam<QueryID> {
  public:
   void SetUp() override { _sqlite_wrapper = std::make_shared<SQLiteWrapper>(); }
 
@@ -44,14 +44,14 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
-  size_t query_idx;
-  std::string query;
-  std::tie(query_idx, query) = GetParam();
+  const auto query_idx = GetParam();
+  const auto tpch_idx = query_idx + 1;
+  const auto query = TPCHQueryGenerator{}.build_query(query_idx);
 
   /**
    * Generate the TPC-H tables with a scale factor appropriate for this query
    */
-  const auto scale_factor = scale_factor_by_query.at(query_idx);
+  const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
   TpchDbGenerator{scale_factor, 10'000}.generate_and_store();
   for (const auto& tpch_table_name : tpch_table_names) {
@@ -59,14 +59,14 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(query_idx));
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx));
 
   std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
 
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
 
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
-  if (query_idx == 15) {
+  if (tpch_idx == 15) {
     Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15") sql_pipeline.get_result_table();
 
     hyrise_result_table = sql_pipeline.get_result_tables()[1];
@@ -88,7 +88,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(tpch_queries), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()), );  // NOLINT
 // clang-format on
 
 }  // namespace opossum
