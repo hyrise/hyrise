@@ -15,7 +15,6 @@ namespace opossum {
 
 class OperatorsPrintTest : public BaseTest {
  protected:
-
   void SetUp() override {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column_1", DataType::Int);
