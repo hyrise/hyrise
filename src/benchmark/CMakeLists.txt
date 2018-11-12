@@ -45,7 +45,7 @@ target_link_libraries(
 
 # General purpose benchmark runner
 add_executable(
-    hyriseBenchmarkFiles
+    hyriseBenchmarkFileBased
 
     file_based_benchmark.cpp
     file_based_query_generator.cpp
@@ -53,7 +53,7 @@ add_executable(
 )
 
 target_link_libraries(
-    hyriseBenchmarkFiles
+    hyriseBenchmarkFileBased
 
     hyrise
     hyriseBenchmarkLib

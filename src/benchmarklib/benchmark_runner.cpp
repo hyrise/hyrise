@@ -104,9 +104,9 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  _query_results.resize(_query_generator->num_available_queries());
+  _query_results.resize(_query_generator->available_query_count());
 
-  const auto number_of_queries = _query_generator->num_selected_queries();
+  const auto number_of_queries = _query_generator->selected_query_count();
   auto query_ids = _query_generator->selected_queries();
 
   for (const auto& query_id : query_ids) {
@@ -169,7 +169,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
-  _query_results.resize(_query_generator->num_available_queries());
+  _query_results.resize(_query_generator->available_query_count());
 
   for (const auto& query_id : _query_generator->selected_queries()) {
     _warmup_query(query_id);
@@ -426,7 +426,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-// clang-format off
+  // clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

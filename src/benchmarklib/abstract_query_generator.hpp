@@ -24,10 +24,10 @@ class AbstractQueryGenerator {
   const std::vector<std::string>& query_names() const;
 
   // Returns the number of queries supported by the benchmark
-  QueryID::base_type num_available_queries() const;
+  size_t available_query_count() const;
 
   // Returns the number of queries selected for execution
-  QueryID::base_type num_selected_queries() const;
+  size_t selected_query_count() const;
 
   // Returns the QueryIDs of all selected queries
   const std::vector<QueryID>& selected_queries() const;
