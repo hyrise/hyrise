@@ -221,22 +221,21 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_single_column_table_scan_impl.cpp
+    operators/table_scan/abstract_single_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
-    operators/table_scan/base_single_column_table_scan_impl.cpp
-    operators/table_scan/base_single_column_table_scan_impl.hpp
-    operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/between_table_scan_impl.cpp
-    operators/table_scan/between_table_scan_impl.hpp
-    operators/table_scan/column_comparison_table_scan_impl.cpp
-    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/column_between_table_scan_impl.cpp
+    operators/table_scan/column_between_table_scan_impl.hpp
+    operators/table_scan/column_is_null_table_scan_impl.cpp
+    operators/table_scan/column_is_null_table_scan_impl.hpp
+    operators/table_scan/column_like_table_scan_impl.cpp
+    operators/table_scan/column_like_table_scan_impl.hpp
+    operators/table_scan/column_vs_column_table_scan_impl.cpp
+    operators/table_scan/column_vs_column_table_scan_impl.hpp
+    operators/table_scan/column_vs_value_table_scan_impl.cpp
+    operators/table_scan/column_vs_value_table_scan_impl.hpp
     operators/table_scan/expression_evaluator_table_scan_impl.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.hpp
-    operators/table_scan/is_null_table_scan_impl.cpp
-    operators/table_scan/is_null_table_scan_impl.hpp
-    operators/table_scan/like_table_scan_impl.cpp
-    operators/table_scan/like_table_scan_impl.hpp
-    operators/table_scan/single_column_table_scan_impl.cpp
-    operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
