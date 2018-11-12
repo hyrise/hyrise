@@ -6,6 +6,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
@@ -24,20 +25,20 @@ class GreedyOperatorOrderingTest : public BaseTest {
     node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
 
     // All columns have the same statistics, only Table row counts differ
-    const auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 100, 0, 100);
+    const auto column_statistics = std::static_pointer_cast<const BaseColumnStatistics>(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 100, 0, 100));
 
     const auto table_statistics_a = std::make_shared<TableStatistics>(
         TableType::Data, 5'000,
-        std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics, column_statistics});
+        std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics, column_statistics});
 
     const auto table_statistics_b = std::make_shared<TableStatistics>(
-        TableType::Data, 1'000, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+        TableType::Data, 1'000, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
     const auto table_statistics_c = std::make_shared<TableStatistics>(
-        TableType::Data, 200, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+        TableType::Data, 200, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
     const auto table_statistics_d = std::make_shared<TableStatistics>(
-        TableType::Data, 500, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+        TableType::Data, 500, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
     node_a->set_statistics(table_statistics_a);
     node_b->set_statistics(table_statistics_b);
@@ -66,16 +67,16 @@ TEST_F(GreedyOperatorOrderingTest, Chain) {
                               std::vector<JoinGraphEdge>{edge_a, edge_ab, edge_bc, edge_cd}
   };
 
-  const auto greedy_operator_ordering = GreedyOperatorOrdering{cost_estimator};
+  auto greedy_operator_ordering = GreedyOperatorOrdering{cost_estimator};
   const auto actual_lqp = greedy_operator_ordering(join_graph);
 
   actual_lqp->print();
-
-  // clang-format off
-  const auto expected_lqp =
-
-
-  // clang-format on
+//
+//  // clang-format off
+//  const auto expected_lqp =
+//
+//
+//  // clang-format on
 
 
 

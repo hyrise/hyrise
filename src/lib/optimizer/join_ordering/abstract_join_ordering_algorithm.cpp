@@ -51,7 +51,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
 const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const {
+const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates) const {
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *

@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-DpCcp::DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
+DpCcp::DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : AbstractJoinOrderingAlgorithm(cost_estimator) {}
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) {
   Assert(!join_graph.vertices.empty(), "Code below relies on the JoinGraph having vertices");

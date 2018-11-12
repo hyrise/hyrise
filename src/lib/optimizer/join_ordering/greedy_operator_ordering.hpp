@@ -1,8 +1,10 @@
 #pragma once
 
+#include <map>
 #include <memory>
 
 #include "abstract_join_ordering_algorithm.hpp"
+#include "join_graph_edge.hpp"
 
 namespace opossum {
 
@@ -24,6 +26,10 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
    *                         * the subplans from the vertices below them
    */
   std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph);
+
+ private:
+  std::shared_ptr<AbstractLQPNode> _build_plan_for_edge(const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
+                                                                               const JoinGraphEdge& edge) const;
 };
 
 }  // namespace opossum
