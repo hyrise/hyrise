@@ -48,15 +48,15 @@ class AbstractTableScanImpl {
     // Unfortunately, vectorization is only really beneficial when we can use AVX-512VL. However, since the SIMD branch
     // is not slower on CPUs without AVX-512VL, we use it in any case. This reduces the divergence across different
     // systems. Finally, we only use the vectorized scan for tables with a certain size. This is because firing up the
-    // AVX units has some cost on current CPUs. Using 1000 as the boundary is just an educated guess - a
-    // machine-dependent fine-tuning could find better values, but as long as scans with a handful of results are not
-    // vectorized, the benefits of fine-tuning should not be too big.
+    // AVX units has some cost on current CPUs. The chosen boundary is just an educated guess - a machine-dependent
+    // fine-tuning could find better values, but as long as scans with a handful of results are not vectorized, the
+    // benefits of fine-tuning should not be too big.
     //
     // See the SIMD method for a comment on IsVectorizable.
 
 #if !HYRISE_DEBUG
     if constexpr (LeftIterator::IsVectorizable) {
-      if (functor_is_vectorizable && left_end - left_it > 1000) {
+      if (functor_is_vectorizable && left_end - left_it > 10'000) {
         _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
       }
     }
@@ -84,7 +84,7 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // noinline reduces compile time drastically
-  void __attribute__((noinline))
+  void
   _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                             const ChunkID chunk_id, PosList& matches_out,
                             [[maybe_unused]] RightIterator right_it) {
@@ -99,9 +99,14 @@ class AbstractTableScanImpl {
     constexpr size_t SIMD_SIZE = 64;  // Assuming a maximum SIMD register size of 512 bit
     constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ValueID);
 
+    // Make sure that we have enough space for the first iteration. We might resize later on.
+    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
+
+    alignas(SIMD_SIZE) std::array<ChunkOffset, SIMD_SIZE / sizeof(ChunkOffset)> offsets;
+    offsets.fill(ChunkOffset{0});
+
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
-      alignas(SIMD_SIZE) std::array<ChunkOffset, SIMD_SIZE / sizeof(ChunkOffset)> offsets;
 
       // The pragmas promise to the compiler that there are no data dependencies within the loop. If you run into any
       // issues with the optimization, make sure that you only have only set IsVectorizable on iterators that use
@@ -147,11 +152,6 @@ class AbstractTableScanImpl {
         if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
       }
 
-      // As we write directly into the matches_out vector, make sure that is has enough size
-      if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
-        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
-      }
-
       // Now write the matches into matches_out.
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
@@ -162,15 +162,16 @@ class AbstractTableScanImpl {
       }
 #else
       // Fast path for AVX512VL systems
+      auto& offsets_m512i = *reinterpret_cast<__m512i*>(&offsets);
 
       // Build a mask where a set bit indicates that the row in `offsets` matched the criterion.
-      const auto mask = _mm512_cmpneq_epu32_mask(*reinterpret_cast<__m512i*>(&offsets), __m512i{});
+      const auto mask = _mm512_cmpneq_epu32_mask(offsets_m512i, __m512i{});
 
       if (!mask) continue;
 
       // Compress `offsets`, i.e., move all values where the mask is set to 1 to the front. This is essentially
       // std::remove(offsets.begin(), offsets.end(), ChunkOffset{0});
-      *reinterpret_cast<__m512i*>(&offsets) = _mm512_maskz_compress_epi32(mask, *reinterpret_cast<__m512i*>(&offsets));
+      offsets_m512i = _mm512_maskz_compress_epi32(mask, offsets_m512i);
 
       // Copy all offsets into `matches_out` - even those that are set to 0. This does not matter because they will
       // be overwritten in the next round anyway. Copying more than necessary is better than stopping at the number
@@ -182,6 +183,11 @@ class AbstractTableScanImpl {
       // Count the number of matches and increase the index of the next write to matches_out accordingly
       matches_out_index += __builtin_popcount(mask);
 #endif
+
+      // As we write directly into the matches_out vector, make sure that is has enough size
+      if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
+        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
+      }
     }
 
     // Remove all entries that we have overallocated
