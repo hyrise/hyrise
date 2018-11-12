@@ -40,15 +40,19 @@ class AbstractTableScanImpl {
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
                        const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] bool functor_is_vectorizable,
                        [[maybe_unused]] RightIterator& right_it) const {
-    // SIMD has no benefit for iterators that block vectorization (mostly iterators that do not operate on contiguous
-    // storage). Because of that, it is only enabled for std::vector (currently used by FixedSizeByteAlignedVector).
-    // Also, the AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for
-    // `IS_DEBUG` is redudant, it makes people aware of this. Unfortunately, vectorization is only really beneficial
-    // when we can use AVX-512VL. However, since this branch is not slower on CPUs without it, we still use it there as
-    // well, as this reduces the divergence across different systems. Finally, we only use the vectorized scan for
-    // tables with a certain size. This is because firing up the AVX units has some cost on current CPUs. Using 1000
-    // as the boundary is just an educated guess - a machine-dependent fine-tuning could find better values, but as
-    // long as scans with a handful of results are not vectorized, the benefits of fine-tuning should not be too big.
+    // SIMD has no benefit for iterators that are too complex (mostly iterators that do not operate on contiguous
+    // storage). Currently, it is only enabled for std::vector (as used by FixedSizeByteAlignedVector). Also, the
+    // AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for `IS_DEBUG`
+    // is redudant, it makes people aware of this.
+    //
+    // Unfortunately, vectorization is only really beneficial when we can use AVX-512VL. However, since the SIMD branch
+    // is not slower on CPUs without AVX-512VL, we use it in any case. This reduces the divergence across different
+    // systems. Finally, we only use the vectorized scan for tables with a certain size. This is because firing up the
+    // AVX units has some cost on current CPUs. Using 1000 as the boundary is just an educated guess - a
+    // machine-dependent fine-tuning could find better values, but as long as scans with a handful of results are not
+    // vectorized, the benefits of fine-tuning should not be too big.
+    //
+    // See the SIMD method for a comment on IsVectorizable.
 
 #if !IS_DEBUG
     if constexpr (LeftIterator::IsVectorizable) {
@@ -81,7 +85,7 @@ class AbstractTableScanImpl {
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // noinline reduces compile time drastically
   void __attribute__((noinline))
-  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it_x, const LeftIterator left_end,
+  _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                             const ChunkID chunk_id, PosList& matches_out,
                             [[maybe_unused]] RightIterator& right_it) const {
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled outside of this
@@ -90,10 +94,8 @@ class AbstractTableScanImpl {
     // Afterwards, add all matching rows into `matches_out`.
 
     auto matches_out_index = matches_out.size();
-    constexpr long SIMD_SIZE = 64;  // Assuming a SIMD register size of 512 bit
-    constexpr long BLOCK_SIZE = SIMD_SIZE / sizeof(ValueID);
-   
-    auto left_it = left_it_x;
+    constexpr auto SIMD_SIZE = 64;  // Assuming a SIMD register size of 512 bit
+    constexpr auto BLOCK_SIZE = SIMD_SIZE / sizeof(ValueID);
 
     // Continue doing this until we have too few rows left to run over a whole block
     while (left_end - left_it > BLOCK_SIZE) {
@@ -103,8 +105,15 @@ class AbstractTableScanImpl {
       // issues with the optimization, make sure that you only have only set IsVectorizable on iterators that use
       // linear storage and where the access methods do not change any state.
       //
-      // Also, when using clang, this causes an error to be thrown if the loop could not be vectorized. This, however
-      // does not guarantee that, if no error is thrown, every instruction in the loop is using SIMD.
+      // Also, when using clang, this causes an error to be thrown if the loop could not be vectorized. Seeing no
+      // error, however, just means that some part of the loop was vectorized - it does not mean that the loop has no
+      // sequential components. For developing fast SIMD methods, you won't get around disassembling the respective
+      // object file.
+      //
+      // Finally, a word on IsVectorizable: With the pragma giving the guarantee about no hidden dependencies, both
+      // gcc and clang can identify cases where SIMD is beneficial. However, when `loop vectorize` is set for clang,
+      // it throws errors for non-vectorized loops. To avoid these compiler errors, we don't even enter this method
+      // if we know that a certain iterator or functor cannot be vectorized.
 
       // NOLINTNEXTLINE
       ;  // clang-format off
@@ -169,7 +178,6 @@ class AbstractTableScanImpl {
     matches_out.resize(matches_out_index);
 
     // The remainder is now done by the regular scan
-   left_it_x = left_it;
   }
 
   /**@}*/
