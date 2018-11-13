@@ -169,13 +169,9 @@ CalibrationColumnFeatures CostModelFeatureExtractor::_extract_features_for_colum
                                      _get_memory_usage_for_column(left_input_table, column_id)};
   }
 
-  return CalibrationColumnFeatures{
-    encoding_type_to_string.left.at(EncodingType::Unencoded),
-    false,
-    data_type_to_string.left.at(column_expression->data_type()),
-    _get_memory_usage_for_column(left_input_table, column_id)
-  };
-
+  return CalibrationColumnFeatures{encoding_type_to_string.left.at(EncodingType::Unencoded), false,
+                                   data_type_to_string.left.at(column_expression->data_type()),
+                                   _get_memory_usage_for_column(left_input_table, column_id)};
 }
 
 void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expression(

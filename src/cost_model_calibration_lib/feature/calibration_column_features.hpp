@@ -24,17 +24,18 @@ struct CalibrationColumnFeatures {
 };
 
 inline const std::vector<std::string> CalibrationColumnFeatures::feature_names(
-        {"segment_encoding", "is_segment_reference_segment", "segment_data_type",
-         "segment_memory_usage_bytes", "segment_distinct_value_count"}
-        );
+    {"segment_encoding", "is_segment_reference_segment", "segment_data_type", "segment_memory_usage_bytes",
+     "segment_distinct_value_count"});
 
-inline const std::vector<std::string> CalibrationColumnFeatures::feature_names_with_prefix(const std::optional<std::string>& prefix) {
-    auto copied_feature_names = feature_names;
+inline const std::vector<std::string> CalibrationColumnFeatures::feature_names_with_prefix(
+    const std::optional<std::string>& prefix) {
+  auto copied_feature_names = feature_names;
 
-    if (prefix) {
-        std::for_each(copied_feature_names.begin(), copied_feature_names.end(), [prefix](auto& s){ s.insert(0, *prefix + "_");});
-    }
-    return copied_feature_names;
+  if (prefix) {
+    std::for_each(copied_feature_names.begin(), copied_feature_names.end(),
+                  [prefix](auto& s) { s.insert(0, *prefix + "_"); });
+  }
+  return copied_feature_names;
 };
 
 inline const std::vector<AllTypeVariant> CalibrationColumnFeatures::serialize(
@@ -43,9 +44,7 @@ inline const std::vector<AllTypeVariant> CalibrationColumnFeatures::serialize(
     return {NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}};
   }
 
-  return {features->column_encoding,
-          features->is_any_segment_reference_segment,
-          features->column_data_type,
+  return {features->column_encoding, features->is_any_segment_reference_segment, features->column_data_type,
           static_cast<int32_t>(features->column_memory_usage_bytes),
           static_cast<int32_t>(features->column_distinct_value_count)};
 }

@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-using PredicateGeneratorFunctor = std::function<std::shared_ptr<AbstractExpression>(
+using PredicateGeneratorFunctor = std::function<const std::shared_ptr<AbstractExpression>(
     const std::shared_ptr<StoredTableNode>&, const std::pair<std::string, CalibrationColumnSpecification>&)>;
 
 class CalibrationQueryGeneratorPredicates {

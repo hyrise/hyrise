@@ -16,9 +16,18 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
   queries.reserve(table_definitions.size());
 
   const auto& add_query_if_present = [](std::vector<const std::shared_ptr<AbstractLQPNode>>& vector,
-                                        const std::shared_ptr<AbstractLQPNode> query) {
+                                        const std::shared_ptr<AbstractLQPNode>& query) {
     if (query) {
       vector.push_back(query);
+    }
+  };
+
+  const auto& add_queries_if_present = [](std::vector<const std::shared_ptr<AbstractLQPNode>>& vector,
+                                          const std::vector<std::shared_ptr<AbstractLQPNode>>& queries) {
+    for (const auto& query : queries) {
+      if (query) {
+        vector.push_back(query);
+      }
     }
   };
 
@@ -52,7 +61,7 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
                                               CalibrationQueryGeneratorPredicates::generate_predicate_equi_on_strings));
   }
 
-  // add_query_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
+  add_queries_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
   // add_query_if_present(queries, CalibrationQueryGenerator::_generate_foreign_key_join(table_definitions));
 
   return queries;
@@ -75,86 +84,90 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_tabl
   return projection_node;
 }
 
-// const std::optional<std::string> CalibrationQueryGenerator::_generate_join(
-//     const std::vector<CalibrationTableSpecification>& table_definitions) {
-//   // Both Join Inputs are filtered randomly beforehand
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join(
+    const std::vector<CalibrationTableSpecification>& table_definitions) {
+  static std::mt19937 engine((std::random_device()()));
+  std::uniform_int_distribution<u_int64_t> table_dist(0, table_definitions.size() - 1);
+
+  if (table_definitions.empty()) return {};
+  const auto left_table_definition = std::next(table_definitions.begin(), table_dist(engine));
+  const auto right_table_definition = std::next(table_definitions.begin(), table_dist(engine));
+  const auto left_table = StoredTableNode::make(left_table_definition->table_name);
+  const auto right_table = StoredTableNode::make(right_table_definition->table_name);
+
+  const auto join_nodes = CalibrationQueryGeneratorJoin::generate_join(
+      CalibrationQueryGeneratorJoin::generate_join_predicate, left_table, right_table);
+
+  if (join_nodes.empty()) {
+    return {};
+  }
+
+  auto left_predicate = CalibrationQueryGeneratorPredicates::generate_predicates(
+      CalibrationQueryGeneratorPredicates::generate_predicate_column_value, left_table_definition->columns, left_table,
+      2);
+
+  auto right_predicate = CalibrationQueryGeneratorPredicates::generate_predicates(
+      CalibrationQueryGeneratorPredicates::generate_predicate_column_value, right_table_definition->columns,
+      right_table, 2);
+
+  // We are not interested in queries without Predicates
+  if (!left_predicate || !right_predicate) {
+    return {};
+  }
+
+  for (const auto& join_node : join_nodes) {
+    join_node->set_left_input(left_predicate);
+    join_node->set_right_input(right_predicate);
+  }
+
+  return join_nodes;
+}
+
+// Both Join Inputs are filtered randomly beforehand
 //   auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5% WHERE (%6%) AND (%7%);";
 
 //   std::random_device random_device;
 //   std::mt19937 engine{random_device()};
-//   std::uniform_int_distribution<u_int64_t> table_dist(0, table_definitions.size() - 1);
 
-//   auto left_table = std::next(table_definitions.begin(), table_dist(engine));
-//   auto right_table = std::next(table_definitions.begin(), table_dist(engine));
-
-//   // Generate Projection columns
+//
+//    Generate Projection columns
 //   std::map<std::string, CalibrationColumnSpecification> columns;
 //   for (const auto& column : left_table->columns) {
 //     const auto column_name = "l." + column.first;
 //     columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
 //   }
-
+//
 //   for (const auto& column : right_table->columns) {
 //     const auto column_name = "r." + column.first;
 //     columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
 //   }
-
+//
 //   const auto join_columns = _generate_join_columns(left_table->columns, right_table->columns);
-
+//
 //   if (!join_columns) {
-//     // Missing potential join columns, will not produce cross join here.
+//      Missing potential join columns, will not produce cross join here.
 //     std::cout << "There are no join partners for query generation. "
 //                  "Check the table configuration, whether there are two columns with the same datatype."
 //               << std::endl;
 //     return {};
 //   }
-
+//
 //   const auto left_predicate =
 //       CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->first, *left_table, "l.");
 //   const auto right_predicate =
 //       CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->second, *right_table, "r.");
-
+//
 //   auto select_columns = _generate_select_columns(columns);
-
+//
 //   if (!left_predicate || !right_predicate) {
 //     std::cout << "Failed to generate join predicates." << std::endl;
 //     return {};
 //   }
-
+//
 //   return boost::str(boost::format(string_template) % select_columns % left_table->table_name % right_table->table_name %
 //                     join_columns->first.first % join_columns->second.first % *left_predicate % *right_predicate);
-// }
 
-// const std::optional<std::pair<std::pair<std::string, CalibrationColumnSpecification>,
-//                               std::pair<std::string, CalibrationColumnSpecification>>>
-// CalibrationQueryGenerator::_generate_join_columns(
-//     const std::map<std::string, CalibrationColumnSpecification>& left_column_definitions,
-//     const std::map<std::string, CalibrationColumnSpecification>& right_column_definitions) {
-//   std::random_device random_device;
-//   std::mt19937 engine(random_device());
-
-//   std::vector<std::pair<std::string, CalibrationColumnSpecification>> left_columns(left_column_definitions.begin(),
-//                                                                                    left_column_definitions.end());
-//   std::vector<std::pair<std::string, CalibrationColumnSpecification>> right_columns(right_column_definitions.begin(),
-//                                                                                     right_column_definitions.end());
-
-//   std::shuffle(left_columns.begin(), left_columns.end(), engine);
-//   std::shuffle(right_columns.begin(), right_columns.end(), engine);
-
-//   for (const auto& left_column : left_columns) {
-//     for (const auto& right_column : right_columns) {
-//       const auto left_type = left_column.second.type;
-
-//       if (left_type == right_column.second.type && left_type != DataType::String) {
-//         return std::pair{left_column, right_column};
-//       }
-//     }
-//   }
-
-//   return {};
-// }
-
-const std::shared_ptr<AggregateNode> CalibrationQueryGenerator::_generate_aggregate(
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggregate(
     const CalibrationTableSpecification& table_definition) {
   const auto table = StoredTableNode::make(table_definition.table_name);
 

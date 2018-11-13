@@ -7,7 +7,7 @@
 namespace opossum {
 
 struct CalibrationAggregateFeatures {
-    static const std::vector<std::string> feature_names;
+  static const std::vector<std::string> feature_names;
 
   static const std::vector<AllTypeVariant> serialize(const std::optional<CalibrationAggregateFeatures>& features);
 };

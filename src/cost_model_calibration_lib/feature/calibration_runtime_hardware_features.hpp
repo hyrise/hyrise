@@ -11,7 +11,7 @@ struct CalibrationRuntimeHardwareFeatures {
   size_t running_queries = 0;
   size_t remaining_transactions = 0;
 
-    static const std::vector<std::string> feature_names;
+  static const std::vector<std::string> feature_names;
 
   static const std::vector<AllTypeVariant> serialize(const CalibrationRuntimeHardwareFeatures& features);
 };
