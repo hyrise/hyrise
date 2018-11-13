@@ -20,13 +20,19 @@ class DataGenerator:
             'int': self.int_column,
             'string': self.string_column,
             'float': self.float_column,
+            'long': self.long_column,
+            'double': self.double_column,
         }
         return switcher.get(column_type, lambda: "Invalid column type")
 
     @staticmethod
     def int_column(row_count, distinct_values):
         # change here for other distributions, numpy provides other distributions in np.random
-        return np.random.randint(0,distinct_values,size=(row_count, 1))
+        return np.random.randint(0, distinct_values, size=(row_count, 1))
+
+    @staticmethod
+    def long_column(row_count, distinct_values):
+        return DataGenerator.int_column(row_count, distinct_values)
 
     @staticmethod
     def string_column(row_count, distinct_values):
@@ -40,8 +46,12 @@ class DataGenerator:
         distinct_values = np.array([np.random.random() for _ in range(distinct_values)])
         return np.random.choice(distinct_values, row_count)
 
+    @staticmethod
+    def double_column(row_count, distinct_values):
+        return DataGenerator.float_column(row_count, distinct_values)
+
     def generate_column(self, column_name, row_count, column_specification):
-        distinct_values = column_specification.get('distinct_values', 100)
+        distinct_values = column_specification.get('distinct_values', max(row_count/100, 100))
         value_distribution = column_specification.get('value_distribution', "uniform")
         column_type = column_specification.get('type', "int")
         is_sorted = column_specification.get('sorted', False)

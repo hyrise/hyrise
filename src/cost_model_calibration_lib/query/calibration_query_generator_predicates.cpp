@@ -251,6 +251,7 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicates::_gen
 
   switch (column_type) {
     case DataType::Int:
+    case DataType::Long:
       return value_(int_dist(engine));
     case DataType::String: {
       const auto character = std::string(1, 'A' + char_dist(engine));
@@ -260,13 +261,12 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicates::_gen
       return value_(character);
     }
     case DataType::Float:
-      return value_(float_dist(engine));
-    case DataType::Long:
-    case DataType::Bool:
     case DataType::Double:
+      return value_(float_dist(engine));
+    case DataType::Bool:
     case DataType::Null:
     default:
-      Fail("Unsupported data type in CalibrationQueryGenerator, found " + data_type_to_string.left.at(column_type));
+      Fail("Unsupported data type in CalibrationQueryGeneratorPredicates, found " + data_type_to_string.left.at(column_type));
   }
 }
 
