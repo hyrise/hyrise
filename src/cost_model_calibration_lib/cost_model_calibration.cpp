@@ -64,12 +64,12 @@ void CostModelCalibration::_calibrate() const {
 const std::vector<std::string> CostModelCalibration::_collect_csv_header_columns() const {
   std::vector<std::string> columns{};
 
-  const auto calibration_features = CalibrationFeatures::columns;
-  const auto hardware_features = CalibrationConstantHardwareFeatures::columns;
-  const auto runtime_features = CalibrationRuntimeHardwareFeatures::columns;
-  const auto join_features = CalibrationJoinFeatures::columns;
-  const auto projection_features = CalibrationProjectionFeatures::columns;
-  const auto table_scan_features = CalibrationTableScanFeatures::columns;
+  const auto calibration_features = CalibrationFeatures::feature_names;
+  const auto hardware_features = CalibrationConstantHardwareFeatures::feature_names;
+  const auto runtime_features = CalibrationRuntimeHardwareFeatures::feature_names;
+  const auto join_features = CalibrationJoinFeatures::feature_names;
+  const auto projection_features = CalibrationProjectionFeatures::feature_names;
+  const auto table_scan_features = CalibrationTableScanFeatures::feature_names;
 
   columns.insert(std::end(columns), std::begin(calibration_features), std::end(calibration_features));
   columns.insert(std::end(columns), std::begin(hardware_features), std::end(hardware_features));

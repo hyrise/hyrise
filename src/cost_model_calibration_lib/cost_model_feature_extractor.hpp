@@ -5,9 +5,10 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 
+#include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
-#include "operators/join_hash.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 
@@ -24,13 +25,6 @@
 
 namespace opossum {
 
-struct ColumnFeatures {
-  std::string data_type;
-  std::string encoding_type;
-  bool is_reference_segment;
-  size_t segment_memory_usage_bytes;
-};
-
 class CostModelFeatureExtractor {
  public:
   static const CalibrationExample extract_features(const std::shared_ptr<const AbstractOperator>& op);
@@ -45,13 +39,16 @@ class CostModelFeatureExtractor {
   static const std::optional<CalibrationProjectionFeatures> _extract_features_for_operator(
       const std::shared_ptr<const Projection>& op);
   static const std::optional<CalibrationJoinFeatures> _extract_features_for_operator(
-      const std::shared_ptr<const JoinHash>& op);
+      const std::shared_ptr<const AbstractJoinOperator>& op);
+
+  static const std::optional<CalibrationAggregateFeatures> _extract_features_for_operator(
+      const std::shared_ptr<const Aggregate>& op);
 
   static void _extract_table_scan_features_for_predicate_expression(
       std::shared_ptr<const Table>& left_input_table, CalibrationTableScanFeatures& features,
       const std::shared_ptr<AbstractPredicateExpression>& expression);
 
-  static ColumnFeatures _extract_features_for_column_expression(std::shared_ptr<const Table>& left_input_table,
+  static CalibrationColumnFeatures _extract_features_for_column_expression(std::shared_ptr<const Table>& left_input_table,
                                                                 std::shared_ptr<PQPColumnExpression> column_expression);
 
   static std::pair<EncodingType, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment);

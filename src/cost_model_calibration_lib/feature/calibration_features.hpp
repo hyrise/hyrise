@@ -29,12 +29,11 @@ struct CalibrationFeatures {
 
   std::string operator_description;
 
-  static const std::vector<std::string> columns;
-
+  static const std::vector<std::string> feature_names;
   static const std::vector<AllTypeVariant> serialize(const CalibrationFeatures& features);
 };
 
-inline const std::vector<std::string> CalibrationFeatures::columns(
+inline const std::vector<std::string> CalibrationFeatures::feature_names(
     {"operator_type", "input_table_size_ratio", "left_input_row_count", "left_input_chunk_count",
      "left_input_memory_usage_bytes", "left_input_chunk_size", "right_input_row_count", "right_input_chunk_count",
      "right_input_memory_usage_bytes", "right_input_chunk_size", "output_row_count", "output_chunk_count",

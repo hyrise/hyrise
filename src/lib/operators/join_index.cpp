@@ -251,38 +251,38 @@ void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterato
   }
 }
 
-// join loop that joins two segments of two columns via their iterators
-template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                               RightIterator right_begin, RightIterator right_end,
-                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
-  // No index so we fall back on a nested loop join
-  for (; left_it != left_end; ++left_it) {
-    const auto left_value = *left_it;
-    if (left_value.is_null()) continue;
-
-    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-      const auto right_value = *right_it;
-      if (right_value.is_null()) continue;
-
-      if (func(left_value.value(), right_value.value())) {
-        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
-
-        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
-          _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
-        }
-
-        if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
-          DebugAssert(chunk_id_right < _right_in_table->chunk_count(), "invalid chunk_id in join_index");
-          DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right)->size(),
-                      "invalid chunk_offset in join_index");
-          _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
-        }
-      }
-    }
-  }
-}
+//// join loop that joins two segments of two columns via their iterators
+//template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
+//void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+//                                               RightIterator right_begin, RightIterator right_end,
+//                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
+//  // No index so we fall back on a nested loop join
+//  for (; left_it != left_end; ++left_it) {
+//    const auto left_value = *left_it;
+//    if (left_value.is_null()) continue;
+//
+//    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
+//      const auto right_value = *right_it;
+//      if (right_value.is_null()) continue;
+//
+//      if (func(left_value.value(), right_value.value())) {
+//        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
+//        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
+//
+//        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+//          _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
+//        }
+//
+//        if (_mode == JoinMode::Outer || _mode == JoinMode::Right) {
+//          DebugAssert(chunk_id_right < _right_in_table->chunk_count(), "invalid chunk_id in join_index");
+//          DebugAssert(right_value.chunk_offset() < _right_in_table->get_chunk(chunk_id_right)->size(),
+//                      "invalid chunk_offset in join_index");
+//          _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
+//        }
+//      }
+//    }
+//  }
+//}
 
 void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                                 const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left,

@@ -5,55 +5,70 @@
 
 #include "all_type_variant.hpp"
 #include "storage/encoding_type.hpp"
+#include "feature/calibration_column_features.hpp"
 
 namespace opossum {
 
 struct CalibrationTableScanFeatures {
-  std::string scan_segment_encoding = "undefined";
-  bool is_scan_segment_reference_segment = false;
-  std::string scan_segment_data_type = "undefined";
-  size_t scan_segment_memory_usage_bytes = 0;
-  size_t scan_segment_distinct_value_count = 0;
+  std::optional<CalibrationColumnFeatures> first_column {};
+  std::optional<CalibrationColumnFeatures> second_column {};
+  std::optional<CalibrationColumnFeatures> third_column {};
+
   bool is_column_comparison = false;
-  std::string second_scan_segment_encoding = "undefined";
-  bool is_second_scan_segment_reference_segment = false;
-  std::string second_scan_segment_data_type = "undefined";
-  size_t second_scan_segment_memory_usage_bytes = 0;
-  size_t second_scan_segment_distinct_value_count = 0;
   std::string scan_operator_type = "undefined";
   size_t number_of_computable_or_column_expressions = 0;
 
-  static const std::vector<std::string> columns;
+  static const std::vector<std::string> feature_names;
 
   static const std::vector<AllTypeVariant> serialize(const std::optional<CalibrationTableScanFeatures>& features);
 };
 
-inline const std::vector<std::string> CalibrationTableScanFeatures::columns(
-    {"scan_segment_encoding", "is_scan_segment_reference_segment", "scan_segment_data_type",
-     "scan_segment_memory_usage_bytes", "scan_segment_distinct_value_count", "is_column_comparison",
-     "second_scan_segment_encoding", "is_second_scan_segment_reference_segment", "second_scan_segment_data_type",
-     "second_scan_segment_memory_usage_bytes", "second_scan_segment_distinct_value_count", "scan_operator_type",
-     "number_of_computable_or_column_expressions"});
+inline const std::vector<std::string> CalibrationTableScanFeatures::feature_names = {
+
+    [](){
+        const auto first_column_names = CalibrationColumnFeatures::feature_names_with_prefix("first_column");
+        const auto second_column_names = CalibrationColumnFeatures::feature_names_with_prefix("second_column");
+        const auto third_column_names = CalibrationColumnFeatures::feature_names_with_prefix("third_column");
+
+        std::vector<std::string> output {};
+
+        output.insert(output.end(), first_column_names.begin(), first_column_names.end());
+        output.insert(output.end(), second_column_names.begin(), second_column_names.end());
+        output.insert(output.end(), third_column_names.begin(), third_column_names.end());
+        output.emplace_back("is_column_comparison");
+        output.emplace_back("scan_operator_type");
+        output.emplace_back("number_of_computable_or_column_expressions");
+
+        return output;
+    }()
+};
 
 inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize(
     const std::optional<CalibrationTableScanFeatures>& features) {
-  if (!features) {
-    return {NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{},
-            NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}, NullValue{}};
-  }
-  return {features->scan_segment_encoding,
-          features->is_scan_segment_reference_segment,
-          features->scan_segment_data_type,
-          static_cast<int32_t>(features->scan_segment_memory_usage_bytes),
-          static_cast<int32_t>(features->scan_segment_distinct_value_count),
-          features->is_column_comparison,
-          features->second_scan_segment_encoding,
-          features->is_second_scan_segment_reference_segment,
-          features->second_scan_segment_data_type,
-          static_cast<int32_t>(features->second_scan_segment_memory_usage_bytes),
-          static_cast<int32_t>(features->second_scan_segment_distinct_value_count),
-          features->scan_operator_type,
-          static_cast<int32_t>(features->number_of_computable_or_column_expressions)};
+
+    if (!features) {
+        const auto serialized_column = CalibrationColumnFeatures::serialize({});
+        const auto column_feature_count = 3 * serialized_column.size();
+
+        // +3 for the three table scan features
+        std::vector<AllTypeVariant> output (column_feature_count + 3, NullValue{});
+        return output;
+    }
+
+    std::vector<AllTypeVariant> output{};
+
+    const auto serialized_first_column = CalibrationColumnFeatures::serialize(features->first_column);
+    const auto serialized_second_column = CalibrationColumnFeatures::serialize(features->second_column);
+    const auto serialized_third_column = CalibrationColumnFeatures::serialize(features->third_column);
+
+    output.insert(output.end(), serialized_first_column.begin(), serialized_first_column.end());
+    output.insert(output.end(), serialized_second_column.begin(), serialized_second_column.end());
+    output.insert(output.end(), serialized_third_column.begin(), serialized_third_column.end());
+    output.emplace_back(features->is_column_comparison);
+    output.emplace_back(features->scan_operator_type);
+    output.emplace_back(static_cast<int32_t>(features->number_of_computable_or_column_expressions));
+
+    return output;
 }
 
 }  // namespace opossum

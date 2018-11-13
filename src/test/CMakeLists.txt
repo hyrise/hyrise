@@ -268,10 +268,10 @@ set (
     ${SHARED_SOURCES}
 
     cost_model_calibration/configuration/calibration_column_specification_test.cpp
+    cost_model_calibration/cost_model_feature_extractor_test.cpp
+    cost_model_calibration/feature/calibration_feature_test.cpp
     cost_model_calibration/query/calibration_query_generator_test.cpp
     cost_model_calibration/query/calibration_query_generator_predicates_test.cpp
-    cost_model_calibration/cost_model_feature_extractor_test.cpp
-    cost_model_calibration/feature/calibration_table_scan_features_test.cpp
     gtest_main.cpp
 )
 
