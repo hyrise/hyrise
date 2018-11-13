@@ -79,7 +79,7 @@ const std::vector<std::string> CostModelCalibration::_collect_csv_header_columns
   columns.insert(std::end(columns), std::begin(table_scan_features), std::end(table_scan_features));
 
   return columns;
-};
+}
 
 void CostModelCalibration::_write_csv_header(const std::string& output_path) const {
   const auto& columns = _collect_csv_header_columns();

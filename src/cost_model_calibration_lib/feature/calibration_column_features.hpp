@@ -36,7 +36,7 @@ inline const std::vector<std::string> CalibrationColumnFeatures::feature_names_w
                   [prefix](auto& s) { s.insert(0, *prefix + "_"); });
   }
   return copied_feature_names;
-};
+}
 
 inline const std::vector<AllTypeVariant> CalibrationColumnFeatures::serialize(
     const std::optional<CalibrationColumnFeatures>& features) {
