@@ -23,8 +23,11 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 
     ChunkEncodingSpec chunk_spec;
 
-    for (const auto& column_specification : table_specification.columns) {
-      chunk_spec.push_back(column_specification.second.encoding);
+    // Need to iterate the table's column_names because column_specifications is an unordered map
+    const auto& column_specifications = table_specification.columns;
+    for (const auto& column_name : table->column_names()) {
+      const auto& column_specification = column_specifications.at(column_name);
+      chunk_spec.push_back(column_specification.encoding);
     }
 
     ChunkEncoder::encode_all_chunks(table, chunk_spec);

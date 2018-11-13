@@ -32,19 +32,16 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::generat
   static std::mt19937 engine((std::random_device()()));
 
   auto left_columns = left_table->get_columns();
-  auto right_columns = right_table->get_columns();
+  auto right_column = right_table->get_column("column_pk");
 
   std::shuffle(left_columns.begin(), left_columns.end(), engine);
-  std::shuffle(right_columns.begin(), right_columns.end(), engine);
 
   for (const auto& left_column : left_columns) {
-    for (const auto& right_column : right_columns) {
-      const auto left_column_expression = lqp_column_(left_column);
-      const auto right_column_expression = lqp_column_(right_column);
-      if (left_column_expression->data_type() != right_column_expression->data_type()) continue;
+    const auto left_column_expression = lqp_column_(left_column);
+    const auto right_column_expression = lqp_column_(right_column);
+    if (left_column_expression->data_type() != right_column_expression->data_type()) continue;
 
-      return expression_functional::equals_(left_column_expression, right_column_expression);
-    }
+    return expression_functional::equals_(left_column_expression, right_column_expression);
   }
 
   return {};

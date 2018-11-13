@@ -22,15 +22,6 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
     }
   };
 
-  const auto& add_queries_if_present = [](std::vector<const std::shared_ptr<AbstractLQPNode>>& vector,
-                                          const std::vector<std::shared_ptr<AbstractLQPNode>>& queries) {
-    for (const auto& query : queries) {
-      if (query) {
-        vector.push_back(query);
-      }
-    }
-  };
-
   for (const auto& table_definition : table_definitions) {
     add_query_if_present(queries, CalibrationQueryGenerator::_generate_aggregate(table_definition));
 
@@ -61,8 +52,11 @@ const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenera
                                               CalibrationQueryGeneratorPredicates::generate_predicate_equi_on_strings));
   }
 
-  add_queries_if_present(queries, CalibrationQueryGenerator::_generate_join(table_definitions));
-  // add_query_if_present(queries, CalibrationQueryGenerator::_generate_foreign_key_join(table_definitions));
+  // Generates the same query using all available JoinTypes
+  const auto join_queries = CalibrationQueryGenerator::_generate_join(table_definitions);
+  for (const auto & query : join_queries) {
+    add_query_if_present(queries, query);
+  }
 
   return queries;
 }
@@ -75,7 +69,7 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_tabl
   auto predicate =
       CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, table_definition.columns, table, 3);
 
-  // We are not interested in queries without Predicate
+  // We are not interested in queries without Predicate (they could get too expensive)
   if (!predicate) {
     return {};
   }
@@ -123,50 +117,6 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
   return join_nodes;
 }
 
-// Both Join Inputs are filtered randomly beforehand
-//   auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5% WHERE (%6%) AND (%7%);";
-
-//   std::random_device random_device;
-//   std::mt19937 engine{random_device()};
-
-//
-//    Generate Projection columns
-//   std::map<std::string, CalibrationColumnSpecification> columns;
-//   for (const auto& column : left_table->columns) {
-//     const auto column_name = "l." + column.first;
-//     columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
-//   }
-//
-//   for (const auto& column : right_table->columns) {
-//     const auto column_name = "r." + column.first;
-//     columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
-//   }
-//
-//   const auto join_columns = _generate_join_columns(left_table->columns, right_table->columns);
-//
-//   if (!join_columns) {
-//      Missing potential join columns, will not produce cross join here.
-//     std::cout << "There are no join partners for query generation. "
-//                  "Check the table configuration, whether there are two columns with the same datatype."
-//               << std::endl;
-//     return {};
-//   }
-//
-//   const auto left_predicate =
-//       CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->first, *left_table, "l.");
-//   const auto right_predicate =
-//       CalibrationQueryGeneratorPredicates::generate_predicate_column_value(join_columns->second, *right_table, "r.");
-//
-//   auto select_columns = _generate_select_columns(columns);
-//
-//   if (!left_predicate || !right_predicate) {
-//     std::cout << "Failed to generate join predicates." << std::endl;
-//     return {};
-//   }
-//
-//   return boost::str(boost::format(string_template) % select_columns % left_table->table_name % right_table->table_name %
-//                     join_columns->first.first % join_columns->second.first % *left_predicate % *right_predicate);
-
 const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggregate(
     const CalibrationTableSpecification& table_definition) {
   const auto table = StoredTableNode::make(table_definition.table_name);
@@ -194,7 +144,7 @@ const std::shared_ptr<ProjectionNode> CalibrationQueryGenerator::_generate_proje
   std::vector<LQPColumnReference> sampled;
   std::sample(columns.begin(), columns.end(), std::back_inserter(sampled), dist(engine), engine);
 
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions;
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions {};
   for (const auto& column_ref : sampled) {
     column_expressions.push_back(expression_functional::lqp_column_(column_ref));
   }

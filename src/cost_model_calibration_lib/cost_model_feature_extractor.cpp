@@ -46,6 +46,9 @@ const CalibrationExample CostModelFeatureExtractor::extract_features(
       calibration_result.aggregate_features = _extract_features_for_operator(aggregate_op);
       break;
     }
+    case OperatorType::GetTable:
+      // No need to add specific features
+      break;
     default: {
       std::cout << "Unhandled operator type in CostModelFeatureExtractor: " << operator_type_to_string.at(operator_type)
                 << std::endl;
@@ -125,7 +128,6 @@ const CalibrationRuntimeHardwareFeatures CostModelFeatureExtractor::_extract_run
   return runtime_features;
 }
 
-// TODO(Sven): Add feature that covers BETWEEN colA AND colB as well as OR
 const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
     const std::shared_ptr<const TableScan>& op) {
   CalibrationTableScanFeatures features{};

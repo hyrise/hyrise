@@ -49,7 +49,7 @@ class DataGenerator:
         column_generator = self.type_to_function(column_type)
         data = column_generator(row_count, distinct_values)
         if is_sorted:
-            data = np.sort(data)
+            data = np.sort(data, axis=None)
         return pd.DataFrame(data, columns=[column_name])
 
     # Generate table
