@@ -11,7 +11,6 @@ std::shared_ptr<GenericHistogram<T>>
 CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
     const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
     const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
-
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};
   auto left_bin_count = left_histogram->bin_count();
@@ -62,7 +61,7 @@ CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_bin_adjusted_hi
 
 template <typename T>
 std::shared_ptr<GenericHistogram<T>>
-CardinalityEstimator::estimate_histogram_of_column_to_column_scan_with_bin_adjusted_histograms(
+CardinalityEstimator::estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(
     const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
     const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
   auto left_idx = BinID{0};
@@ -99,13 +98,15 @@ CardinalityEstimator::estimate_histogram_of_column_to_column_scan_with_bin_adjus
 
     if (min_distinct_count == 0) continue;
 
-    const auto eyssen_zimmermannsche_unschaerfe =
-        std::min((min_distinct_count / left_distinct_count) * left_histogram->bin_height(left_idx),
-                 (min_distinct_count / right_distinct_count) * right_histogram->bin_height(right_idx));
+    const auto eyssen_zimmermannsche_unschaerfe = std::min(
+        (static_cast<float>(min_distinct_count) / left_distinct_count) * left_histogram->bin_height(left_idx),
+        (static_cast<float>(min_distinct_count) / right_distinct_count) * right_histogram->bin_height(right_idx));
+
+    if (eyssen_zimmermannsche_unschaerfe == 0.0f) continue;
 
     bin_minima.emplace_back(left_min);
     bin_maxima.emplace_back(left_histogram->bin_maximum(left_idx));
-    bin_heights.emplace_back(eyssen_zimmermannsche_unschaerfe);
+    bin_heights.emplace_back(std::ceil(eyssen_zimmermannsche_unschaerfe));
     bin_distinct_counts.emplace_back(min_distinct_count);
 
     ++left_idx;

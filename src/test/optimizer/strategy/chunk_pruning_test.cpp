@@ -20,9 +20,9 @@
 #include "statistics/chunk_statistics/segment_statistics_utils.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/chunk.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"

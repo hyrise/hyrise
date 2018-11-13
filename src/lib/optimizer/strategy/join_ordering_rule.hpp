@@ -17,17 +17,16 @@ class AbstractCostEstimator;
  */
 class JoinOrderingRule : public AbstractRule {
  public:
-
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& root,
-                const AbstractCostEstimator& cost_estimator) const override;
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator,
+                const std::shared_ptr<OptimizationContext>& context) const override;
 
  private:
   std::shared_ptr<AbstractLQPNode> _perform_join_ordering_recursively(
-      const std::shared_ptr<AbstractLQPNode>& lqp,
-      const AbstractCostEstimator& cost_estimator) const;
-  void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                          const AbstractCostEstimator& cost_estimator) const;
+      const std::shared_ptr<AbstractLQPNode>& lqp, const AbstractCostEstimator& cost_estimator,
+      const std::shared_ptr<OptimizationContext>& context) const;
+  void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp, const AbstractCostEstimator& cost_estimator,
+                          const std::shared_ptr<OptimizationContext>& context) const;
 };
 
 }  // namespace opossum

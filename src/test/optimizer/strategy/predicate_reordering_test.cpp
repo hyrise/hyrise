@@ -37,11 +37,10 @@ class PredicateReorderingTest : public StrategyBaseTest {
     _rule = std::make_shared<PredicateReorderingRule>();
 
     node = create_mock_node_with_statistics(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
-    {
-      std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
-      std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
-      std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
+        {std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
+         std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
+         std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
 
     node->table_statistics2()->chunk_statistics.at(0)->approx_invalid_row_count = 50;
 

@@ -23,6 +23,8 @@ SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b + c < c * b - 100;
+SELECT * FROM mixed WHERE id > b;
+SELECT * FROM mixed WHERE id = b;
 SELECT * FROM mixed_null WHERE b IS NULL;
 SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;

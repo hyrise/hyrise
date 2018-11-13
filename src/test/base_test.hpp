@@ -14,8 +14,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
-#include "statistics/segment_statistics2.hpp"
 #include "statistics/chunk_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
@@ -118,10 +118,8 @@ class BaseTestWithParam
   }
 
   static std::shared_ptr<MockNode> create_mock_node_with_statistics(
-    const MockNode::ColumnDefinitions& column_definitions,
-    const Cardinality row_count,
-    const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
-
+      const MockNode::ColumnDefinitions& column_definitions, const Cardinality row_count,
+      const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
     Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
 
     const auto mock_node = MockNode::make(column_definitions);

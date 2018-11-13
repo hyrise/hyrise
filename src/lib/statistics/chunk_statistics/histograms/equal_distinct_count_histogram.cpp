@@ -235,11 +235,12 @@ std::shared_ptr<AbstractStatisticsObject> EqualDistinctCountHistogram<T>::scale_
   auto bin_distinct_counts = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
   for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
     bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
-    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(std::ceil(scale_distinct_count(selectivity, _bin_data.bin_heights[bin_id], _bin_data.distinct_count_per_bin)));
+    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(
+        std::ceil(scale_distinct_count(selectivity, _bin_data.bin_heights[bin_id], _bin_data.distinct_count_per_bin)));
   }
 
-  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima),
-                                                          std::move(bin_heights), std::move(bin_distinct_counts));
+  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                               std::move(bin_distinct_counts));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);

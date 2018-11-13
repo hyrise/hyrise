@@ -94,8 +94,6 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
-  sql_pipeline.get_unoptimized_logical_plans().at(0)->print();
-  sql_pipeline.get_optimized_logical_plans().at(0)->print();
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 

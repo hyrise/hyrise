@@ -9,6 +9,7 @@ class AbstractExpression;
 class AbstractCostEstimator;
 class AbstractLQPNode;
 class JoinGraph;
+class OptimizationContext;
 
 /**
  * Optimal join ordering algorithm described in "Analysis of two existing and one new dynamic programming algorithm for
@@ -30,16 +31,19 @@ class DpCcp final {
    *                         * the operations from the JoinGraph in an optimal order
    *                         * the subplans from the vertices below them
    */
-  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const AbstractCostEstimator& cost_estimator);
+  std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const AbstractCostEstimator& cost_estimator,
+                                              const std::shared_ptr<OptimizationContext>& context = {});
 
  private:
   std::shared_ptr<AbstractLQPNode> _add_predicates_to_plan(
-      const std::shared_ptr<AbstractLQPNode>& lqp,
-      const std::vector<std::shared_ptr<AbstractExpression>>& predicates, const AbstractCostEstimator& cost_estimator) const;
+      const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
+      const AbstractCostEstimator& cost_estimator, const std::shared_ptr<OptimizationContext>& context) const;
 
-  std::shared_ptr<AbstractLQPNode> _add_join_to_plan(
-      const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-      std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const AbstractCostEstimator& cost_estimator) const;
+  std::shared_ptr<AbstractLQPNode> _add_join_to_plan(const std::shared_ptr<AbstractLQPNode>& left_lqp,
+                                                     const std::shared_ptr<AbstractLQPNode>& right_lqp,
+                                                     std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
+                                                     const AbstractCostEstimator& cost_estimator,
+                                                     const std::shared_ptr<OptimizationContext>& context) const;
 };
 
 }  // namespace opossum

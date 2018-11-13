@@ -257,6 +257,8 @@ set(
     optimizer/join_ordering/join_graph_builder.hpp
     optimizer/join_ordering/join_graph_edge.cpp
     optimizer/join_ordering/join_graph_edge.hpp
+    optimizer/optimization_context.cpp
+    optimizer/optimization_context.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp

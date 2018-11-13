@@ -9,9 +9,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/table_statistics2.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -21,10 +21,11 @@ namespace opossum {
 std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
 bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                const AbstractCostEstimator& cost_estimator) const {
+                                const AbstractCostEstimator& cost_estimator,
+                                const std::shared_ptr<OptimizationContext>& context) const {
   // we only want to follow chains of predicates
   if (node->type != LQPNodeType::Predicate) {
-    return _apply_to_inputs(node, cost_estimator);
+    return _apply_to_inputs(node, cost_estimator, context);
   }
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
@@ -37,7 +38,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
     current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
     if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
-      return _apply_to_inputs(node, cost_estimator);
+      return _apply_to_inputs(node, cost_estimator, context);
     }
   }
 
@@ -47,7 +48,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {
-    return _apply_to_inputs(node, cost_estimator);
+    return _apply_to_inputs(node, cost_estimator, context);
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");

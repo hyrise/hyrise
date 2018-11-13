@@ -1,11 +1,11 @@
 #include "index_scan_rule.hpp"
 
 #include <algorithm>
+#include <cost_model/abstract_cost_estimator.hpp>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
-#include <cost_model/abstract_cost_estimator.hpp>
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
@@ -32,8 +32,8 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                             const AbstractCostEstimator& cost_estimator) const {
+bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
+                             const std::shared_ptr<OptimizationContext>& context) const {
   if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
@@ -51,7 +51,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
     }
   }
 
-  return _apply_to_inputs(node, cost_estimator);
+  return _apply_to_inputs(node, cost_estimator, context);
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,

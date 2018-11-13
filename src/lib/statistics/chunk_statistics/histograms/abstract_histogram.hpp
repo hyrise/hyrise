@@ -74,7 +74,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * Returns a string with detailed information about the histogram, including the edges of the individual bins.
    */
-  std::string description() const;
+  std::string description(const bool include_bin_info = false) const;
 
   CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,

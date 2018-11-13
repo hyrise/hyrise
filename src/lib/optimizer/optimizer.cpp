@@ -6,8 +6,11 @@
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
@@ -79,6 +82,34 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
   collect_select_expressions_by_lqp(select_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
+void populate_context(const std::shared_ptr<AbstractLQPNode>& plan,
+                      const std::shared_ptr<OptimizationContext>& context) {
+  visit_lqp(plan, [&](const auto& node) {
+    if (node->input_count() == 0) {
+      context->plan_leaf_indices.emplace(node, context->plan_leaf_indices.size());
+    }
+
+    if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
+      if (join_node->join_predicate) {
+        context->predicate_indices.emplace(join_node->join_predicate, context->predicate_indices.size());
+      }
+    } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {
+      context->predicate_indices.emplace(predicate_node->predicate, context->predicate_indices.size());
+    }
+
+    for (const auto& node_expression : node->node_expressions()) {
+      visit_expression(node_expression, [&](const auto& sub_expression) {
+        if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
+          populate_context(select_expression->lqp, context);
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+
+    return LQPVisitation::VisitInputs;
+  });
+}
+
 }  // namespace
 
 namespace opossum {
@@ -93,7 +124,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   final_batch.add_rule(std::make_shared<LogicalReductionRule>());
 
-  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
+  //final_batch.add_rule(std::make_shared<ColumnPruningRule>());
 
   final_batch.add_rule(std::make_shared<ExistsReformulationRule>());
 
@@ -115,7 +146,17 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
-Optimizer::Optimizer(const uint32_t max_num_iterations, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _max_num_iterations(max_num_iterations), _cost_estimator(cost_estimator) {}
+std::shared_ptr<OptimizationContext> Optimizer::create_optimization_context(
+    const std::shared_ptr<AbstractLQPNode>& plan) {
+  const auto context = std::make_shared<OptimizationContext>();
+
+  populate_context(plan, context);
+
+  return context;
+}
+
+Optimizer::Optimizer(const uint32_t max_num_iterations, const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
+    : _max_num_iterations(max_num_iterations), _cost_estimator(cost_estimator) {}
 
 void Optimizer::add_rule_batch(RuleBatch rule_batch) { _rule_batches.emplace_back(std::move(rule_batch)); }
 
@@ -124,10 +165,13 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make(input);
 
+  const auto context = create_optimization_context(input);
+  context->print();
+
   for (const auto& rule_batch : _rule_batches) {
     switch (rule_batch.execution_policy()) {
       case RuleBatchExecutionPolicy::Once:
-        _apply_rule_batch(rule_batch, root_node);
+        _apply_rule_batch(rule_batch, root_node, context);
         break;
 
       case RuleBatchExecutionPolicy::Iterative:
@@ -137,7 +181,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
          */
         auto iter_index = uint32_t{0};
         for (; iter_index < _max_num_iterations; ++iter_index) {
-          if (!_apply_rule_batch(rule_batch, root_node)) {
+          if (!_apply_rule_batch(rule_batch, root_node, context)) {
             break;
           }
         }
@@ -155,19 +199,20 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   return optimized_node;
 }
 
-bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch,
-                                  const std::shared_ptr<AbstractLQPNode>& root_node) const {
+bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch, const std::shared_ptr<AbstractLQPNode>& root_node,
+                                  const std::shared_ptr<OptimizationContext>& context) const {
   auto lqp_changed = false;
 
   for (auto& rule : rule_batch.rules()) {
-    lqp_changed |= _apply_rule(*rule, root_node);
+    lqp_changed |= _apply_rule(*rule, root_node, context);
   }
 
   return lqp_changed;
 }
 
-bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  auto lqp_changed = rule.apply_to(root_node, *_cost_estimator);
+bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node,
+                            const std::shared_ptr<OptimizationContext>& context) const {
+  auto lqp_changed = rule.apply_to(root_node, *_cost_estimator, context);
 
   /**
    * Optimize Subselects
@@ -178,7 +223,7 @@ bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
 
   for (const auto& lqp_and_select_expressions : select_expressions_by_lqp) {
     const auto root_node = LogicalPlanRootNode::make(lqp_and_select_expressions.first);
-    lqp_changed |= _apply_rule(rule, root_node);
+    lqp_changed |= _apply_rule(rule, root_node, context);
     for (const auto& select_expression : lqp_and_select_expressions.second) {
       select_expression->lqp = root_node->left_input();
     }

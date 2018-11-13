@@ -32,9 +32,8 @@ class SegmentStatistics2 : public BaseSegmentStatistics2 {
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-
   bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                                const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<EqualDistinctCountHistogram<T>> equal_distinct_count_histogram;
   std::shared_ptr<EqualWidthHistogram<T>> equal_width_histogram;

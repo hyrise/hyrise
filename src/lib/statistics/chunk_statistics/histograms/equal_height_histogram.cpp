@@ -227,7 +227,8 @@ std::shared_ptr<AbstractStatisticsObject> EqualHeightHistogram<T>::scale_with_se
   const auto count_per_bin = _bin_data.total_count / bin_count;
   auto bin_distinct_counts = std::vector<HistogramCountType>(bin_count);
   for (auto bin_id = BinID{0}; bin_id < bin_count; ++bin_id) {
-    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(std::ceil(scale_distinct_count(selectivity, count_per_bin, _bin_data.bin_distinct_counts[bin_id])));
+    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(
+        std::ceil(scale_distinct_count(selectivity, count_per_bin, _bin_data.bin_distinct_counts[bin_id])));
   }
 
   return std::make_shared<EqualHeightHistogram<T>>(

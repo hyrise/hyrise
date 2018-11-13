@@ -12,7 +12,8 @@
 
 namespace opossum {
 
-template <typename T> class SingleBinHistogram;
+template <typename T>
+class SingleBinHistogram;
 
 enum class EstimateType { MatchesNone, MatchesExactly, MatchesApproximately, MatchesAll };
 

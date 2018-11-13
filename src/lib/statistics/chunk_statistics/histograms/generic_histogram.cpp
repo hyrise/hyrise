@@ -26,7 +26,9 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
          "Must have the same number of edges and distinct counts.");
 
   for (BinID bin_id = 0; bin_id < _bin_data.bin_minima.size(); bin_id++) {
-    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    //    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    Assert(_bin_data.bin_heights[bin_id] >= _bin_data.bin_distinct_counts[bin_id],
+           "Cannot have more distinct than actual values.");
     Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id], "Cannot have overlapping bins.");
 
     if (bin_id < _bin_data.bin_maxima.size() - 1) {
@@ -55,7 +57,9 @@ GenericHistogram<std::string>::GenericHistogram(std::vector<std::string>&& bin_m
          "Must have the same number of edges and distinct counts.");
 
   for (BinID bin_id = 0; bin_id < _bin_data.bin_minima.size(); bin_id++) {
-    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    //    Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
+    Assert(_bin_data.bin_heights[bin_id] >= _bin_data.bin_distinct_counts[bin_id],
+           "Cannot have more distinct than actual values.");
     Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id], "Cannot have overlapping bins.");
 
     if (bin_id < _bin_data.bin_maxima.size() - 1) {

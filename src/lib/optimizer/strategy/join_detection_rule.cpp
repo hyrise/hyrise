@@ -21,7 +21,8 @@ namespace opossum {
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
 bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                                 const AbstractCostEstimator& cost_estimator) const {
+                                 const AbstractCostEstimator& cost_estimator,
+                                 const std::shared_ptr<OptimizationContext>& context) const {
   if (node->type == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -45,7 +46,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
     }
   }
 
-  return _apply_to_inputs(node, cost_estimator);
+  return _apply_to_inputs(node, cost_estimator, context);
 }
 
 std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join(

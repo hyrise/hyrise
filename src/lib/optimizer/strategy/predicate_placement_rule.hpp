@@ -20,8 +20,8 @@ class PredicateNode;
 class PredicatePlacementRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node,
-                const AbstractCostEstimator& cost_estimator) const override;
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
+                const std::shared_ptr<OptimizationContext>& context) const override;
 
  private:
   // Traverse the LQP and perform push downs of predicates.

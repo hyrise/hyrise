@@ -16,8 +16,8 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "histogram_utils.hpp"
-#include "statistics/abstract_statistics_object.hpp"
 #include "single_bin_histogram.hpp"
+#include "statistics/abstract_statistics_object.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
@@ -45,20 +45,20 @@ AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_c
 }
 
 template <typename T>
-std::string AbstractHistogram<T>::description() const {
+std::string AbstractHistogram<T>::description(const bool include_bin_info) const {
   std::stringstream stream;
-  stream << histogram_name() << std::endl;
-  stream << "  distinct    " << total_distinct_count() << std::endl;
-  stream << "  min         " << minimum() << std::endl;
-  stream << "  max         " << maximum() << std::endl;
-  // TODO(tim): consider non-null ratio in histograms
-  // stream << "  non-null " << non_null_value_ratio() << std::endl;
-  stream << "  bins        " << bin_count() << std::endl;
+  stream << histogram_name();
+  stream << " distinct: " << total_distinct_count();
+  stream << " min: " << minimum();
+  stream << " max: " << maximum();
+  stream << " bins: " << bin_count();
 
-  stream << "  edges / counts " << std::endl;
-  for (BinID bin = 0u; bin < bin_count(); bin++) {
-    stream << "              [" << bin_minimum(bin) << ", " << bin_maximum(bin) << "]: ";
-    stream << bin_height(bin) << std::endl;
+  if (include_bin_info) {
+    stream << "  edges / counts " << std::endl;
+    for (BinID bin = 0u; bin < bin_count(); bin++) {
+      stream << "              [" << bin_minimum(bin) << ", " << bin_maximum(bin) << "]: ";
+      stream << bin_height(bin) << std::endl;
+    }
   }
 
   return stream.str();
@@ -171,7 +171,14 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
     const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
     const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
     const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-    return static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    const auto bin_share = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+
+    // bin_share == 1.0f can only happen due to floating point arithmetic inaccuracies
+    if (bin_share == 1.0f) {
+      return previous_value(1.0f);
+    } else {
+      return bin_share;
+    }
   }
 }
 
@@ -905,6 +912,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
             static_cast<HistogramCountType>(std::ceil(bin_height(first_sliced_bin_id) * sliced_bin_share));
         bin_distinct_counts.front() =
             static_cast<HistogramCountType>(std::ceil(bin_distinct_count(first_sliced_bin_id) * sliced_bin_share));
+
       } else {
         bin_minima.front() = bin_minimum(first_sliced_bin_id);
         bin_heights.front() = bin_height(first_sliced_bin_id);
@@ -919,6 +927,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
         bin_heights[sliced_bin_id] = bin_height(bin_id);
         bin_distinct_counts[sliced_bin_id] = bin_distinct_count(bin_id);
       }
+
     } break;
 
     case PredicateCondition::Between:
@@ -1053,7 +1062,7 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::_reduce_to_single_bin_histogram_impl() const {
   if constexpr (std::is_same_v<T, std::string>) {
     return std::make_shared<SingleBinHistogram<T>>(minimum(), maximum(), total_count(), total_distinct_count(),
-    _supported_characters, _string_prefix_length);
+                                                   _supported_characters, _string_prefix_length);
   } else {
     return std::make_shared<SingleBinHistogram<T>>(minimum(), maximum(), total_count(), total_distinct_count());
   }

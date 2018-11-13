@@ -10,9 +10,9 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_scan/like_table_scan_impl.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -25,7 +25,7 @@ namespace opossum {
 class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
   void SetUp() override {
-    _tw = std::make_shared<TableWrapper>( load_table("src/test/tables/int_float.tbl", 2));
+    _tw = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _tw->execute();
 
     // load string table
@@ -33,7 +33,8 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
     _tw_string->execute();
 
     // load special chars table
-    _tw_special_chars = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string_like_special_chars.tbl", 2));
+    _tw_special_chars =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/int_string_like_special_chars.tbl", 2));
     _tw_special_chars->execute();
 
     // load and compress string table

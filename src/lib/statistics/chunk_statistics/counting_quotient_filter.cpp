@@ -115,9 +115,8 @@ bool CountingQuotientFilter<ElementType>::is_full() const {
 
 template <typename ElementType>
 CardinalityEstimate CountingQuotientFilter<ElementType>::estimate_cardinality(
-  const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-  const std::optional<AllTypeVariant>& variant_value2) const {
-
+    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
   if (predicate_type == PredicateCondition::Equals) {
     if (does_not_contain(variant_value)) return {Cardinality{0}, EstimateType::MatchesNone};
     return {static_cast<Cardinality>(count(variant_value)), EstimateType::MatchesApproximately};
@@ -129,14 +128,15 @@ CardinalityEstimate CountingQuotientFilter<ElementType>::estimate_cardinality(
 
 template <typename ElementType>
 std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::slice_with_predicate(
-const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-const std::optional<AllTypeVariant>& variant_value2) const {
+    const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
   // TODO(tim, martin) consider whether slicing a CQF is possible and worthwhile
   return nullptr;
 }
 
 template <typename ElementType>
-std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::scale_with_selectivity(const Selectivity selectivity) const {
+std::shared_ptr<AbstractStatisticsObject> CountingQuotientFilter<ElementType>::scale_with_selectivity(
+    const Selectivity selectivity) const {
   // TODO(tim, martin) consider whether scaling a CQF is possible and worthwhile
   return nullptr;
 }

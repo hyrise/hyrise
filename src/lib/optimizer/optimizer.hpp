@@ -11,6 +11,7 @@ namespace opossum {
 
 class AbstractRule;
 class AbstractLQPNode;
+class OptimizationContext;
 
 /**
  * Applies optimization rules to an LQP. Rules are organized in RuleBatches which can be added to the Optimizer using
@@ -23,10 +24,11 @@ class AbstractLQPNode;
 class Optimizer final {
  public:
   static std::shared_ptr<Optimizer> create_default_optimizer();
+  static std::shared_ptr<OptimizationContext> create_optimization_context(const std::shared_ptr<AbstractLQPNode>& plan);
 
   explicit Optimizer(const uint32_t max_num_iterations,
-            const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
-            std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
+                     const std::shared_ptr<AbstractCostEstimator>& cost_estimator =
+                         std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>()));
 
   void add_rule_batch(RuleBatch rule_batch);
 
@@ -40,8 +42,10 @@ class Optimizer final {
 
   std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 
-  bool _apply_rule_batch(const RuleBatch& rule_batch, const std::shared_ptr<AbstractLQPNode>& root_node) const;
-  bool _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
+  bool _apply_rule_batch(const RuleBatch& rule_batch, const std::shared_ptr<AbstractLQPNode>& root_node,
+                         const std::shared_ptr<OptimizationContext>& context) const;
+  bool _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node,
+                   const std::shared_ptr<OptimizationContext>& context) const;
 };
 
 }  // namespace opossum

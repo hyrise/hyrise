@@ -15,8 +15,8 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
-#include "statistics/segment_statistics2.hpp"
 #include "statistics/chunk_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -49,9 +49,12 @@ class IndexScanRuleTest : public StrategyBaseTest {
     const auto chunk_statistics = table->table_statistics2()->chunk_statistics[0];
     chunk_statistics->row_count = row_count;
 
-    chunk_statistics->segment_statistics[0]->set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
-    chunk_statistics->segment_statistics[1]->set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
-    chunk_statistics->segment_statistics[2]->set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 20'000, row_count, 10));
+    chunk_statistics->segment_statistics[0]->set_statistics_object(
+        std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
+    chunk_statistics->segment_statistics[1]->set_statistics_object(
+        std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
+    chunk_statistics->segment_statistics[2]->set_statistics_object(
+        std::make_shared<SingleBinHistogram<int32_t>>(0, 20'000, row_count, 10));
   }
 
   std::shared_ptr<IndexScanRule> rule;

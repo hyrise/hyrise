@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/segment_statistics2.hpp"
 #include "statistics/chunk_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -94,7 +94,8 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     append_mutable_chunk();
   }
 
-  DebugAssert(_table_statistics2->chunk_statistics.size() == _chunks.size(), "Chunks and corresponding statistics are out of sync");
+  DebugAssert(_table_statistics2->chunk_statistics.size() == _chunks.size(),
+              "Chunks and corresponding statistics are out of sync");
   ++_table_statistics2->chunk_statistics.back()->row_count;
   _chunks.back()->append(values);
 }

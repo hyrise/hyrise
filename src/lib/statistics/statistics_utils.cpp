@@ -8,4 +8,4 @@ Cardinality scale_distinct_count(Selectivity selectivity, Cardinality value_coun
   return std::min(distinct_count, value_count * selectivity);
 }
 
-}  // namespace
+}  // namespace opossum

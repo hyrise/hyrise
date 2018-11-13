@@ -9,16 +9,16 @@
 
 namespace opossum {
 
-bool AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node,
-                                    const AbstractCostEstimator& cost_estimator) const {  // NOLINT
+bool AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node, const AbstractCostEstimator& cost_estimator,
+                                    const std::shared_ptr<OptimizationContext>& context) const {  // NOLINT
   auto inputs_changed = false;
 
   // Apply this rule recursively
   if (node->left_input()) {
-    inputs_changed |= apply_to(node->left_input(), cost_estimator);
+    inputs_changed |= apply_to(node->left_input(), cost_estimator, context);
   }
   if (node->right_input()) {
-    inputs_changed |= apply_to(node->right_input(), cost_estimator);
+    inputs_changed |= apply_to(node->right_input(), cost_estimator, context);
   }
 
   return inputs_changed;
