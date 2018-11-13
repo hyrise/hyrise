@@ -94,18 +94,6 @@ TEST_F(AllParameterVariantTest, ToString) {
     EXPECT_EQ(to_string(parameter), "Column #17");
   }
   {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
-    const std::shared_ptr<StoredTableNode> int_float = StoredTableNode::make("int_float");
-    const LQPColumnReference column_a = {int_float, ColumnID{0}};
-    const LQPColumnReference column_b = {int_float, ColumnID{1}};
-
-    const AllParameterVariant parameter_column_a(column_a);
-    EXPECT_EQ(to_string(parameter_column_a), "a");
-
-    const AllParameterVariant parameter_column_b(column_b);
-    EXPECT_EQ(to_string(parameter_column_b), "b");
-  }
-  {
     const AllParameterVariant parameter("string");
     EXPECT_EQ(to_string(parameter), "string");
   }
