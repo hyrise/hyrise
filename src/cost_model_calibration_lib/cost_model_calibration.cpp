@@ -50,7 +50,7 @@ void CostModelCalibration::_calibrate() const {
 
   for (size_t i = 0; i < number_of_iterations; i++) {
     // Regenerate Queries for each iteration...
-    const auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
+    const auto& queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
     for (const auto& query : queries) {
       const auto examples = queryRunner.calibrate_query_from_lqp(query);
