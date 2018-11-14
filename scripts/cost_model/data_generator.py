@@ -42,8 +42,8 @@ class DataGenerator:
         return np.random.choice(distinct_values, row_count)
 
     @staticmethod
-    def float_column(row_count, distinct_values):
-        distinct_values = np.array([np.random.random() for _ in range(distinct_values)])
+    def float_column(row_count, num_distinct_values):
+        distinct_values = np.array([np.random.random() for _ in range(num_distinct_values)])
         return np.random.choice(distinct_values, row_count)
 
     @staticmethod
@@ -51,7 +51,7 @@ class DataGenerator:
         return DataGenerator.float_column(row_count, distinct_values)
 
     def generate_column(self, column_name, row_count, column_specification):
-        distinct_values = column_specification.get('distinct_values', max(row_count/100, 100))
+        distinct_values = column_specification.get('distinct_values', max(int(row_count/100), 100))
         value_distribution = column_specification.get('value_distribution', "uniform")
         column_type = column_specification.get('type', "int")
         is_sorted = column_specification.get('sorted', False)
