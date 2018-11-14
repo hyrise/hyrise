@@ -26,6 +26,10 @@ class DataGenerator:
         return switcher.get(column_type, lambda: "Invalid column type")
 
     @staticmethod
+    def key_column(row_count):
+        return np.array(range(row_count))
+
+    @staticmethod
     def int_column(row_count, distinct_values):
         # change here for other distributions, numpy provides other distributions in np.random
         return np.random.randint(0, distinct_values, size=(row_count, 1))
@@ -55,6 +59,9 @@ class DataGenerator:
         value_distribution = column_specification.get('value_distribution', "uniform")
         column_type = column_specification.get('type', "int")
         is_sorted = column_specification.get('sorted', False)
+
+        if column_name == 'column_pk':
+            return pd.DataFrame(self.key_column(row_count), columns=[column_name])
 
         column_generator = self.type_to_function(column_type)
         data = column_generator(row_count, distinct_values)
