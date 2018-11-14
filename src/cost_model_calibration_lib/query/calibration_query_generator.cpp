@@ -5,7 +5,8 @@
 #include "../configuration/calibration_table_specification.hpp"
 #include "calibration_query_generator_aggregates.hpp"
 #include "calibration_query_generator_join.hpp"
-#include "calibration_query_generator_predicates.hpp"
+#include "calibration_query_generator_predicate.hpp"
+#include "calibration_query_generator_projection.hpp"
 #include "expression/expression_functional.hpp"
 
 namespace opossum {
@@ -128,21 +129,9 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggr
   return aggregate_node;
 }
 
+
 const std::shared_ptr<ProjectionNode> CalibrationQueryGenerator::_generate_projection(
     const std::vector<LQPColumnReference>& columns) {
-  static std::mt19937 engine((std::random_device()()));
-
-  std::uniform_int_distribution<u_int64_t> dist(1, columns.size());
-
-  std::vector<LQPColumnReference> sampled;
-  std::sample(columns.begin(), columns.end(), std::back_inserter(sampled), dist(engine), engine);
-
-  std::vector<std::shared_ptr<AbstractExpression>> column_expressions {};
-  column_expressions.reserve(sampled.size());
-  for (const auto& column_ref : sampled) {
-    column_expressions.push_back(expression_functional::lqp_column_(column_ref));
-  }
-
-  return ProjectionNode::make(column_expressions);
+  return CalibrationQueryGeneratorProjection::generate_projection(columns);
 }
 }  // namespace opossum

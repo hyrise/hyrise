@@ -12,7 +12,7 @@
 
 #include "configuration/calibration_column_specification.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "query/calibration_query_generator_predicates.hpp"
+#include "query/calibration_query_generator_predicate.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/storage_manager.hpp"
 

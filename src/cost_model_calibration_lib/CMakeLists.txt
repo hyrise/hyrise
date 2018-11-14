@@ -29,8 +29,10 @@ set(
         query/calibration_query_generator_aggregates.hpp
         query/calibration_query_generator_join.cpp
         query/calibration_query_generator_join.hpp
-        query/calibration_query_generator_predicates.cpp
-        query/calibration_query_generator_predicates.hpp
+        query/calibration_query_generator_predicate.cpp
+        query/calibration_query_generator_predicate.hpp
+        query/calibration_query_generator_projection.cpp
+        query/calibration_query_generator_projection.hpp
 )
 
 

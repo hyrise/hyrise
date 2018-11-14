@@ -1,4 +1,4 @@
-#include "calibration_query_generator_predicates.hpp"
+#include "calibration_query_generator_predicate.hpp"
 
 #include <random>
 

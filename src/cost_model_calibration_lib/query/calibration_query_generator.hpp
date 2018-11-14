@@ -7,7 +7,7 @@
 
 #include "../configuration/calibration_column_specification.hpp"
 #include "../configuration/calibration_table_specification.hpp"
-#include "calibration_query_generator_predicates.hpp"
+#include "calibration_query_generator_predicate.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
