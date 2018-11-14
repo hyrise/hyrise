@@ -64,18 +64,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
 const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scan(
     const CalibrationTableSpecification& table_definition, const PredicateGeneratorFunctor& predicate_generator) {
   const auto table = StoredTableNode::make(table_definition.table_name);
-  auto projection_node = _generate_projection(table->get_columns());
 
   auto predicate =
       CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, table_definition.columns, table, 3);
 
-  // We are not interested in queries without Predicate (they could get too expensive)
-  if (!predicate) {
-    return {};
-  }
-
-  projection_node->set_left_input(predicate);
-  return projection_node;
+  return predicate;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join(
@@ -145,7 +138,7 @@ const std::shared_ptr<ProjectionNode> CalibrationQueryGenerator::_generate_proje
   std::sample(columns.begin(), columns.end(), std::back_inserter(sampled), dist(engine), engine);
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions {};
-  column_expressions.resize(sampled.size());
+  column_expressions.reserve(sampled.size());
   for (const auto& column_ref : sampled) {
     column_expressions.push_back(expression_functional::lqp_column_(column_ref));
   }
