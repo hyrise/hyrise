@@ -40,7 +40,7 @@ void generate_table_statistics2(Table& table) {
     const auto chunk = table.get_chunk(chunk_id);
     const auto& chunk_statistics = table.table_statistics2()->chunk_statistics[chunk_id];
 
-    const auto bin_count = std::min<size_t>(1000, std::max<size_t>(2, chunk->size() / 10));
+    const auto bin_count = std::min<size_t>(100, std::max<size_t>(2, chunk->size() / 10));
 
     std::cout << "generate_table_statistics2():   Chunk " << chunk_id << ": ~" << bin_count << " bins" << std::endl;
 

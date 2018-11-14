@@ -306,6 +306,12 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
                                                       right_input_table_statistics->chunk_statistics.size());
 
     switch (join_node->join_mode) {
+      // TODO(anybody) Handle properly
+      case JoinMode::Semi:
+      case JoinMode::Anti: {
+        output_table_statistics = left_input_table_statistics;
+      } break;
+      
       // TODO(anybody) For now, handle outer joins just as inner joins
       case JoinMode::Left:
       case JoinMode::Right:
