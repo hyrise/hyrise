@@ -50,6 +50,10 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   _config.out << "\n- Starting Benchmark..." << std::endl;
 
+  const auto available_queries_count = _query_generator->available_query_count();
+  _query_plans.resize(available_queries_count);
+  _query_results.resize(available_queries_count);
+
   auto benchmark_start = std::chrono::steady_clock::now();
 
   // Run the queries in the selected mode
@@ -104,8 +108,6 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  _query_results.resize(_query_generator->available_query_count());
-
   const auto number_of_queries = _query_generator->selected_query_count();
   auto query_ids = _query_generator->selected_queries();
 
@@ -169,8 +171,6 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
-  _query_results.resize(_query_generator->available_query_count());
-
   for (const auto& query_id : _query_generator->selected_queries()) {
     _warmup_query(query_id);
 
