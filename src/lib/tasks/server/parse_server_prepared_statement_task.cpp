@@ -14,7 +14,7 @@ void ParseServerPreparedStatementTask::_on_execute() {
     Assert(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
 
     auto prepared_plan =
-        std::make_unique<PreparedPlan>(prepared_plans[0], sql_translator.value_placeholder_parameter_ids());
+        std::make_unique<PreparedPlan>(prepared_plans[0], sql_translator.parameter_ids_of_value_placeholders());
 
     _promise.set_value(std::move(prepared_plan));
   } catch (const std::exception& exception) {

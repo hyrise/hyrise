@@ -891,7 +891,7 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  SQLPlanCache::get().clear();
+  SQLPhysicalPlanCache::get().clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 

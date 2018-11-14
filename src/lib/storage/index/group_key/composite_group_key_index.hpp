@@ -44,6 +44,12 @@ class CompositeGroupKeyIndex : public BaseIndex {
   friend class CompositeGroupKeyIndexTest;
 
  public:
+  /**
+   * Predicts the memory consumption in bytes of creating this index.
+   * See BaseIndex::estimate_memory_consumption()
+   */
+  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
+
   CompositeGroupKeyIndex(CompositeGroupKeyIndex&&) = default;
   CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
   ~CompositeGroupKeyIndex() = default;
@@ -56,6 +62,8 @@ class CompositeGroupKeyIndex : public BaseIndex {
   Iterator _cbegin() const final;
   Iterator _cend() const final;
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const final;
+
+  size_t _memory_consumption() const final;
 
   /**
    * Creates a VariableLengthKey using the values given as parameters.

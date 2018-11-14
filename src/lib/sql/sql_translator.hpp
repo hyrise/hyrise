@@ -45,7 +45,7 @@ class SQLTranslator final {
   /**
    * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
    */
-  std::vector<ParameterID> value_placeholder_parameter_ids() const;
+  std::vector<ParameterID> parameter_ids_of_value_placeholders() const;
 
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement

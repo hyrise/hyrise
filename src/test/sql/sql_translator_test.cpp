@@ -35,7 +35,6 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
-#include "tpch/tpch_queries.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -1182,9 +1181,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
       stored_table_node_int_float));
   // clang-format on
 
-  EXPECT_EQ(sql_translator.value_placeholder_parameter_ids().size(), 2u);
-  EXPECT_EQ(sql_translator.value_placeholder_parameter_ids().at(0), ParameterID{1});
-  EXPECT_EQ(sql_translator.value_placeholder_parameter_ids().at(1), ParameterID{0});
+  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().size(), 2u);
+  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().at(0), ParameterID{1});
+  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().at(1), ParameterID{0});
 
   const auto actual_projection_node = std::dynamic_pointer_cast<ProjectionNode>(actual_lqp);
   ASSERT_TRUE(actual_projection_node);

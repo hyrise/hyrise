@@ -71,6 +71,7 @@ set(
     operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
+    operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
     operators/join_null_test.cpp
@@ -183,7 +184,7 @@ set(
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
-    utils/string_functions_test.cpp
+    utils/string_utils_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})

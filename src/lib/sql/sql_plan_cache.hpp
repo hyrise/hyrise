@@ -8,7 +8,9 @@
 namespace opossum {
 
 class AbstractOperator;
+class AbstractLQPNode;
 
-using SQLPlanCache = HashCache<std::shared_ptr<AbstractOperator>, std::string>;
+using SQLPhysicalPlanCache = HashCache<std::shared_ptr<AbstractOperator>, std::string>;
+using SQLLogicalPlanCache = HashCache<std::shared_ptr<AbstractLQPNode>, std::string>;
 
 }  // namespace opossum

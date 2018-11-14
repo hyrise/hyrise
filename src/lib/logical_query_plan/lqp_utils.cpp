@@ -5,8 +5,11 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 #include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -213,6 +216,48 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   if (!lqp->left_input() && !lqp->right_input()) return false;
 
   return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
+}
+
+std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  std::set<std::string> modified_tables;
+
+  visit_lqp(lqp, [&](const auto& node) {
+    switch (node->type) {
+      case LQPNodeType::Insert:
+        modified_tables.insert(std::static_pointer_cast<InsertNode>(node)->table_name);
+        break;
+      case LQPNodeType::Update:
+        modified_tables.insert(std::static_pointer_cast<UpdateNode>(node)->table_name);
+        break;
+      case LQPNodeType::Delete:
+        modified_tables.insert(std::static_pointer_cast<DeleteNode>(node)->table_name);
+        break;
+      case LQPNodeType::CreateTable:
+      case LQPNodeType::CreatePreparedPlan:
+      case LQPNodeType::DropTable:
+      case LQPNodeType::Validate:
+      case LQPNodeType::Aggregate:
+      case LQPNodeType::Alias:
+      case LQPNodeType::CreateView:
+      case LQPNodeType::DropView:
+      case LQPNodeType::DummyTable:
+      case LQPNodeType::Join:
+      case LQPNodeType::Limit:
+      case LQPNodeType::Predicate:
+      case LQPNodeType::Projection:
+      case LQPNodeType::Root:
+      case LQPNodeType::ShowColumns:
+      case LQPNodeType::ShowTables:
+      case LQPNodeType::Sort:
+      case LQPNodeType::StoredTable:
+      case LQPNodeType::Union:
+      case LQPNodeType::Mock:
+        return LQPVisitation::VisitInputs;
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  return modified_tables;
 }
 
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp) {

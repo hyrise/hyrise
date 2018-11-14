@@ -1,7 +1,7 @@
 #include <memory>
 #include <string>
 
-#include "../benchmark_basic_fixture.hpp"
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -17,11 +17,11 @@ namespace opossum {
 using hsql::SQLParser;
 using hsql::SQLParserResult;
 
-class SQLBenchmark : public BenchmarkBasicFixture {
+class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
     // Disable and clear all SQL caches.
-    SQLPlanCache::get().resize(0);
+    SQLPhysicalPlanCache::get().resize(0);
 
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
@@ -62,8 +62,8 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
   void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {  // NOLINT
     // Enable query plan cache.
-    SQLPlanCache::get().clear();
-    SQLPlanCache::get().resize(16);
+    SQLPhysicalPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().resize(16);
 
     while (st.KeepRunning()) {
       auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();

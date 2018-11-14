@@ -1,4 +1,4 @@
-#include "benchmark_basic_fixture.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 
 #include <memory>
 #include <vector>
@@ -17,7 +17,7 @@ constexpr auto CHUNK_SIZE = opossum::ChunkID{2000};
 
 namespace opossum {
 
-void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
+void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
   auto chunk_size = ChunkID(CHUNK_SIZE);
 
   auto table_generator = std::make_shared<TableGenerator>();
@@ -32,9 +32,9 @@ void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
   _table_dict_wrapper->execute();
 }
 
-void BenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
+void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
 
-void BenchmarkBasicFixture::_clear_cache() {
+void MicroBenchmarkBasicFixture::_clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
   for (uint i = 0; i < clear.size(); i++) {

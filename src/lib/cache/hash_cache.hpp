@@ -63,6 +63,7 @@ class HashCache : public Singleton<HashCache<Value, Key>> {
 
   // Returns a reference to the underlying cache.
   AbstractCache<Key, Value>& cache() { return *_cache; }
+  const AbstractCache<Key, Value>& cache() const { return *_cache; }
 
   // Replaces the underlying cache by creating a new object
   // of the given cache type.

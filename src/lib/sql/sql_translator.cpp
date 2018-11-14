@@ -131,11 +131,11 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator) {}
 
-std::vector<ParameterID> SQLTranslator::value_placeholder_parameter_ids() const {
-  const auto& value_placeholder_parameter_ids = _parameter_id_allocator->value_placeholders();
-  auto parameter_ids = std::vector<ParameterID>{value_placeholder_parameter_ids.size()};
+std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
+  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
 
-  for (const auto& [value_placeholder_id, parameter_id] : value_placeholder_parameter_ids) {
+  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
     parameter_ids[value_placeholder_id] = parameter_id;
   }
 
@@ -1016,7 +1016,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 
   const auto lqp = prepared_plan_translator.translate_parser_result(parse_result).at(0);
 
-  const auto parameter_ids = prepared_plan_translator.value_placeholder_parameter_ids();
+  const auto parameter_ids = prepared_plan_translator.parameter_ids_of_value_placeholders();
 
   const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
 
@@ -1030,7 +1030,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   }
 
   const auto prepared_plan = StorageManager::get().get_prepared_plan(execute_statement.name);
-  Assert(parameters.size() == prepared_plan->parameter_ids.size(), "Incorrect number of parameters supplied");
+  AssertInput(parameters.size() == prepared_plan->parameter_ids.size(), "Incorrect number of parameters supplied");
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {

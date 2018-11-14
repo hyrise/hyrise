@@ -133,8 +133,8 @@ set(
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
-        logical_query_plan/create_prepared_plan_node.cpp
-        logical_query_plan/create_prepared_plan_node.hpp
+    logical_query_plan/create_prepared_plan_node.cpp
+    logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
     logical_query_plan/show_columns_node.cpp
@@ -209,8 +209,8 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-        operators/maintenance/create_prepared_plan.cpp
-        operators/maintenance/create_prepared_plan.hpp
+    operators/maintenance/create_prepared_plan.cpp
+    operators/maintenance/create_prepared_plan.hpp
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
@@ -232,22 +232,21 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_single_column_table_scan_impl.cpp
+    operators/table_scan/abstract_single_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
-    operators/table_scan/base_single_column_table_scan_impl.cpp
-    operators/table_scan/base_single_column_table_scan_impl.hpp
-    operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/between_table_scan_impl.cpp
-    operators/table_scan/between_table_scan_impl.hpp
-    operators/table_scan/column_comparison_table_scan_impl.cpp
-    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/column_between_table_scan_impl.cpp
+    operators/table_scan/column_between_table_scan_impl.hpp
+    operators/table_scan/column_is_null_table_scan_impl.cpp
+    operators/table_scan/column_is_null_table_scan_impl.hpp
+    operators/table_scan/column_like_table_scan_impl.cpp
+    operators/table_scan/column_like_table_scan_impl.hpp
+    operators/table_scan/column_vs_column_table_scan_impl.cpp
+    operators/table_scan/column_vs_column_table_scan_impl.hpp
+    operators/table_scan/column_vs_value_table_scan_impl.cpp
+    operators/table_scan/column_vs_value_table_scan_impl.hpp
     operators/table_scan/expression_evaluator_table_scan_impl.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.hpp
-    operators/table_scan/is_null_table_scan_impl.cpp
-    operators/table_scan/is_null_table_scan_impl.hpp
-    operators/table_scan/like_table_scan_impl.cpp
-    operators/table_scan/like_table_scan_impl.hpp
-    operators/table_scan/single_column_table_scan_impl.cpp
-    operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -577,6 +576,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}

@@ -14,6 +14,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -30,9 +31,8 @@
 namespace opossum {
 
 class SQLiteTestRunner : public BaseTestWithParam<std::string> {
- protected:
-  void SetUp() override {
-    StorageManager::get().reset();
+ public:
+  static void SetUpTestCase() {  // called ONCE before the tests
     _sqlite = std::make_unique<SQLiteWrapper>();
 
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
@@ -52,21 +52,60 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
       std::string table_file = args.at(0);
       std::string table_name = args.at(1);
 
-      DebugAssert(!StorageManager::get().has_table(table_name), "Table already loaded");
+      // Store loaded tables in a map that basically caches the loaded tables. In case the table
+      // needs to be reloaded (e.g., due to modifications), we also store the file path.
+      _test_table_cache.emplace(table_name, TableCacheEntry{load_table(table_file, 10), table_file});
 
+      // Create test table and also table copy which is later used as the master to copy from.
       _sqlite->create_table_from_tbl(table_file, table_name);
-
-      std::shared_ptr<Table> table = load_table(table_file, 10);
-      StorageManager::get().add_table(table_name, std::move(table));
+      _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
     }
 
     opossum::Topology::use_numa_topology();
     opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
-
-    SQLPlanCache::get().clear();
   }
 
-  std::unique_ptr<SQLiteWrapper> _sqlite;
+ protected:
+  void SetUp() override {  // called once before each test
+    // For proper testing, we reset the storage manager before EVERY test.
+    StorageManager::get().reset();
+
+    for (auto const& [table_name, test_table] : _test_table_cache) {
+      /*
+        Opossum:
+          We start off with cached tables (SetUpTestCase) and add them to the resetted
+          storage manager before each test here. In case tables have been modified, they are
+          removed from the cache and we thus need to reload them from the initial tbl file.
+        SQLite:
+          Drop table and copy the whole table from the master table to reset all accessed tables.
+      */
+      if (test_table.dirty) {
+        // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
+        auto reloaded_table = load_table(test_table.filename, 10);
+        StorageManager::get().add_table(table_name, reloaded_table);
+        _test_table_cache.emplace(table_name, TableCacheEntry{reloaded_table, test_table.filename});
+
+        // When tables in Hyrise have (potentially) modified, the should might be true for SQLite.
+        _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
+      } else {
+        StorageManager::get().add_table(table_name, test_table.table);
+      }
+    }
+
+    SQLPhysicalPlanCache::get().clear();
+  }
+
+  // Structure to cache initially loaded tables and store their file paths
+  // to reload the the table from the given tbl file whenever required.
+  struct TableCacheEntry {
+    std::shared_ptr<Table> table;
+    std::string filename;
+    bool dirty{false};
+  };
+
+  inline static std::unique_ptr<SQLiteWrapper> _sqlite;
+  inline static std::map<std::string, TableCacheEntry> _test_table_cache;
+  inline static std::string _master_table_suffix = "_master_copy";
 };
 
 std::vector<std::string> read_queries_from_file() {
@@ -92,6 +131,13 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
+
+  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
+    for (const auto& table_name : lqp_find_modified_tables(plan)) {
+      // mark table cache entry as dirty, when table has been modified
+      _test_table_cache[table_name].dirty = true;
+    }
+  }
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 

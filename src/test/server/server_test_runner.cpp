@@ -16,7 +16,7 @@ class ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
-    SQLPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().clear();
 
     _table_a = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);

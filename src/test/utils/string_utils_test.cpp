@@ -5,9 +5,9 @@
 
 namespace opossum {
 
-class StringFunctionsTest : public BaseTest {};
+class StringUtilsTest : public BaseTest {};
 
-TEST_F(StringFunctionsTest, trim_and_split) {
+TEST_F(StringUtilsTest, trim_and_split) {
   const std::string test_command = "print opossonauten_table";
 
   auto arguments = trim_and_split(test_command);
@@ -16,7 +16,7 @@ TEST_F(StringFunctionsTest, trim_and_split) {
   EXPECT_EQ(arguments[1], "opossonauten_table");
 }
 
-TEST_F(StringFunctionsTest, trim_and_split_whitespace_padding) {
+TEST_F(StringUtilsTest, trim_and_split_whitespace_padding) {
   const std::string test_command = "   print opossonauten_table  ";
 
   auto arguments = trim_and_split(test_command);
@@ -25,7 +25,7 @@ TEST_F(StringFunctionsTest, trim_and_split_whitespace_padding) {
   EXPECT_EQ(arguments[1], "opossonauten_table");
 }
 
-TEST_F(StringFunctionsTest, trim_and_split_double_spaces) {
+TEST_F(StringUtilsTest, trim_and_split_double_spaces) {
   const std::string test_command = "print  opossonauten_table";
 
   auto arguments = trim_and_split(test_command);

@@ -27,6 +27,13 @@ class SQLiteWrapper final {
   void create_table_from_tbl(const std::string& file, const std::string& table_name);
 
   /*
+   * Recreates a table given another table to copy from.
+   *
+   * @param command SQL command string
+   */
+  void reset_table_from_copy(const std::string& table_name_to_reset, const std::string& table_name_to_copy_from) const;
+
+  /*
    * Creates a table in the sqlite database from a given opossum Table
    *
    * @param table      The table to load into sqlite

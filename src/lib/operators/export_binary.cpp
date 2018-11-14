@@ -204,7 +204,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
   // Unfortunately, we have to iterate over all values of the reference segment
   // to materialize its contents. Then we can write them to the file
   for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    export_value(context->ofstream, type_cast<T>(ref_segment[row]));
+    export_value(context->ofstream, type_cast_variant<T>(ref_segment[row]));
   }
 }
 
@@ -226,7 +226,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    value = type_cast<std::string>(ref_segment[row]);
+    value = type_cast_variant<std::string>(ref_segment[row]);
     string_lengths[row] = value.length();
     values << value;
   }

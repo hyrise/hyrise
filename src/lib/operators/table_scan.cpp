@@ -27,12 +27,12 @@
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_scan/between_table_scan_impl.hpp"
-#include "table_scan/column_comparison_table_scan_impl.hpp"
+#include "table_scan/column_between_table_scan_impl.hpp"
+#include "table_scan/column_is_null_table_scan_impl.hpp"
+#include "table_scan/column_like_table_scan_impl.hpp"
+#include "table_scan/column_vs_column_table_scan_impl.hpp"
+#include "table_scan/column_vs_value_table_scan_impl.hpp"
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
-#include "table_scan/is_null_table_scan_impl.hpp"
-#include "table_scan/like_table_scan_impl.hpp"
-#include "table_scan/single_column_table_scan_impl.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -134,12 +134,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
           auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
           if (!filtered_pos_list) {
-            filtered_pos_list = std::make_shared<PosList>();
-            filtered_pos_list->reserve(matches_out->size());
+            filtered_pos_list = std::make_shared<PosList>(matches_out->size());
 
+            size_t offset = 0;
             for (const auto& match : *matches_out) {
               const auto row_id = (*pos_list_in)[match.chunk_offset];
-              filtered_pos_list->push_back(row_id);
+              (*filtered_pos_list)[offset] = row_id;
+              ++offset;
             }
           }
 
@@ -210,24 +211,25 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column> LIKE <non-null value>
     if (left_column_expression && left_column_expression->data_type() == DataType::String && is_like_predicate &&
         right_value) {
-      return std::make_unique<LikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                 predicate_condition, type_cast<std::string>(*right_value));
+      return std::make_unique<ColumnLikeTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                       predicate_condition,
+                                                       type_cast_variant<std::string>(*right_value));
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <non-null value>
     if (left_column_expression && right_value) {
-      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                         predicate_condition, *right_value);
+      return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                          predicate_condition, *right_value);
     }
     if (right_column_expression && left_value) {
-      return std::make_unique<SingleColumnTableScanImpl>(input_table_left(), right_column_expression->column_id,
-                                                         flip_predicate_condition(predicate_condition), *left_value);
+      return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), right_column_expression->column_id,
+                                                          flip_predicate_condition(predicate_condition), *left_value);
     }
 
     // Predicate pattern: <column> <binary predicate_condition> <column>
     if (left_column_expression && right_column_expression) {
-      return std::make_unique<ColumnComparisonTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                             predicate_condition, right_column_expression->column_id);
+      return std::make_unique<ColumnVsColumnTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                           predicate_condition, right_column_expression->column_id);
     }
   }
 
@@ -235,8 +237,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column> IS NULL
     if (const auto left_column_expression =
             std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
-      return std::make_unique<IsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                   is_null_expression->predicate_condition);
+      return std::make_unique<ColumnIsNullTableScanImpl>(input_table_left(), left_column_expression->column_id,
+                                                         is_null_expression->predicate_condition);
     }
   }
 
@@ -249,8 +251,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
-      return std::make_unique<BetweenTableScanImpl>(input_table_left(), left_column->column_id, *lower_bound_value,
-                                                    *upper_bound_value);
+      return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
+                                                          *lower_bound_value, *upper_bound_value);
     }
   }
 
