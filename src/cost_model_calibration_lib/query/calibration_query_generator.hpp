@@ -17,7 +17,7 @@ namespace opossum {
 
 class CalibrationQueryGenerator {
  public:
-  static const std::vector<const std::shared_ptr<AbstractLQPNode>> generate_queries(
+  static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_queries(
       const std::vector<CalibrationTableSpecification>& table_definitions);
 
  private:

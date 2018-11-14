@@ -10,12 +10,12 @@
 
 namespace opossum {
 
-const std::vector<const std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries(
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries(
     const std::vector<CalibrationTableSpecification>& table_definitions) {
-  std::vector<const std::shared_ptr<AbstractLQPNode>> queries;
+  std::vector<std::shared_ptr<AbstractLQPNode>> queries;
   queries.reserve(table_definitions.size());
 
-  const auto& add_query_if_present = [](std::vector<const std::shared_ptr<AbstractLQPNode>>& vector,
+  const auto& add_query_if_present = [](std::vector<std::shared_ptr<AbstractLQPNode>>& vector,
                                         const std::shared_ptr<AbstractLQPNode>& query) {
     if (query) {
       vector.push_back(query);
@@ -145,6 +145,7 @@ const std::shared_ptr<ProjectionNode> CalibrationQueryGenerator::_generate_proje
   std::sample(columns.begin(), columns.end(), std::back_inserter(sampled), dist(engine), engine);
 
   std::vector<std::shared_ptr<AbstractExpression>> column_expressions {};
+  column_expressions.resize(sampled.size());
   for (const auto& column_ref : sampled) {
     column_expressions.push_back(expression_functional::lqp_column_(column_ref));
   }
