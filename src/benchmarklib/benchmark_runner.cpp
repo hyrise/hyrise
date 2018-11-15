@@ -5,7 +5,6 @@
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
