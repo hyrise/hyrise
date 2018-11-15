@@ -23,7 +23,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
   }
 
 
-  auto remaining_edge_indices = std::vector<size_t>{join_graph.edges.size()};
+  auto remaining_edge_indices = std::vector<size_t>(join_graph.edges.size());
   std::iota(remaining_edge_indices.begin(), remaining_edge_indices.end(), 0);
 
   auto plan_by_edge = std::vector<std::shared_ptr<AbstractLQPNode>>{join_graph.edges.size()};
@@ -46,11 +46,11 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
 
     for (auto vertex_cluster_iter = vertex_clusters.begin(); vertex_cluster_iter != vertex_clusters.end(); ) {
       if ((vertex_cluster_iter->first & edge.vertex_set).any()) {
+        new_vertex_cluster |= vertex_cluster_iter->first;
         vertex_cluster_iter = vertex_clusters.erase(vertex_cluster_iter);
       } else {
         ++vertex_cluster_iter;
       }
-      new_vertex_cluster |= vertex_cluster_iter->first;
     }
 
     vertex_clusters.emplace(new_vertex_cluster, plan_by_edge[edge_idx]);
@@ -58,7 +58,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
     for (const auto& edge_idx2 : remaining_edge_indices) {
       const auto& edge2 = join_graph.edges[edge_idx];
       if ((edge2.vertex_set & new_vertex_cluster).any()) {
-        plan_by_edge[edge_idx2] =  _build_plan_for_edge(vertex_clusters, join_graph.edges[edge_idx]);
+        plan_by_edge[edge_idx2] =  _build_plan_for_edge(vertex_clusters, join_graph.edges[edge_idx2]);
       }
     }
 

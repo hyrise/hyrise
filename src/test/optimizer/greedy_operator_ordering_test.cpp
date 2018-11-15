@@ -19,10 +19,10 @@ class GreedyOperatorOrderingTest : public BaseTest {
   void SetUp() override {
     cost_estimator = std::make_shared<CostModelLogical>();
 
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a_a"}, {DataType::Int, "a_b"}}, "a");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b_a"}}, "b");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "c_a"}}, "c");
+    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "d_a"}}, "d");
 
     // All columns have the same statistics, only Table row counts differ
     const auto column_statistics = std::static_pointer_cast<const BaseColumnStatistics>(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 100, 0, 100));
@@ -45,11 +45,11 @@ class GreedyOperatorOrderingTest : public BaseTest {
     node_c->set_statistics(table_statistics_c);
     node_d->set_statistics(table_statistics_d);
 
-    a_a = node_a->get_column("a");
-    a_b = node_a->get_column("b");
-    b_a = node_b->get_column("a");
-    c_a = node_c->get_column("a");
-    d_a = node_c->get_column("a");
+    a_a = node_a->get_column("a_a");
+    a_b = node_a->get_column("a_b");
+    b_a = node_b->get_column("b_a");
+    c_a = node_c->get_column("c_a");
+    d_a = node_d->get_column("d_a");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
