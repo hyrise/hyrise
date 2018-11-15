@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-AbstractJoinOrderingAlgorithm::AbstractJoinOrderingAlgorithm(const std::shared_ptr<AbstractCostEstimator>& cost_estimator):
-  _cost_estimator(cost_estimator) {}
-
+AbstractJoinOrderingAlgorithm::AbstractJoinOrderingAlgorithm(
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
+    : _cost_estimator(cost_estimator) {}
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_to_plan(
     const std::shared_ptr<AbstractLQPNode>& lqp,
@@ -108,6 +108,5 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
 
   return lqp;
 }
-
 
 }  // namespace opossum

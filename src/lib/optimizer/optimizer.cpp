@@ -166,7 +166,11 @@ bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch,
 }
 
 bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
+  //  std::cout << "Rule: " << rule.name() << " {" << std::endl;
+  //  root_node->print();
   auto lqp_changed = rule.apply_to(root_node);
+  //  root_node->print();
+  //  std::cout << "}" << std::endl << std::endl;
 
   /**
    * Optimize Subselects

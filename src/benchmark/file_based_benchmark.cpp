@@ -57,9 +57,9 @@ void _load_table_folder(const BenchmarkConfig& config, const std::string& table_
       // We want to avoid any confusion when the benchmark and the CSV meta file define different chunk sizes.
       // It would be possible for one of these to take precedence and generate a warning in case of a mismatch, but
       // right now, we don't know what the desired behavior is.
-      Assert(table->max_chunk_size() == config.chunk_size,
-             std::string("Maximum chunk size defined in benchmark (") + std::to_string(config.chunk_size) +
-                 ") and in csv meta file (" + std::to_string(table->max_chunk_size()) + ") differ");
+      //      Assert(table->max_chunk_size() == config.chunk_size,
+      //             std::string("Maximum chunk size defined in benchmark (") + std::to_string(config.chunk_size) +
+      //                 ") and in csv meta file (" + std::to_string(table->max_chunk_size()) + ") differ");
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;

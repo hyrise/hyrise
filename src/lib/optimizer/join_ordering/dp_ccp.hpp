@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "abstract_join_ordering_algorithm.hpp"
 
 namespace opossum {

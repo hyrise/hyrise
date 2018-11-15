@@ -374,116 +374,6 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   stream << std::setw(2) << report << std::endl;
 }
 
-<<<<<<< HEAD
-BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std::string& table_path,
-                                        const std::string& query_path) {
-  const auto tables = _read_table_folder(table_path);
-  Assert(!tables.empty(), "No tables found in '" + table_path + "'");
-
-  for (const auto& table_path_str : tables) {
-    const auto table_name = filesystem::path{table_path_str}.stem().string();
-
-    std::shared_ptr<Table> table;
-    if (boost::algorithm::ends_with(table_path_str, ".tbl")) {
-      table = load_table(table_path_str, config.chunk_size);
-    } else {
-      table = CsvParser{}.parse(table_path_str);
-    }
-
-    config.out << "- Adding table '" << table_name << "'" << std::endl;
-    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
-    StorageManager::get().add_table(table_name, table);
-  }
-
-  const auto queries = _read_query_folder(query_path);
-  return BenchmarkRunner(config, queries, create_context(config));
-}
-
-std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& table_path) {
-  const auto is_table_file = [](const std::string& filename) {
-    return (boost::algorithm::ends_with(filename, ".csv") || boost::algorithm::ends_with(filename, ".tbl"));
-  };
-
-  filesystem::path path{table_path};
-  Assert(filesystem::exists(path), "No such file or directory '" + table_path + "'");
-
-  std::vector<std::string> tables;
-
-  // If only one file was specified, add it and return
-  if (filesystem::is_regular_file(path)) {
-    Assert(is_table_file(table_path), "Specified file '" + table_path + "' is not a .csv or .tbl file");
-    tables.push_back(table_path);
-    return tables;
-  }
-
-  // Recursively walk through the specified directory and add all files on the way
-  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
-    const auto filename = entry.path().string();
-    if (filesystem::is_regular_file(entry) && is_table_file(filename)) {
-      tables.push_back(filename);
-    }
-  }
-
-  return tables;
-}
-
-NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) {
-  const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
-
-  filesystem::path path{query_path};
-  Assert(filesystem::exists(path), "No such file or directory '" + query_path + "'");
-
-  if (filesystem::is_regular_file(path)) {
-    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
-    return _parse_query_file(query_path);
-  }
-
-  // Recursively walk through the specified directory and add all files on the way
-  NamedQueries queries;
-  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
-    const auto filename = entry.path().string();
-    if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
-      const auto file_queries = _parse_query_file(filename);
-      queries.insert(queries.end(), file_queries.begin(), file_queries.end());
-    }
-  }
-
-  std::sort(queries.begin(), queries.end(), [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
-
-  return queries;
-}
-
-NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
-  std::ifstream file(query_path);
-  const auto filename = filesystem::path{query_path}.stem().string();
-
-  std::string content{std::istreambuf_iterator<char>(file), {}};
-
-  hsql::SQLParserResult parse_result;
-  hsql::SQLParser::parse(content, &parse_result);
-  Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
-
-  size_t sql_string_offset{0u};
-  NamedQueries queries;
-  for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto query_name = filename + '.' + std::to_string(statement_idx);
-    const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
-    const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
-    sql_string_offset += statement_string_length;
-    queries.emplace_back(query_name, std::move(statement_string));
-  }
-
-  // More convenient names if there is only one query per file
-  if (queries.size() == 1) {
-    auto& query_name = queries[0].first;
-    query_name.erase(query_name.end() - 2, query_name.end());  // -2 because .0 at end of name
-  }
-
-  return queries;
-}
-
-=======
->>>>>>> f77fa937f4bb3cfd647ebb3759851b8e4255678b
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
@@ -537,7 +427,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-// clang-format off
+  // clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

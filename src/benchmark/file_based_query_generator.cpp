@@ -3,10 +3,10 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 
-#include "utils/assert.hpp"
-#include "utils/filesystem.hpp"
 #include "SQLParser.h"
 #include "sql/create_sql_parser_error_message.hpp"
+#include "utils/assert.hpp"
+#include "utils/filesystem.hpp"
 
 namespace opossum {
 
