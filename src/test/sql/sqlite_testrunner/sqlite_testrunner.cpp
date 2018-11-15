@@ -112,24 +112,21 @@ class SQLiteTestRunner : public BaseTestWithParam<TestConfiguration> {
 };
 
 std::vector<TestConfiguration> read_queries_from_file() {
-  std::vector<std::string> queries;
+  std::vector<TestConfiguration> queries;
+
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   std::string query;
   while (std::getline(file, query)) {
     if (query.empty() || query.substr(0, 2) == "--") {
       continue;
     }
-    queries.emplace_back(std::move(query));
+    if constexpr (HYRISE_JIT_SUPPORT) {
+      queries.emplace_back(query, true);
+    }
+    queries.emplace_back(std::move(query), false);
   }
 
-  std::vector<TestConfiguration> tests;
-  for (const auto& query : queries) {
-    tests.push_back({query, false});
-    if constexpr (HYRISE_JIT_SUPPORT) {
-      tests.push_back({query, true});
-    }
-  }
-  return tests;
+  return queries;
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
