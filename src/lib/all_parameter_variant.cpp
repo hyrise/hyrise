@@ -13,10 +13,6 @@ std::string to_string(const AllParameterVariant& x) {
     return std::string("Placeholder #") + std::to_string(boost::get<ParameterID>(x));
   } else if (is_column_id(x)) {
     return std::string("Column #") + std::to_string(boost::get<ColumnID>(x));
-  } else if (is_lqp_column_reference(x)) {
-    std::stringstream stream;
-    stream << boost::get<LQPColumnReference>(x);
-    return stream.str();
   } else {
     return boost::lexical_cast<std::string>(x);
   }

@@ -201,8 +201,8 @@ enum class CleanupTemporaries : bool { Yes = true, No = false };
 class Noncopyable {
  protected:
   Noncopyable() = default;
-  Noncopyable(Noncopyable&&) = default;
-  Noncopyable& operator=(Noncopyable&&) = default;
+  Noncopyable(Noncopyable&&) noexcept = default;
+  Noncopyable& operator=(Noncopyable&&) noexcept = default;
   ~Noncopyable() = default;
   Noncopyable(const Noncopyable&) = delete;
   const Noncopyable& operator=(const Noncopyable&) = delete;

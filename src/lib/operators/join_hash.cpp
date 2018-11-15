@@ -118,7 +118,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
-  size_t _calculate_radix_bits() {
+  size_t _calculate_radix_bits() const {
     /*
       Setting number of bits for radix clustering:
       The number of bits is used to create probe partitions with a size that can
@@ -194,30 +194,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * When dealing with an OUTER join, we need to make sure that we keep the NULL values for the outer relation.
      * In the current implementation, the relation on the right is always the outer relation.
      */
-    auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
+    const auto keep_nulls = (_mode == JoinMode::Left || _mode == JoinMode::Right);
 
-    // Pre-partitioning
-    // Save chunk offsets into the input relation
-    size_t left_chunk_count = left_in_table->chunk_count();
-    size_t right_chunk_count = right_in_table->chunk_count();
-
-    auto left_chunk_offsets = std::make_shared<std::vector<size_t>>();
-    auto right_chunk_offsets = std::make_shared<std::vector<size_t>>();
-
-    left_chunk_offsets->resize(left_chunk_count);
-    right_chunk_offsets->resize(right_chunk_count);
-
-    size_t offset_left = 0;
-    for (ChunkID i{0}; i < left_chunk_count; ++i) {
-      left_chunk_offsets->operator[](i) = offset_left;
-      offset_left += left_in_table->get_chunk(i)->size();
-    }
-
-    size_t offset_right = 0;
-    for (ChunkID i{0}; i < right_chunk_count; ++i) {
-      right_chunk_offsets->operator[](i) = offset_right;
-      offset_right += right_in_table->get_chunk(i)->size();
-    }
+    // Pre-partitioning:
+    // Save chunk offsets into the input relation.
+    const auto left_chunk_offsets = determine_chunk_offsets(left_in_table);
+    const auto right_chunk_offsets = determine_chunk_offsets(right_in_table);
 
     Timer performance_timer;
 
@@ -239,7 +221,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
     // ===============================================================================================
-    // We have to data paths, one for left side and one for right input side. We can prepare (i.e.,
+    // We have two data paths, one for left side and one for right input side. We can prepare (i.e.,
     // materialize(), build(), etc.) both sides in parallel until the actual join takes place.
     // All tasks might spawn concurrent tasks themselves. For example, materialize parallelizes over
     // the input chunks and the following steps over the radix clusters.
@@ -262,14 +244,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // Pre-Probing path of left relation
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      // materialize left table
-      materialized_left =
-          materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left, _radix_bits);
+      // materialize left table (NULLs are always discarded for the build side)
+      materialized_left = materialize_input<LeftType, HashedType, false>(left_in_table, _column_ids.first,
+                                                                         histograms_left, _radix_bits);
 
       if (_radix_bits > 0) {
         // radix partition the left table
-        radix_left =
-            partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
+        radix_left = partition_radix_parallel<LeftType, HashedType, false>(materialized_left, left_chunk_offsets,
+                                                                           histograms_left, _radix_bits);
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_left = std::move(materialized_left);
@@ -281,16 +263,26 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.back()->schedule();
 
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      // Materialize right table. 'keep_nulls' makes sure that the relation on
-      // the right materializes NULL values when executing an OUTER join.
-      materialized_right = materialize_input<RightType, HashedType>(right_in_table, _column_ids.second,
-                                                                    histograms_right, _radix_bits, keep_nulls);
+      // Materialize right table. The third template parameter signals if the relation on the right (probe
+      // relation) materializes NULL values when executing OUTER joins (default is to discard NULL values).
+      if (keep_nulls) {
+        materialized_right = materialize_input<RightType, HashedType, true>(right_in_table, _column_ids.second,
+                                                                            histograms_right, _radix_bits);
+      } else {
+        materialized_right = materialize_input<RightType, HashedType, false>(right_in_table, _column_ids.second,
+                                                                             histograms_right, _radix_bits);
+      }
 
       if (_radix_bits > 0) {
         // radix partition the right table. 'keep_nulls' makes sure that the
         // relation on the right keeps NULL values when executing an OUTER join.
-        radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
-                                                          _radix_bits, keep_nulls);
+        if (keep_nulls) {
+          radix_right = partition_radix_parallel<RightType, HashedType, true>(materialized_right, right_chunk_offsets,
+                                                                              histograms_right, _radix_bits);
+        } else {
+          radix_right = partition_radix_parallel<RightType, HashedType, false>(materialized_right, right_chunk_offsets,
+                                                                               histograms_right, _radix_bits);
+        }
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_right = std::move(materialized_right);
@@ -321,7 +313,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
       probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode);
     } else {
-      probe<RightType, HashedType>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
+        probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      } else {
+        probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+      }
     }
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);

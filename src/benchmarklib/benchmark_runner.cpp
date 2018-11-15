@@ -4,25 +4,21 @@
 
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
-#include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
-#include "tpch/tpch_queries.hpp"
-#include "utils/filesystem.hpp"
-#include "utils/load_table.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/sql_query_plan_visualizer.hpp"
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries,
+BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
                                  const nlohmann::json& context)
-    : _config(config), _queries(queries), _context(context) {
+    : _config(config), _query_generator(std::move(query_generator)), _context(context) {
   // In non-verbose mode, disable performance warnings
   if (!config.verbose) {
     _performance_warning_disabler.emplace();
@@ -55,6 +51,10 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   _config.out << "\n- Starting Benchmark..." << std::endl;
 
+  const auto available_queries_count = _query_generator->available_query_count();
+  _query_plans.resize(available_queries_count);
+  _query_results.resize(available_queries_count);
+
   auto benchmark_start = std::chrono::steady_clock::now();
 
   // Run the queries in the selected mode
@@ -82,11 +82,14 @@ void BenchmarkRunner::run() {
 
   // Visualize query plans
   if (_config.enable_visualization) {
-    for (const auto& name_and_plans : _query_plans) {
-      auto name = name_and_plans.first;
+    for (auto query_id = QueryID{0}; query_id < _query_plans.size(); ++query_id) {
+      const auto& lqps = _query_plans[query_id].lqps;
+      const auto& pqps = _query_plans[query_id].pqps;
+
+      if (lqps.empty()) continue;
+
+      auto name = _query_generator->query_names()[query_id];
       boost::replace_all(name, " ", "_");
-      const auto& lqps = name_and_plans.second.lqps;
-      const auto& pqps = name_and_plans.second.pqps;
 
       GraphvizConfig graphviz_config;
       graphviz_config.format = "svg";
@@ -106,19 +109,16 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  // Init results
-  for (const auto& named_query : _queries) {
-    const auto& name = named_query.first;
-    _query_results_by_query_name[name];  // Initializes if it does not exist
-  }
+  const auto number_of_queries = _query_generator->selected_query_count();
+  auto query_ids = _query_generator->selected_queries();
 
-  auto mutable_named_queries = _queries;
+  for (const auto& query_id : query_ids) {
+    _warmup_query(query_id);
+  }
 
   // For shuffling the query order
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
-
-  const auto number_of_queries = mutable_named_queries.size();
 
   // The atomic uints are modified by other threads when finishing a query set, to keep track of when we can
   // let a simulated client schedule the next set, as well as the total number of finished query sets so far
@@ -133,13 +133,13 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
     // We want to only schedule as many query sets simultaneously as we have simulated clients
     if (currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       currently_running_clients++;
-      std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
+      std::shuffle(query_ids.begin(), query_ids.end(), random_generator);
 
-      for (const auto& named_query : mutable_named_queries) {
+      for (const auto& query_id : query_ids) {
         // The on_query_done callback will be appended to the last Task of the query,
         // to measure its duration as well as signal that the query was finished
         const auto query_run_begin = std::chrono::steady_clock::now();
-        auto on_query_done = [query_run_begin, named_query, number_of_queries, &currently_running_clients,
+        auto on_query_done = [query_run_begin, query_id, number_of_queries, &currently_running_clients,
                               &finished_query_set_runs, &finished_queries_total, &state, this]() {
           if (finished_queries_total++ % number_of_queries == 0) {
             currently_running_clients--;
@@ -148,14 +148,14 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 
           if (!state.is_done()) {  // To prevent queries to add their results after the time is up
             const auto duration = std::chrono::steady_clock::now() - query_run_begin;
-            auto& result = _query_results_by_query_name[named_query.first];
+            auto& result = _query_results[query_id];
             result.duration += duration;
             result.iteration_durations.push_back(duration);
             result.num_iterations++;
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       }
     } else {
@@ -172,16 +172,16 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
-  for (const auto& named_query : _queries) {
-    _warmup_query(named_query);
+  for (const auto& query_id : _query_generator->selected_queries()) {
+    _warmup_query(query_id);
 
-    const auto& name = named_query.first;
+    const auto& name = _query_generator->query_names()[query_id];
     _config.out << "- Benchmarking Query " << name << std::endl;
 
     // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
     // let a simulated client schedule the next query, as well as the total number of finished queries so far
     auto currently_running_clients = std::atomic_uint{0};
-    auto& result = _query_results_by_query_name[name];  // Initializes if it does not exist
+    auto& result = _query_results[query_id];
 
     auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
     auto state = BenchmarkState{_config.max_duration};
@@ -203,7 +203,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -227,12 +227,12 @@ void BenchmarkRunner::_benchmark_individual_queries() {
   }
 }
 
-void BenchmarkRunner::_warmup_query(const NamedQuery& named_query) {
+void BenchmarkRunner::_warmup_query(const QueryID query_id) {
   if (_config.warmup_duration == Duration{0}) {
     return;
   }
 
-  const auto& name = named_query.first;
+  const auto& name = _query_generator->query_names()[query_id];
   _config.out << "- Warming up for Query " << name << std::endl;
 
   // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
@@ -251,7 +251,7 @@ void BenchmarkRunner::_warmup_query(const NamedQuery& named_query) {
       // to signal that the query was finished
       auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
 
-      auto query_tasks = _schedule_or_execute_query(named_query, on_query_done);
+      auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
       tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -267,21 +267,20 @@ void BenchmarkRunner::_warmup_query(const NamedQuery& named_query) {
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
-    const NamedQuery& named_query, const std::function<void()>& done_callback) {
+    const QueryID query_id, const std::function<void()>& done_callback) {
   // Some queries (like TPC-H 15) require execution before we can call get_tasks() on the pipeline.
   // These queries can't be scheduled yet, therefore we fall back to "just" executing the query
   // when we don't use the scheduler anyway, so that they can be executed.
   if (_config.enable_scheduler) {
-    return _schedule_query(named_query, done_callback);
+    return _schedule_query(query_id, done_callback);
   }
-  _execute_query(named_query, done_callback);
+  _execute_query(query_id, done_callback);
   return {};
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
-    const NamedQuery& named_query, const std::function<void()>& done_callback) {
-  const auto& name = named_query.first;
-  const auto& sql = named_query.second;
+    const QueryID query_id, const std::function<void()>& done_callback) {
+  const auto& sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
@@ -298,19 +297,13 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
   }
 
   // If necessary, keep plans for visualization
-  if (_config.enable_visualization) {
-    const auto query_plans_iter = _query_plans.find(name);
-    if (query_plans_iter == _query_plans.end()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
-      _query_plans.emplace(name, plans);
-    }
-  }
+  _store_plan(query_id, pipeline);
+
   return query_tasks;
 }
 
-void BenchmarkRunner::_execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback) {
-  const auto& name = named_query.first;
-  const auto& sql = named_query.second;
+void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
+  const auto& sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
@@ -321,11 +314,14 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query, const std::f
   if (done_callback) done_callback();
 
   // If necessary, keep plans for visualization
+  _store_plan(query_id, pipeline);
+}
+
+void BenchmarkRunner::_store_plan(const QueryID query_id, SQLPipeline& pipeline) {
   if (_config.enable_visualization) {
-    const auto query_plans_iter = _query_plans.find(name);
-    if (query_plans_iter == _query_plans.end()) {
+    if (_query_plans[query_id].lqps.empty()) {
       QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
-      _query_plans.emplace(name, plans);
+      _query_plans[query_id] = plans;
     }
   }
 }
@@ -333,9 +329,9 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query, const std::f
 void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json benchmarks;
 
-  for (const auto& named_query : _queries) {
-    const auto& name = named_query.first;
-    const auto& query_result = _query_results_by_query_name.at(name);
+  for (const auto& query_id : _query_generator->selected_queries()) {
+    const auto& name = _query_generator->query_names()[query_id];
+    const auto& query_result = _query_results[query_id];
     Assert(query_result.iteration_durations.size() == query_result.num_iterations,
            "number of iterations and number of iteration durations does not match");
 
@@ -378,6 +374,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   stream << std::setw(2) << report << std::endl;
 }
 
+<<<<<<< HEAD
 BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std::string& table_path,
                                         const std::string& query_path) {
   const auto tables = _read_table_folder(table_path);
@@ -485,6 +482,8 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   return queries;
 }
 
+=======
+>>>>>>> f77fa937f4bb3cfd647ebb3759851b8e4255678b
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 

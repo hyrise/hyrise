@@ -38,16 +38,10 @@ namespace opossum {
 
 class SQLPipelineTest : public BaseTest {
  protected:
-  void SetUp() override {
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", _table_a);
-
+  static void SetUpTestCase() {  // called ONCE before the tests
     _table_a_multi = load_table("src/test/tables/int_float.tbl", 2);
     _table_a_multi->append({11, 11.11});
-    StorageManager::get().add_table("table_a_multi", _table_a_multi);
-
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", _table_b);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int);
@@ -56,14 +50,28 @@ class SQLPipelineTest : public BaseTest {
     _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
+  }
+
+  void SetUp() override {
+    StorageManager::get().reset();
+
+    // We reload table_a every time since it is modified during the test case.
+    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("table_a", _table_a);
+
+    StorageManager::get().add_table("table_a_multi", _table_a_multi);
+    StorageManager::get().add_table("table_b", _table_b);
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
+  // Tables modified during test case
   std::shared_ptr<Table> _table_a;
-  std::shared_ptr<Table> _table_a_multi;
-  std::shared_ptr<Table> _table_b;
-  std::shared_ptr<Table> _join_result;
+
+  // Tables not modified during test case
+  inline static std::shared_ptr<Table> _table_a_multi;
+  inline static std::shared_ptr<Table> _table_b;
+  inline static std::shared_ptr<Table> _join_result;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
