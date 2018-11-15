@@ -41,7 +41,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
 
     const auto& edge = join_graph.edges[edge_idx];
 
-    auto new_vertex_cluster = JoinGraphVertexSet{join_graph.edges.size()};
+    auto new_vertex_cluster = JoinGraphVertexSet{join_graph.vertices.size()};
     auto edge_indices_with_changed_plans = std::unordered_set<size_t>{};
 
     for (auto vertex_cluster_iter = vertex_clusters.begin(); vertex_cluster_iter != vertex_clusters.end(); ) {
