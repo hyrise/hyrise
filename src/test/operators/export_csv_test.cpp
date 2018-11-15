@@ -83,7 +83,7 @@ TEST_F(OperatorsExportCsvTest, EscapeString) {
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(file_exists(meta_filename));
-  EXPECT_TRUE(compare_file(filename, "1,\"Sie sagte: \\\"Mir geht's gut, und dir?\\\"\",3.5\n"));
+  EXPECT_TRUE(compare_file(filename, "1,\"Sie sagte: \"\"Mir geht's gut, und dir?\"\"\",3.5\n"));
 }
 
 TEST_F(OperatorsExportCsvTest, MultipleChunks) {

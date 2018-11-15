@@ -214,6 +214,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   expected_table->append({"www"});
   expected_table->append({"null"});
   expected_table->append({"zzz"});
+  expected_table->append({NULL_VALUE});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
@@ -324,16 +325,6 @@ TEST_F(OperatorsImportCsvTest, UnconvertedCharactersThrows) {
 
   importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_double.csv");
   EXPECT_THROW(importer->execute(), std::logic_error);
-}
-
-TEST_F(OperatorsImportCsvTest, EmptyFile) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/empty_table.csv");
-  importer->execute();
-
-  TableColumnDefinitions column_definitions{{"a", DataType::String}, {"b", DataType::String}, {"c", DataType::String}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
-
-  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 }  // namespace opossum

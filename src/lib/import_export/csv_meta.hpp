@@ -19,7 +19,7 @@ struct ParseConfig {
   char delimiter = '\n';
   char separator = ',';
   char quote = '"';
-  char escape = '\\';
+  char escape = '"';
   char delimiter_escape = '\\';
 
   // If this is set to true, "4.3" will not be accepted as a value for a float column

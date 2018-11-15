@@ -18,8 +18,8 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
 }
 
 std::string LQPColumnExpression::as_column_name() const {
-  if (!column_reference.original_node()) return "<Expired>";
-  Assert(column_reference.original_node(), "Node referenced by LQPColumnReference has expired");
+  // Even if the LQP is invalid, we still want to be able to print it as good as possible
+  if (!column_reference.original_node()) return "<Expired Column>";
 
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     std::stringstream stream;
