@@ -285,9 +285,19 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
-  // JIT_AGGREGATE_COMPUTE_CASE assumes that the left and right side type are the same.
-  // This is not the case when the sum or average of a float or int column is calculated as the temporary sum
-  // is stored in the according 64 bit data type.
+  // The left-hand side is the column being aggregated.
+  // The right-hand side is the temporary value required to calculate the aggregate value.
+  // JIT_AGGREGATE_COMPUTE_CASE assumes that the types of the left-hand and right-hand side are the same.
+  // However, this is not the case when the sum or average of a int or float column is calculated as the temporary sum
+  // is stored in the according 64 bit data type long or double.
+  // Left side |    Right side
+  //   Column  | Sum/Avg | Min/Max
+  //       Int |    Long |     Int
+  //      Long |    Long |    Long
+  //     Float |  Double |   Float
+  //    Double |  Double |  Double
+  //    String |       - |  String
+
   if (lhs.data_type() == DataType::Int && rhs.data_type() == DataType::Long) {
     return catching_func(static_cast<int64_t>(lhs.get<int32_t>(context)), rhs.get<int64_t>(rhs_index, context));
   } else if (lhs.data_type() == DataType::Float && rhs.data_type() == DataType::Double) {

@@ -13,8 +13,8 @@ namespace opossum {
 
 namespace {
 
-bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
-                    const MvccData& mvcc_data) {
+bool _is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
+                     const MvccData& mvcc_data) {
   const auto row_tid = mvcc_data.tids[chunk_offset].load();
   const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
   const auto end_cid = mvcc_data.end_cids[chunk_offset];
@@ -82,7 +82,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (::opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+        if (_is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
           pos_list_out->emplace_back(row_id);
         }
       }
@@ -105,7 +105,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {
-        if (::opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
+        if (_is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }

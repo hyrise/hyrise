@@ -14,7 +14,7 @@
 namespace opossum {
 
 // Functions using strings are not optimized to support code specialization on Linux.
-// This specialiation issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
+// This specialization issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
 // The flag __attribute__((optnone)) ensures that clang does not optimize these functions.
 
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
@@ -138,12 +138,26 @@ struct JitRuntimeContext {
   std::vector<std::shared_ptr<BaseJitSegmentWriter>> outputs;
   JitRuntimeHashmap hashmap;
   Segments out_chunk;
+
+  // Query transaction data required by JitValidate
   TransactionID transaction_id;
   CommitID snapshot_commit_id;
+
+  // MVCC data from the current input chunk required by JitValidate
+  // If the input table is a data table, its MVCC data is used.
   std::shared_ptr<const MvccData> mvcc_data;
+  // The MVCC data is locked with a SharedScopedLockingPtr. The SharedScopedLockingPtr is stored within a unique ptr as
+  // a SharedScopedLockingPtr has not the required copy assignment operator due to its reference data member.
+  // The SharedScopedLockingPtr is only used to lock and not to access MVCC as this construct requires two ptr
+  // dereferencings instead of one to access the MVCC data.
+  std::unique_ptr<SharedScopedLockingPtr<const MvccData>> mvcc_data_lock;
+  // The transaction ids are materialized as specialization cannot handle the atomics holding the transaction ids.
+  pmr_vector<TransactionID> row_tids;
+
+  // If the input table is a reference table, the position list of the first segment and the reference table are used to
+  // lookup the corresponding mvcc data for each row.
   std::shared_ptr<const Table> referenced_table;
   std::shared_ptr<const PosList> pos_list;
-  pmr_vector<TransactionID> row_tids;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.

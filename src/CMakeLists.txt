@@ -5,9 +5,13 @@ else()
 endif()
 
 # Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang
-option(ENABLE_JIT_SUPPORT "Build with JIT support" ON)
+# ENABLE_JIT_SUPPORT is OFF on MacOS by default as JIT does not work with -O3 on MacOS
+CMAKE_DEPENDENT_OPTION(ENABLE_JIT_SUPPORT "Build with JIT support" OFF APPLE ON)
 if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
     set(ENABLE_JIT_SUPPORT OFF)
+elseif (APPLE AND ${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    string(REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+    message(STATUS "Building with optimization level flag -O2 as JIT does not work with -O3 on MacOS")
 endif()
 
 if (${ENABLE_JIT_SUPPORT})

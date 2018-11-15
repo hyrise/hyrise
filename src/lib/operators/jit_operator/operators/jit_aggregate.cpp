@@ -171,7 +171,7 @@ namespace {
 
 // The intermediary result of sum is always stored in a 64 bit data type. The same behaviour is implemented by non-jit
 // operators.
-DataType resolve_sum_data_type(const DataType data_type) {
+DataType get_sum_data_type(const DataType data_type) {
   switch (data_type) {
     case DataType::Int:
       return DataType::Long;
@@ -202,7 +202,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       DebugAssert(value.data_type() != DataType::Null, "Invalid data type null for aggregate function.");
       // The data type depends on the input value.
       const auto data_type =
-          function == AggregateFunction::Sum ? resolve_sum_data_type(value.data_type()) : value.data_type();
+          function == AggregateFunction::Sum ? get_sum_data_type(value.data_type()) : value.data_type();
       _aggregate_columns.emplace_back(JitAggregateColumn{column_name, column_position, function, value,
                                                          JitHashmapValue(data_type, true, _num_hashmap_columns++)});
       break;
@@ -213,7 +213,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       // Average aggregates are computed by first computing two aggregates: a SUM and a COUNT
       _aggregate_columns.emplace_back(
           JitAggregateColumn{column_name, column_position, function, value,
-                             JitHashmapValue(resolve_sum_data_type(value.data_type()), true, _num_hashmap_columns++),
+                             JitHashmapValue(get_sum_data_type(value.data_type()), true, _num_hashmap_columns++),
                              JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::CountDistinct:
