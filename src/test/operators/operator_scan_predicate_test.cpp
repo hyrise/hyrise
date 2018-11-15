@@ -31,13 +31,23 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
   EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::GreaterThan);
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 
-  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*greater_than_(a, b), *node);
+  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*less_than_(5, a), *node);
   ASSERT_TRUE(operator_predicates_b);
   ASSERT_EQ(operator_predicates_b->size(), 1u);
   const auto& operator_predicate_b = operator_predicates_b->at(0);
   EXPECT_EQ(operator_predicate_b.column_id, ColumnID{0});
   EXPECT_EQ(operator_predicate_b.predicate_condition, PredicateCondition::GreaterThan);
-  EXPECT_EQ(operator_predicate_b.value, AllParameterVariant{ColumnID{1}});
+  EXPECT_EQ(operator_predicate_b.value, AllParameterVariant{5});
+
+  const auto operator_predicates_c = OperatorScanPredicate::from_expression(*greater_than_(a, b), *node);
+  ASSERT_TRUE(operator_predicates_c);
+  ASSERT_EQ(operator_predicates_c->size(), 1u);
+  const auto& operator_predicate_c = operator_predicates_c->at(0);
+  EXPECT_EQ(operator_predicate_c.column_id, ColumnID{0});
+  EXPECT_EQ(operator_predicate_c.predicate_condition, PredicateCondition::GreaterThan);
+  EXPECT_EQ(operator_predicate_c.value, AllParameterVariant{ColumnID{1}});
+
+  EXPECT_FALSE(OperatorScanPredicate::from_expression(*greater_than_(5, 3), *node));
 }
 
 TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {

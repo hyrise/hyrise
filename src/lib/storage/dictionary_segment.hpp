@@ -70,7 +70,7 @@ class DictionarySegment : public BaseDictionarySegment {
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
-  std::unique_ptr<BaseVectorDecompressor> _decoder;
+  std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
 }  // namespace opossum

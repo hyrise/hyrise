@@ -7,37 +7,87 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
 DpCcp::DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) {
+  Assert(!join_graph.vertices.empty(), "Code below relies on the JoinGraph having vertices");
+
   // No std::unordered_map, since hashing of JoinGraphVertexSet is not (efficiently) possible because
   // boost::dynamic_bitset hides the data necessary for doing so efficiently.
   auto best_plan = std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>{};
 
   /**
-   * 1. Initialize single-vertex vertex_sets with the vertex nodes and their local predicates
+   * 1. Initialize best_plan[] with the vertices
    */
   for (size_t vertex_idx = 0; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
-    const auto vertex_predicates = join_graph.find_local_predicates(vertex_idx);
-    const auto vertex = join_graph.vertices[vertex_idx];
-
     auto single_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
     single_vertex_set.set(vertex_idx);
 
-    best_plan[single_vertex_set] = _add_predicates_to_plan(vertex, vertex_predicates);
+    best_plan[single_vertex_set] = join_graph.vertices[vertex_idx];
   }
 
   /**
-   * 2. Prepare EnumerateCcp: Transform the JoinGraph's vertex-to-vertex edges into index pairs
+   * 2. Place Uncorrelated Predicates (think "6 > 4": not referencing any vertex)
+   * 2.1 Collect uncorrelated predicates
+   */
+  std::vector<std::shared_ptr<AbstractExpression>> uncorrelated_predicates;
+  for (const auto& edge : join_graph.edges) {
+    if (!edge.vertex_set.none()) continue;
+    uncorrelated_predicates.insert(uncorrelated_predicates.end(), edge.predicates.begin(), edge.predicates.end());
+  }
+
+  /**
+   * 2.2 Find the largest vertex and place the uncorrelated predicates for optimal execution.
+   *     Reasoning: Uncorrelated predicates are either False or True for *all* rows. If an uncorrelated
+   *                predicate is False and we place it on top of the largest vertex we avoid processing the vertex'
+   *                many rows in later joins.
+   */
+  if (!uncorrelated_predicates.empty()) {
+    // Find the largest vertex
+    auto largest_vertex_idx = size_t{0};
+    auto largest_vertex_cardinality = join_graph.vertices.front()->get_statistics()->row_count();
+
+    for (size_t vertex_idx = 1; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
+      const auto vertex_cardinality = join_graph.vertices[vertex_idx]->get_statistics()->row_count();
+      if (vertex_cardinality > largest_vertex_cardinality) {
+        largest_vertex_idx = vertex_idx;
+        largest_vertex_cardinality = vertex_cardinality;
+      }
+    }
+
+    // Place the uncorrelated predicates on top of the largest vertex
+    auto largest_vertex_single_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
+    largest_vertex_single_vertex_set.set(largest_vertex_idx);
+    auto largest_vertex_plan = best_plan[largest_vertex_single_vertex_set];
+    for (const auto& uncorrelated_predicate : uncorrelated_predicates) {
+      largest_vertex_plan = PredicateNode::make(uncorrelated_predicate, largest_vertex_plan);
+    }
+    best_plan[largest_vertex_single_vertex_set] = largest_vertex_plan;
+  }
+
+  /**
+   * 3. Add local predicates on top of the vertices
+   */
+  for (size_t vertex_idx = 0; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
+    const auto vertex_predicates = join_graph.find_local_predicates(vertex_idx);
+    auto single_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
+    single_vertex_set.set(vertex_idx);
+
+    auto& vertex_best_plan = best_plan[single_vertex_set];
+    vertex_best_plan = _add_predicates_to_plan(vertex_best_plan, vertex_predicates);
+  }
+
+  /**
+   * 4. Prepare EnumerateCcp: Transform the JoinGraph's vertex-to-vertex edges into index pairs
    */
   std::vector<std::pair<size_t, size_t>> enumerate_ccp_edges;
   for (const auto& edge : join_graph.edges) {
-    // Don't include local predicate pseudo edges
-    if (edge.vertex_set.count() == 1) continue;
-    Assert(edge.vertex_set.count() == 2, "Can't place complex predicates yet");
+    // EnumerateCcp only deals with binary join predicates
+    if (edge.vertex_set.count() != 2) continue;
 
     const auto first_vertex_idx = edge.vertex_set.find_first();
     const auto second_vertex_idx = edge.vertex_set.find_next(first_vertex_idx);
@@ -46,7 +96,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   }
 
   /**
-   * 3. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan if the candidate plan
+   * 5. Actual DpCcp algorithm: Enumerate the CsgCmpPairs; build candidate plans; update best_plan if the candidate plan
    *                            is cheaper than the cheapest currently known plan for a particular subset of vertices.
    */
   const auto csg_cmp_pairs = EnumerateCcp{join_graph.vertices.size(), enumerate_ccp_edges}();  // NOLINT
@@ -70,7 +120,7 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph) 
   }
 
   /**
-   * 4. Build vertex set with all vertices and return the plan for it - this will be the best plan for the entire join
+   * 6. Build vertex set with all vertices and return the plan for it - this will be the best plan for the entire join
    *    graph.
    */
   boost::dynamic_bitset<> all_vertices_set{join_graph.vertices.size()};
@@ -144,10 +194,6 @@ std::shared_ptr<AbstractLQPNode> DpCcp::_add_join_to_plan(
   for (const auto& join_predicate : join_predicates) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
     join_predicates_and_cost.emplace_back(join_predicate, _cost_estimator->estimate_plan_cost(join_node));
-
-    // need to do this since nodes do not get properly (by design :(( ) removed from plan on their destruction
-    join_node->set_left_input(nullptr);
-    join_node->set_right_input(nullptr);
   }
 
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),

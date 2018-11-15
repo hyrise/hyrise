@@ -221,22 +221,21 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_single_column_table_scan_impl.cpp
+    operators/table_scan/abstract_single_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
-    operators/table_scan/base_single_column_table_scan_impl.cpp
-    operators/table_scan/base_single_column_table_scan_impl.hpp
-    operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/between_table_scan_impl.cpp
-    operators/table_scan/between_table_scan_impl.hpp
-    operators/table_scan/column_comparison_table_scan_impl.cpp
-    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/column_between_table_scan_impl.cpp
+    operators/table_scan/column_between_table_scan_impl.hpp
+    operators/table_scan/column_is_null_table_scan_impl.cpp
+    operators/table_scan/column_is_null_table_scan_impl.hpp
+    operators/table_scan/column_like_table_scan_impl.cpp
+    operators/table_scan/column_like_table_scan_impl.hpp
+    operators/table_scan/column_vs_column_table_scan_impl.cpp
+    operators/table_scan/column_vs_column_table_scan_impl.hpp
+    operators/table_scan/column_vs_value_table_scan_impl.cpp
+    operators/table_scan/column_vs_value_table_scan_impl.hpp
     operators/table_scan/expression_evaluator_table_scan_impl.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.hpp
-    operators/table_scan/is_null_table_scan_impl.cpp
-    operators/table_scan/is_null_table_scan_impl.hpp
-    operators/table_scan/like_table_scan_impl.cpp
-    operators/table_scan/like_table_scan_impl.hpp
-    operators/table_scan/single_column_table_scan_impl.cpp
-    operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -275,6 +274,8 @@ set(
     optimizer/strategy/join_detection_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/logical_reduction_rule.cpp
+    optimizer/strategy/logical_reduction_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -569,6 +570,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}

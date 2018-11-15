@@ -18,7 +18,7 @@ class InsertNodeTest : public ::testing::Test {
 
 TEST_F(InsertNodeTest, Description) { EXPECT_EQ(_insert_node->description(), "[Insert] Into table 'table_a'"); }
 
-TEST_F(InsertNodeTest, TableName) { EXPECT_EQ(_insert_node->table_name(), "table_a"); }
+TEST_F(InsertNodeTest, TableName) { EXPECT_EQ(_insert_node->table_name, "table_a"); }
 
 TEST_F(InsertNodeTest, Equals) {
   EXPECT_EQ(*_insert_node, *_insert_node);

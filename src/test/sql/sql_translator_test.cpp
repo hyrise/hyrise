@@ -34,7 +34,6 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
-#include "tpch/tpch_queries.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -606,7 +605,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
 
-  const auto actual_lqp_count_1 =  compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
+  const auto actual_lqp_count_1 = compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
   // clang-format off
   const auto expected_lqp_count_1 =
   AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
@@ -1524,9 +1523,7 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
                InvalidInputException);  // NOLINT
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
-
-  // TODO(anyone): #1238
-  // EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
 }
 
 }  // namespace opossum
