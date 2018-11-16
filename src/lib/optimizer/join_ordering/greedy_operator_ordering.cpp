@@ -116,18 +116,12 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
   }
 
   /**
-   * 3.
+   * 3. Assert that all clusters where joined and, before returning, add the uncorrelated predicates on top of the plan 
    */
-  auto all_vertices = JoinGraphVertexSet{join_graph.vertices.size()};
-  all_vertices.flip();
-  const auto vertex_cluster_iter = vertex_clusters.find(all_vertices);
-  Assert(vertex_cluster_iter != vertex_clusters.end(),
+  Assert(vertex_clusters.size() == 1 && vertex_clusters.begin()->first.all(),
          "No cluster for all vertices generated, is the JoinGraph connected?");
-
-  /**
-   * 3. Add the uncorrelated predicates on top of the plan and return
-   */
-  return _add_predicates_to_plan(vertex_cluster_iter->second, uncorrelated_predicates);
+  const auto result_plan = vertex_clusters.begin()->second;
+  return _add_predicates_to_plan(result_plan, uncorrelated_predicates);
 }
 
 GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_for_edge(
