@@ -50,6 +50,6 @@ TEST_F(UnionNodeTest, Equals) { EXPECT_EQ(*_union_node, *_union_node); }
 
 TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node); }
 
-TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expression_count(), 0u); }
+TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
 }  // namespace opossum

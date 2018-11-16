@@ -59,6 +59,6 @@ TEST_F(MockNodeTest, Equals) {
 
 TEST_F(MockNodeTest, Copy) { EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy()); }
 
-TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expression_count(), 0u); }
+TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 
 }  // namespace opossum

@@ -31,9 +31,9 @@ class AliasNodeTest : public ::testing::Test {
 };
 
 TEST_F(AliasNodeTest, NodeExpressions) {
-  ASSERT_EQ(alias_node->node_expression_count(), 2u);
-  EXPECT_EQ(alias_node->node_expression(0), b);
-  EXPECT_EQ(alias_node->node_expression(1), a);
+  ASSERT_EQ(alias_node->node_expressions.size(), 2u);
+  EXPECT_EQ(alias_node->node_expressions.at(0), b);
+  EXPECT_EQ(alias_node->node_expressions.at(1), a);
 }
 
 TEST_F(AliasNodeTest, ShallowEqualsAndCopy) {

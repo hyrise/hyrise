@@ -51,7 +51,7 @@ TEST_F(CreatePreparedPlanNodeTest, Copy) {
 }
 
 TEST_F(CreatePreparedPlanNodeTest, NodeExpressions) {
-  ASSERT_EQ(create_prepared_plan_node->node_expression_count(), 0u);
+  ASSERT_EQ(create_prepared_plan_node->node_expressions.size(), 0u);
 }
 
 }  // namespace opossum

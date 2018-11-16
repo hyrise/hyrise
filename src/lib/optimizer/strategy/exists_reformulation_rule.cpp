@@ -24,12 +24,12 @@ std::string ExistsReformulationRule::name() const { return "(Non)Exists to Join 
 bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Find a PredicateNode with an EXISTS(...) predicate
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-  if (!predicate_node || predicate_node->predicate->type != ExpressionType::Exists) {
+  if (!predicate_node || predicate_node->predicate()->type != ExpressionType::Exists) {
     return _apply_to_inputs(node);
   }
 
   // Get the subselect that we work on
-  const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node->predicate);
+  const auto exists_expression = std::static_pointer_cast<ExistsExpression>(predicate_node->predicate());
   const auto subselect_expression = std::static_pointer_cast<LQPSelectExpression>(exists_expression->select());
 
   // We don't care about uncorrelated subselects, nor subselects with more than one parameter
@@ -45,8 +45,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   auto correlated_parameter_usage_count = 0;
 
   visit_lqp(subselect_expression->lqp, [&](const auto& deeper_node) {
-    for (auto expression_idx = size_t{0}; expression_idx < deeper_node->node_expression_count(); ++expression_idx) {
-      visit_expression(deeper_node->node_expression(expression_idx), [&](const auto& sub_expression) {
+    for (const auto& expression : deeper_node->node_expressions) {
+      visit_expression(expression, [&](const auto& sub_expression) {
         const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
         if (parameter_expression && parameter_expression->parameter_id == correlated_parameter_id) {
           ++correlated_parameter_usage_count;
@@ -88,7 +88,7 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
 
     const auto subselect_predicate_expression =
-        std::dynamic_pointer_cast<BinaryPredicateExpression>(subselect_predicate_node->predicate);
+        std::dynamic_pointer_cast<BinaryPredicateExpression>(subselect_predicate_node->predicate());
     if (!subselect_predicate_expression) {
       return LQPVisitation::VisitInputs;
     }

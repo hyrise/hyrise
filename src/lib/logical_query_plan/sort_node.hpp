@@ -18,10 +18,7 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
                     const std::vector<OrderByMode>& order_by_modes);
 
   std::string description() const override;
-  size_t node_expression_count() const override;
-  std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) override;
 
-  const std::vector<std::shared_ptr<AbstractExpression>> expressions;
   const std::vector<OrderByMode> order_by_modes;
 
  protected:

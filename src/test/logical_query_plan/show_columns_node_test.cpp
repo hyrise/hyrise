@@ -40,6 +40,6 @@ TEST_F(ShowColumnsNodeTest, Equals) {
 
 TEST_F(ShowColumnsNodeTest, Copy) { EXPECT_EQ(*_show_columns_node->deep_copy(), *_show_columns_node); }
 
-TEST_F(ShowColumnsNodeTest, NodeExpressions) { ASSERT_EQ(_show_columns_node->node_expression_count(), 0u); }
+TEST_F(ShowColumnsNodeTest, NodeExpressions) { ASSERT_EQ(_show_columns_node->node_expressions.size(), 0u); }
 
 }  // namespace opossum

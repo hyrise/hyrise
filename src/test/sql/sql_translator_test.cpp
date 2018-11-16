@@ -1189,11 +1189,11 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   ASSERT_TRUE(actual_projection_node);
 
   const auto actual_sub_select_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->node_expressions.at(1));
   ASSERT_TRUE(actual_sub_select_a);
 
   const auto actual_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(2));
+      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->node_expressions.at(2));
   ASSERT_TRUE(actual_sub_select_b);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

@@ -51,8 +51,8 @@ TEST_F(PredicateNodeTest, Equals) {
 TEST_F(PredicateNodeTest, Copy) { EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node); }
 
 TEST_F(PredicateNodeTest, NodeExpressions) {
-  ASSERT_EQ(_predicate_node->node_expression_count(), 1u);
-  EXPECT_EQ(*_predicate_node->node_expression(0), *equals_(_i, 5));
+  ASSERT_EQ(_predicate_node->node_expressions.size(), 1u);
+  EXPECT_EQ(*_predicate_node->node_expressions.at(0), *equals_(_i, 5));
 }
 
 }  // namespace opossum

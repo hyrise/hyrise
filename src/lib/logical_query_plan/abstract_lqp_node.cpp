@@ -41,8 +41,8 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
  * Put all LQPs found in expressions in plan @param lqp into @param lqps
  */
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
-  for (auto expression_idx = size_t{0}; expression_idx < lqp.node_expression_count(); ++expression_idx) {
-    collect_lqps_from_expression(lqp.node_expression(expression_idx), lqps);
+  for (const auto& node_expression : lqp.node_expressions) {
+    collect_lqps_from_expression(node_expression, lqps);
   }
 
   if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
@@ -53,7 +53,7 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 
 namespace opossum {
 
-AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : type(node_type) {}
+AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type, const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions) : type(node_type), node_expressions(node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
   Assert(
@@ -190,19 +190,6 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
 const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
   return left_input()->column_expressions();
-}
-
-size_t AbstractLQPNode::node_expression_count() const { return 0u; }
-
-std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size_t idx) {
-  Fail("No node expressions in this node");
-}
-
-const std::shared_ptr<AbstractExpression>& AbstractLQPNode::node_expression(const size_t idx) const {
-  // Use const_cast<> here so that deriving classes don't need to implement a const and a non-const override of this
-  // function.
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-  return const_cast<AbstractLQPNode*>(this)->node_expression(idx);
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {

@@ -10,28 +10,25 @@
 namespace opossum {
 
 LimitNode::LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_expression)
-    : AbstractLQPNode(LQPNodeType::Limit), num_rows_expression(num_rows_expression) {}
+    : AbstractLQPNode(LQPNodeType::Limit, {num_rows_expression}) {}
 
 std::string LimitNode::description() const {
   std::stringstream stream;
-  stream << "[Limit] " << num_rows_expression->as_column_name();
+  stream << "[Limit] " << num_rows_expression()->as_column_name();
   return stream.str();
 }
 
-size_t LimitNode::node_expression_count() const { return 1u; }
-
-std::shared_ptr<AbstractExpression>& LimitNode::node_expression(const size_t idx) {
-  Assert(idx == 0u, "Expression index out of bounds");
-  return num_rows_expression;
+std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {
+  return node_expressions[0];
 }
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return LimitNode::make(expression_copy_and_adapt_to_different_lqp(*num_rows_expression, node_mapping));
+  return LimitNode::make(expression_copy_and_adapt_to_different_lqp(*num_rows_expression(), node_mapping));
 }
 
 bool LimitNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& limit_node = static_cast<const LimitNode&>(rhs);
-  return expression_equal_to_expression_in_different_lqp(*num_rows_expression, *limit_node.num_rows_expression,
+  return expression_equal_to_expression_in_different_lqp(*num_rows_expression(), *limit_node.num_rows_expression(),
                                                          node_mapping);
 }
 

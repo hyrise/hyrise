@@ -136,7 +136,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
 
     auto aggregate = std::make_shared<JitAggregate>();
 
-    for (const auto& groupby_expression : aggregate_node->group_by_expressions()) {
+    for (auto expression_idx = size_t{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx; ++expression_idx) {
+      const auto& groupby_expression = aggregate_node->node_expressions[expression_idx];
       const auto jit_expression =
           _try_translate_expression_to_jit_expression(*groupby_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
@@ -148,7 +149,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       aggregate->add_groupby_column(groupby_expression->as_column_name(), jit_expression->result());
     }
 
-    for (const auto& expression : aggregate_node->aggregate_expressions()) {
+    for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx; expression_idx < aggregate_node->node_expressions.size(); ++expression_idx) {
+      const auto& expression = aggregate_node->node_expressions[expression_idx];
       const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
       DebugAssert(aggregate_expression, "Expression is not a function.");
 
@@ -241,9 +243,9 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
   if (node->type == LQPNodeType::Aggregate) {
     // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
-    auto aggregate_expressions = aggregate_node->aggregate_expressions();
+    const auto& expressions = aggregate_node->node_expressions;
     auto has_unsupported_aggregate =
-        std::any_of(aggregate_expressions.begin(), aggregate_expressions.end(), [](auto& expression) {
+        std::any_of(expressions.begin() + aggregate_node->aggregate_expressions_begin_idx, expressions.end(), [](auto& expression) {
           const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
           Assert(aggregate_expression, "Expected AggregateExpression");
           // Right now, the JIT doesn't support CountDistinct and Count(*) (which can be recognized by an empty
@@ -258,7 +260,7 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
     auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
 
     const auto operator_scan_predicates =
-        OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+        OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
 
     // The JIT doesn't support Between
     const auto is_not_between = operator_scan_predicates && operator_scan_predicates->size() == 1 &&

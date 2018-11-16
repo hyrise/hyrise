@@ -25,24 +25,17 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
 
   std::string description() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
-  size_t node_expression_count() const override;
-  std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
-  std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions() const;
-  std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions() const;
+  // node_expression contains both the group_by- and the aggregate_expressions in that order.
+  const size_t aggregate_expressions_begin_idx;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
-
- private:
-  // _column_expressions contains both the group_by- and the aggregate_expressions in that order.
-  const size_t _aggregate_expressions_begin_idx;
-  const std::vector<std::shared_ptr<AbstractExpression>> _column_expressions;
 };
 
 }  // namespace opossum

@@ -41,11 +41,8 @@ TEST_F(CreatePreparedPlanTest, Execute) {
   EXPECT_FALSE(StorageManager::get().has_prepared_plan("prepared_plan_a"));
   create_prepared_plan->execute();
   const auto& sm = StorageManager::get();
-  std::cout << "Lol" << std::endl;
-  std::cout << sm.get_prepared_plan("prepared_plan_a") << std::endl;
-  std::cout << prepared_plan.get() << std::endl;
-  EXPECT_TRUE(StorageManager::get().has_prepared_plan("prepared_plan_a"));
-  EXPECT_EQ(StorageManager::get().get_prepared_plan("prepared_plan_a"), prepared_plan);
+  EXPECT_TRUE(sm.has_prepared_plan("prepared_plan_a"));
+  EXPECT_EQ(sm.get_prepared_plan("prepared_plan_a"), prepared_plan);
 
   const auto copy = create_prepared_plan->deep_copy();
   EXPECT_ANY_THROW(copy->execute());

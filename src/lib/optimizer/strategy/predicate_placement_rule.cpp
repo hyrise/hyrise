@@ -38,7 +38,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(input_node);
 
-      if (!_is_expensive_predicate(predicate_node->predicate)) {
+      if (!_is_expensive_predicate(predicate_node->predicate())) {
         push_down_nodes.emplace_back(predicate_node);
         lqp_remove_node(predicate_node);
         _push_down_traversal(current_node, input_side, push_down_nodes);
@@ -58,8 +58,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
         for (const auto& push_down_node : push_down_nodes) {
-          const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate, *join_node->left_input());
-          const auto move_to_right = expression_evaluable_on_lqp(push_down_node->predicate, *join_node->right_input());
+          const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->left_input());
+          const auto move_to_right = expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->right_input());
 
           if (!move_to_left && !move_to_right) {
             _insert_nodes(current_node, input_side, {push_down_node});
@@ -114,7 +114,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   // Expensive PredicateNodes become candidates for a PullUp, but only IFF they have exactly one output connection.
   // If they have more, we cannot move them.
   if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
-      predicate_node && _is_expensive_predicate(predicate_node->predicate) && predicate_node->output_count() == 1) {
+      predicate_node && _is_expensive_predicate(predicate_node->predicate()) && predicate_node->output_count() == 1) {
     candidate_nodes.emplace_back(predicate_node);
     lqp_remove_node(predicate_node);
   }
@@ -149,7 +149,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       auto blocked_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
 
       for (const auto& candidate_node : candidate_nodes) {
-        if (expression_evaluable_on_lqp(candidate_node->predicate, *current_node)) {
+        if (expression_evaluable_on_lqp(candidate_node->predicate(), *current_node)) {
           pull_up_nodes.emplace_back(candidate_node);
         } else {
           blocked_nodes.emplace_back(candidate_node);

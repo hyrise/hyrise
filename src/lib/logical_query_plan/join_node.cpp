@@ -25,7 +25,7 @@ JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join
 }
 
 JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
-    : AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode), join_predicate(join_predicate) {
+    : AbstractLQPNode(LQPNodeType::Join, {join_predicate}), join_mode(join_mode) {
   Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
 }
 
@@ -33,7 +33,7 @@ std::string JoinNode::description() const {
   std::stringstream stream;
   stream << "[Join] Mode: " << join_mode_to_string.at(join_mode);
 
-  if (join_predicate) stream << " " << join_predicate->as_column_name();
+  if (join_predicate()) stream << " " << join_predicate()->as_column_name();
 
   return stream.str();
 }
@@ -61,13 +61,6 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   return _column_expressions;
 }
 
-size_t JoinNode::node_expression_count() const { return join_predicate ? 1u : 0u; }
-
-std::shared_ptr<AbstractExpression>& JoinNode::node_expression(const size_t idx) {
-  Assert(join_predicate ? idx == 0 : false, "Expression index out of bounds");
-  return join_predicate;
-}
-
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && right_input, "JoinNode needs left_input and right_input");
@@ -79,10 +72,10 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     return cross_join_statistics;
 
   } else {
-    Assert(join_predicate, "Expected join predicate");
+    Assert(join_predicate(), "Expected join predicate");
 
     const auto operator_join_predicate =
-        OperatorJoinPredicate::from_expression(*join_predicate, *left_input, *right_input);
+        OperatorJoinPredicate::from_expression(*join_predicate(), *left_input, *right_input);
 
     // TODO(anybody) (Complex) predicate we can't build statistics for
     if (!operator_join_predicate) return cross_join_statistics;
@@ -93,9 +86,13 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   }
 }
 
+std::shared_ptr<AbstractExpression> JoinNode::join_predicate() const {
+  return node_expressions.empty() ? nullptr : node_expressions.front();
+}
+
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  if (join_predicate) {
-    return JoinNode::make(join_mode, expression_copy_and_adapt_to_different_lqp(*join_predicate, node_mapping));
+  if (join_predicate()) {
+    return JoinNode::make(join_mode, expression_copy_and_adapt_to_different_lqp(*join_predicate(), node_mapping));
   } else {
     return JoinNode::make(join_mode);
   }
@@ -104,11 +101,11 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
 
-  if ((join_predicate == nullptr) != (join_node.join_predicate == nullptr)) return false;
+  if ((join_predicate() == nullptr) != (join_node.join_predicate() == nullptr)) return false;
   if (join_mode != join_node.join_mode) return false;
-  if (!join_predicate && !join_node.join_predicate) return true;
+  if (!join_predicate() && !join_node.join_predicate()) return true;
 
-  return expression_equal_to_expression_in_different_lqp(*join_predicate, *join_node.join_predicate, node_mapping);
+  return expression_equal_to_expression_in_different_lqp(*join_predicate(), *join_node.join_predicate(), node_mapping);
 }
 
 }  // namespace opossum

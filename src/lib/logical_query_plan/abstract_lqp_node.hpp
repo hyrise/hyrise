@@ -50,7 +50,8 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
 
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
  public:
-  explicit AbstractLQPNode(const LQPNodeType node_type);
+  AbstractLQPNode(const LQPNodeType node_type,
+  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -62,7 +63,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
    * @defgroup Access the outputs/inputs
    *
    * The outputs are implicitly set and removed in set_left_input()/set_right_input()/set_input().
-   * Design decision: If you delete a node, you explicitly need to call remove_output() on its input.
    *
    * set_input() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value.
    * @{
@@ -126,15 +126,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
   /**
-   * @return    Access expressions that this node USES (and doesn't just forward) (e.g., predicates, projections, ...).
-   *            Intended, e.g., for the optimizer to have ONE function to call recursively on a plan and see ALL
-   *            expressions used in that plan
-   */
-  virtual size_t node_expression_count() const;
-  virtual std::shared_ptr<AbstractExpression>& node_expression(const size_t idx);
-  const std::shared_ptr<AbstractExpression>& node_expression(const size_t idx) const;
-
-  /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
@@ -174,6 +165,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   bool operator!=(const AbstractLQPNode& rhs) const;
 
   const LQPNodeType type;
+
+  /**
+   * Expressions used by this node; semantics depend on the actual node type.
+   * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
+   * expression for each column
+   */
+  std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
  protected:
   void _print_impl(std::ostream& out) const;
