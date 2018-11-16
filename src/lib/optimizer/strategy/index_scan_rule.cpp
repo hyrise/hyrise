@@ -57,7 +57,8 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.type != SegmentIndexType::GroupKey) return false;
 
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
+  const auto operator_predicates =
+      OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates) return false;
   if (operator_predicates->size() != 1) return false;
 

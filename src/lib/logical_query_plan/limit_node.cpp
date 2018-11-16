@@ -18,9 +18,7 @@ std::string LimitNode::description() const {
   return stream.str();
 }
 
-std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {
-  return node_expressions[0];
-}
+std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const { return node_expressions[0]; }
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return LimitNode::make(expression_copy_and_adapt_to_different_lqp(*num_rows_expression(), node_mapping));

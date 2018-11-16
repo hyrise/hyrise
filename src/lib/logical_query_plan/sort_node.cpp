@@ -38,7 +38,8 @@ std::shared_ptr<AbstractLQPNode> SortNode::_on_shallow_copy(LQPNodeMapping& node
 bool SortNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& sort_node = static_cast<const SortNode&>(rhs);
 
-  return expressions_equal_to_expressions_in_different_lqp(node_expressions, sort_node.node_expressions, node_mapping) &&
+  return expressions_equal_to_expressions_in_different_lqp(node_expressions, sort_node.node_expressions,
+                                                           node_mapping) &&
          order_by_modes == sort_node.order_by_modes;
 }
 

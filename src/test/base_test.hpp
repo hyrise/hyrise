@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "cache/hash_cache.hpp"
+#include "cache/cache.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"

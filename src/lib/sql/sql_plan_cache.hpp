@@ -3,14 +3,14 @@
 #include <memory>
 #include <string>
 
-#include "cache/hash_cache.hpp"
+#include "cache/cache.hpp"
 
 namespace opossum {
 
 class AbstractOperator;
 class AbstractLQPNode;
 
-using SQLPhysicalPlanCache = HashCache<std::shared_ptr<AbstractOperator>, std::string>;
-using SQLLogicalPlanCache = HashCache<std::shared_ptr<AbstractLQPNode>, std::string>;
+using SQLPhysicalPlanCache = Cache<std::shared_ptr<AbstractOperator>, std::string>;
+using SQLLogicalPlanCache = Cache<std::shared_ptr<AbstractLQPNode>, std::string>;
 
 }  // namespace opossum

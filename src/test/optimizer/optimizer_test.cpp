@@ -152,7 +152,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   ASSERT_TRUE(select_a_a);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
   ASSERT_TRUE(projection_node);
-  auto select_a_b = std::dynamic_pointer_cast<LQPSelectExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
+  auto select_a_b =
+      std::dynamic_pointer_cast<LQPSelectExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_b);
 
   EXPECT_NE(select_a_a->lqp, select_a_b->lqp);

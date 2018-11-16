@@ -29,15 +29,19 @@ std::string AliasNode::description() const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const { return node_expressions; }
+const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const {
+  return node_expressions;
+}
 
 std::shared_ptr<AbstractLQPNode> AliasNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return std::make_shared<AliasNode>(expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping), aliases);
+  return std::make_shared<AliasNode>(expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping),
+                                     aliases);
 }
 
 bool AliasNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& alias_node = static_cast<const AliasNode&>(rhs);
-  return expressions_equal_to_expressions_in_different_lqp(node_expressions, alias_node.node_expressions, node_mapping) &&
+  return expressions_equal_to_expressions_in_different_lqp(node_expressions, alias_node.node_expressions,
+                                                           node_mapping) &&
          aliases == alias_node.aliases;
 }
 

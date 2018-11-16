@@ -15,7 +15,7 @@ set(
     cache/lru_cache.hpp
     cache/lru_k_cache.hpp
     cache/random_cache.hpp
-    cache/hash_cache.hpp
+    cache/cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp

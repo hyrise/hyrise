@@ -51,7 +51,7 @@ using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
-  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
+                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -169,7 +169,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   /**
    * Expressions used by this node; semantics depend on the actual node type.
    * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
-   * expression for each column
+   * expression for each column.
+   *
+   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the expressions
+   * (e.g. column names in the AliasNode, OrderByModes in the SortNode) gets adjusted accordingly.
    */
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 

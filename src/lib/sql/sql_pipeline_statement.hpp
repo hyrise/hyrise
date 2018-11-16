@@ -3,7 +3,7 @@
 #include <string>
 
 #include "SQLParserResult.h"
-#include "cache/hash_cache.hpp"
+#include "cache/cache.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
@@ -55,7 +55,8 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
 
   // Returns the PQP for this statement.
-  // The physical plan is either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the optimized LQP
+  // The physical plan is either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the
+  // optimized LQP.
   const std::shared_ptr<AbstractOperator>& get_physical_plan();
 
   // Returns all tasks that need to be executed for this query.

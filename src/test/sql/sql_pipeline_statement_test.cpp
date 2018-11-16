@@ -7,7 +7,7 @@
 #include "SQLParserResult.h"
 #include "gtest/gtest.h"
 
-#include "cache/hash_cache.hpp"
+#include "cache/cache.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
@@ -16,9 +16,9 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -309,8 +309,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
 
   // Expect cache to contain not validated LQP
   EXPECT_TRUE(SQLLogicalPlanCache::get().has(_select_query_a));
-  const auto not_validated_cached_lqp =
-      SQLLogicalPlanCache::get().get_entry(_select_query_a);
+  const auto not_validated_cached_lqp = SQLLogicalPlanCache::get().get_entry(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 }
 
@@ -325,8 +324,7 @@ TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
 
   // Expect cache to contain not validated LQP
   EXPECT_TRUE(SQLLogicalPlanCache::get().has(_select_query_a));
-  const auto not_validated_cached_lqp =
-      SQLLogicalPlanCache::get().get_entry(_select_query_a);
+  const auto not_validated_cached_lqp = SQLLogicalPlanCache::get().get_entry(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
   // Evict not validated version by requesting a validated version

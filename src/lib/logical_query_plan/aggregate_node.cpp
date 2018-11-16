@@ -19,7 +19,8 @@ namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
-    : AbstractLQPNode(LQPNodeType::Aggregate, {/* Expressions added below*/}), aggregate_expressions_begin_idx{group_by_expressions.size()} {
+    : AbstractLQPNode(LQPNodeType::Aggregate, {/* Expressions added below*/}),
+      aggregate_expressions_begin_idx{group_by_expressions.size()} {
 #if IS_DEBUG
   for (const auto& aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type == ExpressionType::Aggregate,
@@ -29,7 +30,8 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 
   node_expressions.resize(group_by_expressions.size() + aggregate_expressions.size());
   std::copy(group_by_expressions.begin(), group_by_expressions.end(), node_expressions.begin());
-  std::copy(aggregate_expressions.begin(), aggregate_expressions.end(), node_expressions.begin() + group_by_expressions.size());
+  std::copy(aggregate_expressions.begin(), aggregate_expressions.end(),
+            node_expressions.begin() + group_by_expressions.size());
 }
 
 std::string AggregateNode::description() const {
@@ -45,7 +47,8 @@ std::string AggregateNode::description() const {
   stream << "] ";
 
   stream << "Aggregates: [";
-  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < node_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < node_expressions.size();
+       ++expression_idx) {
     stream << node_expressions[expression_idx]->as_column_name();
     if (expression_idx + 1 < node_expressions.size()) stream << ", ";
   }
@@ -87,10 +90,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
-    node_expressions.begin(), node_expressions.begin() + aggregate_expressions_begin_idx};
+      node_expressions.begin(), node_expressions.begin() + aggregate_expressions_begin_idx};
 
   const auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
-    node_expressions.begin() + aggregate_expressions_begin_idx, node_expressions.end()};
+      node_expressions.begin() + aggregate_expressions_begin_idx, node_expressions.end()};
 
   return std::make_shared<AggregateNode>(
       expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),

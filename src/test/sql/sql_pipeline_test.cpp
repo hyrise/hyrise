@@ -15,9 +15,9 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
