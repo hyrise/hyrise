@@ -31,6 +31,8 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
     }
 
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
+
+    // TODO(Sven): add indices
     StorageManager::get().add_table(table_specification.table_name, table);
 
     std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;

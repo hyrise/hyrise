@@ -27,6 +27,8 @@ class CalibrationQueryGeneratorTest : public BaseTest {
 
 TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
   std::map<std::string, CalibrationColumnSpecification> columns = {
+          // Query Generator expects one column with the name 'column_pk', which is handled as primary key
+      {"column_pk", CalibrationColumnSpecification{DataType::Int, "uniform", false, 100, EncodingType::Unencoded}},
       {"a", CalibrationColumnSpecification{DataType::Int, "uniform", false, 100, EncodingType::Unencoded}},
       {"b", CalibrationColumnSpecification{DataType::String, "uniform", false, 100, EncodingType::Unencoded}}};
 

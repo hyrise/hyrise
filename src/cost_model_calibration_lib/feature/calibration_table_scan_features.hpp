@@ -10,9 +10,9 @@
 namespace opossum {
 
 struct CalibrationTableScanFeatures {
-  std::optional<CalibrationColumnFeatures> first_column{};
-  std::optional<CalibrationColumnFeatures> second_column{};
-  std::optional<CalibrationColumnFeatures> third_column{};
+  CalibrationColumnFeatures first_column{};
+  CalibrationColumnFeatures second_column{};
+  CalibrationColumnFeatures third_column{};
 
   bool is_column_comparison = false;
   std::string scan_operator_type = "undefined";
