@@ -18,7 +18,13 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
   const auto row_tid = mvcc_data.tids[chunk_offset].load();
   const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
   const auto end_cid = mvcc_data.end_cids[chunk_offset];
+  return Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid);
+}
 
+}  // namespace
+
+bool Validate::is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
+                              const CommitID begin_cid, const CommitID end_cid) {
   // Taken from: https://github.com/hyrise/hyrise-v1/blob/master/docs/documentation/queryexecution/tx.rst
   // auto own_insert = (our_tid == row_tid) && !(snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
   // auto past_insert = (our_tid != row_tid) && (snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
@@ -27,8 +33,6 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
   // since gcc and clang are surprisingly bad at optimizing the above boolean expression, lets do that ourselves
   return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
 }
-
-}  // namespace
 
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
@@ -78,7 +82,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+        if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
           pos_list_out->emplace_back(row_id);
         }
       }
@@ -101,7 +105,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {
-        if (is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
+        if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }

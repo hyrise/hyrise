@@ -233,7 +233,7 @@ if (${ENABLE_JIT_SUPPORT})
         ${JIT_REPOSITORY_TEST_MODULE}
         ${RESOLVE_CONDITION_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
-        operators/jit_operator/jit_aware_lqp_translator_test.cpp
+        logical_query_plan/jit_aware_lqp_translator_test.cpp
         operators/jit_operator/jit_hashmap_value_test.cpp
         operators/jit_operator/jit_operations_test.cpp
         operators/jit_operator/jit_tuple_value_test.cpp
@@ -243,6 +243,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
+        operators/jit_operator/operators/jit_validate_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
         operators/jit_operator/specialization/jit_code_specializer_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp
