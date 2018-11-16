@@ -246,10 +246,14 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/join_ordering/abstract_join_ordering_algorithm.cpp
+    optimizer/join_ordering/abstract_join_ordering_algorithm.hpp
     optimizer/join_ordering/dp_ccp.cpp
     optimizer/join_ordering/dp_ccp.hpp
     optimizer/join_ordering/enumerate_ccp.cpp
     optimizer/join_ordering/enumerate_ccp.hpp
+    optimizer/join_ordering/greedy_operator_ordering.cpp
+    optimizer/join_ordering/greedy_operator_ordering.hpp
     optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_graph_builder.cpp
@@ -534,6 +538,7 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/make_bimap.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp
@@ -580,6 +585,8 @@ if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
+        operators/validate.cpp
+        operators/validate.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
         operators/jit_operator/jit_operations.cpp
@@ -596,14 +603,18 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_filter.hpp
         operators/jit_operator/operators/jit_read_tuples.cpp
         operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_validate.cpp
+        operators/jit_operator/operators/jit_validate.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE jit_llvm_bundle ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
-        operators/jit_operator/jit_aware_lqp_translator.cpp
-        operators/jit_operator/jit_aware_lqp_translator.hpp
+        logical_query_plan/jit_aware_lqp_translator.cpp
+        logical_query_plan/jit_aware_lqp_translator.hpp
+        operators/jit_operator/jit_constant_mappings.cpp
+        operators/jit_operator/jit_constant_mappings.hpp
         operators/jit_operator/specialization/jit_compiler.cpp
         operators/jit_operator/specialization/jit_compiler.hpp
         operators/jit_operator/specialization/jit_code_specializer.cpp
