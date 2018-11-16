@@ -17,7 +17,8 @@ class RandomCache : public AbstractCacheEvictionPolicy<Key, Value> {
  public:
   typedef typename std::pair<Key, Value> KeyValuePair;
 
-  explicit RandomCache(size_t capacity) : AbstractCacheEvictionPolicy<Key, Value>(capacity), _gen(_rd()), _rand(0, capacity - 1) {
+  explicit RandomCache(size_t capacity) : 
+    AbstractCacheEvictionPolicy<Key, Value>(capacity), _gen(_rd()), _rand(0, capacity - 1) {
     _list.reserve(capacity);
   }
 
