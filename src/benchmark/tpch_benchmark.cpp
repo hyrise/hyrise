@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
 
   // TODO(leander): Enable support for queries that contain multiple statements requiring execution
   if (config->enable_scheduler) {
-    // QueryID{14} represents TPC-H query 15 because of the way we generate and store the queries
+    // QueryID{14} represents TPC-H query 15 because we use 0 indexing
     Assert(std::find(query_ids.begin(), query_ids.end(), opossum::QueryID{14}) == query_ids.end(),
            "TPC-H query 15 is not supported for multithreaded benchmarking.");
   }
