@@ -38,12 +38,12 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_path) {
   const auto filename = filesystem::path{query_path}.stem().string();
 
   std::string content{std::istreambuf_iterator<char>(file), {}};
-  
+ 
   /**
    * A file can contain multiple SQL statements, and each statement may cover one or more lines.
    * We use the SQLParser to split up the content of the file into the individual SQL statements.
    */
-  
+
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parse(content, &parse_result);
   Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
