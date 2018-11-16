@@ -34,7 +34,6 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
-#include "tpch/tpch_queries.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

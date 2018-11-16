@@ -181,9 +181,6 @@ bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
     for (const auto& select_expression : lqp_and_select_expressions.second) {
       select_expression->lqp = local_root_node->left_input();
     }
-
-    // Explicitly untie the root node, otherwise the LQP is left with an expired output weak_ptr
-    local_root_node->set_left_input(nullptr);
   }
 
   return lqp_changed;

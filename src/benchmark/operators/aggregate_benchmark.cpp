@@ -1,7 +1,7 @@
 #include <memory>
 #include <vector>
 
-#include "../benchmark_basic_fixture.hpp"
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
   _clear_cache();
 
   std::vector<AggregateColumnDefinition> aggregates = {{ColumnID{1} /* "b" */, AggregateFunction::Min}};

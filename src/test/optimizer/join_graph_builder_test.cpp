@@ -265,7 +265,11 @@ TEST_F(JoinGraphBuilderTest, MultipleComponentsWithHyperEdge) {
   ASSERT_EQ(join_graph->edges.at(1).predicates.size(), 1u);
   EXPECT_EQ(*join_graph->edges.at(1).predicates.at(0), *equals_(a_a, b_a));
 
-  EXPECT_EQ(join_graph->edges.at(2).vertex_set, JoinGraphVertexSet(3, 0b101));
+  // The edge connecting the components of the JoinGraph can either be AC or BC. Depending on the hash function used
+  // by the stdlib, either could happen
+  const auto cross_edge = join_graph->edges.at(2);
+  EXPECT_TRUE(cross_edge.vertex_set == JoinGraphVertexSet(3, 0b101) ||
+              cross_edge.vertex_set == JoinGraphVertexSet(3, 0b110));
   ASSERT_EQ(join_graph->edges.at(2).predicates.size(), 0u);
 }
 

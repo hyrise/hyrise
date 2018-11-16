@@ -29,7 +29,7 @@ TEST_F(ShowColumnsNodeTest, Description) {
   EXPECT_EQ(_show_columns_node->description(), "[ShowColumns] Table: 'table_a'");
 }
 
-TEST_F(ShowColumnsNodeTest, TableName) { EXPECT_EQ(_show_columns_node->table_name(), "table_a"); }
+TEST_F(ShowColumnsNodeTest, TableName) { EXPECT_EQ(_show_columns_node->table_name, "table_a"); }
 
 TEST_F(ShowColumnsNodeTest, Equals) {
   EXPECT_EQ(*_show_columns_node, *_show_columns_node);

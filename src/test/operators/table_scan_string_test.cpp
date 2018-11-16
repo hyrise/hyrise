@@ -12,7 +12,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/table_scan/like_table_scan_impl.hpp"
+#include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
