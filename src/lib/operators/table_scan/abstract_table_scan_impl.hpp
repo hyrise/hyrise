@@ -86,11 +86,10 @@ class AbstractTableScanImpl {
   }
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  // noinline reduces compile time drastically
   void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                                  const ChunkID chunk_id, PosList& matches_out,
                                  [[maybe_unused]] RightIterator& right_it) const {
-    // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled outside of this
+    // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled by the caller without
     // optimization. For each row, we write 0 to `offsets` if the row does not match, or `chunk_offset + 1` if the row
     // matches. The reason why we need `+1` is given below. This can be parallelized using auto-vectorization/SIMD.
     // Afterwards, we add all matching rows into `matches_out`. There, we do not push_back/emplace_back values, but
@@ -98,7 +97,10 @@ class AbstractTableScanImpl {
     // avoids calls into the stdlib from the hot loop.
 
     auto matches_out_index = matches_out.size();
-    constexpr size_t SIMD_SIZE = 64;  // Assuming a maximum SIMD register size of 512 bit
+
+    // Assuming a maximum SIMD register size of 512 bit. Smaller registers simply lead to the inner loop being unrolled
+    // more than once.
+    constexpr size_t SIMD_SIZE = 64;
     constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ValueID);
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
@@ -110,8 +112,8 @@ class AbstractTableScanImpl {
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
       // The pragmas promise to the compiler that there are no data dependencies within the loop. If you run into any
-      // issues with the optimization, make sure that you only have only set IsVectorizable on iterators that use
-      // linear storage and where the access methods do not change any state.
+      // issues with the optimization, make sure that you have only set IsVectorizable on iterators that use linear
+      // storage and where the access methods do not change any state.
       //
       // Also, when using clang, this causes an error to be thrown if the loop could not be vectorized. Seeing no
       // error, however, just means that some part of the loop was vectorized - it does not mean that the loop has no
@@ -189,7 +191,8 @@ class AbstractTableScanImpl {
       matches_out_index += __builtin_popcount(mask);
 #endif
 
-      // As we write directly into the matches_out vector, make sure that is has enough size
+      // As we write directly into the matches_out vector, make sure that is has enough size. We grow the vector a bit
+      // more aggressively than its default behavior would, because we the potentially wasted space is only ephemeral.
       if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
         matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
       }
