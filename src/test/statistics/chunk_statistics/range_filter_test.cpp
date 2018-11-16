@@ -91,6 +91,21 @@ T get_random_number(std::mt19937& rng, T min, T max) {
 using FilterTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_CASE(RangeFilterTest, FilterTypes);
 
+TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
+  // Create vector with a huge gap in the middle whose length exceeds the type's limits.
+  const pmr_vector<TypeParam> test_vector{static_cast<TypeParam>(0.9 * std::numeric_limits<TypeParam>::lowest()),
+                                          static_cast<TypeParam>(0.8 * std::numeric_limits<TypeParam>::lowest()),
+                                          static_cast<TypeParam>(0.8 * std::numeric_limits<TypeParam>::max()),
+                                          static_cast<TypeParam>(0.9 * std::numeric_limits<TypeParam>::max())};
+
+  // The filter will not create 5 ranges due to potential overflow problems when calculating
+  // distances. In this case, only a filter with a single range is built.
+  auto filter = RangeFilter<TypeParam>::build_filter(test_vector, 5);
+  // Having only one range means the filter cannot prune 0 right in the largest gap.
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0));
+  // Nonetheless, the filter should prune values outside the single range.
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, std::numeric_limits<TypeParam>::lowest() * 0.95));
+}
 // a single range is basically a min/max filter
 TYPED_TEST(RangeFilterTest, SingleRange) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);

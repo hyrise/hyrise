@@ -81,10 +81,10 @@ class RangeFilter : public AbstractFilter {
 
 template <typename T>
 std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary,
-                                                             uint32_t max_ranges_count) {
+                                                             const uint32_t max_ranges_count) {
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
   DebugAssert(!dictionary.empty(), "The dictionary should not be empty.");
-  DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted.");
+  DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.size() == 1) {
     std::vector<std::pair<T, T>> ranges;
@@ -92,10 +92,24 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
     return std::make_unique<RangeFilter<T>>(std::move(ranges));
   }
 
+  /*
+  * In case more than one value is present, first the elements are checked for potential overflows (e.g., when calculating
+  * the distince between INT::MIN() and INT::MAX(), the resulting distance might be to large for signed types).
+  * While being rather unlikely for doubles, it's more like to happen when Opossum includes tinyint etc.
+  * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
+  * Approach: take the min and max values and simply check if the distance between both might overflow. In this case,
+  * fall back to a single range filter.
+  */
+  const auto min_max = std::minmax_element(dictionary.cbegin(), dictionary.cend());
+  if ((*min_max.first < 0) &&
+      (*min_max.second > std::numeric_limits<T>::max() + *min_max.first)) {  // min_value is negative
+    return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{*min_max.first, *min_max.second}});
+  }
+
   // calculate distances by taking the difference between two neighbouring elements
   // vector stores <distance to next element, dictionary index>
   std::vector<std::pair<T, size_t>> distances;
-  distances.reserve(dictionary.size());
+  distances.reserve(dictionary.size() - 1);
   for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
     auto dict_it_next = dict_it + 1;
     distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it));
@@ -133,4 +147,5 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 
   return std::make_unique<RangeFilter<T>>(std::move(ranges));
 }
+
 }  // namespace opossum
