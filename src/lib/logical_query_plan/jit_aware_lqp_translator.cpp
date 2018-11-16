@@ -59,7 +59,7 @@ const std::unordered_map<ArithmeticOperator, JitExpressionType> arithmetic_opera
 const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to_jit_expression = {
     {LogicalOperator::And, JitExpressionType::And}, {LogicalOperator::Or, JitExpressionType::Or}};
 
-bool node_requires_computations(const std::shared_ptr<AbstractLQPNode>& node) {
+bool requires_computation(const std::shared_ptr<AbstractLQPNode>& node) {
   // do not count trivial projections without computations
   if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node)) {
     for (const auto& expression : projection_node->expressions) {
@@ -99,7 +99,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
     if (_node_is_jittable(current_node, is_root_node)) {
       use_validate |= current_node->type == LQPNodeType::Validate;
       validate_after_filter |= use_validate && current_node->type == LQPNodeType::Predicate;
-      if (node_requires_computations(current_node)) ++jittable_node_count;
+      if (requires_computation(current_node)) ++jittable_node_count;
       return true;
     } else {
       input_nodes.insert(current_node);
@@ -112,8 +112,9 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   //   - Always JIT AggregateNodes, as the JitAggregate is significantly faster than the Aggregate operator
   //   - Otherwise, JIT if there are two or more jittable nodes
   if (input_nodes.size() != 1 || jittable_node_count < 1) return nullptr;
-  if (jittable_node_count == 1 && (node->type == LQPNodeType::Projection || node->type == LQPNodeType::Validate))
+  if (jittable_node_count == 1 && (node->type == LQPNodeType::Projection || node->type == LQPNodeType::Validate)) {
     return nullptr;
+  }
 
   // The input_node is not being integrated into the operator chain, but instead serves as the input to the JitOperators
   const auto input_node = *input_nodes.begin();
