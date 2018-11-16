@@ -31,7 +31,8 @@ class RangeFilterTest : public ::testing::Test {
     _after_range = _max_value + 1;   // value larger than the maximum
   }
 
-  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(size_t gap_count, const pmr_vector<T>& values) {
+  // values ought to be sorted!
+  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(const size_t gap_count, const pmr_vector<T>& values) {
     // RangeFilter constructor takes range count, not gap count
     auto filter = RangeFilter<T>::build_filter(values, static_cast<uint32_t>(gap_count + 1));
 
@@ -66,6 +67,7 @@ class RangeFilterTest : public ::testing::Test {
       } else if constexpr (std::is_integral_v<T>) {  // NOLINT
         if (length > 1) {
           EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {begin + 1}));
+          EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {end - 1}));
         }
       }
     }
@@ -78,14 +80,13 @@ class RangeFilterTest : public ::testing::Test {
 };
 
 template <typename T>
-T get_random_number(std::mt19937& rng, T min, T max) {
-  if constexpr (std::is_same_v<T, int>) {
-    std::uniform_int_distribution<T> uni(min, max);
-    return uni(rng);
-  } else {
-    std::uniform_real_distribution<T> uni(min, max);
-    return uni(rng);
-  }
+using distribution =
+    std::conditional_t<std::is_integral<T>::value, std::uniform_int_distribution<T>,
+                       std::conditional_t<std::is_floating_point<T>::value, std::uniform_real_distribution<T>, void>>;
+
+template <typename T>
+T get_random_number(std::mt19937& rng, distribution<T> distribution) {
+  return distribution(rng);
 }
 
 using FilterTypes = ::testing::Types<int, float, double>;
@@ -193,34 +194,46 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_after_range}));
 }
 
-// test larger value ranges
-TYPED_TEST(RangeFilterTest, LargeValueDomain) {
+// Test larger value ranges.
+TYPED_TEST(RangeFilterTest, LargeValueRange) {
   std::random_device rd;
   auto rng = std::mt19937(rd());
 
   // values on which is the range filter is later built on
   pmr_vector<TypeParam> values;
-  values.reserve(10'000);
+  values.reserve(1'000);
 
-  // We randomly create values between min_value(TypeParam) to -1000 and 1000 to max(TypeParam).
-  // Any value in between should be prunable for values between -999 and 999
-  for (auto i = size_t{0}; i < 10'000; ++i) {
-    values.push_back(get_random_number<TypeParam>(rng, std::numeric_limits<TypeParam>::lowest(), -1000));
-    values.push_back(get_random_number<TypeParam>(rng, 1000, std::numeric_limits<TypeParam>::max()));
+  // Multiplying by 0.6 guarantees that the range filter will always yield a gap range
+  // right in the middle around value zero. Note, does not apply for unsigned values.
+  const TypeParam lower_bound_low_range = static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::lowest());
+  const TypeParam upper_bound_low_range = static_cast<TypeParam>(0.6 * lower_bound_low_range);
+  const TypeParam upper_bound_high_range = static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::max());
+  const TypeParam lower_bound_high_range = static_cast<TypeParam>(0.6 * upper_bound_high_range);
+
+  // We randomly create values between min_value(TypeParam) to 0.6*min_value(TypeParam) and
+  // 0.6*max(TypeParam) to max(TypeParam). Any value in between should be prunable.
+  distribution<TypeParam> lower_range_distribution(lower_bound_low_range, upper_bound_low_range);
+  distribution<TypeParam> high_range_distribution(lower_bound_high_range, upper_bound_high_range);
+  for (auto i = size_t{0}; i < 1'000; ++i) {
+    values.push_back(get_random_number<TypeParam>(rng, lower_range_distribution));
+    values.push_back(get_random_number<TypeParam>(rng, high_range_distribution));
   }
 
   std::sort(values.begin(), values.end());
 
-  const std::vector<size_t> gap_counts = {1, 2, 4, 8, 16, 32, 64, values.size() + 1};
+  // For developing reasons, it makes sense to further create range filters with a size of values.size() + 1
+  // but we found the runtime to be too long for hyriseTest.
+  const std::vector<size_t> gap_counts = {1, 2, 4, 8, 16, 32, 64};
+  distribution<TypeParam> middle_gap_distribution(upper_bound_low_range + 1, lower_bound_high_range - 1);
   for (auto gap_count : gap_counts) {
     // execute general tests and receive created range filter
     auto filter = this->test_varying_range_filter_size(gap_count, values);
 
-    // TODO(Tim,Martin): discuss ways to test this
-    // // additionally, test for further values
-    // for (auto i = size_t{0}; i < 100; ++i) {
-    //   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {get_random_number<TypeParam>(rng, -999, 999)}));
-    // }
+    // Additionally, test for further values in between the large random value ranges.
+    for (auto i = size_t{0}; i < 20; ++i) {
+      EXPECT_TRUE(
+          filter->can_prune(PredicateCondition::Equals, {get_random_number<TypeParam>(rng, middle_gap_distribution)}));
+    }
   }
 }
 
