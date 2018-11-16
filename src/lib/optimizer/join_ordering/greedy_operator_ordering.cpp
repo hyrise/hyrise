@@ -107,16 +107,16 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
     /**
      * 2.4 Update the plans associated with all edges that connect to the newly created cluster.
      */
-    for (const auto& edge_idx2 : remaining_edge_indices) {
-      const auto& edge2 = join_graph.edges[edge_idx2];
-      if ((edge2.vertex_set & joined_vertex_set).any()) {
-        plan_by_edge[edge_idx2] = _build_plan_for_edge(join_graph.edges[edge_idx2], vertex_clusters);
+    for (const auto& remaining_edge_idx : remaining_edge_indices) {
+      const auto& remaining_edge = join_graph.edges[remaining_edge_idx];
+      if ((remaining_edge.vertex_set & joined_vertex_set).any()) {
+        plan_by_edge[remaining_edge_idx] = _build_plan_for_edge(remaining_edge, vertex_clusters);
       }
     }
   }
 
   /**
-   * 3. Assert that all clusters where joined and, before returning, add the uncorrelated predicates on top of the plan 
+   * 3. Assert that all clusters where joined and, before returning, add the uncorrelated predicates on top of the plan
    */
   Assert(vertex_clusters.size() == 1 && vertex_clusters.begin()->first.all(),
          "No cluster for all vertices generated, is the JoinGraph connected?");
