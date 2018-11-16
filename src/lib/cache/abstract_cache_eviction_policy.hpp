@@ -6,13 +6,13 @@ namespace opossum {
 
 // Generic template for a cache implementation.
 template <typename Key, typename Value>
-class AbstractCache {
+class AbstractCacheEvictionPolicy {
  public:
   typedef typename std::pair<Key, Value> KeyValuePair;
 
-  explicit AbstractCache(size_t capacity) : _capacity(capacity) {}
+  explicit AbstractCacheEvictionPolicy(size_t capacity) : _capacity(capacity) {}
 
-  virtual ~AbstractCache() {}
+  virtual ~AbstractCacheEvictionPolicy() {}
 
   // Cache the value at the given key.
   // If the new size exceeds the capacity an item will be evicted.

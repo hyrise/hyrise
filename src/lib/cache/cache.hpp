@@ -62,8 +62,8 @@ class Cache : public Singleton<Cache<Value, Key>> {
   size_t size() const { return _impl->size(); }
 
   // Returns a reference to the underlying cache.
-  AbstractCache<Key, Value>& cache() { return *_impl; }
-  const AbstractCache<Key, Value>& cache() const { return *_impl; }
+  AbstractCacheEvictionPolicy<Key, Value>& cache() { return *_impl; }
+  const AbstractCacheEvictionPolicy<Key, Value>& cache() const { return *_impl; }
 
   // Replaces the underlying cache by creating a new object
   // of the given cache type.
@@ -74,7 +74,7 @@ class Cache : public Singleton<Cache<Value, Key>> {
 
  protected:
   // Underlying cache eviction strategy.
-  std::unique_ptr<AbstractCache<Key, Value>> _impl;
+  std::unique_ptr<AbstractCacheEvictionPolicy<Key, Value>> _impl;
 
   std::mutex _mutex;
 };

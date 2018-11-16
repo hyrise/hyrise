@@ -9,7 +9,7 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-    cache/abstract_cache.hpp
+    cache/abstract_cache_eviction_policy.hpp
     cache/gdfs_cache.hpp
     cache/gds_cache.hpp
     cache/lru_cache.hpp
