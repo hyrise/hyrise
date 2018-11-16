@@ -19,6 +19,12 @@ class PreparedPlan final {
 
   std::shared_ptr<PreparedPlan> deep_copy() const;
 
+  /**
+   * @return A copy of the prepared plan, with the specified @param parameters filled into the placeholders
+   */
+  std::shared_ptr<AbstractLQPNode> instantiate(
+      const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const;
+
   void print(std::ostream& stream) const;
 
   bool operator==(const PreparedPlan& rhs) const;

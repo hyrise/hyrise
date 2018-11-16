@@ -98,11 +98,4 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 
-/**
- * In the LQP @param lqp, search for value placeholders and replace them with actual expressions. The will traverse
- * subselects recursively, as well.
- */
-void lqp_replace_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
-                              const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters);
-
 }  // namespace opossum

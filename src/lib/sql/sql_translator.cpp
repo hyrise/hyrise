@@ -1030,18 +1030,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   }
 
   const auto prepared_plan = StorageManager::get().get_prepared_plan(execute_statement.name);
-  AssertInput(parameters.size() == prepared_plan->parameter_ids.size(), "Incorrect number of parameters supplied");
 
-  auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
-  for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {
-    const auto parameter_id = prepared_plan->parameter_ids[parameter_idx];
-    parameters_by_id.emplace(parameter_id, parameters[parameter_idx]);
-  }
-
-  auto lqp = prepared_plan->lqp->deep_copy();
-  lqp_replace_placeholders(lqp, parameters_by_id);
-
-  return lqp;
+  return prepared_plan->instantiate(parameters);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

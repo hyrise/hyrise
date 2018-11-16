@@ -21,8 +21,6 @@ class CreatePreparedPlanNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreatePreparedPlanNodeTest, Description) {
-  std::cout << create_prepared_plan_node->description() << std::endl;
-
   EXPECT_EQ(create_prepared_plan_node->description(),
             R"([CreatePreparedPlan] 'some_prepared_plan' {
 ParameterIDs: []

@@ -15,17 +15,12 @@ void BindServerPreparedStatementTask::_on_execute() {
   try {
     Assert(_params.size() == _prepared_plan->parameter_ids.size(), "Prepared statement parameter count mismatch");
 
-    auto parameters = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
-
     auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{_params.size()};
     for (auto parameter_idx = size_t{0}; parameter_idx < _params.size(); ++parameter_idx) {
-      const auto parameter_id = _prepared_plan->parameter_ids[parameter_idx];
-      parameters.emplace(parameter_id, std::make_shared<ValueExpression>(_params[parameter_idx]));
+      parameter_expressions.emplace_back(std::make_shared<ValueExpression>(_params[parameter_idx]));
     }
 
-    const auto lqp = _prepared_plan->lqp->deep_copy();
-    lqp_replace_placeholders(lqp, parameters);
-
+    const auto lqp = _prepared_plan->instantiate(parameter_expressions);
     const auto pqp = LQPTranslator{}.translate_node(lqp);
 
     _promise.set_value(pqp);

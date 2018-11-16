@@ -162,6 +162,7 @@ set(
     storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
     storage/numa_placement_test.cpp
+    storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp
     storage/simd_bp128_test.cpp

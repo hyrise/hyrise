@@ -80,46 +80,6 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   });
 }
 
-void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
-                                std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes);
-
-void expression_bind_placeholders_impl(
-    std::shared_ptr<AbstractExpression>& expression,
-    const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  visit_expression(expression, [&](auto& sub_expression) {
-    if (const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
-        parameter_expression &&
-        parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
-      const auto parameter_iter = parameters.find(parameter_expression->parameter_id);
-      Assert(parameter_iter != parameters.end(),
-             "No expression specified for ValuePlaceholder. This should have been caught earlier");
-      sub_expression = parameter_iter->second;
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
-      lqp_bind_placeholders_impl(select_expression->lqp, parameters, visited_nodes);
-    }
-
-    return ExpressionVisitation::VisitArguments;
-  });
-}
-
-void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
-                                std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  visit_lqp(lqp, [&](const auto& node) {
-    if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
-
-    for (auto& expression : node->node_expressions) {
-      expression_bind_placeholders_impl(expression, parameters, visited_nodes);
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-}
-
 }  // namespace
 
 namespace opossum {
@@ -302,11 +262,4 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
-
-void lqp_replace_placeholders(const std::shared_ptr<AbstractLQPNode>& lqp,
-                              const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters) {
-  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  lqp_bind_placeholders_impl(lqp, parameters, visited_nodes);
-}
-
 }  // namespace opossum
