@@ -15,6 +15,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/print.hpp"
@@ -177,6 +178,13 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
                                 FloatComparisonMode::RelativeDifference))
       << "Query failed: " << query;
+
+  // Delete newly created views in sqlite
+  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
+    if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
+      _sqlite->execute_query("DROP VIEW " + create_view->view_name() + ";");
+    }
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner,
