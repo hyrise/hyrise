@@ -109,6 +109,17 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // Nonetheless, the filter should prune values outside the single range.
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, std::numeric_limits<TypeParam>::lowest() * 0.95));
 }
+
+TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
+  if (!IS_DEBUG) return;
+
+  const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
+                                          std::numeric_limits<TypeParam>::lowest()};
+
+  // Additional parantheses needed for template macro expansion.
+  EXPECT_THROW((RangeFilter<TypeParam>::build_filter(test_vector, 5)), std::logic_error);
+}
+
 // a single range is basically a min/max filter
 TYPED_TEST(RangeFilterTest, SingleRange) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);
