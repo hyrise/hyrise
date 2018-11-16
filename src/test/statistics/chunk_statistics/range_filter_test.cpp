@@ -43,22 +43,24 @@ class RangeFilterTest : public ::testing::Test {
     // Find `gap_count` largest gaps. We use an std::{{set}} to discard repeated
     // values and directly iterate over them in sorted order.
     const auto value_set = std::set<T>(values.cbegin(), values.cend(), std::less<T>());
-    std::vector<std::pair<T, T>> begin_length_pairs;
+    std::vector<std::pair<std::pair<T, T>, T>> interval_length_pairs;
 
     for (auto it = value_set.begin(); it != std::prev(value_set.end()); ++it) {
       const auto begin = *it;
       const auto end = *(std::next(it));
-      begin_length_pairs.push_back(std::make_pair(begin, end - begin));
+      interval_length_pairs.push_back({{begin, end}, abs(end - begin)});
     }
 
-    std::sort(begin_length_pairs.begin(), begin_length_pairs.end(),
+    std::sort(interval_length_pairs.begin(), interval_length_pairs.end(),
               [](auto& left, auto& right) { return left.second > right.second; });
 
-    for (auto gap_index = size_t{0}; gap_index < gap_count && gap_index < begin_length_pairs.size(); ++gap_index) {
-      const auto gap = begin_length_pairs[gap_index];
-      const auto begin = gap.first;
+    for (auto gap_index = size_t{0}; gap_index < gap_count && gap_index < interval_length_pairs.size(); ++gap_index) {
+      const auto gap = interval_length_pairs[gap_index];
+      const auto begin = gap.first.first;
+      const auto end = gap.first.second;
       const auto length = gap.second;
-      const auto end = begin + length;
+
+      // The self-calculated gaps are non-inclusive!
       EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {begin}));
       EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {end}));
       if constexpr (std::numeric_limits<T>::is_iec559) {
