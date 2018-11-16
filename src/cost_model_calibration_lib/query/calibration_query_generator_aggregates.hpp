@@ -4,12 +4,12 @@
 
 namespace opossum {
 
-class CalibrationQueryGeneratorAggregates {
+class CalibrationQueryGeneratorAggregate {
  public:
   static const std::shared_ptr<AggregateNode> generate_aggregates();
 
  private:
-  CalibrationQueryGeneratorAggregates() = default;
+  CalibrationQueryGeneratorAggregate() = default;
 };
 
 }  // namespace opossum

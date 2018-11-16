@@ -1,10 +1,10 @@
 #include <iostream>
 #include <sql/sql_pipeline_builder.hpp>
 
-#include "types.hpp"
-#include "tpch/tpch_queries.hpp"
-#include "tpch/tpch_db_generator.hpp"
 #include "storage/storage_manager.hpp"
+#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_queries.hpp"
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -22,7 +22,6 @@ int main() {
 
     std::cout << "Encoded table " << table_name << " successfully." << std::endl;
   }
-
 
   std::cout << query << std::endl;
 

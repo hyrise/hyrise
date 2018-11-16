@@ -10,6 +10,7 @@
 namespace opossum {
 
 struct CalibrationColumnSpecification {
+  std::string column_name;
   DataType type;
   std::string value_distribution;
   bool sorted;
@@ -18,16 +19,17 @@ struct CalibrationColumnSpecification {
 };
 
 inline void to_json(nlohmann::json& j, const CalibrationColumnSpecification& s) {
-  j = nlohmann::json{
-      {"type", s.type},         {"value_distribution", s.value_distribution},
-      {"sorted", s.sorted},     {"distinct_values", s.distinct_values},
-      {"encoding", s.encoding},
-  };
+  j = nlohmann::json{{"column_name", s.column_name},
+                     {"type", s.type},
+                     {"value_distribution", s.value_distribution},
+                     {"sorted", s.sorted},
+                     {"distinct_values", s.distinct_values},
+                     {"encoding", s.encoding}};
 }
 
 inline bool operator==(const CalibrationColumnSpecification& lhs, const CalibrationColumnSpecification& rhs) {
-  return std::tie(lhs.type, lhs.value_distribution, lhs.sorted, lhs.distinct_values, lhs.encoding) ==
-         std::tie(rhs.type, rhs.value_distribution, rhs.sorted, rhs.distinct_values, rhs.encoding);
+  return std::tie(lhs.column_name, lhs.type, lhs.value_distribution, lhs.sorted, lhs.distinct_values, lhs.encoding) ==
+         std::tie(rhs.column_name, rhs.type, rhs.value_distribution, rhs.sorted, rhs.distinct_values, rhs.encoding);
 }
 
 inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s) {
@@ -35,6 +37,7 @@ inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s
   if (data_type_to_string.right.find(data_type_string) == data_type_to_string.right.end()) {
     Fail("Unsupported data type");
   }
+  s.column_name = j.at("column_name").get<std::string>();
   s.type = data_type_to_string.right.at(data_type_string);
   s.value_distribution = j.value("value_distribution", "uniform");
   s.sorted = j.value("sorted", false);

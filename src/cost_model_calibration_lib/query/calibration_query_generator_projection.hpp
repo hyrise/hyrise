@@ -6,11 +6,11 @@
 namespace opossum {
 
 class CalibrationQueryGeneratorProjection {
-public:
+ public:
   static const std::shared_ptr<ProjectionNode> generate_projection(const std::vector<LQPColumnReference>& columns);
 
  private:
-    CalibrationQueryGeneratorProjection() = default;
+  CalibrationQueryGeneratorProjection() = default;
 };
 
 }  // namespace opossum

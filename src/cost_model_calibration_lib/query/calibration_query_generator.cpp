@@ -8,13 +8,16 @@
 #include "calibration_query_generator_predicate.hpp"
 #include "calibration_query_generator_projection.hpp"
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/mock_node.hpp"
 
 namespace opossum {
 
-const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries(
-    const std::vector<CalibrationTableSpecification>& table_definitions) {
+CalibrationQueryGenerator::CalibrationQueryGenerator(
+    const std::vector<CalibrationColumnSpecification>& column_specifications)
+    : _column_specifications(column_specifications){};
+
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> queries;
-  queries.reserve(table_definitions.size());
 
   const auto& add_query_if_present = [](std::vector<std::shared_ptr<AbstractLQPNode>>& vector,
                                         const std::shared_ptr<AbstractLQPNode>& query) {
@@ -23,65 +26,62 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
     }
   };
 
-  for (const auto& table_definition : table_definitions) {
-    add_query_if_present(queries, CalibrationQueryGenerator::_generate_aggregate(table_definition));
+  add_query_if_present(queries, CalibrationQueryGenerator::_generate_aggregate());
 
-    add_query_if_present(
-        queries,
-        _generate_table_scan(table_definition, CalibrationQueryGeneratorPredicates::generate_predicate_column_value));
+  add_query_if_present(queries,
+                       _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
 
-    add_query_if_present(
-        queries,
-        _generate_table_scan(table_definition, CalibrationQueryGeneratorPredicates::generate_predicate_column_column));
+  add_query_if_present(queries,
+                       _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
 
-    add_query_if_present(
-        queries, _generate_table_scan(table_definition,
-                                      CalibrationQueryGeneratorPredicates::generate_predicate_between_value_value));
+  add_query_if_present(
+      queries, _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
-    add_query_if_present(
-        queries, _generate_table_scan(table_definition,
-                                      CalibrationQueryGeneratorPredicates::generate_predicate_between_column_column));
+  add_query_if_present(
+      queries, _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
 
-    add_query_if_present(
-        queries, _generate_table_scan(table_definition, CalibrationQueryGeneratorPredicates::generate_predicate_like));
+  add_query_if_present(queries, _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_like));
 
-    add_query_if_present(
-        queries, _generate_table_scan(table_definition, CalibrationQueryGeneratorPredicates::generate_predicate_or));
+  add_query_if_present(queries, _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_or));
 
-    add_query_if_present(queries,
-                         _generate_table_scan(table_definition,
-                                              CalibrationQueryGeneratorPredicates::generate_predicate_equi_on_strings));
-  }
+  add_query_if_present(queries,
+                       _generate_table_scan(CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
 
   // Generates the same query using all available JoinTypes
-  const auto join_queries = CalibrationQueryGenerator::_generate_join(table_definitions);
-  for (const auto & query : join_queries) {
+  const auto join_queries = _generate_join();
+  for (const auto& query : join_queries) {
     add_query_if_present(queries, query);
   }
 
   return queries;
 }
 
-const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scan(
-    const CalibrationTableSpecification& table_definition, const PredicateGeneratorFunctor& predicate_generator) {
-  const auto table = StoredTableNode::make(table_definition.table_name);
+const std::shared_ptr<MockNode> CalibrationQueryGenerator::_column_specification_to_mock_node() const {
+  std::vector<std::pair<DataType, std::string>> column_definitions;
+  for (const auto& column : _column_specifications) {
+    column_definitions.emplace_back(column.type, column.column_name);
+  }
 
-  auto predicate =
-      CalibrationQueryGeneratorPredicates::generate_predicates(predicate_generator, table_definition.columns, table, 3);
+  return MockNode::make(column_definitions);
+}
+
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scan(
+    const PredicateGeneratorFunctor& predicate_generator) const {
+  const auto table = _column_specification_to_mock_node();
+
+  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
+
+  auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(predicate_generator, _column_specifications,
+                                                                           table, 3, configuration);
 
   return predicate;
 }
 
-const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join(
-    const std::vector<CalibrationTableSpecification>& table_definitions) {
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join() const {
   static std::mt19937 engine((std::random_device()()));
-  std::uniform_int_distribution<u_int64_t> table_dist(0, table_definitions.size() - 1);
 
-  if (table_definitions.empty()) return {};
-  const auto left_table_definition = std::next(table_definitions.begin(), table_dist(engine));
-  const auto right_table_definition = std::next(table_definitions.begin(), table_dist(engine));
-  const auto left_table = StoredTableNode::make(left_table_definition->table_name);
-  const auto right_table = StoredTableNode::make(right_table_definition->table_name);
+  const auto left_table = _column_specification_to_mock_node();
+  const auto right_table = _column_specification_to_mock_node();
 
   const auto join_nodes = CalibrationQueryGeneratorJoin::generate_join(
       CalibrationQueryGeneratorJoin::generate_join_predicate, left_table, right_table);
@@ -90,13 +90,15 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
     return {};
   }
 
-  auto left_predicate = CalibrationQueryGeneratorPredicates::generate_predicates(
-      CalibrationQueryGeneratorPredicates::generate_predicate_column_value, left_table_definition->columns, left_table,
-      2);
+  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
 
-  auto right_predicate = CalibrationQueryGeneratorPredicates::generate_predicates(
-      CalibrationQueryGeneratorPredicates::generate_predicate_column_value, right_table_definition->columns,
-      right_table, 2);
+  auto left_predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, left_table, 2,
+      configuration);
+
+  auto right_predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, right_table, 2,
+      configuration);
 
   // We are not interested in queries without Predicates
   if (!left_predicate || !right_predicate) {
@@ -111,14 +113,16 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
   return join_nodes;
 }
 
-const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggregate(
-    const CalibrationTableSpecification& table_definition) {
-  const auto table = StoredTableNode::make(table_definition.table_name);
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggregate() const {
+  const auto table = _column_specification_to_mock_node();
 
-  const auto aggregate_node = CalibrationQueryGeneratorAggregates::generate_aggregates();
+  const auto aggregate_node = CalibrationQueryGeneratorAggregate::generate_aggregates();
 
-  auto predicate = CalibrationQueryGeneratorPredicates::generate_predicates(
-      CalibrationQueryGeneratorPredicates::generate_predicate_column_value, table_definition.columns, table, 1);
+  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
+
+  auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, table, 1,
+      configuration);
 
   if (!predicate) {
     std::cout << "Failed to generate predicate for Aggregate" << std::endl;
@@ -129,9 +133,8 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggr
   return aggregate_node;
 }
 
-
 const std::shared_ptr<ProjectionNode> CalibrationQueryGenerator::_generate_projection(
-    const std::vector<LQPColumnReference>& columns) {
+    const std::vector<LQPColumnReference>& columns) const {
   return CalibrationQueryGeneratorProjection::generate_projection(columns);
 }
 }  // namespace opossum

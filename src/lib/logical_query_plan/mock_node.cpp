@@ -25,6 +25,18 @@ LQPColumnReference MockNode::get_column(const std::string& name) const {
   Fail("Couldn't find column named '"s + name + "' in MockNode");
 }
 
+// TODO(Sven): Write test
+const std::vector<LQPColumnReference> MockNode::get_columns() const {
+  const auto& column_definitions = this->column_definitions();
+
+  std::vector<LQPColumnReference> lqp_column_references;
+  for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
+    lqp_column_references.push_back({shared_from_this(), column_id});
+  }
+
+  return lqp_column_references;
+}
+
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
