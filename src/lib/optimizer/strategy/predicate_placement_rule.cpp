@@ -66,8 +66,13 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             _insert_nodes(current_node, input_side, {push_down_node});
           }
 
-          if (move_to_left) left_push_down_nodes.emplace_back(push_down_node);
-          if (move_to_right) right_push_down_nodes.emplace_back(push_down_node);
+          if (move_to_left && move_to_right) {
+            // Do not push down uncorrelated predicates
+            _insert_nodes(current_node, input_side, {push_down_node});
+          } else {
+            if (move_to_left) left_push_down_nodes.emplace_back(push_down_node);
+            if (move_to_right) right_push_down_nodes.emplace_back(push_down_node);
+          }
         }
 
       } else {

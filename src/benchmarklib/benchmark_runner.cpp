@@ -5,6 +5,7 @@
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
@@ -49,6 +50,10 @@ BenchmarkRunner::~BenchmarkRunner() {
 
 void BenchmarkRunner::run() {
   _config.out << "\n- Starting Benchmark..." << std::endl;
+
+  const auto available_queries_count = _query_generator->available_query_count();
+  _query_plans.resize(available_queries_count);
+  _query_results.resize(available_queries_count);
 
   auto benchmark_start = std::chrono::steady_clock::now();
 
@@ -104,8 +109,6 @@ void BenchmarkRunner::run() {
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
-  _query_results.resize(_query_generator->available_query_count());
-
   const auto number_of_queries = _query_generator->selected_query_count();
   auto query_ids = _query_generator->selected_queries();
 
@@ -169,8 +172,6 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {
-  _query_results.resize(_query_generator->available_query_count());
-
   for (const auto& query_id : _query_generator->selected_queries()) {
     _warmup_query(query_id);
 
@@ -426,7 +427,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-// clang-format off
+  // clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
