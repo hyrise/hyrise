@@ -1,3 +1,4 @@
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
@@ -14,6 +15,8 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -29,7 +32,9 @@
 
 namespace opossum {
 
-class SQLiteTestRunner : public BaseTestWithParam<std::string> {
+using TestConfiguration = std::pair<std::string, bool>;  // SQL Query, use_jit
+
+class SQLiteTestRunner : public BaseTestWithParam<TestConfiguration> {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
     _sqlite = std::make_unique<SQLiteWrapper>();
@@ -107,8 +112,8 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
   inline static std::string _master_table_suffix = "_master_copy";
 };
 
-std::vector<std::string> read_queries_from_file() {
-  std::vector<std::string> queries;
+std::vector<TestConfiguration> read_queries_from_file() {
+  std::vector<TestConfiguration> queries;
 
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   std::string query;
@@ -116,21 +121,33 @@ std::vector<std::string> read_queries_from_file() {
     if (query.empty() || query.substr(0, 2) == "--") {
       continue;
     }
-    queries.emplace_back(std::move(query));
+    if constexpr (HYRISE_JIT_SUPPORT) {
+      queries.emplace_back(query, true);
+    }
+    queries.emplace_back(std::move(query), false);
   }
 
   return queries;
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const std::string query = GetParam();
+  const auto& [query, use_jit] = GetParam();
 
-  SCOPED_TRACE(query);
+  std::shared_ptr<LQPTranslator> lqp_translator;
+  if (use_jit) {
+    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
+  } else {
+    lqp_translator = std::make_shared<LQPTranslator>();
+  }
+
+  SCOPED_TRACE("SQLite " + query + (use_jit ? " with JIT" : " without JIT"));
 
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
-  auto sql_pipeline =
-      SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}
+                          .with_prepared_statement_cache(prepared_statement_cache)
+                          .with_lqp_translator(lqp_translator)
+                          .create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 
@@ -161,6 +178,13 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
                                 FloatComparisonMode::RelativeDifference))
       << "Query failed: " << query;
+
+  // Delete newly created views in sqlite
+  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
+    if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
+      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name() + ";");
+    }
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner,

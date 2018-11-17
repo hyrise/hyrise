@@ -65,10 +65,20 @@ namespace opossum {
  * (which throws a runtime error) for invalid data type combinations. Without the decltype return type declaration, the
  * compiler is unable to detect invalid data type combinations at template instanciation time and produces compilation
  * errors.
+ * Functions handling strings are declared as structs with operator() as the previously used lambdas caused the LLVM
+ * ERROR: "Undefined temporary symbol" during specialization. Without the check for string or non-string type, the
+ * compiler also produces compiler errors.
  */
 
 /* Arithmetic operators */
-const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
+struct JitAddition {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  auto operator()(const T1 a, const T2 b) const {
+    return a + b;
+  }
+};
+const JitAddition jit_addition{};
 const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
 const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b) { return a * b; };
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
@@ -77,28 +87,75 @@ const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)
 
 /* Aggregate operations */
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
-const auto jit_maximum = [](const auto a, const auto b) { return std::max(a, b); };
-const auto jit_minimum = [](const auto a, const auto b) { return std::min(a, b); };
+struct JitMaximum {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  auto operator()(const T1 a, const T2 b) const {
+    return std::max(a, b);
+  }
+};
+const JitMaximum jit_maximum{};
+struct JitMinimum {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  auto operator()(const T1 a, const T2 b) const {
+    return std::min(a, b);
+  }
+};
+const JitMinimum jit_minimum{};
 
 /* Comparison operators */
-const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
-const auto jit_not_equals = [](const auto a, const auto b) -> decltype(a != b) { return a != b; };
-const auto jit_less_than = [](const auto a, const auto b) -> decltype(a < b) { return a < b; };
-const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <= b) { return a <= b; };
-const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
-const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
-
-const auto jit_like = [](const std::string a, const std::string b) -> bool {
-  const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string};
-  return std::regex_match(a, regex);
+struct JitEquals {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  bool operator()(const T1 a, const T2 b) const {
+    return a == b;
+  }
 };
-
-const auto jit_not_like = [](const std::string a, const std::string b) -> bool {
-  const auto regex_string = LikeMatcher::sql_like_to_regex(b);
-  const auto regex = std::regex{regex_string};
-  return !std::regex_match(a, regex);
+const JitEquals jit_equals{};
+struct JitNotEquals {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  bool operator()(const T1 a, const T2 b) const {
+    return a != b;
+  }
 };
+const JitNotEquals jit_not_equals{};
+struct JitLessThan {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  bool operator()(const T1 a, const T2 b) const {
+    return a < b;
+  }
+};
+const JitLessThan jit_less_than{};
+struct JitLessThanEquals {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  bool operator()(const T1 a, const T2 b) const {
+    return a <= b;
+  }
+};
+const JitLessThanEquals jit_less_than_equals{};
+struct JitGreaterThan {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  bool operator()(const T1 a, const T2 b) const {
+    return a > b;
+  }
+};
+const JitGreaterThan jit_greater_than{};
+struct JitGreaterThanEquals {
+  template <typename T1, typename T2,
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
+  bool operator()(const T1 a, const T2 b) const {
+    return a >= b;
+  }
+};
+const JitGreaterThanEquals jit_greater_than_equals{};
+
+bool jit_like(const std::string& a, const std::string& b);
+bool jit_not_like(const std::string& a, const std::string& b);
 
 // The InvalidTypeCatcher acts as a fallback implementation, if template specialization
 // fails for a type combination.
@@ -160,7 +217,9 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
-      return DataType::Null;  // unreachable
+      // when lhs or rhs is null
+      if (lhs == DataType::Null) return rhs;
+      return lhs;
   }
 }
 
@@ -227,7 +286,26 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
-  // catching_func is called in this switch:
+  // The left-hand side is the column being aggregated.
+  // The right-hand side is the temporary value required to calculate the aggregate value.
+  // JIT_AGGREGATE_COMPUTE_CASE assumes that the types of the left-hand and right-hand side are the same.
+  // However, this is not the case when the sum or average of a int or float column is calculated as the temporary sum
+  // is stored in the according 64 bit data type long or double.
+  // Left side |    Right side
+  //   Column  | Sum/Avg | Min/Max
+  //       Int |    Long |     Int
+  //      Long |    Long |    Long
+  //     Float |  Double |   Float
+  //    Double |  Double |  Double
+  //    String |       - |  String
+
+  if (lhs.data_type() == DataType::Int && rhs.data_type() == DataType::Long) {
+    return catching_func(static_cast<int64_t>(lhs.get<int32_t>(context)), rhs.get<int64_t>(rhs_index, context));
+  } else if (lhs.data_type() == DataType::Float && rhs.data_type() == DataType::Double) {
+    return catching_func(static_cast<double>(lhs.get<float>(context)), rhs.get<double>(rhs_index, context));
+  }
+
+  // else, catching_func is called here:
   switch (rhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     default:

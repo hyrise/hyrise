@@ -380,4 +380,28 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
+  // For now, the PredicatePlacementRule doesn't touch uncorrelated (think 6 > (SELECT...)) predicates
+
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(5, 3),
+    PredicateNode::make(equals_(_a_a, 3),
+      JoinNode::make(JoinMode::Cross,
+      _table_a,
+      _table_b)));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(5, 3),
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(equals_(_a_a, 3),
+        _table_a),
+      _table_b));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
