@@ -5,6 +5,8 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
@@ -117,6 +119,46 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
               node_a))))));
   // clang-format on
 
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, Update) {
+  // Do not prune away columns below Update, Update needs them all
+
+  // clang-format off
+  const auto select_rows_lqp =
+  PredicateNode::make(greater_than_(a, 5),
+    node_a);
+
+  const auto lqp =
+  UpdateNode::make("dummy",
+    select_rows_lqp,
+    ProjectionNode::make(expression_vector(a, add_(b, 1), c),
+      select_rows_lqp));
+  // clang-format on
+
+  const auto expected_lqp = lqp->deep_copy();
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  expected_lqp->print();
+  actual_lqp->print();
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, Insert) {
+  // Do not prune away columns below Update, Update needs them all
+
+  // clang-format off
+  const auto lqp =
+  InsertNode::make("dummy",
+   PredicateNode::make(greater_than_(a, 5),
+     node_a));
+  // clang-format on
+
+  const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

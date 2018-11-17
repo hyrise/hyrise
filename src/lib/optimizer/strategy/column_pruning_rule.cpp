@@ -12,6 +12,8 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -54,6 +56,17 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
   // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
   // prune) by only searching the arguments of expression.
   visit_lqp(lqp, [&](const auto& node) {
+    if (const auto update_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
+      const auto& left_input_expressions = update_node->left_input()->column_expressions();
+      consumed_columns.insert(left_input_expressions.begin(), left_input_expressions.end());
+
+      const auto& right_input_expressions = update_node->right_input()->column_expressions();
+      consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
+    } else if (const auto insert_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
+      const auto& expressions = insert_node->right_input()->column_expressions();
+      consumed_columns.insert(expressions.begin(), expressions.end());
+    }
+
     for (const auto& expression : node->node_expressions()) {
       if (node->type == LQPNodeType::Projection) {
         for (const auto& argument : expression->arguments) {
@@ -77,6 +90,7 @@ bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
   // (if a node has two leaves as inputs, it will be collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
   visit_lqp(lqp, [&](auto& node) {
+    // Do not prune columns in Updates or Inserts
     for (const auto input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
       const auto input = node->input(input_side);
       if (input && input->input_count() == 0) leaf_parents.emplace_back(node, input_side);
@@ -124,6 +138,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
   // replaced
   auto projection_nodes = std::vector<std::shared_ptr<ProjectionNode>>{};
   visit_lqp(lqp, [&](auto& node) {
+    // Do not prune columns in Updates or Inserts
     if (node->type != LQPNodeType::Projection) return LQPVisitation::VisitInputs;
     projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
     return LQPVisitation::VisitInputs;

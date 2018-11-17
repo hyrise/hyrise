@@ -17,16 +17,7 @@ void AbstractReadWriteOperator::execute() {
 
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
 
-  try {
-    AbstractOperator::execute();
-  } catch (...) {
-    // No matter what goes wrong, we need to mark the operators as failed. Otherwise, when the transaction context
-    // gets destroyed, it will cause another exception that hides the one that caused the actual error. We are NOT
-    // trying to handle the exception here - just making sure that we are not misled when we debug things.
-    _mark_as_failed();
-
-    throw;
-  }
+  AbstractOperator::execute();
 
   if (_state == ReadWriteOperatorState::Failed) return;
 

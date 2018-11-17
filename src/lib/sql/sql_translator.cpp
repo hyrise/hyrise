@@ -358,6 +358,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
+  AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
+
+  const auto table_name = std::string{update.table->name};
+
   auto translation_state = _translate_table_ref(*update.table);
 
   // The LQP that selects the fields to update
@@ -385,7 +389,21 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
         _translate_hsql_expr(*update_clause->value, translation_state.sql_identifier_resolver);
   }
 
-  return UpdateNode::make((update.table)->name, update_expressions, selection_lqp);
+  // Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
+  const auto target_table = StorageManager::get().get_table(table_name);
+  for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
+    // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
+    // until it is replaced.
+    if (expression_contains_placeholders(update_expressions[column_id]) ||
+        target_table->column_data_type(column_id) != update_expressions[column_id]->data_type()) {
+      update_expressions[column_id] = cast_(update_expressions[column_id], target_table->column_data_type(column_id));
+    }
+  }
+
+  // LQP that computes the updated values
+  const auto updated_values_lqp = ProjectionNode::make(update_expressions, selection_lqp);
+
+  return UpdateNode::make(table_name, selection_lqp, updated_values_lqp);
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref) {

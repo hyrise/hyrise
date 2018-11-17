@@ -1403,10 +1403,33 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
   const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;");
 
   // clang-format off
+  const auto row_select_lqp =
+  PredicateNode::make(greater_than_(int_float_a, 1),
+    stored_table_node_int_float);
+
   const auto expected_lqp =
-  UpdateNode::make("int_float", expression_vector(int_float_a, 3.2f),
-    PredicateNode::make(greater_than_(int_float_a, 1),
-      stored_table_node_int_float));
+  UpdateNode::make("int_float",
+    row_select_lqp,
+    ProjectionNode::make(expression_vector(int_float_a, 3.2f),
+      row_select_lqp));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateCast) {
+  const auto actual_lqp = compile_query("UPDATE int_float SET a = b, b = 3 WHERE a > 1;");
+
+  // clang-format off
+  const auto row_select_lqp =
+  PredicateNode::make(greater_than_(int_float_a, 1),
+    stored_table_node_int_float);
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    row_select_lqp,
+    ProjectionNode::make(expression_vector(cast_(int_float_b, DataType::Int), cast_(3, DataType::Float)),
+      row_select_lqp));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
