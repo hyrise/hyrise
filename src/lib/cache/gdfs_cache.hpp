@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_cache_eviction_policy.hpp"
+#include "abstract_cache_impl.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 
 namespace opossum {
@@ -12,7 +12,7 @@ namespace opossum {
 // Generic cache implementation using the GDFS policy.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class GDFSCache : public AbstractCacheEvictionPolicy<Key, Value> {
+class GDFSCache : public AbstractCacheImpl<Key, Value> {
  public:
   // Entries within the GDFS cache.
   struct GDFSCacheEntry {
@@ -29,7 +29,7 @@ class GDFSCache : public AbstractCacheEvictionPolicy<Key, Value> {
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
 
-  explicit GDFSCache(size_t capacity) : AbstractCacheEvictionPolicy<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDFSCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);

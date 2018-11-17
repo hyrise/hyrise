@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_cache_eviction_policy.hpp"
+#include "abstract_cache_impl.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 
 namespace opossum {
@@ -15,7 +15,7 @@ namespace opossum {
 // This is the item whose k-th most recent access is the furthest in the past.
 // Note: This implementation is not thread-safe.
 template <size_t K, typename Key, typename Value>
-class LRUKCache : public AbstractCacheEvictionPolicy<Key, Value> {
+class LRUKCache : public AbstractCacheImpl<Key, Value> {
  public:
   // Entries within the LRU-K cache.
   // They keep a reference history of the K last accesses.
@@ -57,7 +57,7 @@ class LRUKCache : public AbstractCacheEvictionPolicy<Key, Value> {
   typedef LRUKCacheEntry entry_t;
   typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
 
-  explicit LRUKCache(size_t capacity) : AbstractCacheEvictionPolicy<Key, Value>(capacity), _access_counter(0) {}
+  explicit LRUKCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _access_counter(0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     ++_access_counter;
