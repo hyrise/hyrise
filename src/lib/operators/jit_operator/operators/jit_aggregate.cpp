@@ -197,6 +197,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       break;
     case AggregateFunction::Sum:
       DebugAssert(value.data_type() != DataType::String, "Invalid data type string for aggregate function sum.");
+      [[fallthrough]];
     case AggregateFunction::Max:
     case AggregateFunction::Min: {
       DebugAssert(value.data_type() != DataType::Null, "Invalid data type null for aggregate function.");
