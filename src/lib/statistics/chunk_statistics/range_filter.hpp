@@ -95,7 +95,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   /*
   * In case more than one value is present, first the elements are checked for potential overflows (e.g., when calculating
   * the distince between INT::MIN() and INT::MAX(), the resulting distance might be to large for signed types).
-  * While being rather unlikely for doubles, it's more like to happen when Opossum includes tinyint etc.
+  * While being rather unlikely for doubles, it's more likely to happen when Opossum includes tinyint etc.
   * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
   * Approach: take the min and max values and simply check if the distance between both might overflow. In this case,
   * fall back to a single range filter.
