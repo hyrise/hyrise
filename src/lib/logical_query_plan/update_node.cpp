@@ -10,9 +10,7 @@
 
 namespace opossum {
 
-UpdateNode::UpdateNode(const std::string& table_name)
-    : BaseNonQueryNode(LQPNodeType::Update),
-      table_name(table_name) {}
+UpdateNode::UpdateNode(const std::string& table_name) : BaseNonQueryNode(LQPNodeType::Update), table_name(table_name) {}
 
 std::string UpdateNode::description() const {
   std::ostringstream desc;

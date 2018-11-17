@@ -37,8 +37,8 @@ class OperatorsUpdateTest : public BaseTest {
   void TearDown() override { StorageManager::reset(); }
 
   void helper(const std::shared_ptr<AbstractExpression>& where_predicate,
-                                   const std::vector<std::shared_ptr<AbstractExpression>>& update_expressions,
-                                   const std::string& expected_result_path) {
+              const std::vector<std::shared_ptr<AbstractExpression>>& update_expressions,
+              const std::string& expected_result_path) {
     const auto get_table = std::make_shared<GetTable>(table_to_update_name);
     const auto where_scan = std::make_shared<TableScan>(get_table, where_predicate);
     const auto updated_values_projection = std::make_shared<Projection>(where_scan, update_expressions);
@@ -75,7 +75,8 @@ TEST_F(OperatorsUpdateTest, UpdateWithLiteral) {
 }
 
 TEST_F(OperatorsUpdateTest, UpdateWithExpression) {
-  helper(greater_than_(column_a, 1000), expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)), "src/test/tables/int_float2_updated_1.tbl");
+  helper(greater_than_(column_a, 1000), expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)),
+         "src/test/tables/int_float2_updated_1.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateNone) {
