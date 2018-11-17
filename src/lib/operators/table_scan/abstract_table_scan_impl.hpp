@@ -43,7 +43,8 @@ class AbstractTableScanImpl {
     // SIMD has no benefit for iterators that are too complex (mostly iterators that do not operate on contiguous
     // storage). Currently, it is only enabled for std::vector (as used by FixedSizeByteAlignedVector). Also, the
     // AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for `IS_DEBUG`
-    // is redundant, it makes people aware of this.
+    // is redundant, it makes people aware of this. Because the sanitizers blow up the lambda to a point where they
+    // can't be properly vectorized anymore, we deactivate the SIMD scan for sanitizer builds.
     //
     // Furthermore, we only use the vectorized scan for tables with a certain size. This is because firing up the
     // AVX units has some cost on current CPUs. The chosen boundary is just an educated guess - a machine-dependent
@@ -57,9 +58,9 @@ class AbstractTableScanImpl {
     //
     // See the SIMD method for a comment on IsVectorizable.
 
-#if !HYRISE_DEBUG
-    if constexpr (LeftIterator::IsVectorizable) {
-      if (functor_is_vectorizable && left_end - left_it > 10'000) {
+#if !HYRISE_DEBUG && defined(__has_feature) && !__has_feature(thread_sanitizer) && !__has_feature(address_sanitizer)
+    if constexpr (LeftIterator::IsVectorizable && FunctorIsVectorizable) {
+      if (left_end - left_it > 10'000) {
         _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
       }
     }
