@@ -86,6 +86,9 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
           pos_list_out->emplace_back(row_id);
         }
       }
+      if (ref_segment_in->pos_list()->references_single_chunk()) {
+        pos_list_out->guarantee_single_chunk();
+      }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
       for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
@@ -101,6 +104,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
+      pos_list_out->guarantee_single_chunk();
 
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
