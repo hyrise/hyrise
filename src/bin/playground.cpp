@@ -2080,13 +2080,13 @@ int main(int argc, char** argv) {
                   "cqf_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
     memory_log << "column_name,bin_count,bin_id,cqf,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
-  } else if (cmd_option_exists(argv, argv_end, "--estimation-minmaxdistinct")) {
+  } else if (cmd_option_exists(argv, argv_end, "--estimation-min_max_distinct")) {
     result_log
         << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,actual_count,"
            "min_max_distinct_count,equal_height_hist_count,equal_distinct_count_hist_count,equal_width_hist_count\n";
     memory_log << "column_name,bin_count,bin_id,min_max_distinct,equal_height_hist,equal_distinct_count_hist,equal_"
                   "width_hist\n";
-  } else if (cmd_option_exists(argv, argv_end, "--pruning-minmax")) {
+  } else if (cmd_option_exists(argv, argv_end, "--pruning-min_max")) {
     result_log << "total_count,distinct_count,chunk_size,num_bins,column_name,predicate_condition,value,prunable,"
                   "min_max_prunable,equal_height_hist_prunable,equal_distinct_count_hist_prunable,"
                   "equal_width_hist_prunable\n";
@@ -2098,15 +2098,15 @@ int main(int argc, char** argv) {
     memory_log << "column_name,bin_count,bin_id,range,equal_height_hist,equal_distinct_count_hist,equal_width_hist\n";
   } else if (cmd_option_exists(argv, argv_end, "--time-estimation")) {
     result_log << "row_count,chunk_count,bin_count,total_estimate,predicate_count,column_name,predicate_condition,"
-                  "minmaxdistinct_creation_time,cqf_creation_time,"
+                  "min_max_distinct_creation_time,cqf_creation_time,"
                   "height_creation_time,distinct_creation_time,width_creation_time,"
-                  "minmaxdistinct_estimation_time,cqf_estimation_time,"
+                  "min_max_distinct_estimation_time,cqf_estimation_time,"
                   "height_estimation_time,distinct_estimation_time,width_estimation_time\n";
   } else if (cmd_option_exists(argv, argv_end, "--time-pruning")) {
     result_log << "row_count,chunk_count,bin_count,total_prunable,predicate_count,column_name,predicate_condition,"
-                  "minmax_creation_time,range_creation_time,cqf_creation_time,"
+                  "min_max_creation_time,range_creation_time,cqf_creation_time,"
                   "height_creation_time,distinct_creation_time,width_creation_time,"
-                  "minmax_pruning_time,range_pruning_time,cqf_pruning_time,"
+                  "min_max_pruning_time,range_pruning_time,cqf_pruning_time,"
                   "height_pruning_time,distinct_pruning_time,width_pruning_time\n";
   } else {
     Fail("Specify either '--estimation', '--estimation-cqf', or '--pruning' to decide what to measure.");
@@ -2145,13 +2145,13 @@ int main(int argc, char** argv) {
       run_estimation(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--estimation-cqf")) {
       run_estimation_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
-    } else if (cmd_option_exists(argv, argv_end, "--estimation-minmaxdistinct")) {
+    } else if (cmd_option_exists(argv, argv_end, "--estimation-min_max_distinct")) {
       run_estimation_minmaxdistinct(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning")) {
       run_pruning(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning-cqf")) {
       run_pruning_cqf(table, num_bins_list, filters, result_log, bin_log, memory_log);
-    } else if (cmd_option_exists(argv, argv_end, "--pruning-minmax")) {
+    } else if (cmd_option_exists(argv, argv_end, "--pruning-min_max")) {
       run_pruning_minmax(table, num_bins_list, filters, result_log, bin_log, memory_log);
     } else if (cmd_option_exists(argv, argv_end, "--pruning-range")) {
       run_pruning_range(table, num_bins_list, filters, result_log, bin_log, memory_log);
