@@ -77,17 +77,32 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
-      for (auto row_id : *ref_segment_in->pos_list()) {
-        const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
-
-        auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
-
-        if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-          pos_list_out->emplace_back(row_id);
-        }
-      }
-      if (ref_segment_in->pos_list()->references_single_chunk()) {
+      const auto& pos_list_in = *ref_segment_in->pos_list();
+      if (pos_list_in.references_single_chunk()) {
         pos_list_out->guarantee_single_chunk();
+
+        if (!pos_list_in.empty()) {
+          const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.front().chunk_id);
+
+          auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
+
+          for (auto row_id : pos_list_in) {
+            if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+              pos_list_out->emplace_back(row_id);
+            }
+          }
+        }
+
+      } else {
+        for (auto row_id : pos_list_in) {
+          const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+
+          auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
+
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
+        }
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
