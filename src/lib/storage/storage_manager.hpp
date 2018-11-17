@@ -34,6 +34,9 @@ class StorageManager : public Singleton<StorageManager> {
   // returns a list of all table names
   std::vector<std::string> table_names() const;
 
+  // returns a map from table name to table
+  const std::map<std::string, std::shared_ptr<Table>>& tables() const;
+
   // adds a view to the storage manager
   void add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view);
 

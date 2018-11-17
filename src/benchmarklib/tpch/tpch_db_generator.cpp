@@ -8,6 +8,10 @@ extern "C" {
 
 #include <utility>
 
+#include "boost/hana/for_each.hpp"
+#include "boost/hana/integral_constant.hpp"
+#include "boost/hana/zip_with.hpp"
+
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -26,7 +30,7 @@ const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey
 const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   std::string,    std::string,    std::string,  std::string,    std::string,     std::string,      std::string,  std::string>();  // NOLINT
 const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
-const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   int32_t,        std::string>();  // NOLINT
+const auto part_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, std::string, std::string, int32_t,  std::string,   float,        std::string>();  // NOLINT
 const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
 
 const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           std::string>();  // NOLINT
@@ -55,8 +59,8 @@ class TableBuilder {
  public:
   template <typename... Strings>
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
-               const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc)
-      : _use_mvcc(use_mvcc) {
+               const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
+      : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
     /**
      * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
      * columns.
@@ -78,6 +82,9 @@ class TableBuilder {
                              return column_definitions;
                            });
     _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
+
+    // Reserve some space in the vectors
+    boost::hana::for_each(_data_vectors, [&](auto&& vector) { vector.reserve(_estimated_rows_per_chunk); });
   }
 
   std::shared_ptr<opossum::Table> finish_table() {
@@ -108,6 +115,7 @@ class TableBuilder {
   std::shared_ptr<opossum::Table> _table;
   opossum::UseMvcc _use_mvcc;
   boost::hana::tuple<opossum::pmr_concurrent_vector<DataTypes>...> _data_vectors;
+  size_t _estimated_rows_per_chunk;
 
   size_t _current_chunk_row_count() const { return _data_vectors[boost::hana::llong_c<0>].size(); }
 
@@ -120,6 +128,7 @@ class TableBuilder {
       // reason for nolint: clang-tidy wants this to be a forward, but that doesn't work
       segments.push_back(std::make_shared<opossum::ValueSegment<T>>(std::move(vector)));  // NOLINT
       vector = std::decay_t<decltype(vector)>();
+      vector.reserve(_estimated_rows_per_chunk);
     });
     _table->append_chunk(segments);
   }
@@ -191,21 +200,32 @@ TpchDbGenerator::TpchDbGenerator(float scale_factor, uint32_t chunk_size)
     : _scale_factor(scale_factor), _chunk_size(chunk_size) {}
 
 std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate() {
-  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes};
-  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes};
-  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes};
-  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, UseMvcc::Yes};
-  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names, UseMvcc::Yes};
-  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names, UseMvcc::Yes};
-  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes};
-  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names, UseMvcc::Yes};
+  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
+  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
+  const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
+  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * _scale_factor);
+  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
+  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
+
+  // The `* 4` part is defined in the TPC-H specification.
+  TableBuilder customer_builder{_chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes,
+                                customer_count};
+  TableBuilder order_builder{_chunk_size, order_column_types, order_column_names, UseMvcc::Yes, order_count};
+  TableBuilder lineitem_builder{_chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes,
+                                order_count * 4};
+  TableBuilder part_builder{_chunk_size, part_column_types, part_column_names, UseMvcc::Yes, part_count};
+  TableBuilder partsupp_builder{_chunk_size, partsupp_column_types, partsupp_column_names, UseMvcc::Yes,
+                                part_count * 4};
+  TableBuilder supplier_builder{_chunk_size, supplier_column_types, supplier_column_names, UseMvcc::Yes,
+                                supplier_count};
+  TableBuilder nation_builder{_chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes, nation_count};
+  TableBuilder region_builder{_chunk_size, region_column_types, region_column_names, UseMvcc::Yes, region_count};
 
   dbgen_reset_seeds();
 
   /**
    * CUSTOMER
    */
-  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
 
   for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
     auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TpchTable::Customer);
@@ -216,7 +236,6 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   /**
    * ORDER and LINEITEM
    */
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
 
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
     const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
@@ -239,7 +258,6 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   /**
    * PART and PARTSUPP
    */
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
 
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
     const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part, _scale_factor);
@@ -256,7 +274,6 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   /**
    * SUPPLIER
    */
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * _scale_factor);
 
   for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
     const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TpchTable::Supplier);
@@ -268,7 +285,6 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   /**
    * NATION
    */
-  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
 
   for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
     const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TpchTable::Nation);
@@ -278,7 +294,6 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   /**
    * REGION
    */
-  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
   for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
     const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TpchTable::Region);

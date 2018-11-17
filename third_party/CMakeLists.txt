@@ -57,6 +57,25 @@ target_compile_options(
     -O3 -Wno-sign-compare
 )
 
+add_library(
+    cqf
+
+    cqf/src/cqf2.cpp
+    cqf/src/cqf4.cpp
+    cqf/src/cqf8.cpp
+    cqf/src/cqf16.cpp
+    cqf/src/cqf32.cpp
+)
+
+target_include_directories(
+    cqf
+
+    PUBLIC
+    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
+)
+
+
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
@@ -71,7 +90,7 @@ if(${NUMA_FOUND})
     set(PGASUS_REPLACE_MALLOC OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     set(PGASUS_BUILD_DOCUMENTATION OFF CACHE BOOL "" FORCE)
-    add_subdirectory(pgasus )
+    add_subdirectory(pgasus)
 endif()
 
 # TODO(lawben): There is currently a PR open for CMake support in libpqxx.
@@ -126,3 +145,7 @@ target_include_directories(
 )
 
 target_link_libraries(pqxx PUBLIC ${PQ_LIBRARY})
+
+add_library(uninitialized_vector INTERFACE)
+target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
+target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)

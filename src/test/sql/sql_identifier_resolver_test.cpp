@@ -137,17 +137,17 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b", "T1"}), expression_b);
 
   EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b", "Intermediate"}),
-            *parameter_(ParameterID{0}, intermediate_expression_b));
+            *correlated_parameter_(ParameterID{0}, intermediate_expression_b));
   EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a"}),
-            *parameter_(ParameterID{1}, intermediate_expression_a));
+            *correlated_parameter_(ParameterID{1}, intermediate_expression_a));
   EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b"}),
-            *parameter_(ParameterID{0}, intermediate_expression_b));
+            *correlated_parameter_(ParameterID{0}, intermediate_expression_b));
   EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a", "Intermediate"}), nullptr);
 
   EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"outermost_a"}),
-            *parameter_(ParameterID{2}, outermost_expression_a));
+            *correlated_parameter_(ParameterID{2}, outermost_expression_a));
   EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b", "Outermost"}),
-            *parameter_(ParameterID{3}, outermost_expression_b));
+            *correlated_parameter_(ParameterID{3}, outermost_expression_b));
 
   /**
    * Test whether the proxies tracked accesses to their contexts correctly

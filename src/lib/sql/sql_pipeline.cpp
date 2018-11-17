@@ -8,6 +8,7 @@
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/tracing/probes.hpp"
 
 namespace opossum {
@@ -29,8 +30,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   hsql::SQLParser::parse(sql, &parse_result);
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
-  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_micros.count());
+  _metrics.parse_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - start);
+  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_nanos.count());
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
@@ -235,17 +236,17 @@ const SQLPipelineMetrics& SQLPipeline::metrics() {
 }
 
 std::string SQLPipelineMetrics::to_string() const {
-  auto total_translate_micros = std::chrono::microseconds::zero();
-  auto total_optimize_micros = std::chrono::microseconds::zero();
-  auto total_compile_micros = std::chrono::microseconds::zero();
-  auto total_execute_micros = std::chrono::microseconds::zero();
+  auto total_sql_translate_nanos = std::chrono::nanoseconds::zero();
+  auto total_optimize_nanos = std::chrono::nanoseconds::zero();
+  auto total_lqp_translate_nanos = std::chrono::nanoseconds::zero();
+  auto total_execute_nanos = std::chrono::nanoseconds::zero();
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_metric : statement_metrics) {
-    total_translate_micros += statement_metric->translate_time_micros;
-    total_optimize_micros += statement_metric->optimize_time_micros;
-    total_compile_micros += statement_metric->compile_time_micros;
-    total_execute_micros += statement_metric->execution_time_micros;
+    total_sql_translate_nanos += statement_metric->sql_translate_time_nanos;
+    total_optimize_nanos += statement_metric->optimize_time_nanos;
+    total_lqp_translate_nanos += statement_metric->lqp_translate_time_nanos;
+    total_execute_nanos += statement_metric->execution_time_nanos;
 
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }
@@ -254,11 +255,11 @@ std::string SQLPipelineMetrics::to_string() const {
 
   std::ostringstream info_string;
   info_string << "Execution info: [";
-  info_string << "PARSE: " << parse_time_micros.count() << " µs, ";
-  info_string << "TRANSLATE: " << total_translate_micros.count() << " µs, ";
-  info_string << "OPTIMIZE: " << total_optimize_micros.count() << " µs, ";
-  info_string << "COMPILE: " << total_compile_micros.count() << " µs, ";
-  info_string << "EXECUTE: " << total_execute_micros.count() << " µs (wall time) | ";
+  info_string << "PARSE: " << format_duration(parse_time_nanos) << ", ";
+  info_string << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
+  info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
+  info_string << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
+  info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
   info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
   info_string << "]\n";
 

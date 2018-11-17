@@ -54,7 +54,9 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();
   for (; segment_it != _segments.end(); segment_it++, value_it++) {
-    (*segment_it)->append(*value_it);
+    const auto& base_value_segment = std::dynamic_pointer_cast<BaseValueSegment>(*segment_it);
+    DebugAssert(base_value_segment, "Can't append to segment that is not a ValueSegment");
+    base_value_segment->append(*value_it);
   }
 }
 

@@ -1,10 +1,6 @@
-#include <type_traits>
-
-#include "base_test.hpp"
-#include "gtest/gtest.h"
+#include "../base_test.hpp"
 
 #include "operators/join_hash.hpp"
-#include "operators/join_hash/hash_traits.hpp"
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
@@ -16,112 +12,65 @@ This contains the tests for the JoinHash implementation.
 
 class JoinHashTest : public BaseTest {
  protected:
-  void SetUp() override {
+  static void SetUpTestCase() {
     _table_wrapper_small = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
+
+    _table_tpch_orders = std::make_shared<TableWrapper>(load_table("src/test/tables/tpch/sf-0.001/orders.tbl", 10));
+    _table_tpch_orders->execute();
+
+    _table_tpch_lineitems =
+        std::make_shared<TableWrapper>(load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl", 10));
+    _table_tpch_lineitems->execute();
+
+    _table_with_nulls = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4_with_null.tbl", 10));
+    _table_with_nulls->execute();
+
+    // filters retain all rows
+    _table_tpch_orders_scanned = create_table_scan(_table_tpch_orders, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    _table_tpch_orders_scanned->execute();
+    _table_tpch_lineitems_scanned =
+        create_table_scan(_table_tpch_lineitems, ColumnID{0}, PredicateCondition::GreaterThan, 0);
+    _table_tpch_lineitems_scanned->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_small;
+  void SetUp() override {}
+
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_small, _table_tpch_orders, _table_tpch_lineitems,
+      _table_with_nulls;
+  inline static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
 };
-
-#define EXPECT_HASH_TYPE(left, right, hash) EXPECT_TRUE((std::is_same_v<hash, JoinHashTraits<left, right>::HashType>))
-#define EXPECT_LEXICAL_CAST(left, right, cast) EXPECT_EQ((JoinHashTraits<left, right>::needs_lexical_cast), (cast))
-
-TEST_F(JoinHashTest, IntegerTraits) {
-  // joining int and int
-  EXPECT_HASH_TYPE(int32_t, int32_t, int32_t);
-  EXPECT_LEXICAL_CAST(int32_t, int32_t, false);
-
-  // joining long and long
-  EXPECT_HASH_TYPE(int64_t, int64_t, int64_t);
-  EXPECT_LEXICAL_CAST(int64_t, int64_t, false);
-
-  // joining int and long
-  EXPECT_HASH_TYPE(int32_t, int64_t, int64_t);
-  EXPECT_HASH_TYPE(int64_t, int32_t, int64_t);
-  EXPECT_LEXICAL_CAST(int32_t, int64_t, false);
-  EXPECT_LEXICAL_CAST(int64_t, int32_t, false);
-}
-
-TEST_F(JoinHashTest, FloatingTraits) {
-  // joining float and float
-  EXPECT_HASH_TYPE(float, float, float);
-  EXPECT_LEXICAL_CAST(float, float, false);
-
-  // joining double and double
-  EXPECT_HASH_TYPE(double, double, double);
-  EXPECT_LEXICAL_CAST(double, double, false);
-
-  // joining float and double
-  EXPECT_HASH_TYPE(float, double, double);
-  EXPECT_HASH_TYPE(double, float, double);
-  EXPECT_LEXICAL_CAST(float, double, false);
-  EXPECT_LEXICAL_CAST(double, float, false);
-}
-
-TEST_F(JoinHashTest, StringTraits) {
-  // joining string and string
-  EXPECT_HASH_TYPE(std::string, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, std::string, true);
-}
-
-TEST_F(JoinHashTest, MixedNumberTraits) {
-  // joining int and float
-  EXPECT_HASH_TYPE(int32_t, float, float);
-  EXPECT_HASH_TYPE(float, int32_t, float);
-  EXPECT_LEXICAL_CAST(int32_t, float, false);
-  EXPECT_LEXICAL_CAST(float, int32_t, false);
-
-  // joining int and double
-  EXPECT_HASH_TYPE(int32_t, double, double);
-  EXPECT_HASH_TYPE(double, int32_t, double);
-  EXPECT_LEXICAL_CAST(int32_t, double, false);
-  EXPECT_LEXICAL_CAST(double, int32_t, false);
-
-  // joining long and float
-  EXPECT_HASH_TYPE(int64_t, float, float);
-  EXPECT_HASH_TYPE(float, int64_t, float);
-  EXPECT_LEXICAL_CAST(int64_t, float, false);
-  EXPECT_LEXICAL_CAST(float, int64_t, false);
-
-  // joining long and double
-  EXPECT_HASH_TYPE(int64_t, double, double);
-  EXPECT_HASH_TYPE(double, int64_t, double);
-  EXPECT_LEXICAL_CAST(int64_t, double, false);
-  EXPECT_LEXICAL_CAST(double, int64_t, false);
-}
-
-TEST_F(JoinHashTest, MixedStringTraits) {
-  // joining string and int
-  EXPECT_HASH_TYPE(std::string, int32_t, std::string);
-  EXPECT_HASH_TYPE(int32_t, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, int32_t, true);
-  EXPECT_LEXICAL_CAST(int32_t, std::string, true);
-
-  // joining string and long
-  EXPECT_HASH_TYPE(std::string, int64_t, std::string);
-  EXPECT_HASH_TYPE(int64_t, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, int64_t, true);
-  EXPECT_LEXICAL_CAST(int64_t, std::string, true);
-
-  // joining string and float
-  EXPECT_HASH_TYPE(std::string, float, std::string);
-  EXPECT_HASH_TYPE(float, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, float, true);
-  EXPECT_LEXICAL_CAST(float, std::string, true);
-
-  // joining string and double
-  EXPECT_HASH_TYPE(std::string, double, std::string);
-  EXPECT_HASH_TYPE(double, std::string, std::string);
-  EXPECT_LEXICAL_CAST(std::string, double, true);
-  EXPECT_LEXICAL_CAST(double, std::string, true);
-}
 
 TEST_F(JoinHashTest, OperatorName) {
   auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
 
   EXPECT_EQ(join->name(), "JoinHash");
+}
+
+// Once we bring in the PosList optimization flag REFERS_TO_SINGLE_CHUNK_ONLY, this test will ensure
+// that the join does not unnecessarily add chunks (e.g., discussed in #698).
+TEST_F(JoinHashTest, DISABLED_ChunkCount /* #698 */) {
+  auto join = std::make_shared<JoinHash>(_table_tpch_orders_scanned, _table_tpch_lineitems_scanned, JoinMode::Inner,
+                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 10);
+  join->execute();
+
+  // While radix clustering is well-suited for very large tables, it also yield many output tables.
+  // This test checks whether we create more chunks that existing in the input (which should not be the case).
+  EXPECT_TRUE(join->get_output()->chunk_count() <=
+              std::max(_table_tpch_orders_scanned->get_output()->chunk_count(),
+                       _table_tpch_lineitems_scanned->get_output()->chunk_count()));
+}
+
+TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
+  // This test mirrors the test "LeftJoinWithNullAndZeros" executed in join_null_test, but for such input
+  // sizes no radix clustering is executed. Consequently, we manually create a radix clustered hash join.
+  auto join = std::make_shared<JoinHash>(_table_with_nulls, _table_with_nulls, JoinMode::Left,
+                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 2);
+  join->execute();
+
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_with_null_and_zero.tbl", 1);
+  EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 }
 
 }  // namespace opossum

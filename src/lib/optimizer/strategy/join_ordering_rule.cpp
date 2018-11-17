@@ -3,6 +3,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
+#include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "utils/assert.hpp"
 
@@ -47,15 +48,20 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
    *        -> look for more JoinGraphs below the JoinGraph's vertices
    */
 
-  const auto join_graph = JoinGraph::from_lqp(lqp);
+  const auto join_graph = JoinGraph::build_from_lqp(lqp);
   if (!join_graph) {
     _recurse_to_inputs(lqp);
     return lqp;
   }
 
-  // Currently, we apply DpCcp to any JoinGraph we encounter.
-  // TODO(anybody) in the future we should use, e.g., a different algorithm for very complex JoinGraphs
-  auto result_lqp = DpCcp{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
+  // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
+  // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
+  auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
+  if (join_graph->vertices.size() < 9) {
+    result_lqp = DpCcp{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
+  } else {
+    result_lqp = GreedyOperatorOrdering{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
+  }
 
   for (const auto& vertex : join_graph->vertices) {
     _recurse_to_inputs(vertex);

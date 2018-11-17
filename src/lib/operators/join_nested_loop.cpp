@@ -257,7 +257,7 @@ void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_
           } else {
             auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
                 input_table->get_chunk(row.chunk_id)->get_segment(column_id));
-            new_pos_list->push_back(reference_segment->pos_list()->at(row.chunk_offset));
+            new_pos_list->push_back((*reference_segment->pos_list())[row.chunk_offset]);
           }
         }
 

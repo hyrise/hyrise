@@ -233,4 +233,81 @@ TEST_F(JoinGraphBuilderTest, MultipleComponents) {
   EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 0u);
 }
 
+TEST_F(JoinGraphBuilderTest, MultipleComponentsWithHyperEdge) {
+  // Test that components in the join graph get merged with a cross join, even if they are connected by a hyperedge
+  // DPccp needs the JoinGraph to be connected without relying on the hyperedges
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(equals_(add_(a_a, b_a), c_a),
+    JoinNode::make(JoinMode::Cross,
+      JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+         node_a,
+         node_b),
+      node_c));
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+  ASSERT_TRUE(join_graph);
+
+  ASSERT_EQ(join_graph->vertices.size(), 3u);
+  EXPECT_EQ(join_graph->vertices.at(0), node_a);
+  EXPECT_EQ(join_graph->vertices.at(1), node_b);
+  EXPECT_EQ(join_graph->vertices.at(2), node_c);
+
+  ASSERT_EQ(join_graph->edges.size(), 3u);
+
+  EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(3, 0b111));
+  ASSERT_EQ(join_graph->edges.at(0).predicates.size(), 1u);
+  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0), *equals_(add_(a_a, b_a), c_a));
+
+  EXPECT_EQ(join_graph->edges.at(1).vertex_set, JoinGraphVertexSet(3, 0b011));
+  ASSERT_EQ(join_graph->edges.at(1).predicates.size(), 1u);
+  EXPECT_EQ(*join_graph->edges.at(1).predicates.at(0), *equals_(a_a, b_a));
+
+  // The edge connecting the components of the JoinGraph can either be AC or BC. Depending on the hash function used
+  // by the stdlib, either could happen
+  const auto cross_edge = join_graph->edges.at(2);
+  EXPECT_TRUE(cross_edge.vertex_set == JoinGraphVertexSet(3, 0b101) ||
+              cross_edge.vertex_set == JoinGraphVertexSet(3, 0b110));
+  ASSERT_EQ(join_graph->edges.at(2).predicates.size(), 0u);
+}
+
+TEST_F(JoinGraphBuilderTest, NonJoinGraphJoin) {
+  // Non-Inner/Cross Joins are not represented in the JoinGraph
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Left, equals_(a_a, b_a),
+    node_a,
+    node_b);
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+  ASSERT_FALSE(join_graph);
+}
+
+TEST_F(JoinGraphBuilderTest, BuildAllInLQP) {
+  // clang-format off
+  const auto sub_lqp =
+  AggregateNode::make(expression_vector(a_a), expression_vector(),
+    JoinNode::make(JoinMode::Cross,
+      node_a,
+      node_b));
+
+  const auto lqp =
+  JoinNode::make(JoinMode::Cross,
+    sub_lqp,
+    node_c);
+  // clang-format on
+
+  const auto join_graphs = JoinGraph::build_all_in_lqp(lqp);
+
+  ASSERT_EQ(join_graphs.size(), 2u);
+  EXPECT_EQ(join_graphs.at(0).vertices.at(0), sub_lqp);
+  EXPECT_EQ(join_graphs.at(0).vertices.at(1), node_c);
+  EXPECT_EQ(join_graphs.at(1).vertices.at(0), node_a);
+  EXPECT_EQ(join_graphs.at(1).vertices.at(1), node_b);
+}
+
 }  // namespace opossum

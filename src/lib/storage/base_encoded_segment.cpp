@@ -6,8 +6,6 @@
 
 namespace opossum {
 
-void BaseEncodedSegment::append(const AllTypeVariant&) { Fail("Encoded segment is immutable."); }
-
 CompressedVectorType BaseEncodedSegment::compressed_vector_type() const { return CompressedVectorType::Invalid; }
 
 }  // namespace opossum

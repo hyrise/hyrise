@@ -4,6 +4,8 @@
 
 #include "base_test.hpp"
 
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -12,6 +14,8 @@
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -190,11 +194,11 @@ TEST_F(SchedulerTest, MultipleOperators) {
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto test_table = load_table("src/test/tables/int_float.tbl", 2);
-  StorageManager::get().add_table("table", std::move(test_table));
+  StorageManager::get().add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
-  auto ts =
-      std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
+  auto a = PQPColumnExpression::from_table(*test_table, ColumnID{0});
+  auto ts = std::make_shared<TableScan>(gt, greater_than_equals_(a, 1234));
 
   auto gt_task = std::make_shared<OperatorTask>(gt, CleanupTemporaries::Yes);
   auto ts_task = std::make_shared<OperatorTask>(ts, CleanupTemporaries::Yes);
@@ -207,6 +211,47 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
   auto expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
+}
+
+TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
+  Topology::use_non_numa_topology(8);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
+
+  Topology::use_fake_numa_topology(8);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(8, CurrentScheduler::get()->queues().size());
+
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(2, CurrentScheduler::get()->queues().size());
+
+  Topology::use_fake_numa_topology(8, 8);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
+
+  CurrentScheduler::get()->finish();
+}
+
+TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
+  Topology::use_default_topology(1);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto task_done = false;
+  auto task = std::make_shared<JobTask>([&task_done]() {
+    auto subtask = std::make_shared<JobTask>([&task_done]() {
+      task_done = true;
+    });
+
+    subtask->schedule();
+    CurrentScheduler::wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
+  });
+
+  task->schedule();
+  CurrentScheduler::wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+  EXPECT_TRUE(task_done);
+
+  CurrentScheduler::get()->finish();
 }
 
 }  // namespace opossum

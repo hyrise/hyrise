@@ -38,16 +38,10 @@ namespace opossum {
 
 class SQLPipelineTest : public BaseTest {
  protected:
-  void SetUp() override {
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", _table_a);
-
+  static void SetUpTestCase() {  // called ONCE before the tests
     _table_a_multi = load_table("src/test/tables/int_float.tbl", 2);
     _table_a_multi->append({11, 11.11});
-    StorageManager::get().add_table("table_a_multi", _table_a_multi);
-
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", _table_b);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int);
@@ -56,14 +50,28 @@ class SQLPipelineTest : public BaseTest {
     _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
+  }
+
+  void SetUp() override {
+    StorageManager::get().reset();
+
+    // We reload table_a every time since it is modified during the test case.
+    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("table_a", _table_a);
+
+    StorageManager::get().add_table("table_a_multi", _table_a_multi);
+    StorageManager::get().add_table("table_b", _table_b);
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
+  // Tables modified during test case
   std::shared_ptr<Table> _table_a;
-  std::shared_ptr<Table> _table_a_multi;
-  std::shared_ptr<Table> _table_b;
-  std::shared_ptr<Table> _join_result;
+
+  // Tables not modified during test case
+  inline static std::shared_ptr<Table> _table_a_multi;
+  inline static std::shared_ptr<Table> _table_b;
+  inline static std::shared_ptr<Table> _join_result;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -276,10 +284,10 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   sql_pipeline.get_query_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->compile_time_micros;
+  auto duration = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
   const auto& plans = sql_pipeline.get_query_plans();
-  auto duration2 = metrics.statement_metrics[0]->compile_time_micros;
+  auto duration2 = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -357,11 +365,11 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0]->execution_time_micros;
+  auto duration = metrics.statement_metrics[0]->execution_time_nanos;
 
   const auto& table = sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration2 = metrics.statement_metrics[0]->execution_time_micros;
+  auto duration2 = metrics.statement_metrics[0]->execution_time_nanos;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -431,27 +439,30 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
+  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  EXPECT_EQ(cache.size(), 0u);
+
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
 
   const auto& metrics = sql_pipeline.metrics();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   const auto& statement_metrics = metrics.statement_metrics[0];
 
-  const auto zero_duration = std::chrono::microseconds::zero();
+  const auto zero_duration = std::chrono::nanoseconds::zero();
 
-  EXPECT_EQ(statement_metrics->translate_time_micros, zero_duration);
-  EXPECT_EQ(statement_metrics->optimize_time_micros, zero_duration);
-  EXPECT_EQ(statement_metrics->compile_time_micros, zero_duration);
-  EXPECT_EQ(statement_metrics->execution_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->sql_translate_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->optimize_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->lqp_translate_time_nanos, zero_duration);
+  EXPECT_EQ(statement_metrics->execution_time_nanos, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
-  EXPECT_GT(metrics.parse_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics->translate_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics->optimize_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics->compile_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics->execution_time_micros, zero_duration);
+  EXPECT_GT(metrics.parse_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->sql_translate_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->optimize_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->lqp_translate_time_nanos, zero_duration);
+  EXPECT_GT(statement_metrics->execution_time_nanos, zero_duration);
 }
 
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {

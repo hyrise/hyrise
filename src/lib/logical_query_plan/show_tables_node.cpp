@@ -19,7 +19,7 @@ std::shared_ptr<AbstractLQPNode> ShowTablesNode::_on_shallow_copy(LQPNodeMapping
 const std::vector<std::shared_ptr<AbstractExpression>>& ShowTablesNode::column_expressions() const {
   if (!_column_expressions) {
     _column_expressions.emplace();
-    _column_expressions->emplace_back(column_(LQPColumnReference{shared_from_this(), ColumnID{0}}));
+    _column_expressions->emplace_back(lqp_column_(LQPColumnReference{shared_from_this(), ColumnID{0}}));
   }
 
   return *_column_expressions;

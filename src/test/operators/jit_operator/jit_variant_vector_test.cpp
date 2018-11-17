@@ -12,42 +12,42 @@ TEST_F(JitVariantVectorTest, GetAndSet) {
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
     const auto value_in = static_cast<int32_t>(std::rand());
-    vector.set(index, value_in);
+    vector.set<int32_t>(index, value_in);
     const auto value_out = vector.get<int32_t>(index);
     EXPECT_EQ(value_in, value_out);
   }
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
     const auto value_in = static_cast<int64_t>(std::rand());
-    vector.set(index, value_in);
+    vector.set<int64_t>(index, value_in);
     const auto value_out = vector.get<int64_t>(index);
     EXPECT_EQ(value_in, value_out);
   }
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
     const auto value_in = static_cast<float>(std::rand()) / RAND_MAX;
-    vector.set(index, value_in);
+    vector.set<float>(index, value_in);
     const auto value_out = vector.get<float>(index);
     EXPECT_EQ(value_in, value_out);
   }
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
     const auto value_in = static_cast<double>(std::rand()) / RAND_MAX;
-    vector.set(index, value_in);
+    vector.set<double>(index, value_in);
     const auto value_out = vector.get<double>(index);
     EXPECT_EQ(value_in, value_out);
   }
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
     const auto value_in = std::string("some string");
-    vector.set(index, value_in);
+    vector.set<std::string>(index, value_in);
     const auto value_out = vector.get<std::string>(index);
     EXPECT_EQ(value_in, value_out);
   }
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
     const auto value_in = false;
-    vector.set(index, value_in);
+    vector.set<bool>(index, value_in);
     const auto value_out = vector.get<bool>(index);
     EXPECT_EQ(value_in, value_out);
   }
@@ -81,21 +81,21 @@ TEST_F(JitVariantVectorTest, GetVector) {
   {
     const auto value = 1234.5f;
     const auto index = 2;
-    vector.set(index, value);
+    vector.set<float>(index, value);
     EXPECT_EQ(vector.get_vector<float>().size(), vector_size);
     EXPECT_EQ(vector.get_vector<float>()[index], value);
   }
   {
     const auto value = 1234;
     const auto index = 4;
-    vector.set(index, value);
+    vector.set<int32_t>(index, value);
     EXPECT_EQ(vector.get_vector<int32_t>().size(), vector_size);
     EXPECT_EQ(vector.get_vector<int32_t>()[index], value);
   }
   {
     const auto value = std::string("1234");
     const auto index = 6;
-    vector.set(index, value);
+    vector.set<std::string>(index, value);
     EXPECT_EQ(vector.get_vector<std::string>().size(), vector_size);
     EXPECT_EQ(vector.get_vector<std::string>()[index], value);
   }

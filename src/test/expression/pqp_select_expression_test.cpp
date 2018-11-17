@@ -27,7 +27,7 @@ class PQPSelectExpressionTest : public ::testing::Test {
     a_b = PQPColumnExpression::from_table(*table_a, "b");
 
     // Build a Select returning a SINGLE NON-NULLABLE VALUE and taking ONE PARAMETER
-    const auto parameter_a = parameter_(ParameterID{2});
+    const auto parameter_a = uncorrelated_parameter_(ParameterID{2});
     const auto get_table_a = std::make_shared<GetTable>("int_float");
     const auto projection_a = std::make_shared<Projection>(get_table_a, expression_vector(add_(a_a, parameter_a)));
     const auto limit_a = std::make_shared<Limit>(projection_a, value_(1));
@@ -38,8 +38,7 @@ class PQPSelectExpressionTest : public ::testing::Test {
 
     // Build a Select returning a TABLE and taking NO PARAMETERS
     const auto get_table_b = std::make_shared<GetTable>("int_float");
-    const auto table_scan_b = std::make_shared<TableScan>(
-        get_table_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 5});
+    const auto table_scan_b = std::make_shared<TableScan>(get_table_b, greater_than_(a_a, 5));
     pqp_table = table_scan_b;
     select_table = std::make_shared<PQPSelectExpression>(pqp_table);
   }

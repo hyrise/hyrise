@@ -32,6 +32,9 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
 
   edges.insert(edges.end(), cross_edges.begin(), cross_edges.end());
 
+  // A single vertex without predicates is not considered a JoinGraph
+  if (_vertices.size() <= 1u && edges.empty()) return std::nullopt;
+
   return JoinGraph{_vertices, edges};
 }
 
@@ -209,7 +212,11 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
 
       for (auto iter = edges.begin(); iter != edges.end();) {
         const auto& edge = *iter;
-        if (!edge.vertex_set.test(vertex_idx2)) {
+        // Skip edges not connected to this vertex.
+        // Also skip hyperedges, as hyperedges do not connect components; components connected only by a hyperedge
+        //    need a cross join edge between them anyway. DPccp needs the JoinGraphs to be connected without relying on
+        //    the hyperedges
+        if (!edge.vertex_set.test(vertex_idx2) || edge.vertex_set.count() != 2) {
           ++iter;
           continue;
         }

@@ -80,7 +80,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
   const pmr_vector<T> _block_minima;
   const pmr_vector<bool> _null_values;
   const std::unique_ptr<const BaseCompressedVector> _offset_values;
-  std::unique_ptr<BaseVectorDecompressor> _decoder;
+  std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 
 }  // namespace opossum

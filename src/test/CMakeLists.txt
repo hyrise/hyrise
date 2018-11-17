@@ -13,7 +13,8 @@ set(
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     cost_model/cost_estimator_test.cpp
-    expression/expression_evaluator_test.cpp
+    expression/expression_evaluator_to_pos_list_test.cpp
+    expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp
     expression/expression_test.cpp
     expression/expression_utils_test.cpp
@@ -25,12 +26,16 @@ set(
     import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
+    lib/import_export/csv_parser_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
+    lib/utils/load_table_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
+    logical_query_plan/create_table_node_test.cpp
     logical_query_plan/delete_node_test.cpp
+    logical_query_plan/drop_table_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
     logical_query_plan/insert_node_test.cpp
@@ -63,13 +68,18 @@ set(
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
     operators/join_hash_test.cpp
+    operators/join_hash_types_test.cpp
+    operators/join_hash_steps_test.cpp
+    operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
     operators/join_null_test.cpp
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
+    operators/maintenance/create_table_test.cpp
     operators/maintenance/drop_view_test.cpp
+    operators/maintenance/drop_table_test.cpp
     operators/maintenance/show_columns_test.cpp
     operators/maintenance/show_tables_test.cpp
     operators/operator_deep_copy_test.cpp
@@ -89,6 +99,7 @@ set(
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
     optimizer/dp_ccp_test.cpp
+    optimizer/greedy_operator_ordering_test.cpp
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
@@ -101,9 +112,10 @@ set(
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
-    optimizer/strategy/predicate_pushdown_rule_test.cpp
-    optimizer/strategy/predicate_reordering_test.cpp
+    optimizer/strategy/logical_reduction_rule_test.cpp
+    optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
+    optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
@@ -125,6 +137,7 @@ set(
     statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
     statistics/chunk_statistics/histograms/histogram_utils_test.cpp
     statistics/chunk_statistics/min_max_filter_test.cpp
+    statistics/chunk_statistics/counting_quotient_filter_test.cpp
     statistics/chunk_statistics/range_filter_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
@@ -163,6 +176,7 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/are_args_cxxopts_compatible_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
@@ -170,7 +184,7 @@ set(
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
-    utils/string_functions_test.cpp
+    utils/string_utils_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -220,7 +234,7 @@ if (${ENABLE_JIT_SUPPORT})
         ${JIT_REPOSITORY_TEST_MODULE}
         ${RESOLVE_CONDITION_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
-        operators/jit_operator/jit_aware_lqp_translator_test.cpp
+        logical_query_plan/jit_aware_lqp_translator_test.cpp
         operators/jit_operator/jit_hashmap_value_test.cpp
         operators/jit_operator/jit_operations_test.cpp
         operators/jit_operator/jit_tuple_value_test.cpp
@@ -230,6 +244,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
+        operators/jit_operator/operators/jit_validate_test.cpp
         operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
         operators/jit_operator/specialization/jit_code_specializer_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp
@@ -245,7 +260,6 @@ set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
-    statistics/chunk_statistics/histograms/histogram_utils_extended_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -259,8 +273,6 @@ set(
     gmock
     sqlite3
     ${FILESYSTEM_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
     ${CMAKE_DL_LIBS}
 )
 

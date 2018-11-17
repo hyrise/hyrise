@@ -117,9 +117,14 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
     return predicates;
   }
 
-  if (!is_column_id(*argument_a) && is_column_id(*argument_b)) {
-    std::swap(argument_a, argument_b);
-    predicate_condition = flip_predicate_condition(predicate_condition);
+  if (!is_column_id(*argument_a)) {
+    if (is_column_id(*argument_b)) {
+      std::swap(argument_a, argument_b);
+      predicate_condition = flip_predicate_condition(predicate_condition);
+    } else {
+      // Literal-only predicates like "5 > 3" cannot be turned into OperatorScanPredicates
+      return std::nullopt;
+    }
   }
 
   return std::vector<OperatorScanPredicate>{

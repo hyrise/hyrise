@@ -55,14 +55,14 @@ void CurrentScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType
               "In order to wait for a task’s completion, it needs to have been scheduled first.");
 
   /**
-   * In case wait_for_tasks() is called from a Task being executed in a Worker, block that worker, otherwise just
-   * join the tasks
+   * In case wait_for_tasks() is called from a Task being executed in a Worker, let the Worker handle the join()-ing,
+   * otherwise join right here
    */
   auto worker = Worker::get_this_thread_worker();
   if (worker) {
     worker->_wait_for_tasks(tasks);
   } else {
-    for (auto& task : tasks) task->join();
+    for (auto& task : tasks) task->_join();
   }
 }
 

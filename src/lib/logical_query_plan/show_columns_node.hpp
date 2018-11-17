@@ -15,14 +15,16 @@ class ShowColumnsNode : public EnableMakeForLQPNode<ShowColumnsNode>, public Abs
 
   std::string description() const override;
 
-  const std::string& table_name() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+
+  const std::string table_name;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
-  const std::string _table_name;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 };
 
 }  // namespace opossum

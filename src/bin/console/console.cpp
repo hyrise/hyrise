@@ -20,13 +20,16 @@
 #include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "operators/export_binary.hpp"
+#include "operators/export_csv.hpp"
 #include "operators/get_table.hpp"
+#include "operators/import_binary.hpp"
 #include "operators/import_csv.hpp"
 #include "operators/print.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "planviz/lqp_visualizer.hpp"
-#include "planviz/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -41,6 +44,9 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/string_utils.hpp"
+#include "visualization/join_graph_visualizer.hpp"
+#include "visualization/lqp_visualizer.hpp"
+#include "visualization/sql_query_plan_visualizer.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -112,6 +118,7 @@ Console::Console()
   register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
+  register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
@@ -353,15 +360,21 @@ int Console::_help(const std::string&) {
   out("Available commands:\n");
   out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  load FILE TABLENAME                     - Load table from disc specified by filepath FILE, store it with name TABLENAME\n");  // NOLINT
+  out("  load FILEPATH TABLENAME                 - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("                                               The import type is chosen by the type of FILEPATH.\n");
+  out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
+  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
+  out("                                               The export type is chosen by the type of FILEPATH.\n");
+  out("                                                 Supported types: '.bin', '.csv'\n");
   out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
   out("  print TABLENAME                         - Fully print the given table (including MVCC data)\n");
   out("  visualize [options] [SQL]               - Visualize a SQL query\n");
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
   out("                                                                 Default: noexec\n");
-  out("                                                - {lqp, unoptlqp, pqp} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
-  out("                                                                       unoptimized lqp. Default: pqp\n");
+  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
+  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
+  out("                                                                       Default: pqp\n");
   out("                                              SQL\n");
   out("                                                - Optional, a query to visualize. If not specified, the last\n");
   out("                                                  previously executed query is visualized.\n");
@@ -480,8 +493,61 @@ int Console::_load_table(const std::string& args) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
+  } else if (extension == "bin") {
+    auto importer = std::make_shared<ImportBinary>(filepath, tablename);
+    try {
+      importer->execute();
+    } catch (const std::exception& exception) {
+      out("Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
+      return ReturnCode::Error;
+    }
   } else {
     out("Error: Unsupported file extension '" + extension + "'\n");
+    return ReturnCode::Error;
+  }
+
+  return ReturnCode::Ok;
+}
+
+int Console::_export_table(const std::string& args) {
+  std::vector<std::string> arguments = trim_and_split(args);
+
+  if (arguments.size() != 2) {
+    out("Usage:\n");
+    out("  export TABLENAME FILEPATH\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& tablename = arguments[0];
+  const std::string& filepath = arguments[1];
+
+  auto& storage_manager = StorageManager::get();
+  if (!storage_manager.has_table(tablename)) {
+    out("Table does not exist in StorageManager");
+    return ReturnCode::Error;
+  }
+
+  std::vector<std::string> file_parts;
+  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
+  const std::string& extension = file_parts.back();
+
+  out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
+  auto gt = std::make_shared<GetTable>(tablename);
+  gt->execute();
+
+  try {
+    if (extension == "bin") {
+      auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
+      ex->execute();
+    } else if (extension == "csv") {
+      auto ex = std::make_shared<opossum::ExportCsv>(gt, filepath);
+      ex->execute();
+    } else {
+      out("Exporting to extension \"" + extension + "\" is not supported.\n");
+      return ReturnCode::Error;
+    }
+  } catch (const std::exception& exception) {
+    out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
@@ -516,18 +582,19 @@ int Console::_visualize(const std::string& input) {
   /**
    * "visualize" supports three dimensions of options:
    *    - "noexec"; or implicit "exec", the execution of the specified query
-   *    - "lqp", "unoptlqp"; or implicit "pqp"
+   *    - "lqp", "unoptlqp", "joins"; or implicit "pqp"
    *    - a sql query can either be specified or not. If it isn't, the last previously executed query is visualized
    */
 
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  const std::string EXEC = "exec";
-  const std::string NOEXEC = "noexec";
-  const std::string PQP = "pqp";
-  const std::string LQP = "lqp";
-  const std::string UNOPTLQP = "unoptlqp";
+  constexpr char EXEC[] = "exec";
+  constexpr char NOEXEC[] = "noexec";
+  constexpr char PQP[] = "pqp";
+  constexpr char LQP[] = "lqp";
+  constexpr char UNOPTLQP[] = "unoptlqp";
+  constexpr char JOINS[] = "joins";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default
@@ -537,14 +604,18 @@ int Console::_visualize(const std::string& input) {
   }
 
   // Determine the plan type to visualize
-  enum class PlanType { LQP, UnoptLQP, PQP };
+  enum class PlanType { LQP, UnoptLQP, PQP, Joins };
   auto plan_type = PlanType::PQP;
   auto plan_type_str = std::string{"pqp"};
-  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP) {
-    if (input_words.front() == LQP)
+  if (input_words.front() == LQP || input_words.front() == UNOPTLQP || input_words.front() == PQP ||
+      input_words.front() == JOINS) {
+    if (input_words.front() == LQP) {
       plan_type = PlanType::LQP;
-    else if (input_words.front() == UNOPTLQP)
+    } else if (input_words.front() == UNOPTLQP) {
       plan_type = PlanType::UnoptLQP;
+    } else if (input_words.front() == JOINS) {
+      plan_type = PlanType::Joins;
+    }
 
     plan_type_str = input_words.front();
     input_words.erase(input_words.begin());
@@ -574,51 +645,71 @@ int Console::_visualize(const std::string& input) {
   const auto img_filename = plan_type_str + ".png";
 
   // Visualize the Logical Query Plan
-  if (plan_type == PlanType::LQP || plan_type == PlanType::UnoptLQP) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+  switch (plan_type) {
+    case PlanType::LQP:
+    case PlanType::UnoptLQP: {
+      std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
 
-    try {
-      if (!no_execute) {
-        // Run the query and then collect the LQPs
-        _sql_pipeline->get_result_table();
+      try {
+        const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
+                                                        : _sql_pipeline->get_unoptimized_logical_plans();
+        for (const auto& lqp : lqps) {
+          lqp_roots.push_back(lqp);
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        _handle_rollback();
+        return ReturnCode::Error;
       }
 
-      const auto& lqps = (plan_type == PlanType::LQP) ? _sql_pipeline->get_optimized_logical_plans()
-                                                      : _sql_pipeline->get_unoptimized_logical_plans();
+      LQPVisualizer visualizer;
+      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+    } break;
+
+    case PlanType::PQP: {
+      // Visualize the Physical Query Plan
+      SQLQueryPlan query_plan{CleanupTemporaries::No};
+
+      try {
+        if (!no_execute) {
+          _sql_pipeline->get_result_table();
+        }
+
+        // Create plan with all roots
+        const auto& plans = _sql_pipeline->get_query_plans();
+        for (const auto& plan : plans) {
+          query_plan.append_plan(*plan);
+        }
+      } catch (const std::exception& exception) {
+        out(std::string(exception.what()) + "\n");
+        _handle_rollback();
+        return ReturnCode::Error;
+      }
+
+      SQLQueryPlanVisualizer visualizer;
+      visualizer.visualize(query_plan, graph_filename, img_filename);
+    } break;
+
+    case PlanType::Joins: {
+      out("NOTE: Join graphs will show only Cross and Inner joins, not Semi, Left, Right, Outer and Anti joins.\n");
+
+      auto join_graphs = std::vector<JoinGraph>{};
+
+      const auto& lqps = _sql_pipeline->get_optimized_logical_plans();
       for (const auto& lqp : lqps) {
-        lqp_roots.push_back(lqp);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
+        const auto sub_lqps = lqp_find_subplan_roots(lqp);
 
-    LQPVisualizer visualizer;
-    visualizer.visualize(lqp_roots, graph_filename, img_filename);
-
-  } else {
-    // Visualize the Physical Query Plan
-    SQLQueryPlan query_plan{CleanupTemporaries::No};
-
-    try {
-      if (!no_execute) {
-        _sql_pipeline->get_result_table();
+        for (const auto& sub_lqp : sub_lqps) {
+          const auto sub_lqp_join_graphs = JoinGraph::build_all_in_lqp(sub_lqp);
+          for (auto& sub_lqp_join_graph : sub_lqp_join_graphs) {
+            join_graphs.emplace_back(sub_lqp_join_graph);
+          }
+        }
       }
 
-      // Create plan with all roots
-      const auto& plans = _sql_pipeline->get_query_plans();
-      for (const auto& plan : plans) {
-        query_plan.append_plan(*plan);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
-
-    SQLQueryPlanVisualizer visualizer;
-    visualizer.visualize(query_plan, graph_filename, img_filename);
+      JoinGraphVisualizer visualizer;
+      visualizer.visualize(join_graphs, graph_filename, img_filename);
+    } break;
   }
 
   auto ret = system("./scripts/planviz/is_iterm2.sh");

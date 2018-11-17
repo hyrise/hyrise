@@ -135,7 +135,6 @@ using TransactionID = uint32_t;
 
 using AttributeVectorWidth = uint8_t;
 
-using PosList = pmr_vector<RowID>;
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
@@ -156,11 +155,8 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 
 // The Scheduler currently supports just these 3 priorities, subject to change.
 enum class SchedulePriority {
-  Lowest = 3,   // Default priority when it comes to pulling tasks from the TaskQueue
-  Default = 2,  // Schedule task at the end of the queue
-  Highest = 1,  // Schedule task at the beginning of the queue, but not before any JobTask
-  JobTask = 0   // Schedule task at the beginning of the queue. This is so that we have guaranteed progress and tasks
-                // that wait for JobTasks to do the actual work do not block the execution.
+  Default = 1,  // Schedule task at the end of the queue
+  High = 0      // Schedule task at the beginning of the queue
 };
 
 enum class PredicateCondition {
@@ -172,6 +168,7 @@ enum class PredicateCondition {
   GreaterThanEquals,
   Between,
   In,
+  NotIn,
   Like,
   NotLike,
   IsNull,
@@ -204,8 +201,8 @@ enum class CleanupTemporaries : bool { Yes = true, No = false };
 class Noncopyable {
  protected:
   Noncopyable() = default;
-  Noncopyable(Noncopyable&&) = default;
-  Noncopyable& operator=(Noncopyable&&) = default;
+  Noncopyable(Noncopyable&&) noexcept = default;
+  Noncopyable& operator=(Noncopyable&&) noexcept = default;
   ~Noncopyable() = default;
   Noncopyable(const Noncopyable&) = delete;
   const Noncopyable& operator=(const Noncopyable&) = delete;

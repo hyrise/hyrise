@@ -2,17 +2,18 @@
 
 namespace opossum {
 
-#define JIT_VARIANT_VECTOR_GET(r, d, type)          \
-  template <>                                       \
-  BOOST_PP_TUPLE_ELEM(3, 0, type)                   \
-  JitVariantVector::get(const size_t index) const { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index];  \
+#define JIT_VARIANT_VECTOR_GET(r, d, type)                                           \
+  template <>                                                                        \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                                                    \
+  JitVariantVector::get<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const size_t index) const { \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index];                                   \
   }
 
-#define JIT_VARIANT_VECTOR_SET(r, d, type)                                                        \
-  template <>                                                                                     \
-  void JitVariantVector::set(const size_t index, const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type)[index] = value;                                               \
+#define JIT_VARIANT_VECTOR_SET(r, d, type)                                                                     \
+  template <>                                                                                                  \
+  void JitVariantVector::set<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const size_t index,                              \
+                                                              const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
+    BOOST_PP_TUPLE_ELEM(3, 1, type)[index] = value;                                                            \
   }
 
 #define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
@@ -119,6 +120,7 @@ bool jit_expression_is_binary(const JitExpressionType expression_type) {
     case JitExpressionType::NotLike:
     case JitExpressionType::And:
     case JitExpressionType::Or:
+    case JitExpressionType::In:
       return true;
 
     case JitExpressionType::Column:

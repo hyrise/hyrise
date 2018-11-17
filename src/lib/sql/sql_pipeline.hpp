@@ -19,26 +19,17 @@ struct SQLPipelineMetrics {
   std::vector<std::shared_ptr<const SQLPipelineStatementMetrics>> statement_metrics;
 
   // This is different from the other measured times as we only get this for all statements at once
-  std::chrono::microseconds parse_time_micros{0};
+  std::chrono::nanoseconds parse_time_nanos{0};
 
   std::string to_string() const;
 };
 
 /**
- * This is the unified interface to handle SQL queries and related operations.
- * This should be preferred over using SQLPipelineStatement directly, unless you really know why you need it.
+ * The SQLPipeline represents the flow from the basic SQL string (containing one or more statements) to the result
+ * table(s) with all intermediate steps. Use the SQLPipelineBuilder to construct it.
  *
- * The SQLPipeline represents the flow from the basic SQL string to the result table with all intermediate steps.
- *
- * The basic idea of the SQLPipeline is that is splits a given SQL string into its single SQL statements and wraps each
- * statement in an SQLPipelineStatement. If a single statement is present, it creates just one SQLPipelineStatement.
- * If N statements are present, it creates N SQLPipelineStatements.
- *
- * The advantage of using this over a self created vector of SQLPipelineStatements is that some sanity checks are
- * performed here, e.g. TransactionContexts and dependent statements (CREATE VIEW X followed by SELECT * FROM X)
- *
- * The SQLPipeline holds all results and only hands them out as const references. If the SQLPipeline goes out of scope
- * while the results are still needed, the result references are invalid (except maybe the result table).
+ * The SQLPipeline splits a given SQL string into its single SQL statements and wraps each statement in an
+ * SQLPipelineStatement.
  */
 class SQLPipeline : public Noncopyable {
  public:
@@ -57,21 +48,21 @@ class SQLPipeline : public Noncopyable {
   // Returns the unoptimized LQP root for each statement.
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_unoptimized_logical_plans();
 
-  // Returns the optimized LQP root for each statement.
+  // Returns the optimized LQP root for each statement
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
-  // Returns the SQLQueryPlan for each statement.
-  // For now, this always uses the optimized LQP.
+  // Returns the Physical Plans for each statement.
+  // The plans are either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQPs
   const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
 
   // Returns all tasks for each statement that need to be executed for this query.
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
-  // get_result_tables().back()
-  std::shared_ptr<const Table> get_result_table();
-
   // Executes all tasks, waits for them to finish, and returns the resulting tables
   const std::vector<std::shared_ptr<const Table>>& get_result_tables();
+
+  // Shorthand for `get_result_tables().back()`
+  std::shared_ptr<const Table> get_result_table();
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
@@ -79,10 +70,10 @@ class SQLPipeline : public Noncopyable {
   // This returns the SQLPipelineStatement that aborted the transaction, if any
   std::shared_ptr<SQLPipelineStatement> failed_pipeline_statement() const;
 
-  // Returns the number of SQLPipelineStatements present in this pipeline
   size_t statement_count() const;
 
-  // Returns whether the pipeline requires execution to handle all statements
+  // Returns whether the pipeline requires execution to handle all statements (e.g, one statement creates a Table,
+  // another uses it)
   bool requires_execution() const;
 
   const SQLPipelineMetrics& metrics();
@@ -102,7 +93,7 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::vector<std::shared_ptr<const Table>> _result_tables;
 
-  // Indicates whether get_result_table has been run successfully
+  // Indicates whether get_result_table() has been run successfully
   bool _pipeline_was_executed{false};
 
   // Indicates whether translating a statement in the pipeline requires the execution of a previous statement

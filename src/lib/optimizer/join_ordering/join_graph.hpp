@@ -28,7 +28,14 @@ class JoinGraph final {
    * Tries to turn the subplan rooted at @lqp into a JoinGraph.
    * @return nullopt, if the root node would already be a vertex and thus the JoinGraph wouldn't be meaningful
    */
-  static std::optional<JoinGraph> from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+  static std::optional<JoinGraph> build_from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+  /**
+   * Traverse a plan for subgraphs from which JoinGraphs can be built with JoinGraph::build_from_lqp().
+   * Once one is found, continue the traversal recursively from this JoinGraphs vertices.
+   * @return All JoinGraphs that can be built from subgraphs in the specified LQP
+   */
+  static std::vector<JoinGraph> build_all_in_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 
   JoinGraph() = default;
   JoinGraph(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, const std::vector<JoinGraphEdge>& edges);

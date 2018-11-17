@@ -13,6 +13,7 @@ class AbstractOperator;
 class TransactionContext;
 class AbstractExpression;
 class PredicateNode;
+class TableScan;
 struct OperatorScanPredicate;
 struct OperatorJoinPredicate;
 
@@ -34,9 +35,8 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_predicate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_predicate_node_to_index_scan(
       const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const;
-  std::shared_ptr<AbstractOperator> _translate_predicate_node_to_table_scan(
-      const OperatorScanPredicate& operator_scan_predicate,
-      const std::shared_ptr<AbstractOperator>& input_operator) const;
+  std::shared_ptr<TableScan> _translate_predicate_node_to_table_scan(
+      const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const;
   std::shared_ptr<AbstractOperator> _translate_alias_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_projection_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_sort_node(const std::shared_ptr<AbstractLQPNode>& node) const;
@@ -53,26 +53,17 @@ class LQPTranslator {
   // Maintenance operators
   std::shared_ptr<AbstractOperator> _translate_show_tables_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_show_columns_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_create_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_drop_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Translate LQP- to PQPExpressions
+  std::shared_ptr<AbstractExpression> _translate_expression(const std::shared_ptr<AbstractExpression>& lqp_expression,
+                                                            const std::shared_ptr<AbstractLQPNode>& node) const;
   std::vector<std::shared_ptr<AbstractExpression>> _translate_expressions(
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
-
-  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-
-  static std::shared_ptr<AbstractOperator> _translate_binary_predicate_to_table_scan(
-      const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator,
-      const AbstractExpression& left_operand, const PredicateCondition predicate_condition,
-      const AbstractExpression& right_operand);
-
-  static std::shared_ptr<AbstractOperator> _translate_unary_predicate_to_table_scan(
-      const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator,
-      const AbstractExpression& operand, const PredicateCondition predicate_condition);
-
-  static AllParameterVariant _translate_to_all_parameter_variant(const AbstractLQPNode& input_node,
-                                                                 const AbstractExpression& expression);
 
   // Cache operator subtrees by LQP node to avoid executing operators below a diamond shape multiple times
   mutable std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractOperator>>

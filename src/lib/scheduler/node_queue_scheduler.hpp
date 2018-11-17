@@ -72,7 +72,7 @@ namespace opossum {
  * [1] http://frankdenneman.nl/2016/07/13/numa-deep-dive-4-local-memory-optimization/
  */
 
-class ProcessingUnit;
+class Worker;
 class TaskQueue;
 class UidAllocator;
 
@@ -92,6 +92,8 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   void finish() override;
 
+  bool active() const override;
+
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
   /**
@@ -106,8 +108,8 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic<TaskID> _task_counter{TaskID{0}};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
-  std::vector<std::shared_ptr<ProcessingUnit>> _processing_units;
-  std::atomic_bool _shut_down{false};
+  std::vector<std::shared_ptr<Worker>> _workers;
+  std::atomic_bool _active{false};
 };
 
 }  // namespace opossum

@@ -26,7 +26,7 @@ namespace opossum {
 
 class OperatorsAggregateTest : public BaseTest {
  protected:
-  void SetUp() override {
+  static void SetUpTestCase() {  // called ONCE before the tests
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
@@ -97,6 +97,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_int_int->execute();
   }
 
+  void SetUp() override {}
+
   void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_aggregate_on_reference_table = true) {
@@ -111,8 +113,7 @@ class OperatorsAggregateTest : public BaseTest {
 
     if (test_aggregate_on_reference_table) {
       // Perform a TableScan to create a reference table
-      const auto table_scan =
-          std::make_shared<TableScan>(in, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+      const auto table_scan = std::make_shared<TableScan>(in, greater_than_(get_column_expression(in, ColumnID{0}), 0));
       table_scan->execute();
 
       // Perform the Aggregate on a reference table
@@ -122,7 +123,7 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
       _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null,
       _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string,
       _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a,
@@ -499,7 +500,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
 
 TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 0});
+                                              less_than_(get_column_expression(_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
@@ -510,7 +511,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
 
 TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, 0});
+                                              less_than_(get_column_expression(_table_wrapper_1_2, ColumnID{0}), 0));
   filtered->execute();
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
@@ -525,8 +526,8 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
  */
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+  auto filtered = std::make_shared<TableScan>(
+      _table_wrapper_1_1, less_than_(get_column_expression(_table_wrapper_1_1, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
@@ -534,8 +535,8 @@ TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+  auto filtered = std::make_shared<TableScan>(
+      _table_wrapper_2_2, less_than_(get_column_expression(_table_wrapper_2_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
@@ -544,8 +545,8 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+  auto filtered = std::make_shared<TableScan>(
+      _table_wrapper_2_1, less_than_(get_column_expression(_table_wrapper_2_1, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
@@ -553,8 +554,8 @@ TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+  auto filtered = std::make_shared<TableScan>(
+      _table_wrapper_1_2, less_than_(get_column_expression(_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
@@ -562,8 +563,8 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
-  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1_dict,
-                                              OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "100"});
+  auto filtered = std::make_shared<TableScan>(
+      _table_wrapper_1_1_dict, less_than_(get_column_expression(_table_wrapper_1_1_dict, ColumnID{0}), "100"));
   filtered->execute();
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},

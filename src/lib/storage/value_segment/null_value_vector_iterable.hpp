@@ -24,9 +24,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    auto begin = PointAccessIterator{_null_values, mapped_chunk_offsets.cbegin()};
-    auto end = PointAccessIterator{_null_values, mapped_chunk_offsets.cend()};
+  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+    auto begin = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cbegin()};
+    auto end = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cend()};
     functor(begin, end);
   }
 
@@ -63,8 +63,12 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
-    explicit PointAccessIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue>{chunk_offsets_it},
+    explicit PointAccessIterator(const NullValueVector& null_values,
+                                 const PosList::const_iterator position_filter_begin,
+                                 PosList::const_iterator position_filter_it)
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue>{std::move(
+                                                                                            position_filter_begin),
+                                                                                        std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:
@@ -73,7 +77,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     SegmentIteratorNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      return SegmentIteratorNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
+      return SegmentIteratorNullValue{_null_values[chunk_offsets.offset_in_referenced_chunk],
+                                      chunk_offsets.offset_in_poslist};
     }
 
    private:

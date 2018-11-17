@@ -23,9 +23,6 @@ enum class BenchmarkMode { IndividualQueries, PermutedQuerySet };
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
-using NamedQuery = std::pair<std::string, std::string>;
-using NamedQueries = std::vector<NamedQuery>;
-
 using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec>;
 
 // Map<TABLE_NAME, Map<column_name, SegmentEncoding>>
@@ -37,15 +34,21 @@ using TableSegmentEncodingMapping =
  */
 std::ostream& get_out_stream(const bool verbose);
 
-struct QueryBenchmarkResult {
+struct QueryBenchmarkResult : public Noncopyable {
   QueryBenchmarkResult() { iteration_durations.reserve(1'000'000); }
+
+  QueryBenchmarkResult(QueryBenchmarkResult&& other) noexcept {
+    num_iterations.store(other.num_iterations);
+    duration = std::move(other.duration);
+    iteration_durations = std::move(other.iteration_durations);
+  }
+
+  QueryBenchmarkResult& operator=(QueryBenchmarkResult&&) = default;
+
   std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
   tbb::concurrent_vector<Duration> iteration_durations;
 };
-
-using QueryID = size_t;
-using BenchmarkResults = std::unordered_map<std::string, QueryBenchmarkResult>;
 
 /**
  * Loosely copying the functionality of benchmark::State
@@ -70,9 +73,9 @@ struct BenchmarkState {
 // View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+  EncodingConfig(const SegmentEncodingSpec& default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                  TableSegmentEncodingMapping encoding_mapping);
-  explicit EncodingConfig(SegmentEncodingSpec default_encoding_spec);
+  explicit EncodingConfig(const SegmentEncodingSpec& default_encoding_spec);
 
   static EncodingConfig unencoded();
 
@@ -99,18 +102,19 @@ class BenchmarkTableEncoder {
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
-                  const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
-                  const bool enable_scheduler, const uint cores, const uint clients, const bool enable_visualization,
-                  std::ostream& out);
+                  const Duration& warmup_duration, const UseMvcc use_mvcc,
+                  const std::optional<std::string>& output_file_path, const bool enable_scheduler, const uint cores,
+                  const uint clients, const bool enable_visualization, std::ostream& out);
 
   static BenchmarkConfig get_default_config();
 
   const BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
   const bool verbose = false;
-  const ChunkOffset chunk_size = Chunk::MAX_SIZE;
+  const ChunkOffset chunk_size = 100'000;
   const EncodingConfig encoding_config = EncodingConfig{};
   const size_t max_num_query_runs = 1000;
-  const Duration max_duration = std::chrono::seconds(5);
+  const Duration max_duration = std::chrono::seconds(60);
+  const Duration warmup_duration = std::chrono::seconds(0);
   const UseMvcc use_mvcc = UseMvcc::No;
   const std::optional<std::string> output_file_path = std::nullopt;
   const bool enable_scheduler = false;

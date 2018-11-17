@@ -13,6 +13,7 @@ namespace opossum {
 class PQPColumnExpression : public AbstractExpression {
  public:
   static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const std::string& column_name);
+  static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const ColumnID column_id);
 
   PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
                       const std::string& column_name);
