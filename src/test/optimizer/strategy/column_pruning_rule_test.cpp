@@ -124,8 +124,8 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, Update) {
-  // Do not prune away columns below Update, Update needs them all
+TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
+  // Do not prune away input columns to Update, Update needs them all
 
   // clang-format off
   const auto select_rows_lqp =
@@ -148,8 +148,8 @@ TEST_F(ColumnPruningRuleTest, Update) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, Insert) {
-  // Do not prune away columns below Update, Update needs them all
+TEST_F(ColumnPruningRuleTest, DoNotPruneInsertInputs) {
+  // Do not prune away input columns to Insert, Insert needs them all
 
   // clang-format off
   const auto lqp =

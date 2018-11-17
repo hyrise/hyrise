@@ -256,7 +256,6 @@ int Console::_eval_sql(const std::string& sql) {
   if (!_initialize_pipeline(sql)) return ReturnCode::Error;
 
   try {
-    _sql_pipeline->get_optimized_logical_plans().at(0)->print();
     _sql_pipeline->get_result_tables();
     Assert(!_sql_pipeline->failed_pipeline_statement(),
            "The transaction has failed. This should never happen in the console, where only one statement gets "
