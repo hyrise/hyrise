@@ -15,7 +15,7 @@ class AbstractExpression;
  */
 class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public BaseNonQueryNode {
  public:
-  UpdateNode(const std::string& table_name);
+  explicit UpdateNode(const std::string& table_name);
 
   std::string description() const override;
 
