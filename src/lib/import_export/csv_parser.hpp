@@ -35,7 +35,7 @@ class CsvParser {
    * @param csv_meta      Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
    * @returns             The table that was created from the csv file.
    */
-  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt);
+  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt, const ChunkOffset chunk_size = Chunk::MAX_SIZE);
   std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename);
 
  protected:
@@ -70,5 +70,6 @@ class CsvParser {
 
   // CSV meta information like chunk_size, column information, delimitor/seperator characters, etc.
   CsvMeta _meta;
+  ChunkOffset _chunk_size;
 };
 }  // namespace opossum
