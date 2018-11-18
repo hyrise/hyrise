@@ -17,7 +17,7 @@ void BindServerPreparedStatementTask::_on_execute() {
 
     auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{_params.size()};
     for (auto parameter_idx = size_t{0}; parameter_idx < _params.size(); ++parameter_idx) {
-      parameter_expressions.emplace_back(std::make_shared<ValueExpression>(_params[parameter_idx]));
+      parameter_expressions[parameter_idx] = std::make_shared<ValueExpression>(_params[parameter_idx]);
     }
 
     const auto lqp = _prepared_plan->instantiate(parameter_expressions);
