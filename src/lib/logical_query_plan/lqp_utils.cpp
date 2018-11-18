@@ -66,7 +66,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   visit_lqp(lqp, [&](const auto& sub_node) {
     if (!visited_nodes.emplace(sub_node).second) return LQPVisitation::DoNotVisitInputs;
 
-    for (const auto& expression : sub_node->node_expressions()) {
+    for (const auto& expression : sub_node->node_expressions) {
       visit_expression(expression, [&](const auto sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
           lqp_find_subplan_roots_impl(root_nodes, visited_nodes, select_expression->lqp);
@@ -193,6 +193,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
         modified_tables.insert(std::static_pointer_cast<DeleteNode>(node)->table_name);
         break;
       case LQPNodeType::CreateTable:
+      case LQPNodeType::CreatePreparedPlan:
       case LQPNodeType::DropTable:
       case LQPNodeType::Validate:
       case LQPNodeType::Aggregate:
@@ -230,9 +231,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp);
       const auto left_input_expression = lqp_subplan_to_boolean_expression(lqp->left_input());
       if (left_input_expression) {
-        return and_(predicate_node->predicate, left_input_expression);
+        return and_(predicate_node->predicate(), left_input_expression);
       } else {
-        return predicate_node->predicate;
+        return predicate_node->predicate();
       }
     }
 
@@ -262,5 +263,4 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   lqp_find_subplan_roots_impl(root_nodes, visited_nodes, lqp);
   return root_nodes;
 }
-
 }  // namespace opossum

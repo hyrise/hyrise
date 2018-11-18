@@ -10,6 +10,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -51,8 +52,7 @@ TEST_F(ConstantCalculationRuleTest, ProjectionAndPredicate) {
 
   /**
    * NOTE
-   * The ProjectionNode will still contain a Column calculating 1+7. It isn't rewritten because the Optimizer
-   * (TODO(anybody)!) can't rewrite root expressions, because AbstractLQPNode::node_expressions() returns them by value.
+   * The ProjectionNode will still contain a Column calculating 1+7. See rule for details
    */
 
   // clang-format off
