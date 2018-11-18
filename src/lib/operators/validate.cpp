@@ -83,7 +83,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         
         pos_list_out->guarantee_single_chunk();
 
-        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.front().chunk_id);
+        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
         for (auto row_id : pos_list_in) {
