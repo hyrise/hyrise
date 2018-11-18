@@ -80,7 +80,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       const auto& pos_list_in = *ref_segment_in->pos_list();
       if (pos_list_in.references_single_chunk() && !pos_list_in.empty()) {
         // Fast path - we are looking at a single referenced chunk and thus need to get the MVCC data vector only once.
-        
+
         pos_list_out->guarantee_single_chunk();
 
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
@@ -94,7 +94,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
-        
+
         for (auto row_id : pos_list_in) {
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 

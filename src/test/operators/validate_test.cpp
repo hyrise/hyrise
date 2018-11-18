@@ -120,5 +120,5 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
 }
- 
+
 }  // namespace opossum
