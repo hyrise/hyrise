@@ -77,13 +77,32 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
-      for (auto row_id : *ref_segment_in->pos_list()) {
-        const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto& pos_list_in = *ref_segment_in->pos_list();
+      if (pos_list_in.references_single_chunk() && !pos_list_in.empty()) {
+        // Fast path - we are looking at a single referenced chunk and thus need to get the MVCC data vector only once.
 
+        pos_list_out->guarantee_single_chunk();
+
+        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-          pos_list_out->emplace_back(row_id);
+        for (auto row_id : pos_list_in) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
+        }
+
+      } else {
+        // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
+
+        for (auto row_id : pos_list_in) {
+          const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+
+          auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
+
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
         }
       }
 
@@ -101,6 +120,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
+      pos_list_out->guarantee_single_chunk();
 
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
