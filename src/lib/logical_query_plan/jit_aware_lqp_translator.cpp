@@ -62,7 +62,7 @@ const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to
 bool requires_computation(const std::shared_ptr<AbstractLQPNode>& node) {
   // do not count trivial projections without computations
   if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node)) {
-    for (const auto& expression : projection_node->expressions) {
+    for (const auto& expression : projection_node->column_expressions()) {
       if (expression->type != ExpressionType::LQPColumn) return true;
     }
     return false;
