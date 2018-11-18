@@ -107,7 +107,7 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, EquiOnStrings) {
       CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings(table, filter_column, configuration);
 
   ASSERT_TRUE(predicate);
-  EXPECT_EQ("a = 'FOO'", predicate->as_column_name());
+  EXPECT_EQ("a = Parameter[id=0]", predicate->as_column_name());
 }
 
 TEST_F(CalibrationQueryGeneratorPredicatesTest, BetweenValueValue) {
@@ -137,6 +137,47 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, BetweenColumnColumn) {
 
   ASSERT_TRUE(predicate);
   EXPECT_TRUE("a BETWEEN b AND c" == predicate->as_column_name() || "a BETWEEN c AND b" == predicate->as_column_name());
+}
+
+TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValue) {
+  std::vector<CalibrationColumnSpecification> column_specifications{
+      {"a", DataType::Int, "uniform", false, 2, EncodingType::Unencoded},
+      {"b", DataType::Int, "uniform", false, 2, EncodingType::Dictionary},
+      {"c", DataType::String, "uniform", false, 2, EncodingType::Unencoded},
+      {"d", DataType::String, "uniform", false, 2, EncodingType::Dictionary}};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Dictionary, DataType::Int, 0.1f, false};
+
+  const std::vector<std::pair<DataType, std::string>> columns{
+      {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}};
+  const auto table = MockNode::make(columns);
+
+  auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, column_specifications, table, configuration);
+
+  ASSERT_TRUE(predicate);
+  EXPECT_EQ("b <= 0", predicate->predicate->as_column_name());
+  EXPECT_FALSE(predicate->left_input());
+}
+
+TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValueOnReference) {
+  std::vector<CalibrationColumnSpecification> column_specifications{
+      {"a", DataType::Int, "uniform", false, 2, EncodingType::Unencoded},
+      {"b", DataType::Int, "uniform", false, 2, EncodingType::Dictionary},
+      {"c", DataType::String, "uniform", false, 2, EncodingType::Unencoded},
+      {"d", DataType::String, "uniform", false, 2, EncodingType::Dictionary}};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Dictionary, DataType::Int, 0.1f, true};
+
+  const std::vector<std::pair<DataType, std::string>> columns{
+      {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}};
+  const auto table = MockNode::make(columns);
+
+  auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, column_specifications, table, configuration);
+
+  ASSERT_TRUE(predicate);
+  EXPECT_EQ("b <= 0", predicate->predicate->as_column_name());
+  EXPECT_TRUE(predicate->left_input());
+  EXPECT_EQ(LQPNodeType::Validate, predicate->left_input()->type);
 }
 
 }  // namespace opossum

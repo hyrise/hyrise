@@ -26,7 +26,7 @@ class CalibrationQueryGeneratorPredicate {
   static const std::shared_ptr<PredicateNode> generate_predicates(
       const PredicateGeneratorFunctor& predicate_generator,
       const std::vector<CalibrationColumnSpecification>& column_definitions, const std::shared_ptr<MockNode>& table,
-      const size_t number_of_predicates, const CalibrationQueryGeneratorPredicateConfiguration& configuration);
+      const CalibrationQueryGeneratorPredicateConfiguration& configuration);
 
   /*
    * Functors to generate predicates.
@@ -65,12 +65,16 @@ class CalibrationQueryGeneratorPredicate {
       std::function<std::optional<std::pair<std::shared_ptr<AbstractExpression>, std::shared_ptr<AbstractExpression>>>(
           const std::shared_ptr<MockNode>&, const CalibrationColumnSpecification&)>;
 
+  static const std::optional<CalibrationColumnSpecification> _find_column_for_configuration(
+      const std::vector<CalibrationColumnSpecification>& column_definitions,
+      const CalibrationQueryGeneratorPredicateConfiguration& configuration);
+
   static const std::shared_ptr<ValueExpression> _generate_value_expression(
       const CalibrationColumnSpecification& column_definition,
       const CalibrationQueryGeneratorPredicateConfiguration& configuration, const bool trailing_like = false);
 
   static const std::shared_ptr<AbstractExpression> _generate_between(
-      const std::shared_ptr<MockNode>& table, const BetweenPredicateGeneratorFunctor& predicate_generator,
+      const std::shared_ptr<MockNode>& table, const BetweenPredicateGeneratorFunctor& between_predicate_generator,
       const CalibrationColumnSpecification& filter_column);
 
   static const std::shared_ptr<AbstractExpression> _generate_column_predicate(

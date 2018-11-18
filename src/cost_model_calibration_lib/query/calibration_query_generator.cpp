@@ -72,38 +72,44 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_tabl
   CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
 
   auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(predicate_generator, _column_specifications,
-                                                                           table, 3, configuration);
+                                                                           table, configuration);
+  // TODO(Sven): Test
+  if (!predicate) return {};
 
+  predicate->set_left_input(table);
   return predicate;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join() const {
-  static std::mt19937 engine((std::random_device()()));
-
   const auto left_table = _column_specification_to_mock_node();
   const auto right_table = _column_specification_to_mock_node();
 
+  CalibrationQueryGeneratorJoinConfiguration join_configuration{EncodingType::Unencoded, DataType::Int, false};
+
   const auto join_nodes = CalibrationQueryGeneratorJoin::generate_join(
-      CalibrationQueryGeneratorJoin::generate_join_predicate, left_table, right_table);
+      join_configuration, CalibrationQueryGeneratorJoin::generate_join_predicate, left_table, right_table, _column_specifications);
 
   if (join_nodes.empty()) {
     return {};
   }
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Int, 0.1f, false};
 
   auto left_predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
-      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, left_table, 2,
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, left_table,
       configuration);
 
   auto right_predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
-      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, right_table, 2,
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, right_table,
       configuration);
 
   // We are not interested in queries without Predicates
   if (!left_predicate || !right_predicate) {
     return {};
   }
+
+  left_predicate->set_left_input(left_table);
+  right_predicate->set_left_input(right_table);
 
   for (const auto& join_node : join_nodes) {
     join_node->set_left_input(left_predicate);
@@ -121,7 +127,7 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggr
   CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
 
   auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
-      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, table, 1,
+      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, _column_specifications, table,
       configuration);
 
   if (!predicate) {
@@ -129,6 +135,7 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_aggr
     return {};
   }
 
+  predicate->set_left_input(table);
   aggregate_node->set_left_input(predicate);
   return aggregate_node;
 }

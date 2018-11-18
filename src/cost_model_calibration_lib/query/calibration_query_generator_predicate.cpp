@@ -2,8 +2,10 @@
 
 #include <random>
 
+#include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "storage/storage_manager.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -16,43 +18,28 @@ namespace opossum {
 const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generate_predicates(
     const PredicateGeneratorFunctor& predicate_generator,
     const std::vector<CalibrationColumnSpecification>& column_definitions, const std::shared_ptr<MockNode>& table,
-    const size_t number_of_predicates, const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-  static std::mt19937 engine((std::random_device()()));
-
-  // We want to scan on each column at most once
-  auto remaining_column_definitions = column_definitions;
-
-  std::vector<std::shared_ptr<PredicateNode>> predicates{};
-  for (size_t i = 0; i < number_of_predicates; i++) {
-    if (remaining_column_definitions.empty()) continue;
-
-    // select scan column at random
-    std::uniform_int_distribution<long> filter_column_dist(0, remaining_column_definitions.size() - 1);
-    auto filter_column = std::next(remaining_column_definitions.begin(), filter_column_dist(engine));
-    auto predicate = predicate_generator(table, *filter_column, configuration);
-
-    if (!predicate) continue;
-
-    predicates.push_back(PredicateNode::make(predicate));
-
-    // Avoid filtering on the same column twice
-    remaining_column_definitions.erase(
-        std::remove(remaining_column_definitions.begin(), remaining_column_definitions.end(), *filter_column),
-        remaining_column_definitions.end());
-    //    remaining_column_definitions.erase(filter_column->column_name);
+    const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
+  const auto filter_column = _find_column_for_configuration(column_definitions, configuration);
+  if (!filter_column) {
+    std::cout << "Did not find column for configuration "
+              << encoding_type_to_string.left.at(configuration.encoding_type) << " "
+              << data_type_to_string.left.at(configuration.data_type) << " " << configuration.selectivity << " "
+              << configuration.reference_column << std::endl;
+    return {};
   }
 
-  if (predicates.empty()) return {};
+  auto predicate = predicate_generator(table, *filter_column, configuration);
 
-  // Construct valid chain of PredicateNodes
-  auto current_predicate = predicates.front();
-  current_predicate->set_left_input(table);
-  for (size_t idx = 1; idx < predicates.size(); ++idx) {
-    predicates[idx]->set_left_input(current_predicate);
-    current_predicate = predicates[idx];
+  // TODO(Sven): add test for this case
+  if (!predicate) return {};
+  const auto predicate_node = PredicateNode::make(predicate);
+
+  if (configuration.reference_column) {
+    auto validate_node = ValidateNode::make();
+    predicate_node->set_left_input(validate_node);
   }
 
-  return current_predicate;
+  return predicate_node;
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value(
@@ -180,9 +167,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 
   const auto lqp_column_reference = table->get_column(filter_column.column_name);
   const auto lhs = lqp_column_(table->get_column(filter_column.column_name));
-
-  // TODO(Sven): 'FOO' should be replaced by an actual value later on.
-  const auto rhs = "FOO";
+  const auto rhs = uncorrelated_parameter_(ParameterID{0});
   return equals_(lhs, rhs);
 }
 
@@ -193,6 +178,18 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto rhs = generate_predicate_column_value(table, filter_column, configuration);
 
   return or_(lhs, rhs);
+}
+
+const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorPredicate::_find_column_for_configuration(
+    const std::vector<CalibrationColumnSpecification>& column_definitions,
+    const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
+  for (const auto& definition : column_definitions) {
+    if (definition.type == configuration.data_type && definition.encoding == configuration.encoding_type) {
+      return definition;
+    }
+  }
+
+  return {};
 }
 
 /**
@@ -218,16 +215,16 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_g
 /**
      * Helper function to generate between predicate
      * @param table
-     * @param predicate_generator
+     * @param between_predicate_generator
      * @param filter_column
      * @return
      */
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_generate_between(
-    const std::shared_ptr<MockNode>& table, const BetweenPredicateGeneratorFunctor& predicate_generator,
+    const std::shared_ptr<MockNode>& table, const BetweenPredicateGeneratorFunctor& between_predicate_generator,
     const CalibrationColumnSpecification& filter_column) {
   const auto column = lqp_column_(table->get_column(filter_column.column_name));
 
-  const auto& between_values = predicate_generator(table, filter_column);
+  const auto& between_values = between_predicate_generator(table, filter_column);
 
   if (!between_values) return {};
 
