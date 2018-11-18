@@ -469,7 +469,7 @@ int Console::_load_table(const std::string& args) {
 
   out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
   if (extension == "csv") {
-    auto importer = std::make_shared<ImportCsv>(filepath, tablename);
+    auto importer = std::make_shared<ImportCsv>(filepath, Chunk::MAX_SIZE, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
