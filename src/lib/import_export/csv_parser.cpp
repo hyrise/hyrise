@@ -24,7 +24,8 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta, const ChunkOffset chunk_size) {
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
+                                        const ChunkOffset chunk_size) {
   // If no meta info is given as a parameter, look for a json file
   if (csv_meta == std::nullopt) {
     _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);

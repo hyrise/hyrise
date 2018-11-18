@@ -74,8 +74,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
-  json = nlohmann::json{{"config", config},
-                        {"columns", columns}};
+  json = nlohmann::json{{"config", config}, {"columns", columns}};
 }
 
 bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
@@ -90,8 +89,7 @@ bool operator==(const ParseConfig& left, const ParseConfig& right) {
 }
 
 bool operator==(const CsvMeta& left, const CsvMeta& right) {
-  return std::tie(left.config, left.columns) ==
-         std::tie(right.config, right.columns);
+  return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
 }
 
 }  // namespace opossum

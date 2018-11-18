@@ -11,8 +11,8 @@
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& filename, const ChunkOffset chunk_size, const std::optional<std::string>& tablename,
-                     const std::optional<CsvMeta>& csv_meta)
+ImportCsv::ImportCsv(const std::string& filename, const ChunkOffset chunk_size,
+                     const std::optional<std::string>& tablename, const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::ImportCsv),
       _filename(filename),
       _chunk_size(chunk_size),
