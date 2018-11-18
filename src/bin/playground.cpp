@@ -757,10 +757,9 @@ create_histograms_for_column(const std::shared_ptr<const Table> table, const Col
 template <typename T>
 std::shared_ptr<CountingQuotientFilter<T>> build_cqf(const std::shared_ptr<const BaseSegment>& segment,
                                                      const uint8_t remainder = 8u) {
-  // const auto distinct_count = get_distinct_values<T>(segment).size();
-  // const auto quotient_size = static_cast<size_t>(std::ceil(
-  //     std::log2(distinct_count * (1 + std::log2(static_cast<double>(segment->size()) / distinct_count) / remainder))));
-  const auto quotient_size = 17u;
+  const auto distinct_count = get_distinct_values<T>(segment).size();
+  const auto quotient_size = static_cast<size_t>(std::ceil(
+      std::log2(distinct_count * (1 + std::log2(static_cast<double>(segment->size()) / distinct_count) / remainder))));
   const auto cqf = std::make_shared<CountingQuotientFilter<T>>(quotient_size, remainder);
   cqf->populate(segment);
   return cqf;
