@@ -362,7 +362,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  DebugAssert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
+  Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
     const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);
@@ -387,7 +387,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   // The update operator wants ReferenceSegments on its left side. Also, we should make sure that we do not update
   // invalid rows.
-  DebugAssert(lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
+  Assert(lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
 
   if (update.where) {
     const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
