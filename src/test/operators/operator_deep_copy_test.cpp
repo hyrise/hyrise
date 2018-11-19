@@ -199,8 +199,8 @@ TEST_F(OperatorDeepCopyTest, Subselect) {
 
   SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
-  const auto copied_plan = sql_pipeline.get_query_plan()->deep_copy();
-  const auto tasks = copied_plan.create_tasks();
+  const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
+  const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();

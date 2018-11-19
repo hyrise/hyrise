@@ -71,7 +71,7 @@ TEST_F(OperatorsImportCsvTest, FileDoesNotExist) {
 }
 
 TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::MAX_SIZE, std::string("float_table"));
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -79,9 +79,9 @@ TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::MAX_SIZE, std::string("float_table"));
   importer->execute();
-  auto retriever = std::make_shared<ImportCsv>("src/test/csv/float.csv", std::string("float_table"));
+  auto retriever = std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::MAX_SIZE, std::string("float_table"));
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
@@ -124,7 +124,7 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   std::string csv_file = "src/test/csv/ints_semicolon_separator.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.separator = ';';
-  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::MAX_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
@@ -137,8 +137,7 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
 }
 
 TEST_F(OperatorsImportCsvTest, ChunkSize) {
-  // chunk_size is defined as "20" in meta file
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv");
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv", ChunkOffset{20});
   importer->execute();
 
   // check if chunk_size property is correct
@@ -149,9 +148,8 @@ TEST_F(OperatorsImportCsvTest, ChunkSize) {
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{1})->size(), 20U);
 }
 
-TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
-  // chunk_size is not defined in the meta file, resulting in the maximum allowed chunk size
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_max.csv");
+TEST_F(OperatorsImportCsvTest, MaxChunkSize) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_large_chunksize_max.csv", Chunk::MAX_SIZE);
   importer->execute();
 
   // check if chunk_size property is correct (maximum chunk size)
@@ -175,7 +173,7 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   std::string csv_file = "src/test/csv/string_escaped_unsafe.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.rfc_mode = false;
-  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::MAX_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String}};
@@ -223,7 +221,7 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
   std::string csv_file = "src/test/csv/string_with_bad_null.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.reject_null_strings = false;
-  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::MAX_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
@@ -245,7 +243,7 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   std::string csv_file = "src/test/csv/with_and_without_quotes.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.reject_quoted_nonstrings = false;
-  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::MAX_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
   TableColumnDefinitions column_definitions;
@@ -269,7 +267,7 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   std::string csv_file = "src/test/csv/string_double_escape.csv";
   auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
   csv_meta.config.escape = '\\';
-  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::MAX_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
   TableColumnDefinitions column_definitions{{"a", DataType::String}};
@@ -283,37 +281,6 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
 TEST_F(OperatorsImportCsvTest, ImportQuotedInt) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/quoted_int.csv");
   EXPECT_THROW(importer->execute(), std::exception);
-}
-
-TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
-  std::string csv_file = "src/test/csv/float_int_large.csv";
-  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
-  csv_meta.auto_compress = true;
-  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
-  importer->execute();
-
-  TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
-
-  for (int i = 0; i < 100; ++i) {
-    expected_table->append({458.7f, 12345});
-  }
-
-  auto result_table = importer->get_output();
-
-  // Check if table content is preserved
-  EXPECT_TABLE_EQ_ORDERED(result_table, expected_table);
-
-  // Check if segments are compressed into DictionarySegments
-  for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
-    auto chunk = result_table->get_chunk(chunk_id);
-    for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
-      auto base_segment = chunk->get_segment(column_id);
-      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(base_segment);
-
-      EXPECT_TRUE(dict_segment != nullptr);
-    }
-  }
 }
 
 TEST_F(OperatorsImportCsvTest, UnconvertedCharactersThrows) {

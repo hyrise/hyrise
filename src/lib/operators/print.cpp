@@ -62,7 +62,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   _out << "|" << std::endl;
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
     const auto nullable = input_table_left()->column_is_nullable(column_id);
-    _out << "|" << (nullable ? "    null" : "not null");
+    _out << "|" << std::setw(widths[column_id]) << (nullable ? "null" : "not null") << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||      |      |      ";
@@ -143,7 +143,8 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 }
 
 std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
-  auto cell_string = type_cast<std::string>(cell);
+  // Use lexical_cast instead of type_cast here so that floats get truncated
+  auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {
     return cell_string.substr(0, max_width - 3) + "...";

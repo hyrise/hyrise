@@ -27,8 +27,14 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   // `MIN(2-1)`, since `2-1` is a column.
   if (node->type == LQPNodeType::Aggregate) return _apply_to_inputs(node);
 
-  for (auto& expression : node->node_expressions()) {
-    _prune_expression(expression);
+  for (const auto& expression : node->node_expressions) {
+    // TODO(anybody)
+    // We can't prune top level expressions right now, because that breaks `SELECT MIN(1+2)...` because if we rewrite
+    // that to `SELECT MIN(3)...` the input to the aggregate is not a column anymore and the Aggregate operator cannot
+    // handle that
+    for (auto& argument : expression->arguments) {
+      _prune_expression(argument);
+    }
   }
 
   return _apply_to_inputs(node);

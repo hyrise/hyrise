@@ -6,7 +6,7 @@ SELECT * FROM mixed_null;
 SELECT 1;
 SELECT -1;
 SELECT (1 + 3.0) * 13.0 as some_arithmetics;
-SELECT 22 / 5;
+SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
@@ -28,6 +28,12 @@ SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
 SELECT * FROM mixed_null WHERE NOT (b = 12);
 SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
+
+-- Scans with predicates that do not reference columns
+SELECT * FROM mixed_null WHERE 4 > 3;
+SELECT * FROM mixed_null WHERE (4 > 3 AND 2 < 1) OR 4 < 5;
+SELECT * FROM mixed_null WHERE 50 IN (51, 52, 50);
+SELECT * FROM mixed_null WHERE 50 IN (SELECT id FROM mixed);
 
 -- Projection
 SELECT a FROM mixed;
@@ -90,6 +96,9 @@ SELECT t1.id, t1.a, t2.b, t3.b, t4.c_name FROM mixed AS t1 INNER JOIN mixed_null
 
 -- Join three tables and perform a scan
 SELECT * FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a WHERE t1.c > 23.0 AND t2.a = 'c';
+
+-- Join three, complex join predicate,
+SELECT t1.b FROM mixed AS t1, mixed_null AS t2, id_int_int_int_100 AS t3 WHERE t1.id + t2.b = t3.a - 5 AND (5 > 3 OR 3 > 2) AND t1.b = 19 AND t1.b + 40 = t3.b;
 
 -- (not) exists to semi(/anti) join reformulation
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)

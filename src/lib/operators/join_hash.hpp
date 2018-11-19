@@ -1,10 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "abstract_join_operator.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -42,6 +37,8 @@ class JoinHash : public AbstractJoinOperator {
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;
+  template <typename LeftType, typename RightType>
+  friend class JoinHashImpl;
 };
 
 }  // namespace opossum
