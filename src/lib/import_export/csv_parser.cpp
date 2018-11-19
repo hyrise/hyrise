@@ -33,9 +33,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     _meta = *csv_meta;
   }
 
-  _chunk_size = chunk_size;
-
-  auto table = _create_table_from_meta();
+  auto table = _create_table_from_meta(chunk_size);
 
   std::ifstream csvfile{filename};
   std::string content{std::istreambuf_iterator<char>(csvfile), {}};
@@ -84,7 +82,7 @@ std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string&
   return _create_table_from_meta();
 }
 
-std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
+std::shared_ptr<Table> CsvParser::_create_table_from_meta(const ChunkOffset chunk_size) {
   TableColumnDefinitions column_definitions;
   for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;
@@ -98,7 +96,7 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
     column_definitions.emplace_back(column_name, data_type, column_meta.nullable);
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  return std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 }
 
 bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,
