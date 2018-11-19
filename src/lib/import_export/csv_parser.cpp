@@ -77,9 +77,10 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   return table;
 }
 
-std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename) {
+std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename,
+                                                              const ChunkOffset chunk_size) {
   _meta = process_csv_meta_file(filename);
-  return _create_table_from_meta();
+  return _create_table_from_meta(chunk_size);
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta(const ChunkOffset chunk_size) {
