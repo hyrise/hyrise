@@ -221,8 +221,7 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/null_literal.csv");
   importer->execute();
 
-  TableColumnDefinitions column_definitions{
-  {"a", DataType::Int, true}, {"b", DataType::String, true}};
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
 
   expected_table->append({1, "Hello"});
@@ -231,7 +230,6 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
-
 
 TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringThrows) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_bad_null.csv");
