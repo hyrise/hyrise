@@ -51,6 +51,9 @@ class AbstractTableScanImpl {
     // fine-tuning could find better values, but as long as scans with a handful of results are not vectorized, the
     // benefits of fine-tuning should not be too big.
     //
+    // All conditions are tested within _simd_scan_with_iterators, because it's easier to express the different
+    // conditions there.
+    //
     // Unfortunately, vectorization is only really beneficial when we can use AVX-512VL. In some cases, running it
     // without AVX-512VL is slower than the straight-forward SISD version. To account for this while still making sure
     // that the scan can be developed and tested on non-AVX-512VL machines, we do at least one SIMD iteration even on
@@ -58,13 +61,7 @@ class AbstractTableScanImpl {
     //
     // See the SIMD method for a comment on IsVectorizable.
 
-#if !HYRISE_DEBUG && !defined(__has_feature) || (!__has_feature(thread_sanitizer) && !__has_feature(address_sanitizer))
-    if constexpr (LeftIterator::IsVectorizable && FunctorIsVectorizable) {
-      if (left_end - left_it > 10'000) {
-        _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
-      }
-    }
-#endif
+    _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
 
     // Do the remainder the easy way. If we did not use the optimization above, left_it was not yet touched, so we
     // iterate over the entire input data.
@@ -91,6 +88,25 @@ class AbstractTableScanImpl {
   static void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                             const ChunkID chunk_id, PosList& matches_out,
                             [[maybe_unused]] RightIterator right_it) {
+// Check if the SIMD scan is applicable (see comment above)
+#if IS_DEBUG
+    return;
+#endif
+
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
+    return;
+#endif
+#endif
+
+    if constexpr (!LeftIterator::IsVectorizable || !FunctorIsVectorizable) {
+      return;
+    }
+
+    if (left_end - left_it > 10'000) {
+      return;
+    }
+
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled by the caller without
     // optimization. For each row, we write 0 to `offsets` if the row does not match, or `chunk_offset + 1` if the row
     // matches. The reason why we need `+1` is given below. This can be parallelized using auto-vectorization/SIMD.
