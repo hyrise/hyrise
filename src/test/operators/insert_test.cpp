@@ -227,7 +227,6 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
   EXPECT_THROW(ins->execute(), std::logic_error);
 }
 
