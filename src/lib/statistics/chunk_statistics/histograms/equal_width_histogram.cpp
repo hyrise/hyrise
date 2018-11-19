@@ -178,7 +178,7 @@ typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_w
 
   const auto base_width = static_cast<T>(this->_get_next_value(_bin_data.maximum - _bin_data.minimum) / bin_count());
 
-  if constexpr (std::is_integral_v<T>) {
+  if constexpr (std::is_integral_v<T>) {  // NOLINT
     return base_width + (index < _bin_data.bin_count_with_larger_range ? 1 : 0);
   }
 
