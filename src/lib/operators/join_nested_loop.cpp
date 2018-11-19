@@ -130,9 +130,7 @@ void JoinNestedLoop::_perform_join() {
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
     std::swap(left_table, right_table);
-
-    left_column_id = _column_ids.second;
-    right_column_id = _column_ids.first;
+    std::swap(left_column_id, right_column_id);
   }
 
   _pos_list_left = std::make_shared<PosList>();
