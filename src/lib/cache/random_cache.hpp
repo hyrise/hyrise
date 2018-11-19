@@ -66,7 +66,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
     }
 
     this->_capacity = capacity;
-    _rand = std::uniform_int_distribution<size_t>(0, capacity - 1);
+    _rand = std::uniform_int_distribution<>(0, capacity - 1);
   }
 
  protected:
@@ -79,7 +79,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   // Random number generation to determine which item to evict.
   std::random_device _rd;
   std::mt19937 _gen;
-  std::uniform_int_distribution<size_t> _rand;
+  std::uniform_int_distribution<> _rand;
 
   void _evict() {
     _map.erase(_list[0].first);
