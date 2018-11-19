@@ -35,10 +35,30 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   configuration.tpch_output_path = j.value("tpch_output_path", "./tpch_calibration_results.json");
   configuration.calibration_runs = j.value("calibration_runs", 1000u);
   configuration.table_specifications = j.value("table_specifications", std::vector<CalibrationTableSpecification>{});
-  configuration.encodings = j.value("encodings", std::vector<EncodingType>{});
-  configuration.data_types = j.value("data_types", std::vector<DataType>{});
-  configuration.selectivities = j.value("selectivities", std::vector<float>{});
-  configuration.columns = j.value("columns", std::vector<CalibrationColumnSpecification>{});
+
+  const auto encoding_strings = j.at("encodings").get<std::vector<std::string>>();
+
+  std::vector<EncodingType> encodings{};
+  for (const auto& encoding_string : encoding_strings) {
+    if (encoding_type_to_string.right.find(encoding_string) == encoding_type_to_string.right.end()) {
+      Fail("Unsupported encoding");
+    }
+    encodings.push_back(encoding_type_to_string.right.at(encoding_string));
+  }
+  configuration.encodings = encodings;
+
+  const auto data_type_strings = j.at("data_types").get<std::vector<std::string>>();
+  std::vector<DataType> data_types{};
+  for (const auto& data_type_string : data_type_strings) {
+    if (data_type_to_string.right.find(data_type_string) == data_type_to_string.right.end()) {
+      Fail("Unsupported data type");
+    }
+    data_types.push_back(data_type_to_string.right.at(data_type_string));
+  }
+  configuration.data_types = data_types;
+
+  configuration.selectivities = j.at("selectivities").get<std::vector<float>>();
+  configuration.columns = j.at("columns").get<std::vector<CalibrationColumnSpecification>>();
 }
 
 }  // namespace opossum

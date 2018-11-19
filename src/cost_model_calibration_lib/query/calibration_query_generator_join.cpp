@@ -14,8 +14,8 @@ namespace opossum {
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoin::generate_join(
     const CalibrationQueryGeneratorJoinConfiguration& configuration,
     const JoinGeneratorFunctor& join_predicate_generator,
-    const std::shared_ptr<MockNode>& left_table,
-    const std::shared_ptr<MockNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions) {
+    const std::shared_ptr<StoredTableNode>& left_table,
+    const std::shared_ptr<StoredTableNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions) {
   std::vector<JoinType> join_types = {JoinType::Hash, JoinType::NestedLoop, JoinType::MPSM, JoinType::SortMerge};
   std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
 
@@ -30,8 +30,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::generate_join_predicate(
-    const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<MockNode>& left_table,
-    const std::shared_ptr<MockNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions) {
+    const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<StoredTableNode>& left_table,
+    const std::shared_ptr<StoredTableNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions) {
   const auto left_column_definition = _find_column_for_configuration(column_definitions, configuration);
   if (!left_column_definition) return {};
 

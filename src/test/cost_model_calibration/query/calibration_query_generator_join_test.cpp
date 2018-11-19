@@ -17,7 +17,10 @@ namespace opossum {
 
 class CalibrationQueryGeneratorJoinTest : public BaseTest {
  protected:
-  void SetUp() override {}
+  void SetUp() override {
+    auto& manager = StorageManager::get();
+    manager.add_table("SomeTable", load_table("src/test/tables/int_int_int_calibration.tbl", 1u));
+  }
 };
 
 TEST_F(CalibrationQueryGeneratorJoinTest, GenerateJoinPredicate) {
@@ -27,8 +30,8 @@ TEST_F(CalibrationQueryGeneratorJoinTest, GenerateJoinPredicate) {
           {"a", DataType::Int, "uniform", false, 2, EncodingType::Unencoded},
           {"column_pk", DataType::Int, "uniform", false, 2, EncodingType::Unencoded}
   };
-  const auto left_input = MockNode::make(columns);
-  const auto right_input = MockNode::make(columns);
+  const auto left_input = StoredTableNode::make("SomeTable");
+  const auto right_input = StoredTableNode::make("SomeTable");
 
   CalibrationQueryGeneratorJoinConfiguration join_configuration{EncodingType::Unencoded, DataType::Int, false};
   auto join_predicate =

@@ -21,7 +21,7 @@ class CalibrationQueryGeneratorTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& manager = StorageManager::get();
-    manager.add_table("SomeTable", load_table("src/test/tables/int_string.tbl", 1u));
+    manager.add_table("SomeTable", load_table("src/test/tables/int_int_int_calibration.tbl", 1u));
   }
 };
 
@@ -32,11 +32,11 @@ TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
         CalibrationColumnSpecification{"a", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
         CalibrationColumnSpecification{"b", DataType::String, "uniform", false, 100, EncodingType::Unencoded}};
 
-        const CalibrationQueryGenerator generator(columns);
-    auto queries = generator.generate_queries();
+    const CalibrationQueryGenerator generator({"SomeTable"}, columns);
+    const auto query_templates = generator.generate_queries();
 
-    for (const auto& query : queries) {
-      query->print();
+    for (const auto& query : query_templates) {
+        query->print();
     }
 }
 

@@ -11,29 +11,31 @@
 namespace opossum {
 
 struct CalibrationQueryGeneratorJoinConfiguration {
+  const std::string left_table_name;
+  const std::string right_table_name;
   const EncodingType encoding_type;
   const DataType data_type;
   const bool reference_column;
 };
 
 using JoinGeneratorFunctor = std::function<const std::shared_ptr<AbstractExpression>(
-    const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<MockNode>&,
-    const std::shared_ptr<MockNode>&, const std::vector<CalibrationColumnSpecification>&)>;
+    const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<StoredTableNode>&,
+    const std::shared_ptr<StoredTableNode>&, const std::vector<CalibrationColumnSpecification>&)>;
 
 class CalibrationQueryGeneratorJoin {
  public:
   static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_join(
       const CalibrationQueryGeneratorJoinConfiguration& configuration,
-      const JoinGeneratorFunctor& join_predicate_generator, const std::shared_ptr<MockNode>& left_table,
-      const std::shared_ptr<MockNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions);
+      const JoinGeneratorFunctor& join_predicate_generator, const std::shared_ptr<StoredTableNode>& left_table,
+      const std::shared_ptr<StoredTableNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions);
 
   /*
      * Functors to generate joins.
      * They all implement 'JoinGeneratorFunctor'
      */
   static const std::shared_ptr<AbstractExpression> generate_join_predicate(
-      const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<MockNode>& left_table,
-      const std::shared_ptr<MockNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions);
+      const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<StoredTableNode>& left_table,
+      const std::shared_ptr<StoredTableNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions);
 
  private:
 

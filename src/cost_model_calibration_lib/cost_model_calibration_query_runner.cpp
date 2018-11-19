@@ -6,6 +6,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "utils/format_duration.hpp"
+#include "concurrency/transaction_manager.hpp"
 
 namespace opossum {
 
@@ -27,7 +28,9 @@ const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate
   const auto operators = lqp_translator.translate_node(lqp);
 
   const auto query_plan = std::make_shared<SQLQueryPlan>(CleanupTemporaries::No);
+  auto context = TransactionManager::get().new_transaction_context();
   query_plan->add_tree_by_root(operators);
+  query_plan->set_transaction_context(context);
 
   const auto& root = query_plan->tree_roots().front();
   const auto tasks = OperatorTask::make_tasks_from_operator(root, CleanupTemporaries::No);
