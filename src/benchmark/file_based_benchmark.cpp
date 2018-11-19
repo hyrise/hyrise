@@ -53,7 +53,7 @@ void _load_table_folder(const BenchmarkConfig& config, const std::string& table_
     if (boost::algorithm::ends_with(table_path_str, ".tbl")) {
       table = load_table(table_path_str, config.chunk_size);
     } else {
-      table = CsvParser{}.parse(table_path_str);
+      table = CsvParser{}.parse(table_path_str, std::nullopt, config.chunk_size);
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;
