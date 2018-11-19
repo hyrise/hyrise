@@ -20,15 +20,13 @@
 namespace opossum {
 
 PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractLQPNode(LQPNodeType::Predicate), predicate(predicate) {}
+    : AbstractLQPNode(LQPNodeType::Predicate, {predicate}) {}
 
 std::string PredicateNode::description() const {
   std::stringstream stream;
-  stream << "[Predicate] " << predicate->as_column_name();
+  stream << "[Predicate] " << predicate()->as_column_name();
   return stream.str();
 }
-
-std::vector<std::shared_ptr<AbstractExpression>> PredicateNode::node_expressions() const { return {predicate}; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
@@ -41,7 +39,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
    * Currently, we cannot compute statistics for, e.g., IN or nestings of AND/OR.
    */
 
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate, *left_input);
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate(), *left_input);
   if (!operator_predicates) return left_input->get_statistics();
 
   auto output_statistics = left_input->get_statistics();
@@ -55,14 +53,16 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
   return output_statistics;
 }
 
+std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
+
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate, node_mapping));
+  return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping));
 }
 
 bool PredicateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& predicate_node = static_cast<const PredicateNode&>(rhs);
   const auto equal =
-      expression_equal_to_expression_in_different_lqp(*predicate, *predicate_node.predicate, node_mapping);
+      expression_equal_to_expression_in_different_lqp(*predicate(), *predicate_node.predicate(), node_mapping);
 
   return equal;
 }

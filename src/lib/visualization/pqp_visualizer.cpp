@@ -7,31 +7,29 @@
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "utils/format_duration.hpp"
 #include "visualization/abstract_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
 
-SQLQueryPlanVisualizer::SQLQueryPlanVisualizer() = default;
+PQPVisualizer::PQPVisualizer() = default;
 
-SQLQueryPlanVisualizer::SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info,
-                                               VizVertexInfo vertex_info, VizEdgeInfo edge_info)
+PQPVisualizer::PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
+                             VizEdgeInfo edge_info)
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                          std::move(edge_info)) {}
 
-void SQLQueryPlanVisualizer::_build_graph(const SQLQueryPlan& plan) {
+void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) {
   std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;
 
-  for (const auto& root : plan.tree_roots()) {
-    _build_subtree(root, visualized_ops);
+  for (const auto& plan : plans) {
+    _build_subtree(plan, visualized_ops);
   }
 }
 
-void SQLQueryPlanVisualizer::_build_subtree(
-    const std::shared_ptr<const AbstractOperator>& op,
-    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
+                                   std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
   if (visualized_ops.find(op) != visualized_ops.end()) return;
   visualized_ops.insert(op);
@@ -72,9 +70,9 @@ void SQLQueryPlanVisualizer::_build_subtree(
   }
 }
 
-void SQLQueryPlanVisualizer::_visualize_subselects(
-    const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<AbstractExpression>& expression,
-    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+void PQPVisualizer::_visualize_subselects(const std::shared_ptr<const AbstractOperator>& op,
+                                          const std::shared_ptr<AbstractExpression>& expression,
+                                          std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
     if (!pqp_select_expression) return ExpressionVisitation::VisitArguments;
@@ -91,8 +89,8 @@ void SQLQueryPlanVisualizer::_visualize_subselects(
   });
 }
 
-void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                             const std::shared_ptr<const AbstractOperator>& to) {
+void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
+                                    const std::shared_ptr<const AbstractOperator>& to) {
   VizEdgeInfo info = _default_edge;
 
   if (const auto& output = from->get_output()) {
@@ -110,7 +108,7 @@ void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const Abstrac
   _add_edge(from, to, info);
 }
 
-void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>& op) {
+void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>& op) {
   VizVertexInfo info = _default_vertex;
   auto label = op->description(DescriptionMode::MultiLine);
 

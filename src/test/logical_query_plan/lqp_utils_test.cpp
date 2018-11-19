@@ -13,6 +13,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

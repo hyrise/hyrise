@@ -6,7 +6,7 @@ SELECT * FROM mixed_null;
 SELECT 1;
 SELECT -1;
 SELECT (1 + 3.0) * 13.0 as some_arithmetics;
-SELECT 22 / 5;
+SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;

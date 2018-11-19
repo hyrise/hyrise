@@ -41,8 +41,8 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
  * Put all LQPs found in expressions in plan @param lqp into @param lqps
  */
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
-  for (const auto& expression : lqp.node_expressions()) {
-    collect_lqps_from_expression(expression, lqps);
+  for (const auto& node_expression : lqp.node_expressions) {
+    collect_lqps_from_expression(node_expression, lqps);
   }
 
   if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
@@ -53,7 +53,9 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 
 namespace opossum {
 
-AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : type(node_type) {}
+AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
+                                 const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions)
+    : type(node_type), node_expressions(node_expressions) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
   Assert(
@@ -191,8 +193,6 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_
   Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
   return left_input()->column_expressions();
 }
-
-std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressions() const { return {}; }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
   const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below

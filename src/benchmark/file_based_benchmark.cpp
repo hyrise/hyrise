@@ -9,6 +9,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/filesystem.hpp"

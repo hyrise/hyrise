@@ -7,10 +7,17 @@
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 
 namespace opossum {
 
-class AbstractLQPNode;
 class AbstractExpression;
 enum class LQPInputSide;
 
@@ -57,7 +64,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on each node of the @param lqp.
+ * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subselects.
  * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
