@@ -5,8 +5,8 @@
 
 #include "../configuration/calibration_column_specification.hpp"
 #include "expression/value_expression.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 
 namespace opossum {
 
@@ -72,11 +72,12 @@ class CalibrationQueryGeneratorPredicate {
       const CalibrationQueryGeneratorPredicateConfiguration& configuration);
 
   static const std::shared_ptr<ValueExpression> _generate_value_expression(
-      const CalibrationColumnSpecification& column_definition,
-      const float selectivity, const bool trailing_like = false);
+      const CalibrationColumnSpecification& column_definition, const float selectivity,
+      const bool trailing_like = false);
 
   static const std::shared_ptr<AbstractExpression> _generate_between(
-      const std::shared_ptr<StoredTableNode>& table, const BetweenPredicateGeneratorFunctor& between_predicate_generator,
+      const std::shared_ptr<StoredTableNode>& table,
+      const BetweenPredicateGeneratorFunctor& between_predicate_generator,
       const CalibrationColumnSpecification& filter_column);
 
   static const std::shared_ptr<AbstractExpression> _generate_column_predicate(

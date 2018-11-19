@@ -27,21 +27,22 @@ class CalibrationQueryGeneratorJoin {
   static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_join(
       const CalibrationQueryGeneratorJoinConfiguration& configuration,
       const JoinGeneratorFunctor& join_predicate_generator, const std::shared_ptr<StoredTableNode>& left_table,
-      const std::shared_ptr<StoredTableNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions);
+      const std::shared_ptr<StoredTableNode>& right_table,
+      const std::vector<CalibrationColumnSpecification>& column_definitions);
 
   /*
      * Functors to generate joins.
      * They all implement 'JoinGeneratorFunctor'
      */
   static const std::shared_ptr<AbstractExpression> generate_join_predicate(
-      const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<StoredTableNode>& left_table,
-      const std::shared_ptr<StoredTableNode>& right_table, const std::vector<CalibrationColumnSpecification>& column_definitions);
+      const CalibrationQueryGeneratorJoinConfiguration& configuration,
+      const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table,
+      const std::vector<CalibrationColumnSpecification>& column_definitions);
 
  private:
-
-    static const std::optional<CalibrationColumnSpecification> _find_column_for_configuration(
-            const std::vector<CalibrationColumnSpecification>& column_definitions,
-            const CalibrationQueryGeneratorJoinConfiguration& configuration);
+  static const std::optional<CalibrationColumnSpecification> _find_column_for_configuration(
+      const std::vector<CalibrationColumnSpecification>& column_definitions,
+      const CalibrationQueryGeneratorJoinConfiguration& configuration);
   CalibrationQueryGeneratorJoin() = default;
 };
 

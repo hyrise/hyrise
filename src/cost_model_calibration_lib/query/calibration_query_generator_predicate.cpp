@@ -17,7 +17,8 @@ namespace opossum {
 */
 const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generate_predicates(
     const PredicateGeneratorFunctor& predicate_generator,
-    const std::vector<CalibrationColumnSpecification>& column_definitions, const std::shared_ptr<StoredTableNode>& table,
+    const std::vector<CalibrationColumnSpecification>& column_definitions,
+    const std::shared_ptr<StoredTableNode>& table,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
   const auto filter_column = _find_column_for_configuration(column_definitions, configuration);
   if (!filter_column) {
@@ -33,12 +34,6 @@ const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generat
   // TODO(Sven): add test for this case
   if (!predicate) return {};
   const auto predicate_node = PredicateNode::make(predicate);
-
-
-//  if (configuration.reference_column) {
-//    auto validate_node = ValidateNode::make();
-//    predicate_node->set_left_input(validate_node);
-//  }
 
   return predicate_node;
 }
@@ -69,6 +64,8 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto& between_predicate_column_functor = [](const std::shared_ptr<StoredTableNode>& table,
                                                     const CalibrationColumnSpecification& filter_column)
       -> std::optional<std::pair<std::shared_ptr<AbstractExpression>, std::shared_ptr<AbstractExpression>>> {
+
+      const auto column_name = filter_column.column_name;
     const auto filter_column_expression = lqp_column_(table->get_column(filter_column.column_name));
 
     static std::mt19937 engine((std::random_device()()));
@@ -125,9 +122,11 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
          const CalibrationQueryGeneratorPredicateConfiguration& configuration) -> std::shared_ptr<AbstractExpression> {
     static std::mt19937 engine((std::random_device()()));
 
+
+    const auto column_name = filter_column.column_name;
     table->column_expressions();
 
-    const auto filter_column_expression = lqp_column_(table->get_column(filter_column.column_name));
+    const auto filter_column_expression = lqp_column_(table->get_column(column_name));
 
     auto columns = table->get_columns();
     std::shuffle(columns.begin(), columns.end(), engine);
@@ -150,9 +149,11 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_like(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-  if (filter_column.type != DataType::String) return {};
+  if (configuration.data_type != DataType::String) return {};
 
-  const auto lhs = lqp_column_(table->get_column(filter_column.column_name));
+  const auto column_name = filter_column.column_name;
+
+  const auto lhs = lqp_column_(table->get_column(column_name));
   const auto rhs = _generate_value_expression(filter_column, configuration.selectivity, true);
 
   if (!rhs) {
@@ -165,11 +166,12 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
+    const auto column_name = filter_column.column_name;
   // We just want Equi Scans on String columns for now
-  if (filter_column.type != DataType::String) return {};
+  if (configuration.data_type != DataType::String) return {};
 
-  const auto lqp_column_reference = table->get_column(filter_column.column_name);
-  const auto lhs = lqp_column_(table->get_column(filter_column.column_name));
+  const auto lqp_column_reference = table->get_column(column_name);
+  const auto lhs = lqp_column_(table->get_column(column_name));
 
   // TODO(Sven): Get one existing value from column and filter by that
   const auto stored_table = StorageManager::get().get_table(table->table_name);
@@ -184,14 +186,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_or(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-
-  const CalibrationQueryGeneratorPredicateConfiguration second_configuration {
-    configuration.table_name,
-    configuration.encoding_type,
-    configuration.data_type,
-    0.5f,
-    configuration.reference_column
-    };
+  const CalibrationQueryGeneratorPredicateConfiguration second_configuration{
+      configuration.table_name, configuration.encoding_type, configuration.data_type, 0.5f,
+      configuration.reference_column};
 
   const auto lhs = generate_predicate_column_value(table, filter_column, configuration);
   const auto rhs = generate_predicate_column_value(table, filter_column, second_configuration);
@@ -222,6 +219,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_g
     const std::shared_ptr<StoredTableNode>& table, const PredicateGeneratorFunctor& predicate_generator,
     const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
+
+    const auto column_name = filter_column.column_name;
+
   const auto lqp_column_reference = table->get_column(filter_column.column_name);
   const auto lhs = lqp_column_(lqp_column_reference);
   const auto rhs = predicate_generator(table, filter_column, configuration);
@@ -251,9 +251,10 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_g
 }
 
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
-    const CalibrationColumnSpecification& column_definition,
-    const float selectivity, const bool trailing_like) {
-  auto column_type = column_definition.type;
+    const CalibrationColumnSpecification& column_definition, const float selectivity, const bool trailing_like) {
+  const auto column_type = column_definition.type;
+
+
 
   const auto int_value = static_cast<int>(column_definition.distinct_values * selectivity);
   const auto float_value = selectivity;

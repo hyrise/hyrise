@@ -22,8 +22,8 @@ void CostModelCalibration::run() const {
   _calibrate();
 
   std::cout << "Finished Calibration, now starting TPC-H" << std::endl;
-//  tableGenerator.load_tpch_tables(0.01f);
-//  _run_tpch();
+  //  tableGenerator.load_tpch_tables(0.01f);
+  //  _run_tpch();
 }
 
 void CostModelCalibration::_run_tpch() const {
@@ -64,7 +64,6 @@ void CostModelCalibration::_calibrate() const {
 
     const auto& queries = generator.generate_queries();
     for (const auto& query : queries) {
-
       const auto examples = queryRunner.calibrate_query_from_lqp(query);
       _append_to_result_csv(_configuration.output_path, examples);
     }

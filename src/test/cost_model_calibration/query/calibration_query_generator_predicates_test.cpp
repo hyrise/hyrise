@@ -29,9 +29,9 @@ class CalibrationQueryGeneratorPredicatesTest : public BaseTest {
 TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValueInt) {
   const CalibrationColumnSpecification filter_column{"a", DataType::Int, "uniform", false, 2, EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Int, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::Int, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Int, "a"}};
+//  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Int, "a"}};
   const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_column_value(table, filter_column, configuration);
@@ -44,10 +44,10 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValueString) {
   const CalibrationColumnSpecification filter_column{"a", DataType::String,       "uniform", false,
                                                      2,   EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::String, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::String, "a"}};
-      const auto table = StoredTableNode::make("SomeTable");
+//  const std::vector<std::pair<DataType, std::string>> columns{{DataType::String, "a"}};
+  const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_column_value(table, filter_column, configuration);
 
@@ -59,10 +59,10 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValueFloat) {
   const CalibrationColumnSpecification filter_column{"a", DataType::Float,        "uniform", false,
                                                      2,   EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Float, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::Float, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Float, "a"}};
-      const auto table = StoredTableNode::make("SomeTable");
+//  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Float, "a"}};
+  const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_column_value(table, filter_column, configuration);
 
@@ -73,9 +73,8 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValueFloat) {
 TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnColumn) {
   const CalibrationColumnSpecification filter_column{"a", DataType::Int, "uniform", false, 1, EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Int, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::Int, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Int, "a"}, {DataType::Int, "b"}};
   const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_column_column(table, filter_column, configuration);
@@ -88,10 +87,10 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, Like) {
   const CalibrationColumnSpecification filter_column{"a", DataType::String,       "uniform", false,
                                                      2,   EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::String, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::String, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::String, "a"}};
-      const auto table = StoredTableNode::make("SomeTable");
+//  const std::vector<std::pair<DataType, std::string>> columns{{DataType::String, "a"}};
+  const auto table = StoredTableNode::make("SomeTable");
   auto predicate = CalibrationQueryGeneratorPredicate::generate_predicate_like(table, filter_column, configuration);
 
   ASSERT_TRUE(predicate);
@@ -102,10 +101,9 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, EquiOnStrings) {
   const CalibrationColumnSpecification filter_column{"a", DataType::String,       "uniform", false,
                                                      2,   EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Int, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::Int, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::String, "a"}};
-      const auto table = StoredTableNode::make("SomeTable");
+  const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings(table, filter_column, configuration);
 
@@ -116,29 +114,28 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, EquiOnStrings) {
 TEST_F(CalibrationQueryGeneratorPredicatesTest, BetweenValueValue) {
   const CalibrationColumnSpecification filter_column{"a", DataType::Int, "uniform", false, 10, EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Int, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::Int, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Int, "a"}};
-      const auto table = StoredTableNode::make("SomeTable");
+//  const std::vector<std::pair<DataType, std::string>> columns{{DataType::Int, "a"}};
+  const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value(table, filter_column, configuration);
 
   ASSERT_TRUE(predicate);
-  EXPECT_EQ("a BETWEEN 1 AND 1", predicate->as_column_name());
+  EXPECT_EQ("a BETWEEN 1 AND 5", predicate->as_column_name());
 }
 
 TEST_F(CalibrationQueryGeneratorPredicatesTest, BetweenColumnColumn) {
   const CalibrationColumnSpecification filter_column{"a", DataType::Int, "uniform", false, 2, EncodingType::Unencoded};
 
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Unencoded, DataType::Int, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Unencoded, DataType::Int, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{
-      {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}};
-      const auto table = StoredTableNode::make("SomeTable");
+  const auto table = StoredTableNode::make("SomeTable");
   auto predicate =
       CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column(table, filter_column, configuration);
 
   ASSERT_TRUE(predicate);
+  std::cout << predicate->as_column_name() << std::endl;
   EXPECT_TRUE("a BETWEEN b AND c" == predicate->as_column_name() || "a BETWEEN c AND b" == predicate->as_column_name());
 }
 
@@ -148,39 +145,15 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValue) {
       {"b", DataType::Int, "uniform", false, 2, EncodingType::Dictionary},
       {"c", DataType::String, "uniform", false, 2, EncodingType::Unencoded},
       {"d", DataType::String, "uniform", false, 2, EncodingType::Dictionary}};
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Dictionary, DataType::Int, 0.1f, false};
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable", EncodingType::Dictionary, DataType::Int, 0.1f, false};
 
-  const std::vector<std::pair<DataType, std::string>> columns{
-      {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}};
-      const auto table = StoredTableNode::make("SomeTable");
+  const auto table = StoredTableNode::make("SomeTable");
 
   auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
       CalibrationQueryGeneratorPredicate::generate_predicate_column_value, column_specifications, table, configuration);
 
   ASSERT_TRUE(predicate);
   EXPECT_EQ("b <= 0", predicate->predicate->as_column_name());
-  EXPECT_FALSE(predicate->left_input());
-}
-
-TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValueOnReference) {
-  std::vector<CalibrationColumnSpecification> column_specifications{
-      {"a", DataType::Int, "uniform", false, 2, EncodingType::Unencoded},
-      {"b", DataType::Int, "uniform", false, 2, EncodingType::Dictionary},
-      {"c", DataType::String, "uniform", false, 2, EncodingType::Unencoded},
-      {"d", DataType::String, "uniform", false, 2, EncodingType::Dictionary}};
-  CalibrationQueryGeneratorPredicateConfiguration configuration{EncodingType::Dictionary, DataType::Int, 0.1f, true};
-
-  const std::vector<std::pair<DataType, std::string>> columns{
-      {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}};
-      const auto table = StoredTableNode::make("SomeTable");
-
-  auto predicate = CalibrationQueryGeneratorPredicate::generate_predicates(
-      CalibrationQueryGeneratorPredicate::generate_predicate_column_value, column_specifications, table, configuration);
-
-  ASSERT_TRUE(predicate);
-  EXPECT_EQ("b <= 0", predicate->predicate->as_column_name());
-  EXPECT_TRUE(predicate->left_input());
-  EXPECT_EQ(LQPNodeType::Validate, predicate->left_input()->type);
 }
 
 }  // namespace opossum

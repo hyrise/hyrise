@@ -6,14 +6,18 @@ import pandas as pd
 import numpy as np
 import json
 
+import random
+
 
 class DataGenerator:
     table_specifications = []
+    column_specification = []
 
     def __init__(self, file):
         with open(file) as f:
             config = json.load(f)
             self.table_specifications = config['table_specifications']
+            self.column_specification = config['columns']
 
     def type_to_function(self, column_type):
         switcher = {
@@ -31,8 +35,8 @@ class DataGenerator:
 
     @staticmethod
     def int_column(row_count, distinct_values):
-        # change here for other distributions, numpy provides other distributions in np.random
-        return np.random.randint(0, distinct_values, size=(row_count, 1))
+        distinct_values = random.sample(range(0, 10000000), distinct_values)
+        return np.random.choice(distinct_values, row_count)
 
     @staticmethod
     def long_column(row_count, distinct_values):
@@ -40,8 +44,8 @@ class DataGenerator:
 
     @staticmethod
     def string_column(row_count, distinct_values):
-        fake = Faker()
-        distinct_values = np.array([fake.password(length=10, special_chars=False, digits=False,
+        faker = Faker()
+        distinct_values = np.array([faker.password(length=10, special_chars=False, digits=False,
                                                   upper_case=True, lower_case=False) for _ in range(distinct_values)])
         return np.random.choice(distinct_values, row_count)
 
@@ -54,7 +58,8 @@ class DataGenerator:
     def double_column(row_count, distinct_values):
         return DataGenerator.float_column(row_count, distinct_values)
 
-    def generate_column(self, column_name, row_count, column_specification):
+    def generate_column(self, row_count, column_specification):
+        column_name = column_specification['column_name']
         distinct_values = column_specification.get('distinct_values', max(int(row_count/100), 100))
         value_distribution = column_specification.get('value_distribution', "uniform")
         column_type = column_specification.get('type', "int")
@@ -69,13 +74,13 @@ class DataGenerator:
             data = np.sort(data, axis=None)
         return pd.DataFrame(data, columns=[column_name])
 
-    # Generate table
     def generate_table(self, table_specification):
-        columns = table_specification['columns']
+        columns = self.column_specification
         column_data = {}
 
-        for column_name, column in columns.items():
-            generated_column = self.generate_column(column_name, table_specification['table_size'], column)
+        for column in columns:
+            column_name = column['column_name']
+            generated_column = self.generate_column(table_specification['table_size'], column)
             column_data[column_name] = generated_column
             print('Column ' + column_name + ' generated')
 
@@ -87,12 +92,12 @@ class DataGenerator:
         print('CSV written')
 
     def execute(self):
+        type_row = {column['column_name']: column['type'] for column in self.column_specification}
+
         for table_specification in self.table_specifications:
             table = self.generate_table(table_specification)
-            types = {name: column['type'] for name, column in table_specification['columns'].items()}
-            table = pd.concat([pd.DataFrame(types, index=[0]), table], ignore_index=True)
+            table = pd.concat([pd.DataFrame(type_row, index=[0]), table], ignore_index=True)
             self.write_csv(table_specification['table_path'], table)
-
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

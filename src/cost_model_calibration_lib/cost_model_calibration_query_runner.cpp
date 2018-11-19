@@ -1,12 +1,12 @@
 #include "cost_model_calibration_query_runner.hpp"
 
+#include "concurrency/transaction_manager.hpp"
 #include "cost_model_feature_extractor.hpp"
 #include "feature/calibration_example.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "utils/format_duration.hpp"
-#include "concurrency/transaction_manager.hpp"
 
 namespace opossum {
 

@@ -49,27 +49,38 @@ class TrainingDataPipeline:
         Returns:
 
         """
-        encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference']
+        encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
         boolean_categories = [False, True]
-        data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string']
+        data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string', 'undefined']
 
         df = df[df['operator_type'] == 'TableScan']
 
-        df['first_column_segment_encoding'] = df['first_column_segment_encoding'].astype('category',
-                                                                                         categories=encoding_categories)
-        df['second_column_segment_encoding'] = df['second_column_segment_encoding'].astype('category',
-                                                                                           categories=encoding_categories)
+        df['first_column_segment_encoding'] = df['first_column_segment_encoding']\
+            .astype('category', categories=encoding_categories)
+        df['second_column_segment_encoding'] = df['second_column_segment_encoding']\
+            .astype('category', categories=encoding_categories)
+        df['third_column_segment_encoding'] = df['third_column_segment_encoding']\
+            .astype('category', categories=encoding_categories)
         df['is_column_comparison'] = df['is_column_comparison'].astype('category', categories=boolean_categories)
+
         df['first_column_is_segment_reference_segment'] = df['first_column_is_segment_reference_segment'] \
             .astype('category', categories=boolean_categories)
         df['second_column_is_segment_reference_segment'] = df['second_column_is_segment_reference_segment'] \
             .astype('category', categories=boolean_categories)
-        df['first_column_segment_data_type'] = df['first_column_segment_data_type'].astype('category',
-                                                                                           categories=data_type_categories)
+        df['third_column_is_segment_reference_segment'] = df['third_column_is_segment_reference_segment'] \
+            .astype('category', categories=boolean_categories)
+
+        df['first_column_segment_data_type'] = df['first_column_segment_data_type']\
+            .astype('category', categories=data_type_categories)
         df['second_column_segment_data_type'] = df['second_column_segment_data_type'] \
             .astype('category', categories=data_type_categories)
+        df['third_column_segment_data_type'] = df['third_column_segment_data_type'] \
+            .astype('category', categories=data_type_categories)
+
         df['scan_operator_type'] = df['scan_operator_type'] \
             .astype('category', categories=['<=', 'BETWEEN', 'Or', 'undefined'])
+
+        df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
 
         return df
 

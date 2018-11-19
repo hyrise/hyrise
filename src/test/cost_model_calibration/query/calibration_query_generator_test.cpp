@@ -10,6 +10,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "configuration/calibration_configuration.hpp"
 #include "configuration/calibration_column_specification.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "storage/encoding_type.hpp"
@@ -26,18 +27,29 @@ class CalibrationQueryGeneratorTest : public BaseTest {
 };
 
 TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
-//             Query Generator expects one column with the name 'column_pk', which is handled as primary key
-    std::vector<CalibrationColumnSpecification> columns = {
-        CalibrationColumnSpecification{"column_pk", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
-        CalibrationColumnSpecification{"a", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
-        CalibrationColumnSpecification{"b", DataType::String, "uniform", false, 100, EncodingType::Unencoded}};
+  //             Query Generator expects one column with the name 'column_pk', which is handled as primary key
+  std::vector<CalibrationColumnSpecification> columns = {
+      CalibrationColumnSpecification{"column_pk", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
+      CalibrationColumnSpecification{"a", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
+      CalibrationColumnSpecification{"b", DataType::String, "uniform", false, 100, EncodingType::Unencoded}};
 
-    const CalibrationQueryGenerator generator({"SomeTable"}, columns);
-    const auto query_templates = generator.generate_queries();
+  const CalibrationConfiguration configuration {
+          {},
+          "",
+          "",
+          1,
+          {EncodingType::Unencoded},
+          {DataType::Int, DataType::String},
+          {0.1, 0.8},
+          {}
+  };
 
-    for (const auto& query : query_templates) {
-        query->print();
-    }
+  const CalibrationQueryGenerator generator({"SomeTable"}, columns, configuration);
+  const auto query_templates = generator.generate_queries();
+
+  for (const auto& query : query_templates) {
+    query->print();
+  }
 }
 
 }  // namespace opossum
