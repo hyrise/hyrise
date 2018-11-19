@@ -170,6 +170,12 @@ DELETE FROM id_int_int_int_100 WHERE a = 5 OR b = 6 OR (a > 2 AND b > 80) OR (a 
 
 -- Update
 UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = a + 1; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = b + c + 3 WHERE id > 10 * 5; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = b + c + 3 WHERE id > 1000 * 1000; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET id = 0 WHERE id > 20; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET id = a, a = b, b = c, c = id WHERE id > 20; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET id = a - 1, a = b, b = c, c = id + 1 WHERE id > 20; SELECT * FROM id_int_int_int_100;
 
 -- INSERT
 INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
