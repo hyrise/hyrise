@@ -22,6 +22,8 @@ TEST_F(DeleteNodeTest, Equals) {
   EXPECT_NE(*_delete_node, *different_delete_node);
 }
 
+TEST_F(DeleteNodeTest, NodeExpressions) { ASSERT_EQ(_delete_node->node_expressions.size(), 0u); }
+
 TEST_F(DeleteNodeTest, Copy) { EXPECT_EQ(*_delete_node, *_delete_node->deep_copy()); }
 
 }  // namespace opossum

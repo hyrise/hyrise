@@ -10,15 +10,17 @@
 
 #include "abstract_query_generator.hpp"
 #include "benchmark_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
+
+class SQLPipeline;
 
 class BenchmarkRunner {
  public:
@@ -62,7 +64,7 @@ class BenchmarkRunner {
   struct QueryPlans final {
     // std::vector<>s, since queries can contain multiple statements
     std::vector<std::shared_ptr<AbstractLQPNode>> lqps;
-    std::vector<std::shared_ptr<SQLQueryPlan>> pqps;
+    std::vector<std::shared_ptr<AbstractOperator>> pqps;
   };
 
   // If visualization is enabled, this stores the LQP and PQP for each query. Its length is defined by the number of

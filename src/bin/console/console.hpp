@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "sql/sql_pipeline.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
 
@@ -151,7 +150,6 @@ class Console : public Singleton<Console> {
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
-  std::shared_ptr<PreparedStatementCache> _prepared_statements;
 };
 
 }  // namespace opossum

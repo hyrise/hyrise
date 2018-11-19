@@ -14,6 +14,7 @@
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -42,7 +43,8 @@ class TPCHTest : public BaseTestWithParam<TestConfiguration> {
   }
   void SetUp() override {
     _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    SQLLogicalPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().clear();
   }
 
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;

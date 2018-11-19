@@ -12,6 +12,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -44,11 +45,11 @@ namespace opossum {
 class SQLTranslatorTest : public ::testing::Test {
  public:
   void SetUp() override {
-    opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
-    opossum::StorageManager::get().add_table("int_string", opossum::load_table("src/test/tables/int_string.tbl"));
-    opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
-    opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
-    opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
+    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("int_string", load_table("src/test/tables/int_string.tbl"));
+    StorageManager::get().add_table("int_float2", load_table("src/test/tables/int_float2.tbl"));
+    StorageManager::get().add_table("int_float5", load_table("src/test/tables/int_float5.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
@@ -1180,19 +1181,19 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
       stored_table_node_int_float));
   // clang-format on
 
-  EXPECT_EQ(sql_translator.value_placeholders().size(), 2u);
-  EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{0}), ParameterID{1});
-  EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{1}), ParameterID{0});
+  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().size(), 2u);
+  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().at(0), ParameterID{1});
+  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().at(1), ParameterID{0});
 
   const auto actual_projection_node = std::dynamic_pointer_cast<ProjectionNode>(actual_lqp);
   ASSERT_TRUE(actual_projection_node);
 
   const auto actual_sub_select_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->node_expressions.at(1));
   ASSERT_TRUE(actual_sub_select_a);
 
   const auto actual_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(2));
+      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->node_expressions.at(2));
   ASSERT_TRUE(actual_sub_select_b);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1488,6 +1489,116 @@ TEST_F(SQLTranslatorTest, DropTable) {
   const auto actual_lqp = compile_query("DROP TABLE a_table");
 
   const auto expected_lqp = DropTableNode::make("a_table");
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
+  const auto actual_lqp = compile_query("PREPARE some_prepared_plan FROM 'SELECT a AS x FROM int_float'");
+
+  // clang-format off
+  const auto statement_lqp =
+  AliasNode::make(expression_vector(int_float_a), std::vector<std::string>{"x"},
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float));
+  // clang-format on
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{});
+
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, PrepareWithParameters) {
+  const auto actual_lqp = compile_query(
+      "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float "
+      "WHERE a > ? AND b < ?'");
+
+  // clang-format off
+  const auto statement_lqp =
+  PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{1})),
+      stored_table_node_int_float));
+  // clang-format on
+
+  const auto prepared_plan =
+      std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
+
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
+  // Correlated subselects and prepared statement's parameters both use the ParameterID system, so let's test that they
+  // cooperate
+
+  const auto actual_lqp = compile_query(
+      "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float WHERE a > ? AND"
+      " a < (SELECT MIN(a) FROM int_string WHERE int_float.a = int_string.a) AND"
+      " b < ?'");
+
+  // clang-format off
+  const auto correlated_parameter = correlated_parameter_(ParameterID{1}, int_float_a);
+
+  const auto subselect_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min_(int_string_a)),
+    PredicateNode::make(equals_(correlated_parameter, int_string_a),
+      stored_table_node_int_string));
+
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{1}, int_float_a));
+
+  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  PredicateNode::make(less_than_(int_float_a, subselect),
+    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{2})),
+       stored_table_node_int_float)));
+  // clang-format on
+
+  const auto prepared_plan =
+      std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
+
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Execute) {
+  // clang-format off
+  const auto uncorrelated_parameter = uncorrelated_parameter_(ParameterID{3});
+  const auto correlated_parameter = correlated_parameter_(ParameterID{2}, int_float_a);
+
+  const auto prepared_subselect_lqp = AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+    PredicateNode::make(equals_(uncorrelated_parameter, correlated_parameter),
+      stored_table_node_int_float));
+
+  const auto prepared_subselect = lqp_select_(prepared_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
+
+  const auto prepared_plan_lqp =
+  PredicateNode::make(greater_than_(int_string_a, uncorrelated_parameter_(ParameterID{1})),
+    PredicateNode::make(less_than_(int_string_b, uncorrelated_parameter_(ParameterID{0})),
+      PredicateNode::make(equals_(int_string_a, prepared_subselect), stored_table_node_int_string)));
+  // clang-format on
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(
+      prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
+
+  StorageManager::get().add_prepared_plan("some_prepared_plan", prepared_plan);
+
+  const auto actual_lqp = compile_query("EXECUTE some_prepared_plan ('Hello', 1, 42)");
+
+  // clang-format off
+  const auto execute_subselect_lqp =
+      AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+                          PredicateNode::make(equals_(42, correlated_parameter), stored_table_node_int_float));
+
+  const auto execute_subselect = lqp_select_(execute_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(int_string_a, 1),
+    PredicateNode::make(less_than_(int_string_b, "Hello"),
+      PredicateNode::make(equals_(int_string_a, execute_subselect),
+        stored_table_node_int_string)));
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

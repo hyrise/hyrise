@@ -46,6 +46,7 @@ enum class OperatorType {
   Update,
   Validate,
   CreateTable,
+  CreatePreparedPlan,
   CreateView,
   DropTable,
   DropView,
