@@ -228,7 +228,9 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
   auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
   EXPECT_THROW(ins->execute(), std::logic_error);
+  context->rollback();
 }
 
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
