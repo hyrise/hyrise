@@ -31,6 +31,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -72,12 +73,13 @@ class SQLTranslatorTest : public ::testing::Test {
 
   void TearDown() override { StorageManager::reset(); }
 
-  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
+  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
+                                                          const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-    const auto lqps = opossum::SQLTranslator{}.translate_parser_result(parser_result);
+    const auto lqps = opossum::SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
   }
@@ -1375,38 +1377,67 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, DeleteWithoutMVCC) {
+  EXPECT_THROW(compile_query("DELETE FROM int_float;"), std::logic_error);
+}
+
 TEST_F(SQLTranslatorTest, DeleteSimple) {
-  const auto actual_lqp = compile_query("DELETE FROM int_float");
+  const auto actual_lqp = compile_query("DELETE FROM int_float", UseMvcc::Yes);
 
   // clang-format off
   const auto expected_lqp =
   DeleteNode::make("int_float",
-    StoredTableNode::make("int_float"));
+    ValidateNode::make(
+      StoredTableNode::make("int_float")));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DeleteConditional) {
-  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5");
+  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5", UseMvcc::Yes);
 
   // clang-format off
   const auto expected_lqp =
   DeleteNode::make("int_float",
     PredicateNode::make(greater_than_(int_float_a, 5),
-      stored_table_node_int_float));
+      ValidateNode::make(
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateWithoutMVCC) {
+  EXPECT_THROW(compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;"), std::logic_error);
+}
+
+TEST_F(SQLTranslatorTest, UpdateUnconditional) {
+  const auto actual_lqp = compile_query("UPDATE int_float SET b = b + 1", UseMvcc::Yes);
+
+  // clang-format off
+  const auto row_select_lqp =
+  ValidateNode::make(
+    stored_table_node_int_float);
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    row_select_lqp,
+    ProjectionNode::make(expression_vector(int_float_a, add_(int_float_b, value_(1))),
+      row_select_lqp));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, UpdateConditional) {
-  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;");
+  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;", UseMvcc::Yes);
 
   // clang-format off
   const auto row_select_lqp =
   PredicateNode::make(greater_than_(int_float_a, 1),
-    stored_table_node_int_float);
+    ValidateNode::make(
+      stored_table_node_int_float));
 
   const auto expected_lqp =
   UpdateNode::make("int_float",
@@ -1419,12 +1450,13 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
 }
 
 TEST_F(SQLTranslatorTest, UpdateCast) {
-  const auto actual_lqp = compile_query("UPDATE int_float SET a = b, b = 3 WHERE a > 1;");
+  const auto actual_lqp = compile_query("UPDATE int_float SET a = b, b = 3 WHERE a > 1;", UseMvcc::Yes);
 
   // clang-format off
   const auto row_select_lqp =
   PredicateNode::make(greater_than_(int_float_a, 1),
-    stored_table_node_int_float);
+    ValidateNode::make(
+      stored_table_node_int_float));
 
   const auto expected_lqp =
   UpdateNode::make("int_float",

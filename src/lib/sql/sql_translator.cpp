@@ -362,6 +362,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
+  DebugAssert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
+
   if (delete_statement.expr) {
     const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);
     data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
@@ -383,12 +385,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   // Take a copy intentionally, we're going to replace some of these later
   auto update_expressions = selection_lqp->column_expressions();
 
-  // The update operator wants ReferenceSegments on its left side
-  // TODO(anyone): fix this
-  AssertInput(update.where, "Unconditional updates are currently not supported");
+  // The update operator wants ReferenceSegments on its left side. Also, we should make sure that we do not update
+  // invalid rows.
+  DebugAssert(lqp_is_validated(selection_lqp), "UPDATE expects rows to be updated to have been validated");
 
-  const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
-  selection_lqp = _translate_predicate_expression(where_expression, selection_lqp);
+  if (update.where) {
+    const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
+    selection_lqp = _translate_predicate_expression(where_expression, selection_lqp);
+  }
 
   for (const auto* update_clause : *update.updates) {
     const auto column_name = std::string{update_clause->column};
