@@ -12,7 +12,7 @@
 #include "tpch/tpch_db_generator.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
 
@@ -101,8 +101,8 @@ void BenchmarkRunner::run() {
       }
       for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
         const auto file_prefix = name + "-PQP-" + std::to_string(pqp_idx);
-        SQLQueryPlanVisualizer{graphviz_config, {}, {}, {}}.visualize(*pqps[pqp_idx], file_prefix + ".dot",
-                                                                      file_prefix + ".svg");
+        PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".dot",
+                                                             file_prefix + ".svg");
       }
     }
   }
@@ -320,7 +320,7 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
 void BenchmarkRunner::_store_plan(const QueryID query_id, SQLPipeline& pipeline) {
   if (_config.enable_visualization) {
     if (_query_plans[query_id].lqps.empty()) {
-      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+      QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_physical_plans()};
       _query_plans[query_id] = plans;
     }
   }

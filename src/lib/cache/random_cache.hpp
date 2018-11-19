@@ -6,18 +6,18 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_cache.hpp"
+#include "abstract_cache_impl.hpp"
 
 namespace opossum {
 
 // Generic cache implementation using a random eviction policy.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class RandomCache : public AbstractCache<Key, Value> {
+class RandomCache : public AbstractCacheImpl<Key, Value> {
  public:
   typedef typename std::pair<Key, Value> KeyValuePair;
 
-  explicit RandomCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _gen(_rd()), _rand(0, capacity - 1) {
+  explicit RandomCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _gen(_rd()), _rand(0, capacity - 1) {
     _list.reserve(capacity);
   }
 

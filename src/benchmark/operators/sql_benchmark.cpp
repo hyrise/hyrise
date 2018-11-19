@@ -7,6 +7,7 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -20,7 +21,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
     // Disable and clear all SQL caches.
-    SQLQueryCache<SQLQueryPlan>::get().resize(0);
+    SQLPhysicalPlanCache::get().resize(0);
 
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
@@ -61,12 +62,12 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
   void BM_QueryPlanCache(benchmark::State& st) {  // NOLINT
     // Enable query plan cache.
-    SQLQueryCache<SQLQueryPlan>::get().clear();
-    SQLQueryCache<SQLQueryPlan>::get().resize(16);
+    SQLPhysicalPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().resize(16);
 
     while (st.KeepRunning()) {
       auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
-      pipeline_statement.get_query_plan();
+      pipeline_statement.get_physical_plan();
     }
   }
 
