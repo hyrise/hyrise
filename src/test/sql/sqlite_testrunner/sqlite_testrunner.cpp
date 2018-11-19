@@ -26,6 +26,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -96,7 +97,7 @@ class SQLiteTestRunner : public BaseTestWithParam<TestConfiguration> {
       }
     }
 
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    SQLPhysicalPlanCache::get().clear();
   }
 
   // Structure to cache initially loaded tables and store their file paths
@@ -142,12 +143,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   SCOPED_TRACE("SQLite " + query + (use_jit ? " with JIT" : " without JIT"));
 
-  const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
-
-  auto sql_pipeline = SQLPipelineBuilder{query}
-                          .with_prepared_statement_cache(prepared_statement_cache)
-                          .with_lqp_translator(lqp_translator)
-                          .create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 

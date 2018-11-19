@@ -32,6 +32,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -130,8 +131,15 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator) {}
 
-const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLTranslator::value_placeholders() const {
-  return _parameter_id_allocator->value_placeholders();
+std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
+  const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
+  auto parameter_ids = std::vector<ParameterID>{parameter_ids_of_value_placeholders.size()};
+
+  for (const auto& [value_placeholder_id, parameter_id] : parameter_ids_of_value_placeholders) {
+    parameter_ids[value_placeholder_id] = parameter_id;
+  }
+
+  return parameter_ids;
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_result(
@@ -163,6 +171,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_create(static_cast<const hsql::CreateStatement&>(statement));
     case hsql::kStmtDrop:
       return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
+    case hsql::kStmtPrepare:
+      return _translate_prepare(static_cast<const hsql::PrepareStatement&>(statement));
+    case hsql::kStmtExecute:
+      return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
+
     default:
       FailInput("SQL statement type not supported");
   }
@@ -1008,6 +1021,35 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
     default:
       FailInput("hsql::DropType is not supported.");
   }
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::PrepareStatement& prepare_statement) {
+  hsql::SQLParserResult parse_result;
+  hsql::SQLParser::parse(prepare_statement.query, &parse_result);
+
+  AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
+  AssertInput(parse_result.size() == 1u, "PREPAREd statement can only contain a single SQL statement");
+
+  auto prepared_plan_translator = SQLTranslator{};
+
+  const auto lqp = prepared_plan_translator.translate_parser_result(parse_result).at(0);
+
+  const auto parameter_ids = prepared_plan_translator.parameter_ids_of_value_placeholders();
+
+  const auto lqp_prepared_plan = std::make_shared<PreparedPlan>(lqp, parameter_ids);
+
+  return CreatePreparedPlanNode::make(prepare_statement.name, lqp_prepared_plan);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
+  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{execute_statement.parameters->size()};
+  for (auto parameter_idx = size_t{0}; parameter_idx < execute_statement.parameters->size(); ++parameter_idx) {
+    parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx]);
+  }
+
+  const auto prepared_plan = StorageManager::get().get_prepared_plan(execute_statement.name);
+
+  return prepared_plan->instantiate(parameters);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

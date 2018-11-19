@@ -1,20 +1,20 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "sql/gdfs_cache.hpp"
-#include "sql/gds_cache.hpp"
-#include "sql/lru_cache.hpp"
-#include "sql/lru_k_cache.hpp"
-#include "sql/random_cache.hpp"
+#include "cache/gdfs_cache.hpp"
+#include "cache/gds_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/lru_k_cache.hpp"
+#include "cache/random_cache.hpp"
 
 namespace opossum {
 
 // Test for the different cache implementations in lib/sql.
 // Not using SQL types in this test, only testing cache eviction.
-class SQLBasicCacheTest : public BaseTest {};
+class CachePolicyTest : public BaseTest {};
 
 // LRU Strategy
-TEST_F(SQLBasicCacheTest, LRUCacheTest) {
+TEST_F(CachePolicyTest, LRUCacheTest) {
   LRUCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -50,7 +50,7 @@ TEST_F(SQLBasicCacheTest, LRUCacheTest) {
 }
 
 // LRU-K (K = 2)
-TEST_F(SQLBasicCacheTest, LRU2CacheTest) {
+TEST_F(CachePolicyTest, LRU2CacheTest) {
   LRUKCache<2, int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -86,7 +86,7 @@ TEST_F(SQLBasicCacheTest, LRU2CacheTest) {
 }
 
 // GDS Strategy
-TEST_F(SQLBasicCacheTest, GDSCacheTest) {
+TEST_F(CachePolicyTest, GDSCacheTest) {
   GDSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -137,7 +137,7 @@ TEST_F(SQLBasicCacheTest, GDSCacheTest) {
 }
 
 // GDFS Strategy
-TEST_F(SQLBasicCacheTest, GDFSCacheTest) {
+TEST_F(CachePolicyTest, GDFSCacheTest) {
   GDFSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -188,7 +188,7 @@ TEST_F(SQLBasicCacheTest, GDFSCacheTest) {
 }
 
 // Random Replacement Strategy
-TEST_F(SQLBasicCacheTest, RandomCacheTest) {
+TEST_F(CachePolicyTest, RandomCacheTest) {
   RandomCache<int, int> cache(3);
 
   ASSERT_FALSE(cache.has(1));
