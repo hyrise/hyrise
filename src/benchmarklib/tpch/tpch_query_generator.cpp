@@ -29,6 +29,12 @@ void TPCHQueryGenerator::_generate_names() {
 
 void TPCHQueryGenerator::_generate_preparation_queries() {
   for (const auto& query_id : _selected_queries) {
+    if (query_id + 1 == 15) {
+      // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
+      // to manually build this query once we start randomizing the parameters.
+      _preparation_queries.emplace_back("");
+      continue;
+    }
     _preparation_queries.emplace_back(tpch_queries.find(query_id + 1)->second);
   }
 }
@@ -42,23 +48,23 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH3  ('BUILDING', '1995-03-15', '1995-03-15');",
       "EXECUTE TPCH4  ('1996-07-01', '1996-10-01');",
       "EXECUTE TPCH5  ('AMERICA', '1994-01-01', '1995-01-01');",
-      "EXECUTE TPCH6  ();",
+      "EXECUTE TPCH6;",
       "EXECUTE TPCH7  ('IRAN', 'IRAQ', 'IRAQ', 'IRAN');",
       "EXECUTE TPCH8  ('BRAZIL', 'AMERICA', 'ECONOMY ANODIZED STEEL');",
       "EXECUTE TPCH9  ('%green%');",
       "EXECUTE TPCH10 ('1993-10-01', '1994-01-01');",
       "EXECUTE TPCH11 ('GERMANY', 0.0001, 'GERMANY');",
       "EXECUTE TPCH12 ('MAIL', 'SHIP', '1994-01-01', '1995-01-01');",
-      "EXECUTE TPCH13 ();",
+      "EXECUTE TPCH13;",
       "EXECUTE TPCH14 ('1995-09-01', '1995-10-01');",
-      "EXECUTE TPCH15a ('1993-05-13', '1993-08-13'); EXECUTE TPCH15b (); EXECUTE TPCH15c;",
+      tpch_queries.find(15)->second,  // see comment in _generate_preparation_queries.
       "EXECUTE TPCH16 ('Brand#45', 'MEDIUM POLISHED%', 49, 14, 23, 45, 19, 3, 36, 9);",
       "EXECUTE TPCH17 ('Brand#23', 'MED BOX');",
       "EXECUTE TPCH18 (300);",
       "EXECUTE TPCH19 ('Brand#12', 1, 1, 'Brand#23', 10, 10, 'Brand#34', 20, 20);",
       "EXECUTE TPCH20 ('forest%', '1995-01-01', '1994-01-01', 'CANADA');",
       "EXECUTE TPCH21 ('SAUDI ARABIA');",
-      "EXECUTE TPCH22 ();"};
+      "EXECUTE TPCH22;"};
 
   if (!execute_statements[query_id].empty()) return execute_statements[query_id];
 

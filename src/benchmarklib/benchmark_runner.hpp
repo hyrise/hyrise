@@ -84,8 +84,6 @@ class BenchmarkRunner {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   Duration _total_run_duration{};
-
-  std::shared_ptr<PreparedStatementCache> _prepared_statements;
 };
 
 }  // namespace opossum

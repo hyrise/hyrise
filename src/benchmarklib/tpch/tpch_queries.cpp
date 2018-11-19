@@ -593,15 +593,15 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_15 =
-    R"(PREPARE TPCH15a FROM 'create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= ?
-      AND l_shipdate < ? GROUP BY l_suppkey';
+    R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
+      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
+      AND l_shipdate < '1993-08-13' GROUP BY l_suppkey';
 
       PREPARE TPCH15b FROM 'SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
       FROM revenue) ORDER BY s_suppkey';
 
-      PREPARE TPCH15c FROM 'drop view revenue';)";
+      ;)";
 
 /**
  * TPC-H 16
@@ -631,7 +631,7 @@ const char* const tpch_query_16 =
     R"(PREPARE TPCH16 FROM 'SELECT p_brand, p_type, p_size, count(distinct ps_suppkey) as supplier_cnt
       FROM partsupp, part WHERE p_partkey = ps_partkey AND p_brand <> ?
       AND p_type not like ? AND p_size in (?, ?, ?, ?, ?, ?, ?, ?)
-      AND ps_suppkey not in (SELECT s_suppkey FROM supplier WHERE s_comment like '%Customer%Complaints%')
+      AND ps_suppkey not in (SELECT s_suppkey FROM supplier WHERE s_comment like ''%Customer%Complaints%'')
       GROUP BY p_brand, p_type, p_size ORDER BY supplier_cnt DESC, p_brand, p_type, p_size';)";
 
 /**
@@ -731,13 +731,13 @@ const char* const tpch_query_18 =
 const char* const tpch_query_19 =
 
     R"(PREPARE TPCH19 FROM 'SELECT SUM(l_extendedprice * (1 - l_discount) ) as revenue FROM lineitem, part WHERE (( p_partkey = l_partkey AND
-  p_brand = ? AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND l_quantity >= ? AND l_quantity
-  <= ? + 10 AND p_size between 1 AND 5 AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or
-  (p_partkey = l_partkey AND p_brand = ? AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') AND
-  l_quantity >= ? AND l_quantity <= ? + 10 AND p_size between 1 AND 10 AND l_shipmode in ('AIR', 'AIR REG') AND
-  l_shipinstruct = 'DELIVER IN PERSON') or (p_partkey = l_partkey AND p_brand = ? AND p_container in (
-  'LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') AND l_quantity >= ? AND l_quantity <= ? + 10 AND p_size between 1 AND 15
-  AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON'))';)";
+      p_brand = ? AND p_container in ( ''SM CASE'', ''SM BOX'', ''SM PACK'', ''SM PKG'') AND l_quantity >= ? AND l_quantity
+      <= ? + 10 AND p_size between 1 AND 5 AND l_shipmode in (''AIR'', ''AIR REG'') AND l_shipinstruct = ''DELIVER IN PERSON'') or
+      (p_partkey = l_partkey AND p_brand = ? AND p_container in (''MED BAG'', ''MED BOX'', ''MED PKG'', ''MED PACK'') AND
+      l_quantity >= ? AND l_quantity <= ? + 10 AND p_size between 1 AND 10 AND l_shipmode in (''AIR'', ''AIR REG'') AND
+      l_shipinstruct = ''DELIVER IN PERSON'') or (p_partkey = l_partkey AND p_brand = ? AND p_container in (
+      ''LG CASE'', ''LG BOX'', ''LG PACK'', ''LG PKG'') AND l_quantity >= ? AND l_quantity <= ? + 10 AND p_size between 1 AND 15
+      AND l_shipmode in (''AIR'', ''AIR REG'') AND l_shipinstruct = ''DELIVER IN PERSON''))';)";
 
 /**
  * TPC-H 20
@@ -822,7 +822,7 @@ const char* const tpch_query_20 =
  */
 const char* const tpch_query_21 =
     R"(PREPARE TPCH21 FROM 'SELECT s_name, count(*) as numwait FROM supplier, lineitem l1, orders, nation WHERE s_suppkey = l1.l_suppkey
-      AND o_orderkey = l1.l_orderkey AND o_orderstatus = 'F' AND l1.l_receiptdate > l1.l_commitdate AND exists
+      AND o_orderkey = l1.l_orderkey AND o_orderstatus = ''F'' AND l1.l_receiptdate > l1.l_commitdate AND exists
       (SELECT * FROM lineitem l2 WHERE l2.l_orderkey = l1.l_orderkey AND l2.l_suppkey <> l1.l_suppkey) AND not exists
       (SELECT * FROM lineitem l3 WHERE l3.l_orderkey = l1.l_orderkey AND l3.l_suppkey <> l1.l_suppkey AND
       l3.l_receiptdate > l3.l_commitdate ) AND s_nationkey = n_nationkey AND n_name = ? GROUP BY s_name
@@ -872,7 +872,7 @@ const char* const tpch_query_21 =
  *  1. Renamed SUBSTRING to SUBSTR because SQLite does not support the former
  */
 const char* const tpch_query_22 =
-    R"(PREPARE TPCH2 FROM 'SELECT
+    R"(PREPARE TPCH22 FROM 'SELECT
          CNTRYCODE, COUNT(*) AS NUMCUST, SUM(c_acctbal) AS TOTACCTBAL
        FROM
          (SELECT

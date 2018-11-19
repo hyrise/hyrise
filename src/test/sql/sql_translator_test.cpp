@@ -1603,6 +1603,19 @@ TEST_F(SQLTranslatorTest, Execute) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
+  const auto prepared_lqp = AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+    stored_table_node_int_float);
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
+
+  StorageManager::get().add_prepared_plan("another_prepared_plan", prepared_plan);
+
+  const auto actual_lqp = compile_query("EXECUTE another_prepared_plan ()");
+
+  EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
+}
+
 TEST_F(SQLTranslatorTest, OperatorPrecedence) {
   /**
    * Though the operator precedence is handled by the sql-parser, do some checks here as well that it works as expected.

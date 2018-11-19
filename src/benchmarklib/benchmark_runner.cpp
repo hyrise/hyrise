@@ -40,8 +40,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
-
-  _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
 }
 
 BenchmarkRunner::~BenchmarkRunner() {
@@ -53,8 +51,9 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   // Run the preparation queries
   _config.out << "- Preparing queries..." << std::endl;
-  for (const auto& query : _query_generator->selected_queries()) {
-    _execute_query(query, true);
+  for (const auto& query_id : _query_generator->selected_queries()) {
+    _config.out << "- Preparing " << _query_generator->query_names()[query_id] << std::endl;
+    _execute_query(query_id, true);
   }
 
   _config.out << "- Starting Benchmark..." << std::endl;
@@ -291,10 +290,11 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
   const auto& sql =
       prepare ? _query_generator->preparation_queries()[query_id] : _query_generator->build_query(query_id);
 
+  if (prepare && sql.empty()) return {};
+
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-  pipeline_builder.with_prepared_statement_cache(_prepared_statements);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
 
@@ -317,10 +317,9 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const bool prepare,
   const auto& sql =
       prepare ? _query_generator->preparation_queries()[query_id] : _query_generator->build_query(query_id);
 
-  _config.out << "- Preparing " << _query_generator->query_names()[query_id] << std::endl;
+  if (prepare && sql.empty()) return;
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
-  pipeline_builder.with_prepared_statement_cache(_prepared_statements);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
   // Execute the query, we don't care about the results

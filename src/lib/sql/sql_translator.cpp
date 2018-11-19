@@ -1024,8 +1024,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
-  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{execute_statement.parameters->size()};
-  for (auto parameter_idx = size_t{0}; parameter_idx < execute_statement.parameters->size(); ++parameter_idx) {
+  const auto num_parameters = execute_statement.parameters ? execute_statement.parameters->size() : 0;
+  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{num_parameters};
+  for (auto parameter_idx = size_t{0}; parameter_idx < num_parameters; ++parameter_idx) {
     parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx]);
   }
 
