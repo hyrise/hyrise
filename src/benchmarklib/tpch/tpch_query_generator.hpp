@@ -12,6 +12,7 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
 
  protected:
   void _generate_names();
+  void _generate_preparation_queries();
 };
 
 }  // namespace opossum

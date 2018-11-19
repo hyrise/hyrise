@@ -2,6 +2,8 @@
 
 namespace opossum {
 
+const std::vector<std::string>& AbstractQueryGenerator::preparation_queries() const { return _preparation_queries; }
+
 const std::vector<std::string>& AbstractQueryGenerator::query_names() const { return _query_names; }
 
 size_t AbstractQueryGenerator::available_query_count() const { return _query_names.size(); }

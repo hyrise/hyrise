@@ -33,14 +33,14 @@ namespace {
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_1 =
-    R"(SELECT l_returnflag, l_linestatus, SUM(l_quantity) as sum_qty, SUM(l_extendedprice) as sum_base_price,
+    R"(PREPARE TPCH1 FROM 'SELECT l_returnflag, l_linestatus, SUM(l_quantity) as sum_qty, SUM(l_extendedprice) as sum_base_price,
       SUM(l_extendedprice*(1-l_discount)) as sum_disc_price,
       SUM(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge, AVG(l_quantity) as avg_qty,
       AVG(l_extendedprice) as avg_price, AVG(l_discount) as avg_disc, COUNT(*) as count_order
       FROM lineitem
-      WHERE l_shipdate <= '1998-09-02'
+      WHERE l_shipdate <= ?
       GROUP BY l_returnflag, l_linestatus
-      ORDER BY l_returnflag, l_linestatus;)";
+      ORDER BY l_returnflag, l_linestatus';)";
 
 /**
  * TPC-H 2
@@ -73,13 +73,13 @@ const char* const tpch_query_1 =
  *  1. Random values are hardcoded
  */
 const char* const tpch_query_2 =
-    R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
+    R"(PREPARE TPCH2 FROM 'SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
        FROM part, supplier, partsupp, nation, region
-       WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type like '%BRASS' AND
-       s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE' AND
+       WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = ? AND p_type like ? AND
+       s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = ? AND
        ps_supplycost = (SELECT min(ps_supplycost) FROM partsupp, supplier, nation, region
        WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND s_nationkey = n_nationkey
-       AND n_regionkey = r_regionkey AND r_name = 'EUROPE') ORDER BY s_acctbal DESC, n_name, s_name, p_partkey;)";
+       AND n_regionkey = r_regionkey AND r_name = ?) ORDER BY s_acctbal DESC, n_name, s_name, p_partkey';)";
 
 /**
  * TPC-H 3
@@ -97,12 +97,12 @@ const char* const tpch_query_2 =
  *  1. Random values are hardcoded
  */
 const char* const tpch_query_3 =
-    R"(SELECT l_orderkey, SUM(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority
+    R"(PREPARE TPCH3 FROM 'SELECT l_orderkey, SUM(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority
       FROM customer, orders, lineitem
-      WHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey
-      AND o_orderdate < '1995-03-15' AND l_shipdate > '1995-03-15'
+      WHERE c_mktsegment = ? AND c_custkey = o_custkey AND l_orderkey = o_orderkey
+      AND o_orderdate < ? AND l_shipdate > ?
       GROUP BY l_orderkey, o_orderdate, o_shippriority
-      ORDER BY revenue DESC, o_orderdate;)";
+      ORDER BY revenue DESC, o_orderdate';)";
 
 /**
  * TPC-H 4
@@ -133,10 +133,10 @@ const char* const tpch_query_3 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_4 =
-    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
-    o_orderdate < '1996-10-01' AND exists (
+    R"(PREPARE TPCH4 FROM 'SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= ? AND
+    o_orderdate < ? AND exists (
     SELECT * FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
-    GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
+    GROUP BY o_orderpriority ORDER BY o_orderpriority';)";
 
 /**
  * TPC-H 5
@@ -175,13 +175,13 @@ const char* const tpch_query_4 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_5 =
-    R"(SELECT n_name, SUM(l_extendedprice * (1 - l_discount)) as revenue
+    R"(PREPARE TPCH5 FROM 'SELECT n_name, SUM(l_extendedprice * (1 - l_discount)) as revenue
       FROM customer, orders, lineitem, supplier, nation, region
       WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND l_suppkey = s_suppkey AND c_nationkey = s_nationkey
-      AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'AMERICA' AND o_orderdate >= '1994-01-01'
-      AND o_orderdate < '1995-01-01'
+      AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = ? AND o_orderdate >= ?
+      AND o_orderdate < ?
       GROUP BY n_name
-      ORDER BY revenue DESC;)";
+      ORDER BY revenue DESC';)";
 
 /**
  * TPC-H 6
@@ -200,11 +200,14 @@ const char* const tpch_query_5 =
  *  2. ".06 + 0.01" is less than "0.07" in sqlite, but >= "0.07" in hyrise.
  *    a. Add a small offset ".06 + 0.01001" to include records with a l_discount of "0.07"
  */
+
+// TODO verify if no random
+
 const char* const tpch_query_6 =
-    R"(SELECT sum(l_extendedprice*l_discount) AS REVENUE
+    R"(PREPARE TPCH6 FROM 'SELECT sum(l_extendedprice*l_discount) AS REVENUE
       FROM lineitem
-      WHERE l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01'
-      AND l_discount BETWEEN .06 - 0.01 AND .06 + 0.01001 AND l_quantity < 24;)";
+      WHERE l_shipdate >= ''1994-01-01'' AND l_shipdate < ''1995-01-01''
+      AND l_discount BETWEEN .06 - 0.01 AND .06 + 0.01001 AND l_quantity < 24';)";
 
 /**
  * TPC-H 7
@@ -243,7 +246,7 @@ const char* const tpch_query_6 =
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_7 =
-    R"(SELECT
+    R"(PREPARE TPCH7 FROM 'SELECT
           supp_nation,
           cust_nation,
           l_year,
@@ -267,14 +270,14 @@ const char* const tpch_query_7 =
               c_custkey = o_custkey AND
               s_nationkey = n1.n_nationkey AND
               c_nationkey = n2.n_nationkey AND
-              ((n1.n_name = 'IRAN' AND n2.n_name = 'IRAQ') OR
-               (n1.n_name = 'IRAQ' AND n2.n_name = 'IRAN')) AND
-              l_shipdate BETWEEN '1995-01-01' AND '1996-12-31'
+              ((n1.n_name = ? AND n2.n_name = ?) OR
+               (n1.n_name = ? AND n2.n_name = ?)) AND
+              l_shipdate BETWEEN ''1995-01-01'' AND ''1996-12-31''
           ) as shipping
       GROUP BY
           supp_nation, cust_nation, l_year
       ORDER BY
-          supp_nation, cust_nation, l_year;)";
+          supp_nation, cust_nation, l_year';)";
 
 /**
  * TPC-H 8
@@ -325,13 +328,13 @@ const char* const tpch_query_7 =
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_8 =
-    R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share
+    R"(PREPARE TPCH8 FROM 'SELECT o_year, SUM(case when nation = ? then volume else 0 end) / SUM(volume) as mkt_share
      FROM (SELECT SUBSTR(o_orderdate, 0, 4) as o_year, l_extendedprice * (1-l_discount) as volume,
      n2.n_name as nation FROM part, supplier, lineitem, orders, customer, nation n1, nation n2, region
      WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND
      o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND
-     r_name = 'AMERICA' AND s_nationkey = n2.n_nationkey AND o_orderdate between '1995-01-01'
-     AND '1996-12-31' AND p_type = 'ECONOMY ANODIZED STEEL') as all_nations GROUP BY o_year ORDER BY o_year;)";
+     r_name = ? AND s_nationkey = n2.n_nationkey AND o_orderdate between ''1995-01-01''
+     AND ''1996-12-31'' AND p_type = ?) as all_nations GROUP BY o_year ORDER BY o_year';)";
 
 /**
  * TPC-H 9
@@ -366,12 +369,12 @@ const char* const tpch_query_8 =
  *    a. Use SUBSTR instead
  */
 const char* const tpch_query_9 =
-    R"(SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 0, 4) as o_year,
+    R"(PREPARE TPCH9 FROM 'SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 0, 4) as o_year,
       l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount
       FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey
       AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey
-      AND s_nationkey = n_nationkey AND p_name like '%green%') as profit
-      GROUP BY nation, o_year ORDER BY nation, o_year DESC;)";
+      AND s_nationkey = n_nationkey AND p_name like ?) as profit
+      GROUP BY nation, o_year ORDER BY nation, o_year DESC';)";
 
 /**
  * TPC-H 10
@@ -417,13 +420,13 @@ const char* const tpch_query_9 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_10 =
-    R"(SELECT c_custkey, c_name, SUM(l_extendedprice * (1 - l_discount)) as revenue, c_acctbal, n_name, c_address,
+    R"(PREPARE TPCH10 FROM 'SELECT c_custkey, c_name, SUM(l_extendedprice * (1 - l_discount)) as revenue, c_acctbal, n_name, c_address,
       c_phone, c_comment
       FROM customer, orders, lineitem, nation
-      WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate >= '1993-10-01'
-      AND o_orderdate < '1994-01-01' AND l_returnflag = 'R' AND c_nationkey = n_nationkey
+      WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate >= ?
+      AND o_orderdate < ? AND l_returnflag = ''R'' AND c_nationkey = n_nationkey
       GROUP BY c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment
-      ORDER BY revenue DESC;)";
+      ORDER BY revenue DESC';)";
 
 /**
  * TPC-H 11
@@ -454,11 +457,11 @@ const char* const tpch_query_10 =
 
  */
 const char* const tpch_query_11 =
-    R"(SELECT ps_partkey, SUM(ps_supplycost * ps_availqty) as value FROM partsupp, supplier, nation
-      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY'
+    R"(PREPARE TPCH11 FROM 'SELECT ps_partkey, SUM(ps_supplycost * ps_availqty) as value FROM partsupp, supplier, nation
+      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = ?
       GROUP BY ps_partkey having SUM(ps_supplycost * ps_availqty) > (
-      SELECT SUM(ps_supplycost * ps_availqty) * 0.0001 FROM partsupp, supplier, nation
-      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY') ORDER BY value DESC;)";
+      SELECT SUM(ps_supplycost * ps_availqty) * ? FROM partsupp, supplier, nation
+      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = ?) ORDER BY value DESC';)";
 
 /**
  * TPC-H 12
@@ -495,12 +498,12 @@ const char* const tpch_query_11 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_12 =
-    R"(SELECT l_shipmode, SUM(case when o_orderpriority ='1-URGENT' or o_orderpriority ='2-HIGH' then 1 else 0 end)
-      as high_line_count, SUM(case when o_orderpriority <> '1-URGENT' AND
-      o_orderpriority <> '2-HIGH' then 1 else 0 end) as low_line_count FROM orders, lineitem
-      WHERE o_orderkey = l_orderkey AND l_shipmode IN ('MAIL','SHIP') AND l_commitdate < l_receiptdate
-      AND l_shipdate < l_commitdate AND l_receiptdate >= '1994-01-01' AND
-      l_receiptdate < '1995-01-01' GROUP BY l_shipmode ORDER BY l_shipmode;)";
+    R"(PREPARE TPCH12 FROM 'SELECT l_shipmode, SUM(case when o_orderpriority =''1-URGENT'' or o_orderpriority =''2-HIGH'' then 1 else 0 end)
+      as high_line_count, SUM(case when o_orderpriority <> ''1-URGENT'' AND
+      o_orderpriority <> ''2-HIGH'' then 1 else 0 end) as low_line_count FROM orders, lineitem
+      WHERE o_orderkey = l_orderkey AND l_shipmode IN (?, ?) AND l_commitdate < l_receiptdate
+      AND l_shipdate < l_commitdate AND l_receiptdate >= ? AND
+      l_receiptdate < ? GROUP BY l_shipmode ORDER BY l_shipmode';)";
 
 /**
  * TPC-H 13
@@ -523,10 +526,12 @@ const char* const tpch_query_12 =
  *  1. Random values are hardcoded
  *  2. Subselect column aliases are moved into subselect because SQLite does not support aliases at the original position
  */
+
+// TODO which random values?
 const char* const tpch_query_13 =
-    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
-      FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like '%special%request%'
-      GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
+    R"(PREPARE TPCH13 FROM 'SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
+      FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like ''%special%request%''
+      GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC';)";
 
 /**
  * TPC-H 14
@@ -551,9 +556,9 @@ const char* const tpch_query_13 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_14 =
-    R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1-l_discount) else 0 end)
+    R"(PREPARE TPCH14 FROM 'SELECT 100.00 * SUM(case when p_type like ''PROMO%'' then l_extendedprice*(1-l_discount) else 0 end)
       / SUM(l_extendedprice * (1 - l_discount)) as promo_revenue FROM lineitem, part WHERE l_partkey = p_partkey
-      AND l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01';)";
+      AND l_shipdate >= ? AND l_shipdate < ?';)";
 
 /**
  * TPC-H 15
@@ -588,15 +593,15 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_15 =
-    R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
-      AND l_shipdate < '1993-08-13' GROUP BY l_suppkey;
+    R"(PREPARE TPCH15a FROM 'create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
+      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= ?
+      AND l_shipdate < ? GROUP BY l_suppkey';
 
-      SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
+      PREPARE TPCH15b FROM 'SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
-      FROM revenue) ORDER BY s_suppkey;
+      FROM revenue) ORDER BY s_suppkey';
 
-      drop view revenue;)";
+      PREPARE TPCH15c FROM 'drop view revenue';)";
 
 /**
  * TPC-H 16
@@ -623,11 +628,11 @@ const char* const tpch_query_15 =
 
  */
 const char* const tpch_query_16 =
-    R"(SELECT p_brand, p_type, p_size, count(distinct ps_suppkey) as supplier_cnt
-      FROM partsupp, part WHERE p_partkey = ps_partkey AND p_brand <> 'Brand#45'
-      AND p_type not like 'MEDIUM POLISHED%' AND p_size in (49, 14, 23, 45, 19, 3, 36, 9)
+    R"(PREPARE TPCH16 FROM 'SELECT p_brand, p_type, p_size, count(distinct ps_suppkey) as supplier_cnt
+      FROM partsupp, part WHERE p_partkey = ps_partkey AND p_brand <> ?
+      AND p_type not like ? AND p_size in (?, ?, ?, ?, ?, ?, ?, ?)
       AND ps_suppkey not in (SELECT s_suppkey FROM supplier WHERE s_comment like '%Customer%Complaints%')
-      GROUP BY p_brand, p_type, p_size ORDER BY supplier_cnt DESC, p_brand, p_type, p_size;)";
+      GROUP BY p_brand, p_type, p_size ORDER BY supplier_cnt DESC, p_brand, p_type, p_size';)";
 
 /**
  * TPC-H 17
@@ -651,9 +656,9 @@ const char* const tpch_query_16 =
 
  */
 const char* const tpch_query_17 =
-    R"(SELECT SUM(l_extendedprice) / 7.0 as avg_yearly FROM lineitem, part WHERE p_partkey = l_partkey
-      AND p_brand = 'Brand#23' AND p_container = 'MED BOX' AND l_quantity < (SELECT 0.2 * avg(l_quantity)
-      FROM lineitem WHERE l_partkey = p_partkey);)";
+    R"(PREPARE TPCH17 FROM 'SELECT SUM(l_extendedprice) / 7.0 as avg_yearly FROM lineitem, part WHERE p_partkey = l_partkey
+      AND p_brand = ? AND p_container = ? AND l_quantity < (SELECT 0.2 * avg(l_quantity)
+      FROM lineitem WHERE l_partkey = p_partkey)';)";
 
 /**
  * TPC-H 18
@@ -679,10 +684,10 @@ const char* const tpch_query_17 =
 
  */
 const char* const tpch_query_18 =
-    R"(SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, SUM(l_quantity)
+    R"(PREPARE TPCH18 FROM 'SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, SUM(l_quantity)
       FROM customer, orders, lineitem WHERE o_orderkey in (SELECT l_orderkey FROM lineitem
-      GROUP BY l_orderkey having SUM(l_quantity) > 300) AND c_custkey = o_custkey AND o_orderkey = l_orderkey
-      GROUP BY c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice ORDER BY o_totalprice DESC, o_orderdate;)";
+      GROUP BY l_orderkey having SUM(l_quantity) > ?) AND c_custkey = o_custkey AND o_orderkey = l_orderkey
+      GROUP BY c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice ORDER BY o_totalprice DESC, o_orderdate';)";
 
 /**
  * TPC-H 19
@@ -722,19 +727,17 @@ const char* const tpch_query_18 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_19 =
 
-    R"(SELECT SUM(l_extendedprice * (1 - l_discount) ) as revenue FROM lineitem, part WHERE (( p_partkey = l_partkey AND
-  p_brand = 'Brand#12' AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND l_quantity >= 1 AND l_quantity
-  <= 1 + 10 AND p_size between 1 AND 5 AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or
-  (p_partkey = l_partkey AND p_brand = 'Brand#23' AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') AND
-  l_quantity >= 10 AND l_quantity <= 10 + 10 AND p_size between 1 AND 10 AND l_shipmode in ('AIR', 'AIR REG') AND
-  l_shipinstruct = 'DELIVER IN PERSON') or (p_partkey = l_partkey AND p_brand = 'Brand#34' AND p_container in (
-  'LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') AND l_quantity >= 20 AND l_quantity <= 20 + 10 AND p_size between 1 AND 15
-  AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON'));)";
+    R"(PREPARE TPCH19 FROM 'SELECT SUM(l_extendedprice * (1 - l_discount) ) as revenue FROM lineitem, part WHERE (( p_partkey = l_partkey AND
+  p_brand = ? AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND l_quantity >= ? AND l_quantity
+  <= ? + 10 AND p_size between 1 AND 5 AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or
+  (p_partkey = l_partkey AND p_brand = ? AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') AND
+  l_quantity >= ? AND l_quantity <= ? + 10 AND p_size between 1 AND 10 AND l_shipmode in ('AIR', 'AIR REG') AND
+  l_shipinstruct = 'DELIVER IN PERSON') or (p_partkey = l_partkey AND p_brand = ? AND p_container in (
+  'LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') AND l_quantity >= ? AND l_quantity <= ? + 10 AND p_size between 1 AND 15
+  AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON'))';)";
 
 /**
  * TPC-H 20
@@ -773,11 +776,11 @@ const char* const tpch_query_19 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_20 =
-    R"(SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey in (SELECT ps_suppkey FROM partsupp
-      WHERE ps_partkey in (SELECT p_partkey FROM part WHERE p_name like 'forest%') AND ps_availqty >
+    R"(PREPARE TPCH20 FROM 'SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey in (SELECT ps_suppkey FROM partsupp
+      WHERE ps_partkey in (SELECT p_partkey FROM part WHERE p_name like ?) AND ps_availqty >
       (SELECT 0.5 * SUM(l_quantity) FROM lineitem WHERE l_partkey = ps_partkey AND l_suppkey = ps_suppkey AND
-      l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01')) AND s_nationkey = n_nationkey
-      AND n_name = 'CANADA' ORDER BY s_name;)";
+      l_shipdate >= ? AND l_shipdate < ?)) AND s_nationkey = n_nationkey
+      AND n_name = ? ORDER BY s_name';)";
 
 /**
  * TPC-H 21
@@ -818,12 +821,12 @@ const char* const tpch_query_20 =
 
  */
 const char* const tpch_query_21 =
-    R"(SELECT s_name, count(*) as numwait FROM supplier, lineitem l1, orders, nation WHERE s_suppkey = l1.l_suppkey
+    R"(PREPARE TPCH21 FROM 'SELECT s_name, count(*) as numwait FROM supplier, lineitem l1, orders, nation WHERE s_suppkey = l1.l_suppkey
       AND o_orderkey = l1.l_orderkey AND o_orderstatus = 'F' AND l1.l_receiptdate > l1.l_commitdate AND exists
       (SELECT * FROM lineitem l2 WHERE l2.l_orderkey = l1.l_orderkey AND l2.l_suppkey <> l1.l_suppkey) AND not exists
       (SELECT * FROM lineitem l3 WHERE l3.l_orderkey = l1.l_orderkey AND l3.l_suppkey <> l1.l_suppkey AND
-      l3.l_receiptdate > l3.l_commitdate ) AND s_nationkey = n_nationkey AND n_name = 'SAUDI ARABIA' GROUP BY s_name
-      ORDER BY numwait DESC, s_name;)";
+      l3.l_receiptdate > l3.l_commitdate ) AND s_nationkey = n_nationkey AND n_name = ? GROUP BY s_name
+      ORDER BY numwait DESC, s_name';)";
 
 /**
  * TPC-H 22
@@ -869,7 +872,7 @@ const char* const tpch_query_21 =
  *  1. Renamed SUBSTRING to SUBSTR because SQLite does not support the former
  */
 const char* const tpch_query_22 =
-    R"(SELECT
+    R"(PREPARE TPCH2 FROM 'SELECT
          CNTRYCODE, COUNT(*) AS NUMCUST, SUM(c_acctbal) AS TOTACCTBAL
        FROM
          (SELECT
@@ -877,18 +880,18 @@ const char* const tpch_query_22 =
           FROM
             customer
           WHERE
-            SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17') AND
+            SUBSTR(c_phone,1,2) IN (''13'', ''31'', ''23'', ''29'', ''30'', ''18'', ''17'') AND
             c_acctbal > (SELECT
                            AVG(c_acctbal)
                          FROM
                            customer
                          WHERE
                           c_acctbal > 0.00 AND
-                          SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17')) AND
+                          SUBSTR(c_phone,1,2) IN (''13'', ''31'', ''23'', ''29'', ''30'', ''18'', ''17'')) AND
             NOT EXISTS ( SELECT * FROM orders WHERE o_custkey = c_custkey)
         ) AS CUSTSALE
        GROUP BY CNTRYCODE
-       ORDER BY CNTRYCODE;)";
+       ORDER BY CNTRYCODE';)";
 
 }  // namespace
 
