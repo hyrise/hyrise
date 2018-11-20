@@ -17,7 +17,7 @@ void LoadServerFileTask::_on_execute() {
     const std::string& extension = file_parts.back();
 
     if (extension == "csv") {
-      auto importer = std::make_shared<ImportCsv>(_file_name, _table_name);
+      auto importer = std::make_shared<ImportCsv>(_file_name, Chunk::MAX_SIZE, _table_name);
       importer->execute();
     } else if (extension == "tbl") {
       const auto table = load_table(_file_name, Chunk::MAX_SIZE);
@@ -25,6 +25,8 @@ void LoadServerFileTask::_on_execute() {
     } else if (extension == "bin") {
       auto importer = std::make_shared<ImportBinary>(_file_name, _table_name);
       importer->execute();
+    } else {
+      Fail("Unsupported file type could not be loaded. Only csv, tbl, and bin are supported.");
     }
 
     _promise.set_value();
