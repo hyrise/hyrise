@@ -70,14 +70,19 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
         auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
 
-        left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
+        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto chunk_id_copy = chunk_id;
+        const auto matches_out_copy = matches_out;
+        const auto condition = _predicate_condition;
+
+        left_segment_iterable.with_iterators([&right_segment_iterable, &chunk_id_copy, &matches_out_copy, condition](auto left_it, auto left_end) {
           right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(_predicate_condition, [&](auto predicate_comparator) {
+            with_comparator(condition, [&](auto predicate_comparator) {
               auto comparator = [predicate_comparator](const auto& left, const auto& right) {
                 return predicate_comparator(left.value(), right.value());
               };
-              _scan_with_iterators<true>(comparator, left_it, left_end,
-                                         chunk_id, *matches_out, right_it);
+              AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end,
+                                         chunk_id_copy, *matches_out_copy, right_it);
             });
           });
         });
