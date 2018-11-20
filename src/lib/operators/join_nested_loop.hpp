@@ -62,10 +62,6 @@ class JoinNestedLoop : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   std::shared_ptr<Table> _output_table;
-  std::shared_ptr<const Table> _left_in_table;
-  std::shared_ptr<const Table> _right_in_table;
-  ColumnID _left_column_id;
-  ColumnID _right_column_id;
 
   bool _is_outer_join{false};
   std::shared_ptr<PosList> _pos_list_left;

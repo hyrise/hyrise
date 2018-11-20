@@ -411,7 +411,6 @@ Example:
 {
   "verbose": true,
   "scheduler": true,
-  "chunk_size": 10000,
   "time": 5
 }
 

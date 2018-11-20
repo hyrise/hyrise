@@ -96,7 +96,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
   std::unique_ptr<BaseSegmentEncoder> create_new() const final { return std::make_unique<Derived>(); }
 
-  bool uses_vector_compression() const final { return Derived::_uses_vector_compression; };
+  bool uses_vector_compression() const final { return Derived::_uses_vector_compression; }
 
   void set_vector_compression(VectorCompressionType type) final {
     Assert(uses_vector_compression(), "Vector compression type can only be set if supported by encoder.");

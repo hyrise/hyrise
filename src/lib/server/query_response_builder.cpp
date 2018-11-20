@@ -52,29 +52,23 @@ std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const
   return result;
 }
 
-std::string QueryResponseBuilder::build_command_complete_message(hsql::StatementType statement_type,
-                                                                 uint64_t row_count) {
-  switch (statement_type) {
-    case hsql::StatementType::kStmtSelect: {
-      return "SELECT " + std::to_string(row_count);
-    }
-    case hsql::StatementType::kStmtInsert: {
+std::string QueryResponseBuilder::build_command_complete_message(const AbstractOperator& root_op, uint64_t row_count) {
+  switch (root_op.type()) {
+    case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row
       return "INSERT 0 1";
     }
-    case hsql::StatementType::kStmtUpdate: {
+    case OperatorType::Update: {
       // We do not return how many rows are affected, because we don't track this information
       return "UPDATE -1";
     }
-    case hsql::StatementType::kStmtDelete: {
+    case OperatorType::Delete: {
       // We do not return how many rows are affected, because we don't track this information
       return "DELETE -1";
     }
-    case hsql::StatementType::kStmtCreate: {
-      // 0 rows retrieved (Postgres requires a CREATE TABLE statement to return SELECT)
-      return "SELECT 0";
-    }
-    default: { throw std::logic_error("Unknown statement type. Server doesn't know how to complete query."); }
+    default:
+      // Assuming normal query
+      return "SELECT " + std::to_string(row_count);
   }
 }
 

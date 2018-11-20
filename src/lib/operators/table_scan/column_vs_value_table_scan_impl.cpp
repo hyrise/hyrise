@@ -185,7 +185,6 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 

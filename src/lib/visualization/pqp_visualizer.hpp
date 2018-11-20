@@ -5,20 +5,20 @@
 #include <utility>
 
 #include "expression/abstract_expression.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "operators/abstract_operator.hpp"
 #include "visualization/abstract_visualizer.hpp"
 
 namespace opossum {
 
-class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
+class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractOperator>>> {
  public:
-  SQLQueryPlanVisualizer();
+  PQPVisualizer();
 
-  SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info = {}, VizVertexInfo vertex_info = {},
-                         VizEdgeInfo edge_info = {});
+  PQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info = {}, VizVertexInfo vertex_info = {},
+                VizEdgeInfo edge_info = {});
 
  protected:
-  void _build_graph(const SQLQueryPlan& plan) override;
+  void _build_graph(const std::vector<std::shared_ptr<AbstractOperator>>& plans) override;
 
   void _build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                       std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops);

@@ -176,8 +176,8 @@ TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
   ASSERT_EQ(input_literals[0].tuple_value.data_type(), DataType::Int);
   ASSERT_EQ(input_literals[0].tuple_value.is_nullable(), false);
 
-  ASSERT_EQ(input_literals[1].value, AllTypeVariant(1.2f));
-  ASSERT_EQ(input_literals[1].tuple_value.data_type(), DataType::Float);
+  ASSERT_EQ(input_literals[1].value, AllTypeVariant(1.2));
+  ASSERT_EQ(input_literals[1].tuple_value.data_type(), DataType::Double);
   ASSERT_EQ(input_literals[1].tuple_value.is_nullable(), false);
 }
 

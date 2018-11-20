@@ -29,7 +29,7 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/materialize.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -926,9 +926,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
 
-  SQLQueryPlan query_plan{CleanupTemporaries::Yes};
-  query_plan.add_tree_by_root(row_pqp);
-  const auto tasks = query_plan.create_tasks();
+  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
@@ -1278,7 +1276,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
   if (((row_counts == 0) || ...)) return 0;
 
-  return std::max({row_counts...});
+  return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,

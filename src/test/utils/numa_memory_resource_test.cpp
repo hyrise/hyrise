@@ -15,7 +15,7 @@ int get_node_id_of(const void* ptr) {
 #if HYRISE_NUMA_SUPPORT
   int status[1];
   void* addr = {const_cast<void*>(ptr)};
-  numa_move_pages(0, 1, static_cast<void**>(&addr), NULL, reinterpret_cast<int*>(&status), 0);
+  numa_move_pages(0, 1, static_cast<void**>(&addr), nullptr, reinterpret_cast<int*>(&status), 0);
   return status[0];
 #else
   return 1;

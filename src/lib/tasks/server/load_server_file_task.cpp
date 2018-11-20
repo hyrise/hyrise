@@ -11,7 +11,7 @@ void LoadServerFileTask::_on_execute() {
     const auto table = load_table(_file_name, Chunk::MAX_SIZE);
     StorageManager::get().add_table(_table_name, table);
     _promise.set_value();
-  } catch (const std::exception& exception) {
+  } catch (...) {
     _promise.set_exception(boost::current_exception());
   }
 }

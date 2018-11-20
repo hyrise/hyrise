@@ -88,14 +88,14 @@ TEST_F(VariableLengthKeyStoreTest, CalculateIteratorDistance) {
   auto end = _store.end();
   auto second = begin + 1;
 
-  EXPECT_EQ(0, begin - begin);
-  EXPECT_EQ(0, cbegin - begin);
-  EXPECT_EQ(1, second - begin);
-  EXPECT_EQ(4, end - begin);
+  EXPECT_EQ(begin - begin, 0);
+  EXPECT_EQ(cbegin - begin, 0);
+  EXPECT_EQ(second - begin, 1);
+  EXPECT_EQ(end - begin, 4);
 
-  EXPECT_EQ(0, std::distance(begin, begin));
-  EXPECT_EQ(1, std::distance(begin, second));
-  EXPECT_EQ(4, std::distance(begin, end));
+  EXPECT_EQ(std::distance(begin, begin), 0);
+  EXPECT_EQ(std::distance(begin, second), 1);
+  EXPECT_EQ(std::distance(begin, end), 4);
 }
 
 TEST_F(VariableLengthKeyStoreTest, AdvanceIterator) {

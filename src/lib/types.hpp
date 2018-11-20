@@ -42,6 +42,10 @@ STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
 STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
+// Used to identify a Parameter within a (Sub)Select. This can be either a parameter of a Prepared SELECT statement
+// `SELECT * FROM t WHERE a > ?` or a correlated parameter in a Subselect.
+STRONG_TYPEDEF(size_t, ParameterID);
+
 namespace opossum {
 
 /** We use vectors with custom allocators, e.g, to bind the data object to

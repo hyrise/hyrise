@@ -70,10 +70,10 @@ std::vector<double> scale(const std::vector<double>& container) {
 }
 
 // Determines whether a NUMA node has enough capacity by specifying a relative threshold.
-bool node_has_capacity(size_t node_id, double threshold = 0.8) {
-  size_t total_capacity = numa_node_size(node_id, nullptr);
+bool node_has_capacity(NodeID node_id, double threshold = 0.8) {
+  size_t total_capacity = numa_node_size(static_cast<int>(node_id), nullptr);
   int64_t dummy;
-  size_t free_capacity = numa_node_size(node_id, &dummy);
+  size_t free_capacity = numa_node_size(static_cast<int>(node_id), &dummy);
   return static_cast<double>(total_capacity * (1.0 - threshold)) <= static_cast<double>(free_capacity);
 }
 

@@ -41,4 +41,32 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
 
 void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table() const {
+  const auto left_in_table = _input_left->get_output();
+  const auto right_in_table = _input_right->get_output();
+
+  const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
+  const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
+
+  TableColumnDefinitions output_column_definitions;
+
+  // Preparing output table by adding segments from left table
+  for (ColumnID column_id{0}; column_id < left_in_table->column_count(); ++column_id) {
+    const auto nullable = (left_may_produce_null || left_in_table->column_is_nullable(column_id));
+    output_column_definitions.emplace_back(left_in_table->column_name(column_id),
+                                           left_in_table->column_data_type(column_id), nullable);
+  }
+
+  // Preparing output table by adding segments from right table
+  if (_mode != JoinMode::Semi && _mode != JoinMode::Anti) {
+    for (ColumnID column_id{0}; column_id < right_in_table->column_count(); ++column_id) {
+      const auto nullable = (right_may_produce_null || right_in_table->column_is_nullable(column_id));
+      output_column_definitions.emplace_back(right_in_table->column_name(column_id),
+                                             right_in_table->column_data_type(column_id), nullable);
+    }
+  }
+
+  return std::make_shared<Table>(output_column_definitions, TableType::References);
+}
+
 }  // namespace opossum

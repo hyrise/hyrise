@@ -24,6 +24,8 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   FixedStringIterator(size_t string_length, Storage& vector, size_t pos = 0)
       : _string_length(string_length), _chars(vector), _pos(pos) {}
 
+  FixedStringIterator(const FixedStringIterator&) = default;
+
   FixedStringIterator& operator=(const FixedStringIterator& other) {
     DebugAssert(_string_length == other._string_length && &_chars == &other._chars,
                 "can't convert pointers from different vectors");

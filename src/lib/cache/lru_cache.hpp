@@ -4,18 +4,18 @@
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_cache.hpp"
+#include "abstract_cache_impl.hpp"
 
 namespace opossum {
 
 // Generic implementation of a least-recently-used cache.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class LRUCache : public AbstractCache<Key, Value> {
+class LRUCache : public AbstractCacheImpl<Key, Value> {
  public:
   typedef typename std::pair<Key, Value> KeyValuePair;
 
-  explicit LRUCache(size_t capacity) : AbstractCache<Key, Value>(capacity) {}
+  explicit LRUCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity) {}
 
   // Sets the value to be cached at the given key.
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {

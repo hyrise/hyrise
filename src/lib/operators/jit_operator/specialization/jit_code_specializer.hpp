@@ -18,6 +18,7 @@ namespace opossum {
  */
 class JitRTTIHelper {
  private:
+  virtual ~JitRTTIHelper() = default;
   virtual void _() const {}
 };
 

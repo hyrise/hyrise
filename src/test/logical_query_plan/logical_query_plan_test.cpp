@@ -318,9 +318,9 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
 
   // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
   const auto copied_expression_a =
-      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->node_expressions.at(0));
   const auto copied_expression_b =
-      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->node_expressions.at(1));
 
   EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
   EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
@@ -414,7 +414,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   const auto copied_sub_select_a =
       std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
   const auto copied_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate->arguments.at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate()->arguments.at(1));
 
   // Check that LQPs and SelectExpressions were actually duplicated
   EXPECT_NE(copied_sub_select_a, sub_select);

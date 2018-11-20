@@ -1,20 +1,20 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "sql/gdfs_cache.hpp"
-#include "sql/gds_cache.hpp"
-#include "sql/lru_cache.hpp"
-#include "sql/lru_k_cache.hpp"
-#include "sql/random_cache.hpp"
+#include "cache/gdfs_cache.hpp"
+#include "cache/gds_cache.hpp"
+#include "cache/lru_cache.hpp"
+#include "cache/lru_k_cache.hpp"
+#include "cache/random_cache.hpp"
 
 namespace opossum {
 
 // Test for the different cache implementations in lib/sql.
 // Not using SQL types in this test, only testing cache eviction.
-class SQLBasicCacheTest : public BaseTest {};
+class CachePolicyTest : public BaseTest {};
 
 // LRU Strategy
-TEST_F(SQLBasicCacheTest, LRUCacheTest) {
+TEST_F(CachePolicyTest, LRUCacheTest) {
   LRUCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -50,7 +50,7 @@ TEST_F(SQLBasicCacheTest, LRUCacheTest) {
 }
 
 // LRU-K (K = 2)
-TEST_F(SQLBasicCacheTest, LRU2CacheTest) {
+TEST_F(CachePolicyTest, LRU2CacheTest) {
   LRUKCache<2, int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -86,7 +86,7 @@ TEST_F(SQLBasicCacheTest, LRU2CacheTest) {
 }
 
 // GDS Strategy
-TEST_F(SQLBasicCacheTest, GDSCacheTest) {
+TEST_F(CachePolicyTest, GDSCacheTest) {
   GDSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -137,7 +137,7 @@ TEST_F(SQLBasicCacheTest, GDSCacheTest) {
 }
 
 // GDFS Strategy
-TEST_F(SQLBasicCacheTest, GDFSCacheTest) {
+TEST_F(CachePolicyTest, GDFSCacheTest) {
   GDFSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -188,7 +188,7 @@ TEST_F(SQLBasicCacheTest, GDFSCacheTest) {
 }
 
 // Random Replacement Strategy
-TEST_F(SQLBasicCacheTest, RandomCacheTest) {
+TEST_F(CachePolicyTest, RandomCacheTest) {
   RandomCache<int, int> cache(3);
 
   ASSERT_FALSE(cache.has(1));
@@ -245,7 +245,7 @@ TYPED_TEST(CacheTest, Size) {
   cache.set(1, 2);
   cache.set(2, 4);
 
-  ASSERT_EQ(2u, cache.size());
+  ASSERT_EQ(cache.size(), 2u);
 }
 
 TYPED_TEST(CacheTest, Clear) {
@@ -259,8 +259,8 @@ TYPED_TEST(CacheTest, Clear) {
 
   cache.clear();
 
-  ASSERT_EQ(3u, cache.capacity());
-  ASSERT_EQ(0u, cache.size());
+  ASSERT_EQ(cache.capacity(), 3u);
+  ASSERT_EQ(cache.size(), 0u);
   ASSERT_FALSE(cache.has(1));
   ASSERT_FALSE(cache.has(2));
 }
@@ -268,15 +268,15 @@ TYPED_TEST(CacheTest, Clear) {
 TYPED_TEST(CacheTest, ResizeGrow) {
   TypeParam cache(3);
 
-  ASSERT_EQ(3u, cache.capacity());
+  ASSERT_EQ(cache.capacity(), 3u);
 
   cache.set(1, 2);
   cache.set(2, 4);
 
   cache.resize(5);
 
-  ASSERT_EQ(5u, cache.capacity());
-  ASSERT_EQ(2u, cache.size());
+  ASSERT_EQ(cache.capacity(), 5u);
+  ASSERT_EQ(cache.size(), 2u);
 
   ASSERT_TRUE(cache.has(1));
   ASSERT_TRUE(cache.has(2));
@@ -285,7 +285,7 @@ TYPED_TEST(CacheTest, ResizeGrow) {
 TYPED_TEST(CacheTest, ResizeShrink) {
   TypeParam cache(3);
 
-  ASSERT_EQ(3u, cache.capacity());
+  ASSERT_EQ(cache.capacity(), 3u);
 
   cache.set(1, 2);
   cache.set(2, 4);
@@ -293,8 +293,8 @@ TYPED_TEST(CacheTest, ResizeShrink) {
 
   cache.resize(1);
 
-  ASSERT_EQ(1u, cache.capacity());
-  ASSERT_EQ(1u, cache.size());
+  ASSERT_EQ(cache.capacity(), 1u);
+  ASSERT_EQ(cache.size(), 1u);
 
   ASSERT_FALSE(cache.has(1));
   ASSERT_FALSE(cache.has(2));
