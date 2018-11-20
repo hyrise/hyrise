@@ -77,9 +77,20 @@ class SQLTranslatorTest : public ::testing::Test {
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-    const auto lqps = opossum::SQLTranslator{}.translate_parser_result(parser_result);
+    const auto lqps = SQLTranslator{UseMvcc::No}.translate_parser_result(parser_result);
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
+  }
+
+  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, std::vector<ParameterID>> compile_prepared_query(const std::string& query) {
+    hsql::SQLParserResult parser_result;
+    hsql::SQLParser::parseSQLString(query, &parser_result);
+    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+    SQLTranslator sql_translator{UseMvcc::No};
+    const auto lqps = sql_translator.translate_parser_result(parser_result);
+    Assert(lqps.size() == 1, "Expected just one LQP");
+    return {lqps.at(0), sql_translator.parameter_ids_of_value_placeholders()};
   }
 
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
@@ -1084,9 +1095,38 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
+  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query("SELECT ? + (SELECT a + ? FROM int_float2) FROM (SELECT a FROM int_float WHERE ? > (SELECT a + ? FROM int_string)) s1");
+
+  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
+  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{1});
+  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{3});
+  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{0});
+
+
+  // clang-format off
+  const auto subselect_a_lqp =
+  ProjectionNode::make(expression_vector(add_(int_float2_a, placeholder_1)),
+                       stored_table_node_int_float2);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto subselect_b_lqp =
+  ProjectionNode::make(expression_vector(add_(int_string_a, placeholder_3)),
+    stored_table_node_int_string);
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(placeholder_0, subselect_a)),
+    ProjectionNode::make(expression_vector(int_float_a),
+      PredicateNode::make(greater_than_(placeholder_2, subselect_b),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   /**
-   * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
+   * Test that ParameterIDs are correctly allocated to correlated Parameters
    */
 
   const auto query = "SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float";
@@ -1095,7 +1135,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  SQLTranslator sql_translator;
+  SQLTranslator sql_translator{UseMvcc::No};
 
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
@@ -1131,16 +1171,18 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
    */
   const auto query =
       "SELECT ?, "
-      "  (SELECT MIN(b) + int_float.a FROM int_float2), "
-      "  (SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
-      "FROM int_float WHERE a > ?";
+      "  (SELECT MIN(b) + int_float2.a + ? FROM int_float2), "
+      "  (SELECT ? + MAX(b) + (SELECT int_float2.a + ? + int_float2.b) FROM int_float2) "
+      "FROM (SELECT a + ? AS k FROM int_float) s1 WHERE k > (SELECT ? + a FROM int_string)";
 
   hsql::SQLParserResult parser_result;
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  SQLTranslator sql_translator;
+  SQLTranslator sql_translator{UseMvcc::No};
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
+
+  actual_lqp->print();
 
   // clang-format off
   const auto parameter_int_float_a = correlated_parameter_(ParameterID{2}, int_float_a);
