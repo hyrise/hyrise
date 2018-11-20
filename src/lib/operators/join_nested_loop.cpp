@@ -16,7 +16,7 @@
 #include "utils/performance_warning.hpp"
 
 namespace {
-using namespace opossum;
+using namespace opossum;  // NOLINT
 static void process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
   params.pos_list_left.emplace_back(left_row_id);
   params.pos_list_right.emplace_back(right_row_id);
@@ -103,7 +103,6 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      // clang-format off
       if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
         auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
@@ -113,15 +112,16 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
         const auto chunk_id_left_copy = chunk_id_left;
         const auto chunk_id_right_copy = chunk_id_right;
 
-        iterable_left.with_iterators([&params_copy, &iterable_right, chunk_id_left_copy, chunk_id_right_copy](auto left_it, auto left_end) {
-           iterable_right.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(params_copy.predicate_condition, [&](auto comparator) {
-             join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left_copy,
-                                      chunk_id_right_copy, params_copy);
-             });
-           });
-         });      }
-      // clang-format on
+        iterable_left.with_iterators(
+            [&params_copy, &iterable_right, chunk_id_left_copy, chunk_id_right_copy](auto left_it, auto left_end) {
+              iterable_right.with_iterators([&](auto right_it, auto right_end) {
+                with_comparator(params_copy.predicate_condition, [&](auto comparator) {
+                  join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left_copy,
+                                          chunk_id_right_copy, params_copy);
+                });
+              });
+            });
+      }
     });
   });
 }

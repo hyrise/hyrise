@@ -64,9 +64,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      // clang-format off
-      if constexpr((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
-                   (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
+      if constexpr ((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
+                    (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
         auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
 
@@ -75,21 +74,21 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
         const auto matches_out_copy = matches_out;
         const auto condition = _predicate_condition;
 
-        left_segment_iterable.with_iterators([&right_segment_iterable, &chunk_id_copy, &matches_out_copy, condition](auto left_it, auto left_end) {
-          right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(condition, [&](auto predicate_comparator) {
-              auto comparator = [predicate_comparator](const auto& left, const auto& right) {
-                return predicate_comparator(left.value(), right.value());
-              };
-              AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end,
-                                         chunk_id_copy, *matches_out_copy, right_it);
+        left_segment_iterable.with_iterators(
+            [&right_segment_iterable, &chunk_id_copy, &matches_out_copy, condition](auto left_it, auto left_end) {
+              right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
+                with_comparator(condition, [&](auto predicate_comparator) {
+                  auto comparator = [predicate_comparator](const auto& left, const auto& right) {
+                    return predicate_comparator(left.value(), right.value());
+                  };
+                  AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id_copy,
+                                                                    *matches_out_copy, right_it);
+                });
+              });
             });
-          });
-        });
       } else {
-        Fail("Invalid segment combination detected!");   // NOLINT - cpplint.py does not know about constexpr
+        Fail("Invalid segment combination detected!");  // NOLINT - cpplint.py does not know about constexpr
       }
-      // clang-format on
     });
   });
 
