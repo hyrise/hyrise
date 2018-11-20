@@ -37,6 +37,8 @@ class JoinHash : public AbstractJoinOperator {
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;
+  template <typename LeftType, typename RightType>
+  friend class JoinHashImpl;
 };
 
 }  // namespace opossum

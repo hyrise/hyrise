@@ -111,7 +111,42 @@ class JoinTest : public BaseTest {
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 
-    EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+    const auto actual_result = join->get_output();
+    EXPECT_TABLE_EQ_UNORDERED(actual_result, expected_result);
+
+    /**
+     * Test the column definitions of the output table, especially the nullability
+     */
+
+    for (auto output_column_id = ColumnID{0}; output_column_id < actual_result->column_count(); ++output_column_id) {
+      auto expected_column_definition = TableColumnDefinition{};
+
+      switch (mode) {
+        case JoinMode::Inner:
+        case JoinMode::Left:
+        case JoinMode::Right:
+        case JoinMode::Outer:
+        case JoinMode::Cross:
+          if (output_column_id < left->get_output()->column_count()) {
+            expected_column_definition = left->get_output()->column_definitions()[output_column_id];
+            if (mode == JoinMode::Right || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+          } else {
+            expected_column_definition =
+                right->get_output()->column_definitions()[output_column_id - left->get_output()->column_count()];
+            if (mode == JoinMode::Left || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+          }
+          break;
+
+        case JoinMode::Semi:
+          expected_column_definition = left->get_output()->column_definitions()[output_column_id];
+          break;
+        case JoinMode::Anti:
+          expected_column_definition = right->get_output()->column_definitions()[output_column_id];
+          break;
+      }
+      const auto actual_column_definition = actual_result->column_definitions()[output_column_id];
+      EXPECT_EQ(actual_column_definition, expected_column_definition);
+    }
   }
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,

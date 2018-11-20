@@ -386,13 +386,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  const auto input_operator = translate_node(node->left_input());
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
-  auto new_value_exprs = _translate_expressions(update_node->node_expressions, node);
+  const auto input_operator_left = translate_node(node->left_input());
+  const auto input_operator_right = translate_node(node->right_input());
 
-  auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
-  return std::make_shared<Update>(update_node->table_name, input_operator, projection);
+  return std::make_shared<Update>(update_node->table_name, input_operator_left, input_operator_right);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
