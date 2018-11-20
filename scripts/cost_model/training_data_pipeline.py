@@ -21,8 +21,8 @@ class TrainingDataPipeline:
         Returns:
             A tuple of DataFrames for feature and target variables
         """
-        x = df.drop('execution_time_ns', axis=1)
-        y = df['execution_time_ns']
+        x = df.drop(['execution_time_ms', 'execution_time_ns'], axis=1)
+        y = df['execution_time_ms']
 
         return x, y
 
@@ -53,6 +53,9 @@ class TrainingDataPipeline:
         boolean_categories = [False, True]
         data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string', 'undefined']
 
+        # And many more... not sure how to cover this
+        scan_operator_categories = ['LIKE', 'NOT LIKE', '>','<', '!=', '=', '<=', '>=', 'BETWEEN', 'Or', 'undefined', 'IN']
+
         df = df[df['operator_type'] == 'TableScan']
 
         df['first_column_segment_encoding'] = df['first_column_segment_encoding']\
@@ -78,9 +81,10 @@ class TrainingDataPipeline:
             .astype('category', categories=data_type_categories)
 
         df['scan_operator_type'] = df['scan_operator_type'] \
-            .astype('category', categories=['<=', 'BETWEEN', 'Or', 'undefined'])
+            .astype('category', categories=scan_operator_categories)
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
+        #df['output_selectivity_rounded'] = df['output_selectivity'].round(2)
 
         return df
 
