@@ -64,6 +64,6 @@ target_link_libraries(
 target_include_directories(
     hyriseConsole
 
-    PUBLIC
+    SYSTEM PUBLIC
     ${READLINE_INCLUDE_DIR}
 )

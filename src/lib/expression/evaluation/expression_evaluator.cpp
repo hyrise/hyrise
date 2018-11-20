@@ -29,7 +29,7 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/materialize.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
@@ -926,9 +926,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
 
-  SQLQueryPlan query_plan{CleanupTemporaries::Yes};
-  query_plan.add_tree_by_root(row_pqp);
-  const auto tasks = query_plan.create_tasks();
+  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
@@ -1001,7 +999,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
                   if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                          RightDataType>::value) {
-                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
                       auto matches = ExpressionEvaluator::Bool{0};
@@ -1025,11 +1023,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
                 if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             }
@@ -1048,7 +1046,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
@@ -1110,8 +1108,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
              "Cannot evaluate non-boolean literal to PosList");
       // TRUE literal returns the entire Chunk, FALSE literal returns empty PosList
       if (boost::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
-        result_pos_list.resize(_chunk->size());
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+        result_pos_list.resize(_output_row_count);
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           result_pos_list[chunk_offset] = {_chunk_id, chunk_offset};
         }
       }
@@ -1278,7 +1276,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
   if (((row_counts == 0) || ...)) return 0;
 
-  return std::max({row_counts...});
+  return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,

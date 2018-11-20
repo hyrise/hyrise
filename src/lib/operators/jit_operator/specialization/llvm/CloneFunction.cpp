@@ -40,6 +40,9 @@
 #include <map>
 using namespace llvm;
 
+#pragma clang diagnostic ignored "-Wshadow-all"
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,

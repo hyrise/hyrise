@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../jit_types.hpp"
 #include "abstract_jittable.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
@@ -84,6 +85,8 @@ class JitReadTuples : public AbstractJittable {
   };
 
  public:
+  explicit JitReadTuples(const bool has_validate = false);
+
   std::string description() const final;
 
   virtual void before_query(const Table& in_table, JitRuntimeContext& context) const;
@@ -108,6 +111,8 @@ class JitReadTuples : public AbstractJittable {
 
  private:
   void _consume(JitRuntimeContext& context) const final {}
+
+  const bool _has_validate;
 };
 
 }  // namespace opossum

@@ -63,8 +63,11 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   }
   query << ");";
 
+  size_t rows_added = 0;
+  query << "INSERT INTO " << table_name << " VALUES ";
   while (std::getline(infile, line)) {
-    query << "INSERT INTO " << table_name << " VALUES (";
+    if (rows_added) query << ", ";
+    query << "(";
     std::vector<std::string> values = split_string_by_delimiter(line, '|');
     for (size_t i = 0; i < values.size(); i++) {
       if (column_types[i] == "TEXT" && values[i] != "null") {
@@ -77,8 +80,10 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
         query << ", ";
       }
     }
-    query << ");";
+    query << ")";
+    ++rows_added;
   }
+  query << ";";
 
   _exec_sql(query.str());
 }
@@ -160,7 +165,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
 
   int rc;
   for (const auto& query : queries_before_select) {
-    rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, 0);
+    rc = sqlite3_prepare_v2(_db, query.c_str(), -1, &result_row, nullptr);
 
     if (rc != SQLITE_OK) {
       sqlite3_finalize(result_row);
@@ -172,7 +177,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
     }
   }
 
-  rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, 0);
+  rc = sqlite3_prepare_v2(_db, select_query.c_str(), -1, &result_row, nullptr);
 
   if (rc != SQLITE_OK) {
     auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(_db));
@@ -256,6 +261,15 @@ std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, in
   return nullptr;
 }
 
+void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset,
+                                          const std::string& table_name_to_copy_from) const {
+  std::stringstream command_ss;
+  command_ss << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
+  command_ss << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
+
+  _exec_sql(command_ss.str());
+}
+
 void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
   std::vector<AllTypeVariant> row;
 
@@ -295,7 +309,7 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
 
 void SQLiteWrapper::_exec_sql(const std::string& sql) const {
   char* err_msg;
-  auto rc = sqlite3_exec(_db, sql.c_str(), 0, 0, &err_msg);
+  auto rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (rc != SQLITE_OK) {
     auto msg = std::string(err_msg);

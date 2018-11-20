@@ -43,8 +43,6 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
 
-TableScan::~TableScan() = default;
-
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
@@ -135,6 +133,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
           if (!filtered_pos_list) {
             filtered_pos_list = std::make_shared<PosList>(matches_out->size());
+            if (pos_list_in->references_single_chunk()) {
+              filtered_pos_list->guarantee_single_chunk();
+            }
 
             size_t offset = 0;
             for (const auto& match : *matches_out) {

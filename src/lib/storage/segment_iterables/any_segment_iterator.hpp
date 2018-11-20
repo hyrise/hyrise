@@ -110,7 +110,7 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
 
   template <typename Iterator>
   explicit AnySegmentIterator(const Iterator& iterator)
-      : _wrapper{std::make_unique<detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
+      : _wrapper{std::make_unique<opossum::detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
   /**@}*/
 
  public:
@@ -128,7 +128,7 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
   SegmentIteratorValue<T> dereference() const { return _wrapper->dereference(); }
 
  private:
-  std::unique_ptr<detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
+  std::unique_ptr<opossum::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 
 }  // namespace opossum

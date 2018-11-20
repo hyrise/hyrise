@@ -26,7 +26,7 @@ namespace opossum {
 
 class OperatorsAggregateTest : public BaseTest {
  protected:
-  void SetUp() override {
+  static void SetUpTestCase() {  // called ONCE before the tests
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
@@ -97,6 +97,8 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_int_int->execute();
   }
 
+  void SetUp() override {}
+
   void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
                    bool test_aggregate_on_reference_table = true) {
@@ -104,10 +106,12 @@ class OperatorsAggregateTest : public BaseTest {
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
-    // Test the Aggregate on stored table data
-    auto aggregate = std::make_shared<Aggregate>(in, aggregates, groupby_column_ids);
-    aggregate->execute();
-    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    {
+      // Test the Aggregate on stored table data
+      auto aggregate = std::make_shared<Aggregate>(in, aggregates, groupby_column_ids);
+      aggregate->execute();
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    }
 
     if (test_aggregate_on_reference_table) {
       // Perform a TableScan to create a reference table
@@ -121,7 +125,7 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
       _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null,
       _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string,
       _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a,

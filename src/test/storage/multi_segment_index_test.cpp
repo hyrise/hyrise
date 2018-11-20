@@ -202,9 +202,9 @@ TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   auto indices_int_str = chunk->get_indices({this->dict_segment_int, this->dict_segment_str});
   auto indices_str = chunk->get_indices({this->dict_segment_str});
 
-  EXPECT_EQ(2u, indices_int.size());
-  EXPECT_EQ(1u, indices_int_str.size());
-  EXPECT_EQ(0u, indices_str.size());
+  EXPECT_EQ(indices_int.size(), 2u);
+  EXPECT_EQ(indices_int_str.size(), 1u);
+  EXPECT_EQ(indices_str.size(), 0u);
 
   EXPECT_TRUE(indices_int[0]->is_index_for({this->dict_segment_int}));
   EXPECT_TRUE(indices_int[1]->is_index_for({this->dict_segment_int}));

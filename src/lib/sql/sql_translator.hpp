@@ -45,7 +45,7 @@ class SQLTranslator final {
   /**
    * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
    */
-  const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders() const;
+  std::vector<ParameterID> parameter_ids_of_value_placeholders() const;
 
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
@@ -115,6 +115,9 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_create_table(const hsql::CreateStatement& create_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& drop_statement);
+
+  std::shared_ptr<AbstractLQPNode> _translate_prepare(const hsql::PrepareStatement& prepare_statement);
+  std::shared_ptr<AbstractLQPNode> _translate_execute(const hsql::ExecuteStatement& execute_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
       const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const;

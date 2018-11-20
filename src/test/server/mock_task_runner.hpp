@@ -6,18 +6,22 @@
 
 #include "gmock/gmock.h"
 
+#include "storage/prepared_plan.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
+#include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 namespace opossum {
 
 class MockTaskRunner {
  public:
   MOCK_METHOD1(dispatch_server_task,
-               boost::future<std::unique_ptr<SQLQueryPlan>>(std::shared_ptr<BindServerPreparedStatementTask>));
+               boost::future<std::unique_ptr<PreparedPlan>>(std::shared_ptr<ParseServerPreparedStatementTask>));
+  MOCK_METHOD1(dispatch_server_task,
+               boost::future<std::shared_ptr<AbstractOperator>>(std::shared_ptr<BindServerPreparedStatementTask>));
   MOCK_METHOD1(dispatch_server_task,
                boost::future<std::unique_ptr<CreatePipelineResult>>(std::shared_ptr<CreatePipelineTask>));
   MOCK_METHOD1(dispatch_server_task,

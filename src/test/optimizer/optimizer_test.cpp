@@ -3,6 +3,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -48,7 +49,7 @@ TEST_F(OptimizerTest, RuleBatches) {
       return num_iterations != 0;
     }
 
-    mutable uint32_t num_iterations;
+    mutable size_t num_iterations;
   };
 
   auto iterative_rule_a = std::make_shared<MockRule>(4u);
@@ -147,11 +148,12 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
   ASSERT_TRUE(predicate_node_a);
   auto select_a_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate->arguments.at(0)->arguments.at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_a);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
   ASSERT_TRUE(projection_node);
-  auto select_a_b = std::dynamic_pointer_cast<LQPSelectExpression>(projection_node->expressions.at(0)->arguments.at(1));
+  auto select_a_b =
+      std::dynamic_pointer_cast<LQPSelectExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_b);
 
   EXPECT_NE(select_a_a->lqp, select_a_b->lqp);
@@ -195,15 +197,15 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
   ASSERT_TRUE(predicate_node_a);
   select_a_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate->arguments.at(0)->arguments.at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_a);
   projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
   ASSERT_TRUE(projection_node);
-  select_a_b = std::dynamic_pointer_cast<LQPSelectExpression>(projection_node->expressions.at(0)->arguments.at(1));
+  select_a_b = std::dynamic_pointer_cast<LQPSelectExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_b);
   auto predicate_node_b = std::dynamic_pointer_cast<PredicateNode>(lqp->left_input()->left_input());
   ASSERT_TRUE(predicate_node_b);
-  auto select_b_a = std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_b->predicate->arguments.at(1));
+  auto select_b_a = std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_b->predicate()->arguments.at(1));
   ASSERT_TRUE(select_b_a);
 
   EXPECT_EQ(select_a_a->lqp, select_a_b->lqp);

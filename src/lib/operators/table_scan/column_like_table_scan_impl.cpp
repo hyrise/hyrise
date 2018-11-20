@@ -110,9 +110,9 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
 
   _matcher.resolve(_invert_results, [&](const auto& matcher) {
     for (const auto& value : dictionary) {
-      const auto result = matcher(value);
-      count += static_cast<size_t>(result);
-      dictionary_matches.push_back(result);
+      const auto matches = matcher(value);
+      count += static_cast<size_t>(matches);
+      dictionary_matches.push_back(matches);
     }
   });
 

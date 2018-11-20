@@ -24,8 +24,8 @@ The actual test cases are split into EquiOnly and FullJoin tests.
 */
 
 class JoinTest : public BaseTest {
- protected:
-  void SetUp() override {
+ public:
+  static void SetUpTestCase() {  // called ONCE before tests are run
     // load and create regular ValueSegment tables
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
@@ -93,6 +93,9 @@ class JoinTest : public BaseTest {
     _table_wrapper_n_dict->execute();
   }
 
+ protected:
+  void SetUp() override {}
+
   // builds and executes the given Join and checks correctness of the output
   template <typename JoinType>
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
@@ -108,14 +111,48 @@ class JoinTest : public BaseTest {
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 
-    EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+    const auto actual_result = join->get_output();
+    EXPECT_TABLE_EQ_UNORDERED(actual_result, expected_result);
+
+    /**
+     * Test the column definitions of the output table, especially the nullability
+     */
+
+    for (auto output_column_id = ColumnID{0}; output_column_id < actual_result->column_count(); ++output_column_id) {
+      auto expected_column_definition = TableColumnDefinition{};
+
+      switch (mode) {
+        case JoinMode::Inner:
+        case JoinMode::Left:
+        case JoinMode::Right:
+        case JoinMode::Outer:
+        case JoinMode::Cross:
+          if (output_column_id < left->get_output()->column_count()) {
+            expected_column_definition = left->get_output()->column_definitions()[output_column_id];
+            if (mode == JoinMode::Right || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+          } else {
+            expected_column_definition =
+                right->get_output()->column_definitions()[output_column_id - left->get_output()->column_count()];
+            if (mode == JoinMode::Left || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+          }
+          break;
+
+        case JoinMode::Semi:
+          expected_column_definition = left->get_output()->column_definitions()[output_column_id];
+          break;
+        case JoinMode::Anti:
+          expected_column_definition = right->get_output()->column_definitions()[output_column_id];
+          break;
+      }
+      const auto actual_column_definition = actual_result->column_definitions()[output_column_id];
+      EXPECT_EQ(actual_column_definition, expected_column_definition);
+    }
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
       _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n, _table_wrapper_o, _table_wrapper_p,
       _table_wrapper_q, _table_wrapper_a_dict, _table_wrapper_b_dict, _table_wrapper_c_dict, _table_wrapper_m_dict,
       _table_wrapper_n_dict;
 };
-
 }  // namespace opossum
