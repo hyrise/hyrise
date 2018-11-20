@@ -8,11 +8,13 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -49,12 +51,12 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
-  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions(), i.e. columns that are necessary for
+  // Search the entire LQP for columns used in the node expressions, i.e. columns that are necessary for
   // the "functioning" of the LQP.
   // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
   // prune) by only searching the arguments of expression.
   visit_lqp(lqp, [&](const auto& node) {
-    for (const auto& expression : node->node_expressions()) {
+    for (const auto& expression : node->node_expressions) {
       if (node->type == LQPNodeType::Projection) {
         for (const auto& argument : expression->arguments) {
           collect_consumed_columns_from_expression(argument);
@@ -63,6 +65,19 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
         collect_consumed_columns_from_expression(expression);
       }
     }
+
+    // No pruning of the input columns to Update and Insert, they need them all.
+    if (const auto update_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
+      const auto& left_input_expressions = update_node->left_input()->column_expressions();
+      consumed_columns.insert(left_input_expressions.begin(), left_input_expressions.end());
+
+      const auto& right_input_expressions = update_node->right_input()->column_expressions();
+      consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
+    } else if (const auto insert_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
+      const auto& expressions = insert_node->right_input()->column_expressions();
+      consumed_columns.insert(expressions.begin(), expressions.end());
+    }
+
     return LQPVisitation::VisitInputs;
   });
 
@@ -132,7 +147,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
   // Replace ProjectionNodes with pruned ProjectionNodes if necessary
   for (const auto& projection_node : projection_nodes) {
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto& expression : projection_node->node_expressions()) {
+    for (const auto& expression : projection_node->node_expressions) {
       // We keep all non-column expressions
       if (expression->type != ExpressionType::LQPColumn) {
         referenced_projection_expressions.emplace_back(expression);
@@ -141,7 +156,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
       }
     }
 
-    if (projection_node->node_expressions().size() == referenced_projection_expressions.size()) {
+    if (projection_node->node_expressions.size() == referenced_projection_expressions.size()) {
       // No columns to prune
       continue;
     }
@@ -150,7 +165,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
     if (referenced_projection_expressions.empty()) {
       lqp_remove_node(projection_node);
     } else {
-      projection_node->expressions = referenced_projection_expressions;
+      projection_node->node_expressions = referenced_projection_expressions;
     }
   }
 }

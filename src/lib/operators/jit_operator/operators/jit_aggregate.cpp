@@ -167,6 +167,23 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
   out_table.append_chunk(segments);
 }
 
+namespace {
+
+// The intermediary result of sum is always stored in a 64 bit data type. The same behaviour is implemented by non-jit
+// operators.
+DataType get_sum_data_type(const DataType data_type) {
+  switch (data_type) {
+    case DataType::Int:
+      return DataType::Long;
+    case DataType::Float:
+      return DataType::Double;
+    default:
+      return data_type;
+  }
+}
+
+}  // namespace
+
 void JitAggregate::add_aggregate_column(const std::string& column_name, const JitTupleValue& value,
                                         const AggregateFunction function) {
   auto column_position = _aggregate_columns.size() + _groupby_columns.size();
@@ -179,26 +196,28 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
                              JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::Sum:
+      DebugAssert(value.data_type() != DataType::String, "Invalid data type string for aggregate function sum.");
     case AggregateFunction::Max:
-    case AggregateFunction::Min:
-      Assert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
-             "Invalid data type for aggregate function.");
+    case AggregateFunction::Min: {
+      DebugAssert(value.data_type() != DataType::Null, "Invalid data type null for aggregate function.");
       // The data type depends on the input value.
-      _aggregate_columns.emplace_back(
-          JitAggregateColumn{column_name, column_position, function, value,
-                             JitHashmapValue(value.data_type(), true, _num_hashmap_columns++)});
+      const auto data_type =
+          function == AggregateFunction::Sum ? get_sum_data_type(value.data_type()) : value.data_type();
+      _aggregate_columns.emplace_back(JitAggregateColumn{column_name, column_position, function, value,
+                                                         JitHashmapValue(data_type, true, _num_hashmap_columns++)});
       break;
+    }
     case AggregateFunction::Avg:
-      Assert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
-             "Invalid data type for aggregate function.");
+      DebugAssert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
+                  "Invalid data type for aggregate function average.");
       // Average aggregates are computed by first computing two aggregates: a SUM and a COUNT
       _aggregate_columns.emplace_back(
           JitAggregateColumn{column_name, column_position, function, value,
-                             JitHashmapValue(value.data_type(), true, _num_hashmap_columns++),
+                             JitHashmapValue(get_sum_data_type(value.data_type()), true, _num_hashmap_columns++),
                              JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::CountDistinct:
-      Fail("Not supported");
+      Fail("Aggregate function count distinct not supported");
   }
 }
 
@@ -288,8 +307,9 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
           jit_grow_by_one(_aggregate_columns[i].hashmap_count_for_avg.value(), JitVariantVector::InitialValue::Zero,
                           context);
           break;
-        case AggregateFunction::CountDistinct:
-          Fail("Not supported");
+        case AggregateFunction::CountDistinct: {
+          Fail("Aggregate function count distinct not supported");
+        }
       }
     }
 
@@ -324,8 +344,9 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value,
                               _aggregate_columns[i].hashmap_count_for_avg.value(), row_index, context);
         break;
-      case AggregateFunction::CountDistinct:
-        Fail("Not supported");
+      case AggregateFunction::CountDistinct: {
+        Fail("Aggregate function count distinct not supported");
+      }
     }
   }
 }

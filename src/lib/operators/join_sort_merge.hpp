@@ -39,6 +39,8 @@ class JoinSortMerge : public AbstractJoinOperator {
 
   template <typename T>
   class JoinSortMergeImpl;
+  template <typename T>
+  friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
 };

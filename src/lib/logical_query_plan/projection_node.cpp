@@ -11,21 +11,19 @@
 namespace opossum {
 
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
-    : AbstractLQPNode(LQPNodeType::Projection), expressions(expressions) {}
+    : AbstractLQPNode(LQPNodeType::Projection, expressions) {}
 
 std::string ProjectionNode::description() const {
   std::stringstream stream;
 
-  stream << "[Projection] " << expression_column_names(expressions);
+  stream << "[Projection] " << expression_column_names(node_expressions);
 
   return stream.str();
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_expressions() const {
-  return expressions;
+  return node_expressions;
 }
-
-std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::node_expressions() const { return expressions; }
 
 std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
@@ -36,9 +34,9 @@ std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
   const auto row_count = input_statistics->row_count();
 
   std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
-  column_statistics.reserve(expressions.size());
+  column_statistics.reserve(node_expressions.size());
 
-  for (const auto& expression : expressions) {
+  for (const auto& expression : node_expressions) {
     const auto column_id = left_input->find_column_id(*expression);
     if (column_id) {
       column_statistics.emplace_back(input_statistics->column_statistics()[*column_id]);
@@ -58,12 +56,12 @@ std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return make(expressions_copy_and_adapt_to_different_lqp(expressions, node_mapping));
+  return make(expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping));
 }
 
 bool ProjectionNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto& rhs_expressions = static_cast<const ProjectionNode&>(rhs).expressions;
-  return expressions_equal_to_expressions_in_different_lqp(expressions, rhs_expressions, node_mapping);
+  const auto& rhs_expressions = static_cast<const ProjectionNode&>(rhs).node_expressions;
+  return expressions_equal_to_expressions_in_different_lqp(node_expressions, rhs_expressions, node_mapping);
 }
 
 }  // namespace opossum

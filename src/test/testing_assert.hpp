@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "types.hpp"

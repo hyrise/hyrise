@@ -5,13 +5,7 @@
 
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
-#include "strong_typedef.hpp"
-
-/**
- * Used to identify a Parameter within a (Sub)Select. This can be either a parameter of a Prepared SELECT statement
- * `SELECT * FROM t WHERE a > ?` or a correlated parameter in a Subselect.
- */
-STRONG_TYPEDEF(size_t, ParameterID);
+#include "types.hpp"
 
 namespace opossum {
 

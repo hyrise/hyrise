@@ -26,4 +26,6 @@ TEST_F(InsertNodeTest, Equals) {
   EXPECT_NE(*_insert_node, *InsertNode::make("table_b"));
 }
 
+TEST_F(InsertNodeTest, NodeExpressions) { ASSERT_EQ(_insert_node->node_expressions.size(), 0u); }
+
 }  // namespace opossum

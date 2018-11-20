@@ -25,7 +25,7 @@
 #include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -110,7 +110,8 @@ int main(int argc, char* argv[]) {
 
   // TODO(leander): Enable support for queries that contain multiple statements requiring execution
   if (config->enable_scheduler) {
-    Assert(std::find(query_ids.begin(), query_ids.end(), opossum::QueryID{15}) == query_ids.end(),
+    // QueryID{14} represents TPC-H query 15 because we use 0 indexing
+    Assert(std::find(query_ids.begin(), query_ids.end(), opossum::QueryID{14}) == query_ids.end(),
            "TPC-H query 15 is not supported for multithreaded benchmarking.");
   }
 

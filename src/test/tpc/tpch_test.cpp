@@ -7,12 +7,14 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -24,9 +26,26 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-class TPCHTest : public BaseTestWithParam<QueryID> {
+using TestConfiguration = std::pair<QueryID, bool>;  // query_idx, use_jit
+
+class TPCHTest : public BaseTestWithParam<TestConfiguration> {
  public:
-  void SetUp() override { _sqlite_wrapper = std::make_shared<SQLiteWrapper>(); }
+  static std::vector<TestConfiguration> build_combinations() {
+    std::vector<TestConfiguration> combinations;
+    const auto selected_queries = TPCHQueryGenerator{}.selected_queries();
+    for (const auto query_id : selected_queries) {
+      combinations.emplace_back(query_id, false);
+      if constexpr (HYRISE_JIT_SUPPORT) {
+        combinations.emplace_back(query_id, true);
+      }
+    }
+    return combinations;
+  }
+  void SetUp() override {
+    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
+    SQLLogicalPlanCache::get().clear();
+    SQLPhysicalPlanCache::get().clear();
+  }
 
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
@@ -44,7 +63,7 @@ class TPCHTest : public BaseTestWithParam<QueryID> {
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
-  const auto query_idx = GetParam();
+  const auto [query_idx, use_jit] = GetParam();  // NOLINT
   const auto tpch_idx = query_idx + 1;
   const auto query = TPCHQueryGenerator{}.build_query(query_idx);
 
@@ -59,11 +78,23 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx));
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT"));
 
   std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
+  std::shared_ptr<LQPTranslator> lqp_translator;
+  if (use_jit) {
+    // TPCH query 13 can currently not be run with Jit Operators because of wrong output column definitions for outer
+    // Joins. See: Issue #1051 (https://github.com/hyrise/hyrise/issues/1051)
+    if (tpch_idx == 13) {
+      std::cerr << "Test of TPCH query 13 with JIT is currently disabled (Issue #1051)" << std::endl;
+      return;
+    }
+    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
+  } else {
+    lqp_translator = std::make_shared<LQPTranslator>();
+  }
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).disable_mvcc().create_pipeline();
 
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
   if (tpch_idx == 15) {
@@ -87,8 +118,6 @@ TEST_P(TPCHTest, TPCHQueryTest) {
                   FloatComparisonMode::RelativeDifference);
 }
 
-// clang-format off
-INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()), );  // NOLINT
-// clang-format on
+INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(TPCHTest::build_combinations()), );  // NOLINT
 
 }  // namespace opossum

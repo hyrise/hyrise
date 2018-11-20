@@ -8,7 +8,6 @@
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/logical_expression.hpp"
-#include "operators/jit_operator/jit_types.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -36,6 +35,5 @@ extern const boost::bimap<EncodingType, std::string> encoding_type_to_string;
 extern const boost::bimap<LogicalOperator, std::string> logical_operator_to_string;
 extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
 extern const boost::bimap<TableType, std::string> table_type_to_string;
-extern const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string;
 
 }  // namespace opossum

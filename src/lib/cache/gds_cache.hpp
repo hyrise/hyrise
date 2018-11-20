@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_cache.hpp"
+#include "abstract_cache_impl.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
 
 namespace opossum {
@@ -12,7 +12,7 @@ namespace opossum {
 // Generic cache implementation using the GDS policy.
 // Note: This implementation is not thread-safe.
 template <typename Key, typename Value>
-class GDSCache : public AbstractCache<Key, Value> {
+class GDSCache : public AbstractCacheImpl<Key, Value> {
  public:
   // Entries within the GDS cache.
   struct GDSCacheEntry {
@@ -30,7 +30,7 @@ class GDSCache : public AbstractCache<Key, Value> {
   typedef GDSCacheEntry entry_t;
   typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
 
-  explicit GDSCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
+  explicit GDSCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
     auto it = _map.find(key);

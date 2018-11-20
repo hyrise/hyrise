@@ -107,14 +107,20 @@ TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
 }
 
 TEST_F(JoinNodeTest, JoinType) {
-  auto foo = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b)->join_type;
-  EXPECT_EQ(foo, std::nullopt);
-  auto bar =
+  auto join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b)->join_type;
+  EXPECT_EQ(join_node, std::nullopt);
+  join_node =
       JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::Hash, _mock_node_a, _mock_node_b)->join_type;
-  EXPECT_EQ(bar, JoinType::Hash);
-  auto foobar =
+  EXPECT_EQ(join_node, JoinType::Hash);
+  join_node =
       JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::MPSM, _mock_node_a, _mock_node_b)->join_type;
-  EXPECT_EQ(foobar, JoinType::MPSM);
+  EXPECT_EQ(join_node, JoinType::MPSM);
+}
+
+TEST_F(JoinNodeTest, NodeExpressions) {
+  ASSERT_EQ(_inner_join_node->node_expressions.size(), 1u);
+  EXPECT_EQ(*_inner_join_node->node_expressions.at(0u), *equals_(_t_a_a, _t_b_y));
+  ASSERT_EQ(_join_node->node_expressions.size(), 0u);
 }
 
 }  // namespace opossum

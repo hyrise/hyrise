@@ -24,7 +24,8 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
+std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
+                                        const ChunkOffset chunk_size) {
   // If no meta info is given as a parameter, look for a json file
   if (csv_meta == std::nullopt) {
     _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
@@ -32,7 +33,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     _meta = *csv_meta;
   }
 
-  auto table = _create_table_from_meta();
+  auto table = _create_table_from_meta(chunk_size);
 
   std::ifstream csvfile{filename};
   std::string content{std::istreambuf_iterator<char>(csvfile), {}};
@@ -73,17 +74,16 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     table->append_chunk(segments);
   }
 
-  if (_meta.auto_compress) ChunkEncoder::encode_all_chunks(table);
-
   return table;
 }
 
-std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename) {
+std::shared_ptr<Table> CsvParser::create_table_from_meta_file(const std::string& filename,
+                                                              const ChunkOffset chunk_size) {
   _meta = process_csv_meta_file(filename);
-  return _create_table_from_meta();
+  return _create_table_from_meta(chunk_size);
 }
 
-std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
+std::shared_ptr<Table> CsvParser::_create_table_from_meta(const ChunkOffset chunk_size) {
   TableColumnDefinitions column_definitions;
   for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;
@@ -97,7 +97,7 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
     column_definitions.emplace_back(column_name, data_type, column_meta.nullable);
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
+  return std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 }
 
 bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,

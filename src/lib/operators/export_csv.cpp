@@ -39,7 +39,6 @@ void ExportCsv::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 
 void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {
   CsvMeta meta{};
-  meta.chunk_size = table->max_chunk_size();
 
   // Column Types
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
