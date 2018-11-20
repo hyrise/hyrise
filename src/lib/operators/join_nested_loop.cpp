@@ -219,7 +219,7 @@ void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_
         auto new_pos_list = std::make_shared<PosList>();
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
-        for (const auto row : *pos_list) {
+        for (const auto& row : *pos_list) {
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
           } else {

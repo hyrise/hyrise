@@ -640,7 +640,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE})
+        ${LLVM_BUNDLE_FILE}
+    )
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
@@ -658,7 +659,7 @@ add_custom_command (
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
-set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
+set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
@@ -669,3 +670,9 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+if (${ENABLE_JIT_SUPPORT})
+    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
+    # This silences some compiler warnings (uses -isystem instead of -I).
+    # target_include_directories(hyrise SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
+endif()

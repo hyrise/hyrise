@@ -203,13 +203,13 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(add_(int32_t{1}, int32_t{2})->data_type(), DataType::Int);
   EXPECT_EQ(add_(int32_t{1}, int64_t{2})->data_type(), DataType::Long);
   EXPECT_EQ(add_(int64_t{1}, int32_t{2})->data_type(), DataType::Long);
-  EXPECT_EQ(add_(float{1.3}, int32_t{2})->data_type(), DataType::Float);
-  EXPECT_EQ(add_(float{1.3}, int64_t{2})->data_type(), DataType::Double);
-  EXPECT_EQ(add_(float{1.3}, float{2})->data_type(), DataType::Float);
-  EXPECT_EQ(add_(double{1.3}, float{2})->data_type(), DataType::Double);
+  EXPECT_EQ(add_(float{1.3f}, int32_t{2})->data_type(), DataType::Float);
+  EXPECT_EQ(add_(float{1.3f}, int64_t{2})->data_type(), DataType::Double);
+  EXPECT_EQ(add_(float{1.3f}, float{2.f})->data_type(), DataType::Float);
+  EXPECT_EQ(add_(double{1.3}, float{2.f})->data_type(), DataType::Double);
   EXPECT_EQ(add_(double{1.3}, double{2})->data_type(), DataType::Double);
   EXPECT_EQ(add_(int32_t{1}, double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(unary_minus_(float{2})->data_type(), DataType::Float);
+  EXPECT_EQ(unary_minus_(float{2.f})->data_type(), DataType::Float);
   EXPECT_EQ(unary_minus_(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value_(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value_("Hello")->data_type(), DataType::String);

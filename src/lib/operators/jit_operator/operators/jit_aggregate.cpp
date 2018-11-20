@@ -197,6 +197,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       break;
     case AggregateFunction::Sum:
       DebugAssert(value.data_type() != DataType::String, "Invalid data type string for aggregate function sum.");
+      [[fallthrough]];
     case AggregateFunction::Max:
     case AggregateFunction::Min: {
       DebugAssert(value.data_type() != DataType::Null, "Invalid data type null for aggregate function.");
@@ -251,7 +252,11 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
   auto& hash_bucket = context.hashmap.indices[hash_value];
 
   bool found_match = false;
-  uint64_t row_index;
+
+  // row_index will be set later on, but it needs to be initialized. Setting it to an invalid value so that we might be
+  // able to catch cases where it is not set.
+  uint64_t row_index{std::numeric_limits<uint64_t>::max()};
+
   // Iterate over each row that produces this hash. Unless there is a hash collision, there should only be at most one
   // entry for each hash. We do not need an index-based for loop here, since the number of items in each hash bucket
   // depends on runtime hash collisions and the loop is thus not specializable (i.e., not unrollable).

@@ -53,19 +53,19 @@ T get_test_value(size_t run) {
 
 template <>
 int32_t get_test_value<int32_t>(size_t run) {
-  return 123457 + run;
+  return static_cast<int32_t>(123457 + run);
 }
 template <>
 int64_t get_test_value<int64_t>(size_t run) {
-  return 123457 + run;
+  return static_cast<int64_t>(123457 + run);
 }
 template <>
 float get_test_value<float>(size_t run) {
-  return 123457.0f + run;
+  return static_cast<float>(123457.0f + run);
 }
 template <>
 double get_test_value<double>(size_t run) {
-  return 123457.0 + run;
+  return static_cast<double>(123457.0 + run);
 }
 template <>
 std::string get_test_value<std::string>(size_t run) {

@@ -15,7 +15,12 @@ namespace opossum {
 
 class BaseExpressionResult {
  public:
+  BaseExpressionResult() = default;
   virtual ~BaseExpressionResult() = default;
+  BaseExpressionResult(const BaseExpressionResult&) = default;
+  BaseExpressionResult(BaseExpressionResult&&) = default;
+  BaseExpressionResult& operator=(const BaseExpressionResult&) = default;
+  BaseExpressionResult& operator=(BaseExpressionResult&&) = default;
 };
 
 /**

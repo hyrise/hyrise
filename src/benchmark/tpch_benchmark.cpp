@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
   }
 
   config->out << "- Benchmarking Queries: [ ";
-  for (const auto query_id : query_ids) {
+  for (const auto& query_id : query_ids) {
     config->out << (query_id + 1) << ", ";
   }
   config->out << "]" << std::endl;

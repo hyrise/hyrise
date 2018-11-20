@@ -278,6 +278,9 @@ set(
     ${CMAKE_DL_LIBS}
 )
 
+# This warning does not play well with SCOPED_TRACE
+add_compile_options(-Wno-used-but-marked-unused)
+
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
 
@@ -293,5 +296,6 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

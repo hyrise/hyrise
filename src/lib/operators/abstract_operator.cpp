@@ -132,18 +132,18 @@ void AbstractOperator::print(std::ostream& stream) const {
     if (op->input_right()) children.emplace_back(op->input_right());
     return children;
   };
-  const auto node_print_fn = [& performance_data = *_performance_data](const auto& op, auto& stream) {
-    stream << op->description();
+  const auto node_print_fn = [& performance_data = *_performance_data](const auto& op, auto& fn_stream) {
+    fn_stream << op->description();
 
     // If the operator was already executed, print some info about data and performance
     const auto output = op->get_output();
     if (output) {
-      stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
-             << output->column_count() << " column(s)/";
+      fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
+                << output->column_count() << " column(s)/";
 
-      stream << format_bytes(output->estimate_memory_usage());
-      stream << "/";
-      stream << performance_data.to_string(DescriptionMode::SingleLine) << ")";
+      fn_stream << format_bytes(output->estimate_memory_usage());
+      fn_stream << "/";
+      fn_stream << performance_data.to_string(DescriptionMode::SingleLine) << ")";
     }
   };
 

@@ -97,7 +97,7 @@ void AbstractTask::execute() {
 }
 
 void AbstractTask::_mark_as_scheduled() {
-  [[gnu::unused]] auto already_scheduled = _is_scheduled.exchange(true);
+  [[maybe_unused]] auto already_scheduled = _is_scheduled.exchange(true);
 
   DebugAssert((!already_scheduled), "Task was already scheduled!");
 }

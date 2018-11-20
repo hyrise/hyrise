@@ -1305,7 +1305,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-   ProjectionNode::make(expression_vector(10, 12.5f),
+   ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
      DummyTableNode::make()));
   // clang-format on
 
@@ -1318,7 +1318,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(10, 12.5f),
+    ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
         DummyTableNode::make()));
   // clang-format on
 
@@ -1331,7 +1331,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), 12.5f),
+    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1344,7 +1344,7 @@ TEST_F(SQLTranslatorTest, InsertNull) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), 12.5f),
+    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1370,7 +1370,7 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(5.5f, DataType::Int), cast_(12, DataType::Float)),
+    ProjectionNode::make(expression_vector(cast_(5.5, DataType::Int), cast_(12, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1442,7 +1442,7 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
   const auto expected_lqp =
   UpdateNode::make("int_float",
     row_select_lqp,
-    ProjectionNode::make(expression_vector(int_float_a, 3.2f),
+    ProjectionNode::make(expression_vector(int_float_a, cast_(3.2, DataType::Float)),
       row_select_lqp));
   // clang-format on
 

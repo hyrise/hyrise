@@ -82,7 +82,7 @@ class UidAllocator;
 class NodeQueueScheduler : public AbstractScheduler {
  public:
   NodeQueueScheduler();
-  ~NodeQueueScheduler();
+  ~NodeQueueScheduler() override;
 
   /**
    * Create a queue on every node and a processing unit for every core.
