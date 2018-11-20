@@ -674,5 +674,5 @@ target_compile_options(hyrise PRIVATE -fPIC)
 if (${ENABLE_JIT_SUPPORT})
     # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
     # This silences some compiler warnings (uses -isystem instead of -I).
-    target_include_directories(hyrise SYSTEM PUBLIC "/usr/local/opt/llvm/include")
+    # target_include_directories(hyrise SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
 endif()
