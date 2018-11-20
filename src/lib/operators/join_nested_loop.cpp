@@ -108,15 +108,19 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
         auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
         auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
 
-        iterable_left.with_iterators([&](auto left_it, auto left_end) {
-          iterable_right.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(params.predicate_condition, [&](auto comparator) {
-              _join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                      chunk_id_right, params);
-            });
-          });
-        });
-      }
+        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto params_copy = params;
+        const auto chunk_id_left_copy = chunk_id_left;
+        const auto chunk_id_right_copy = chunk_id_right;
+
+        iterable_left.with_iterators([&params_copy, &iterable_right, chunk_id_left_copy, chunk_id_right_copy](auto left_it, auto left_end) {
+           iterable_right.with_iterators([&](auto right_it, auto right_end) {
+            with_comparator(params_copy.predicate_condition, [&](auto comparator) {
+             join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left_copy,
+                                      chunk_id_right_copy, params_copy);
+             });
+           });
+         });      }
       // clang-format on
     });
   });
