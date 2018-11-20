@@ -58,6 +58,13 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportCsvTest, EmptyFile) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_empty.csv");
+  importer->execute();
+  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int_empty.tbl", 2);
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 TEST_F(OperatorsImportCsvTest, TrailingNewline) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_trailing_newline.csv");
   importer->execute();
