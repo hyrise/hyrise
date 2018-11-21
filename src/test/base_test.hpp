@@ -24,9 +24,9 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
-
 namespace opossum {
+
+using namespace expression_functional;  // NOLINT
 
 class AbstractLQPNode;
 class Table;

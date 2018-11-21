@@ -90,7 +90,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
         pos_list_out->reserve(chunk_left->size() * chunk_right->size());
         for (size_t i = 0; i < chunk_left->size() * chunk_right->size(); ++i) {
           // size_t is sufficient here, because ChunkOffset::max is 2^32 and (2^32 * 2^32 = 2^64)
-          ChunkOffset offset = is_left_side ? (i / chunk_right->size()) : (i % chunk_right->size());
+          auto offset = is_left_side ? static_cast<ChunkOffset>(i / chunk_right->size())
+                                     : static_cast<ChunkOffset>(i % chunk_right->size());
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {

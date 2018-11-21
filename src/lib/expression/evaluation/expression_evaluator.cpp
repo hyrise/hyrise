@@ -1276,7 +1276,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
   if (((row_counts == 0) || ...)) return 0;
 
-  return std::max({row_counts...});
+  return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,

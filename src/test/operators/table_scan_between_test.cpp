@@ -37,9 +37,9 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
     resolve_data_type(data_type, [&, nullable = nullable](const auto type) {
-      using DataType = typename decltype(type)::type;
+      using Type = typename decltype(type)::type;
       for (auto i = 0; i <= 10; ++i) {
-        auto value = type_cast<DataType>(10.25 + i * 2.0);
+        auto value = type_cast<Type>(10.25 + i * 2.0);
         if (nullable && i % 3 == 2) {
           data_table->append({NullValue{}, i});
         } else {

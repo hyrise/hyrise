@@ -27,10 +27,10 @@ JitCompiler::ModuleHandle JitCompiler::add_module(const std::shared_ptr<llvm::Mo
       [&](const std::string& name) -> llvm::JITSymbol {
         // We first try to locate symbols in the modules added to the JIT, then in runtime overrides and finally in
         // the running process.
-        if (auto symbol = _compile_layer.findSymbol(name, true)) {
-          return symbol;
-        } else if (auto symbol = _cxx_runtime_overrides.searchOverrides(name)) {
-          return symbol;
+        if (auto compile_layer_symbol = _compile_layer.findSymbol(name, true)) {
+          return compile_layer_symbol;
+        } else if (auto runtime_override_symbol = _cxx_runtime_overrides.searchOverrides(name)) {
+          return runtime_override_symbol;
         } else {
           return llvm::JITSymbol(llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name),
                                  llvm::JITSymbolFlags::Exported);

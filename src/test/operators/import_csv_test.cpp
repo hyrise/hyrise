@@ -58,6 +58,13 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportCsvTest, EmptyFile) {
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_empty.csv");
+  importer->execute();
+  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float_int_empty.tbl", 2);
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 TEST_F(OperatorsImportCsvTest, TrailingNewline) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_trailing_newline.csv");
   importer->execute();
@@ -218,18 +225,15 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
-  std::string csv_file = "src/test/csv/string_with_bad_null.csv";
-  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
-  csv_meta.config.reject_null_strings = false;
-  auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::MAX_SIZE, std::nullopt, csv_meta);
+  auto importer = std::make_shared<ImportCsv>("src/test/csv/null_literal.csv");
   importer->execute();
 
-  TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
-  expected_table->append({"xxx"});
-  expected_table->append({"www"});
-  expected_table->append({NULL_VALUE});
-  expected_table->append({"zzz"});
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+
+  expected_table->append({1, "Hello"});
+  expected_table->append({NULL_VALUE, "World"});
+  expected_table->append({2, NULL_VALUE});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
@@ -293,5 +297,4 @@ TEST_F(OperatorsImportCsvTest, UnconvertedCharactersThrows) {
   importer = std::make_shared<ImportCsv>("src/test/csv/unconverted_characters_double.csv");
   EXPECT_THROW(importer->execute(), std::logic_error);
 }
-
 }  // namespace opossum

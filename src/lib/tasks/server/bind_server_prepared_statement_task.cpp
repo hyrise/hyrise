@@ -24,7 +24,7 @@ void BindServerPreparedStatementTask::_on_execute() {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
 
     _promise.set_value(pqp);
-  } catch (const std::exception& exception) {
+  } catch (const std::exception&) {
     _promise.set_exception(boost::current_exception());
   }
 }

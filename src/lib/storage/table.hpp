@@ -130,7 +130,8 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk->get_segment(column_id))[row_number + current_size - row_counter]);
+        return get<T>(
+            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)]);
       }
     }
     Fail("Row does not exist.");

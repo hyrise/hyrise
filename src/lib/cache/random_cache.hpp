@@ -17,7 +17,8 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
  public:
   typedef typename std::pair<Key, Value> KeyValuePair;
 
-  explicit RandomCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity), _gen(_rd()), _rand(0, capacity - 1) {
+  explicit RandomCache(size_t capacity)
+      : AbstractCacheImpl<Key, Value>(capacity), _gen(_rd()), _rand(0, static_cast<int>(capacity - 1)) {
     _list.reserve(capacity);
   }
 
@@ -66,7 +67,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
     }
 
     this->_capacity = capacity;
-    _rand = std::uniform_int_distribution<>(0, capacity - 1);
+    _rand = std::uniform_int_distribution<>(0, static_cast<int>(capacity - 1));
   }
 
  protected:

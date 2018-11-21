@@ -78,6 +78,12 @@
 
 using namespace llvm;
 
+#pragma clang diagnostic ignored "-Wshadow-all"
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wdocumentation-unknown-command"
+#pragma clang diagnostic ignored "-Wrange-loop-analysis"
+#pragma clang diagnostic ignored "-Wold-style-cast"
+
 static cl::opt<bool>
 EnableNoAliasConversion("opossum-enable-noalias-to-md-conversion", cl::init(true),
   cl::Hidden,

@@ -50,8 +50,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
  private:
   template <typename U, typename T>
   static ValueID _get_value_id(const U& dictionary, const T& value) {
-    return static_cast<ValueID>(
-        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+    return ValueID{static_cast<ValueID::base_type>(
+        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)))};
   }
 
   template <typename U, typename T>

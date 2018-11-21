@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/preprocessor/seq/for_each.hpp>
-
 #include <unordered_map>
 
 #include "all_type_variant.hpp"
