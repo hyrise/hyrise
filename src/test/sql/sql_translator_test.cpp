@@ -1186,8 +1186,6 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   // NOLINTNEXTLINE
   const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
 
-  actual_lqp->print();
-
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{3});
@@ -1231,8 +1229,6 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
         ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_3)),
           stored_table_node_int_float))));
   // clang-format on
-
-  expected_lqp->print();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

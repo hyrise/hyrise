@@ -254,7 +254,6 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_tables();
-    _sql_pipeline->get_optimized_logical_plans().at(0)->print();
     Assert(!_sql_pipeline->failed_pipeline_statement(),
            "The transaction has failed. This should never happen in the console, where only one statement gets "
            "executed at a time.");

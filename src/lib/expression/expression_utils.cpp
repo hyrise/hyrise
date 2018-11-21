@@ -47,13 +47,6 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
   auto copied_expression_left = expression_left.deep_copy();
   expression_adapt_to_different_lqp(copied_expression_left, node_mapping);
-
-  if (*copied_expression_left != expression_right) {
-    std::cout << "    Expression mismatch: " << copied_expression_left->as_column_name() << " "
-              << expression_right.as_column_name() << std::endl;
-    return false;
-  }
-
   return *copied_expression_left == expression_right;
 }
 
