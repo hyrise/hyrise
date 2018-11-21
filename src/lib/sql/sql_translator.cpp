@@ -154,9 +154,9 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_re
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
                              const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                              const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator)
-: _use_mvcc(use_mvcc),
-  _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
-  _parameter_id_allocator(parameter_id_allocator) {}
+    : _use_mvcc(use_mvcc),
+      _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
+      _parameter_id_allocator(parameter_id_allocator) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
@@ -255,7 +255,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   return _current_lqp;
 }
 
-std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc) {
+std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
+                                                                       const UseMvcc use_mvcc) {
   // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
   return SQLTranslator{use_mvcc}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierResolver>());
 }

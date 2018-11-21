@@ -50,7 +50,10 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
                                                           const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                           const std::shared_ptr<const AbstractLQPNode>& rhs) {
   if (!lhs && !rhs) return std::nullopt;
-  if (!lhs->shallow_equals(*rhs, node_mapping)) return LQPMismatch(lhs, rhs);
+  if (!lhs->shallow_equals(*rhs, node_mapping)) {
+    std::cout << "Mismatch between\n  " << lhs->description() << "\n  " << rhs->description() << std::endl;
+    return LQPMismatch(lhs, rhs);
+  }
 
   const auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
   if (mismatch_left) return mismatch_left;

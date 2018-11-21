@@ -91,10 +91,9 @@ class SQLTranslator final {
    * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
    *                                                for each encountered parameter
    */
-  SQLTranslator(
-  const UseMvcc use_mvcc,
-  const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-  const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator);
+  SQLTranslator(const UseMvcc use_mvcc,
+                const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
+                const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
