@@ -474,8 +474,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
           sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);
         }
 
-        Assert(_use_mvcc == UseMvcc::No || lqp_is_validated(view->lqp),
-               "Can't use unvalidated View in validated Query");
+        AssertInput(_use_mvcc == (lqp_is_validated(view->lqp) ? UseMvcc::Yes : UseMvcc::No),
+               "Mismatch between validation of View and query it is used in");
       } else {
         FailInput(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
@@ -1053,6 +1053,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   }
 
   const auto prepared_plan = StorageManager::get().get_prepared_plan(execute_statement.name);
+
+  AssertInput(_use_mvcc == (lqp_is_validated(prepared_plan->lqp) ? UseMvcc::Yes : UseMvcc::No),
+              "Mismatch between validation of Prepared statement and query it is used in");
 
   return prepared_plan->instantiate(parameters);
 }

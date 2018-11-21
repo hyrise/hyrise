@@ -80,7 +80,7 @@ class SQLTranslatorTest : public ::testing::Test {
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
     const auto lqps = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
-    
+
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
   }
