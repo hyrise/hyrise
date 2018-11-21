@@ -17,7 +17,7 @@
 
 namespace {
 using namespace opossum;  // NOLINT
-static void process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
+void process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
   params.pos_list_left.emplace_back(left_row_id);
   params.pos_list_right.emplace_back(right_row_id);
 
@@ -32,7 +32,7 @@ static void process_match(RowID left_row_id, RowID right_row_id, const JoinNeste
 
 // inner join loop that joins two segments via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-static void join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+void join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                                     RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                                     const ChunkID chunk_id_right, const JoinNestedLoop::JoinParams& params) {
   for (; left_it != left_end; ++left_it) {
