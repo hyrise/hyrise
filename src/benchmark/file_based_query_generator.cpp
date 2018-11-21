@@ -49,7 +49,7 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_path) {
   Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
 
   size_t sql_string_offset{0u};
-  for (auto statement_idx = int{0}; statement_idx < parse_result.size(); ++statement_idx) {
+  for (auto statement_idx = int{0}; statement_idx < static_cast<int>(parse_result.size()); ++statement_idx) {
     const auto query_name = filename + '.' + std::to_string(statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
