@@ -52,7 +52,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   };
 
   for (const auto& table_name : _table_names) {
-    add_queries_if_present(queries, _generate_aggregate(table_name));
+//    add_queries_if_present(queries, _generate_aggregate(table_name));
   }
 
   const auto permutations = _generate_predicate_permutations();
@@ -89,8 +89,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
       CalibrationQueryGeneratorJoinConfiguration join_configuration{left_table_name, right_table_name,
                                                                     EncodingType::Unencoded, DataType::Int, false};
       // Generates the same query using all available JoinTypes
-      const auto& join_queries = _generate_join(join_configuration, left_table_name, right_table_name);
-      add_queries_if_present(queries, join_queries);
+//      const auto& join_queries = _generate_join(join_configuration, left_table_name, right_table_name);
+//      add_queries_if_present(queries, join_queries);
     }
   }
 
