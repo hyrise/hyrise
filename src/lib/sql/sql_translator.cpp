@@ -1095,6 +1095,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
     default:
       FailInput("Cannot use this ExpressionType as predicate");
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
@@ -1453,6 +1455,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
     default:
       Fail("Can't invert non-boolean expression");
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 SQLTranslator::TableSourceState::TableSourceState(
