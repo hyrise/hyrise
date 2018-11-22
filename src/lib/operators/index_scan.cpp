@@ -25,6 +25,47 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
 
 const std::string IndexScan::name() const { return "IndexScan"; }
 
+    const std::string IndexScan::description(DescriptionMode description_mode) const {
+      const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+
+      std::stringstream stream;
+
+      stream << name() << separator;
+
+      const auto predicate_condition_string = predicate_condition_to_string.left.at(_predicate_condition);
+      std::ostringstream column_name_stringstream;
+
+      for (const auto& column_id : _left_column_ids) {
+        auto column_name = _in_table->column_name(column_id);
+        column_name_stringstream << column_name << " " ;
+      }
+
+      std::ostringstream right_value_stringstream;
+
+      for (const auto& value : _right_values) {
+        right_value_stringstream << " " << value;
+      }
+
+      std::ostringstream right_value2_stringstream;
+
+
+      for (const auto& value : _right_values2) {
+        right_value2_stringstream << " " << value;
+      }
+
+      stream << separator << column_name_stringstream.str() << predicate_condition_string << right_value_stringstream.str() << right_value2_stringstream.str();
+
+      return stream.str();
+    }
+
+PredicateCondition IndexScan::predicate_condition() const { return _predicate_condition; }
+
+const std::vector<ColumnID>& IndexScan::left_columns_ids() const { return _left_column_ids; }
+
+const std::vector<AllTypeVariant>& IndexScan::right_values() const { return _right_values; }
+
+const std::vector<AllTypeVariant>& IndexScan::right_values2() const { return _right_values2; }
+
 void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {

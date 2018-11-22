@@ -35,7 +35,9 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
     const auto chunks = table->chunks();
     for (const auto& chunk : chunks) {
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        chunk->template create_index<BTreeIndex>({column_id});
+        std::vector<ColumnID> column_ids{};
+        column_ids.push_back(column_id);
+        chunk->template create_index<BTreeIndex>(column_ids);
       }
     }
 

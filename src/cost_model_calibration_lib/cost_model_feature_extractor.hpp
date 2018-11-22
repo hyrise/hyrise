@@ -9,6 +9,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 
@@ -36,6 +37,8 @@ class CostModelFeatureExtractor {
 
   static const std::optional<CalibrationTableScanFeatures> _extract_features_for_operator(
       const std::shared_ptr<const TableScan>& op);
+  static const std::optional<CalibrationTableScanFeatures> _extract_features_for_operator(
+            const std::shared_ptr<const IndexScan>& op);
   static const std::optional<CalibrationProjectionFeatures> _extract_features_for_operator(
       const std::shared_ptr<const Projection>& op);
   static const std::optional<CalibrationJoinFeatures> _extract_features_for_operator(

@@ -28,6 +28,13 @@ class IndexScan : public AbstractReadOnlyOperator {
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 
   const std::string name() const final;
+  const std::string description(DescriptionMode description_mode) const override;
+
+  PredicateCondition predicate_condition() const;
+
+  const std::vector<ColumnID>& left_columns_ids() const;
+  const std::vector<AllTypeVariant>& right_values() const;
+  const std::vector<AllTypeVariant>& right_values2() const;
 
   /**
    * @brief If set, only the specified chunks will be scanned.
