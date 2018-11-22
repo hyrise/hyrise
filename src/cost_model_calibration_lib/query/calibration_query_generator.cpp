@@ -51,9 +51,9 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
       }
   };
 
-  for (const auto& table_name : _table_names) {
+//  for (const auto& table_name : _table_names) {
 //    add_queries_if_present(queries, _generate_aggregate(table_name));
-  }
+//  }
 
   const auto permutations = _generate_predicate_permutations();
   for (const auto& permutation : permutations) {
@@ -84,15 +84,15 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
   }
 
-  for (const auto& left_table_name : _table_names) {
-    for (const auto& right_table_name : _table_names) {
-      CalibrationQueryGeneratorJoinConfiguration join_configuration{left_table_name, right_table_name,
-                                                                    EncodingType::Unencoded, DataType::Int, false};
+//  for (const auto& left_table_name : _table_names) {
+//    for (const auto& right_table_name : _table_names) {
+//      CalibrationQueryGeneratorJoinConfiguration join_configuration{left_table_name, right_table_name,
+//                                                                    EncodingType::Unencoded, DataType::Int, false};
       // Generates the same query using all available JoinTypes
 //      const auto& join_queries = _generate_join(join_configuration, left_table_name, right_table_name);
 //      add_queries_if_present(queries, join_queries);
-    }
-  }
+//    }
+//  }
 
   std::cout << "Generated " << queries.size() << " queries." << std::endl;
 
