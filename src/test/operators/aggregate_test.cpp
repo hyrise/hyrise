@@ -106,10 +106,12 @@ class OperatorsAggregateTest : public BaseTest {
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
-    // Test the Aggregate on stored table data
-    auto aggregate = std::make_shared<Aggregate>(in, aggregates, groupby_column_ids);
-    aggregate->execute();
-    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    {
+      // Test the Aggregate on stored table data
+      auto aggregate = std::make_shared<Aggregate>(in, aggregates, groupby_column_ids);
+      aggregate->execute();
+      EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
+    }
 
     if (test_aggregate_on_reference_table) {
       // Perform a TableScan to create a reference table

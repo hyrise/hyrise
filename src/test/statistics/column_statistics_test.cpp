@@ -394,9 +394,9 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
   auto stats_2 =
       std::const_pointer_cast<BaseColumnStatistics>(_column_statistics_uniform_columns[2]);  // values from 1 to 2
 
-  stats_0->set_null_value_ratio(0.1);   // non-null value ratio: 0.9
-  stats_1->set_null_value_ratio(0.2);   // non-null value ratio: 0.8
-  stats_2->set_null_value_ratio(0.15);  // non-null value ratio: 0.85
+  stats_0->set_null_value_ratio(0.1f);   // non-null value ratio: 0.9
+  stats_1->set_null_value_ratio(0.2f);   // non-null value ratio: 0.8
+  stats_2->set_null_value_ratio(0.15f);  // non-null value ratio: 0.85
 
   auto predicate_condition = PredicateCondition::Equals;
   auto result = stats_0->estimate_predicate_with_column(predicate_condition, *stats_1);

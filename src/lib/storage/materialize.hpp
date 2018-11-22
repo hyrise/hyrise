@@ -26,8 +26,8 @@ template <typename Container>
 void materialize_values(const BaseSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type;
 
-  resolve_segment_type<ContainerValueType>(segment, [&](const auto& segment) {
-    create_iterable_from_segment<ContainerValueType>(segment).materialize_values(container);
+  resolve_segment_type<ContainerValueType>(segment, [&](const auto& typed_segment) {
+    create_iterable_from_segment<ContainerValueType>(typed_segment).materialize_values(container);
   });
 }
 
@@ -36,16 +36,16 @@ template <typename Container>
 void materialize_values_and_nulls(const BaseSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type::second_type;
 
-  resolve_segment_type<ContainerValueType>(segment, [&](const auto& segment) {
-    create_iterable_from_segment<ContainerValueType>(segment).materialize_values_and_nulls(container);
+  resolve_segment_type<ContainerValueType>(segment, [&](const auto& typed_segment) {
+    create_iterable_from_segment<ContainerValueType>(typed_segment).materialize_values_and_nulls(container);
   });
 }
 
 // Materialize the nulls in the segment
 template <typename SegmentValueType, typename Container>
 void materialize_nulls(const BaseSegment& segment, Container& container) {
-  resolve_segment_type<SegmentValueType>(segment, [&](const auto& segment) {
-    create_iterable_from_segment<SegmentValueType>(segment).materialize_nulls(container);
+  resolve_segment_type<SegmentValueType>(segment, [&](const auto& typed_segment) {
+    create_iterable_from_segment<SegmentValueType>(typed_segment).materialize_nulls(container);
   });
 }
 

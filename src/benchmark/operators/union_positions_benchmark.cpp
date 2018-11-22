@@ -19,10 +19,10 @@ constexpr auto REFERENCED_TABLE_CHUNK_COUNT = opossum::ChunkID{10};
 constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
 
 /**
- * Generate a random pos_list of length std::floor(pos_list_size) with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
+ * Generate a random pos_list of length pos_list_size with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, float pos_list_size) {
+std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
   std::random_device random_device;
   std::default_random_engine random_engine(random_device());
 

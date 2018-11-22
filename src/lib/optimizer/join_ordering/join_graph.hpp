@@ -25,7 +25,7 @@ namespace opossum {
 class JoinGraph final {
  public:
   /**
-   * Tries to turn the subplan rooted at @lqp into a JoinGraph.
+   * Tries to turn the subplan rooted at @param lqp into a JoinGraph.
    * @return nullopt, if the root node would already be a vertex and thus the JoinGraph wouldn't be meaningful
    */
   static std::optional<JoinGraph> build_from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);

@@ -30,7 +30,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   //    and count the occurrences of each value id at their respective position in the dictionary,
   //    i.e. the position in the _index_offsets
   resolve_compressed_vector_type(*_indexed_segments->attribute_vector(), [&](auto& attribute_vector) {
-    for (const auto& value_id : attribute_vector) {
+    for (const auto value_id : attribute_vector) {
       _index_offsets[value_id + 1u]++;
     }
   });

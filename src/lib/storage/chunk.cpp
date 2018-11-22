@@ -66,12 +66,12 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
 
 const Segments& Chunk::segments() const { return _segments; }
 
-uint16_t Chunk::column_count() const { return _segments.size(); }
+uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.size()); }
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
   auto first_segment = get_segment(ColumnID{0});
-  return first_segment->size();
+  return static_cast<uint32_t>(first_segment->size());
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }

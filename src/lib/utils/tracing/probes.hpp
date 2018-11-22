@@ -18,6 +18,8 @@ constexpr bool is_valid_name(const char* name) {
 
 #if defined(__APPLE__) || defined(__MACOS__)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
 #include "provider.hpp"
 
 // Construct the probe definition by provider and probe name. Because TSan has issues and throw false positives, we

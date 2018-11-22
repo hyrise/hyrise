@@ -18,6 +18,9 @@ extern "C" {
 extern char** asc_date;
 extern seed_t seed[];
 
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wfloat-conversion"
+
 namespace {
 
 // clang-format off
@@ -76,10 +79,10 @@ class TableBuilder {
     // Iterate over the column types/names and create the columns.
     opossum::TableColumnDefinitions column_definitions;
     boost::hana::fold_left(column_names_and_data_types, column_definitions,
-                           [](auto& column_definitions, auto column_name_and_type) -> decltype(auto) {
-                             column_definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
-                                                             column_name_and_type[boost::hana::llong_c<1>]);
-                             return column_definitions;
+                           [](auto& definitions, auto column_name_and_type) -> decltype(auto) {
+                             definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
+                                                      column_name_and_type[boost::hana::llong_c<1>]);
+                             return definitions;
                            });
     _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
 
