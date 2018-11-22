@@ -24,7 +24,7 @@ using PredicateGeneratorFunctor = std::function<const std::shared_ptr<AbstractEx
 
 class CalibrationQueryGeneratorPredicate {
  public:
-  static const std::shared_ptr<PredicateNode> generate_predicates(
+  static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_predicates(
       const PredicateGeneratorFunctor& predicate_generator,
       const std::vector<CalibrationColumnSpecification>& column_definitions,
       const std::shared_ptr<StoredTableNode>& table,

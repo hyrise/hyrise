@@ -1,6 +1,7 @@
 #include "cost_model_calibration_table_generator.hpp"
 
 #include "query/calibration_query_generator.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
@@ -30,7 +31,14 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
 
-    // TODO(Sven): add indices
+    const auto column_count = table->column_count();
+    const auto chunks = table->chunks();
+    for (const auto& chunk : chunks) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        chunk->template create_index<BTreeIndex>({column_id});
+      }
+    }
+
     StorageManager::get().add_table(table_specification.table_name, table);
 
     std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;

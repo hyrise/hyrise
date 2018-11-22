@@ -97,6 +97,10 @@ const std::unordered_map<OperatorType, std::string> operator_type_to_string = {
     {OperatorType::ShowTables, "ShowTables"},
     {OperatorType::Mock, "Mock"}};
 
+    const std::unordered_map<ScanType, std::string> scan_type_to_string = {
+            {ScanType::TableScan, "TableScan"},
+            {ScanType::IndexScan, "IndexScan"}};
+
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({
         {AggregateFunction::Min, "MIN"},

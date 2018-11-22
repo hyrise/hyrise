@@ -4,6 +4,7 @@
 
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/storage_manager.hpp"
@@ -15,7 +16,7 @@ namespace opossum {
 /**
 * Generates a list of predicates connected by AND
 */
-const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generate_predicates(
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorPredicate::generate_predicates(
     const PredicateGeneratorFunctor& predicate_generator,
     const std::vector<CalibrationColumnSpecification>& column_definitions,
     const std::shared_ptr<StoredTableNode>& table,
@@ -33,9 +34,42 @@ const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generat
 
   // TODO(Sven): add test for this case
   if (!predicate) return {};
-  const auto predicate_node = PredicateNode::make(predicate);
 
-  return predicate_node;
+  std::vector<ScanType> scan_types = {ScanType::TableScan, ScanType ::IndexScan};
+  std::vector<std::shared_ptr<AbstractLQPNode>> permutated_predicate_nodes{};
+
+      auto column_expression_count = 0;
+      visit_expression(predicate, [&](const auto& sub_expression) {
+          if (sub_expression->type == ExpressionType::LQPColumn) {
+            column_expression_count += 1;
+          }
+
+          return ExpressionVisitation::VisitArguments;
+      });
+
+  for (const auto& scan_type : scan_types) {
+    // IndexScan does not work on ReferenceSegments or handle multiple columns in B-Tree
+    if (scan_type == ScanType::IndexScan) {
+      if (configuration.reference_column || column_expression_count > 1) {
+        continue;
+      }
+
+      if (predicate->type == ExpressionType::Predicate) {
+        const auto abstract_predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
+        const auto predicate_condition = abstract_predicate_expression->predicate_condition;
+        if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
+          continue;
+        }
+      }
+    }
+
+
+    const auto predicate_node = PredicateNode::make(predicate);
+    predicate_node->scan_type = scan_type;
+    permutated_predicate_nodes.push_back(predicate_node);
+  }
+
+  return permutated_predicate_nodes;
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value(
@@ -253,8 +287,6 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_g
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
     const CalibrationColumnSpecification& column_definition, const float selectivity, const bool trailing_like) {
   const auto column_type = column_definition.type;
-
-
 
   const auto int_value = static_cast<int>(column_definition.distinct_values * selectivity);
   const auto float_value = selectivity;

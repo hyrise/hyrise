@@ -8,6 +8,7 @@
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/logical_expression.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -19,6 +20,7 @@ enum class ExpressionType;
 enum class LogicalOperator;
 enum class TableType;
 enum class OperatorType;
+enum class ScanType : uint8_t;
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
 extern const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string;
@@ -28,6 +30,7 @@ extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<JoinType, std::string> join_type_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const std::unordered_map<OperatorType, std::string> operator_type_to_string;
+extern const std::unordered_map<ScanType, std::string> scan_type_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
