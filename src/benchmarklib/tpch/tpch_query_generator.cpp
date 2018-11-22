@@ -29,7 +29,7 @@ void TPCHQueryGenerator::_generate_names() {
 }
 
 void TPCHQueryGenerator::_generate_preparation_queries() {
-  for (const auto& query_id : _selected_queries) {
+  for (auto query_id = QueryID{0}; query_id < 22; ++query_id) {
     if (query_id + 1 == 15) {
       // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
       // to manually build this query once we start randomizing the parameters.
