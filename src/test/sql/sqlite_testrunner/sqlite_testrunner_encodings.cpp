@@ -1,5 +1,7 @@
 #include "sqlite_testrunner.hpp"
 
+#include "boost/hana.hpp"
+
 namespace {
 
 using namespace opossum;  // NOLINT
@@ -7,7 +9,7 @@ using namespace opossum;  // NOLINT
 std::vector<SQLiteTestRunnerTestCase> generate_test_cases() {
   auto queries = SQLiteTestRunner::queries();
 
-  const auto encoding_type_count = hana::size(supported_data_types_for_encoding_type) - 1;
+  const auto encoding_type_count = hana::size(supported_data_types_for_encoding_type);
 
   std::vector<SQLiteTestRunnerTestCase> test_cases;
   test_cases.reserve(queries.size() * encoding_type_count);

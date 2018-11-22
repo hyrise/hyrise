@@ -31,6 +31,7 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -43,8 +44,23 @@ struct SQLiteTestRunnerTestCase {
 
 class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
  public:
+  static constexpr ChunkOffset CHUNK_SIZE = 10;
+
+  // Structure to cache initially loaded tables and store their file paths
+  // to reload the the table from the given tbl file whenever required.
+  struct TableCacheEntry {
+    std::shared_ptr<Table> table;
+    std::string filename;
+    ChunkEncodingSpec chunk_encoding_spec{};
+    bool dirty{false};
+  };
+
+  using TableCache = std::map<std::string, TableCacheEntry>;
+
   static void SetUpTestCase() {  // called ONCE before the tests
     _sqlite = std::make_unique<SQLiteWrapper>();
+
+    auto unencoded_table_cache = TableCache{};
 
     std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
     std::string line;
@@ -65,22 +81,51 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
 
       // Store loaded tables in a map that basically caches the loaded tables. In case the table
       // needs to be reloaded (e.g., due to modifications), we also store the file path.
-      _test_table_cache.emplace(table_name, TableCacheEntry{load_table(table_file, 10), table_file});
+      unencoded_table_cache.emplace(table_name, TableCacheEntry{load_table(table_file, CHUNK_SIZE), table_file});
 
       // Create test table and also table copy which is later used as the master to copy from.
       _sqlite->create_table_from_tbl(table_file, table_name);
       _sqlite->create_table_from_tbl(table_file, table_name + _master_table_suffix);
     }
 
+    _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
+
     opossum::Topology::use_numa_topology();
     opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
   }
 
-  void SetUp() override {  // called once before each test
-    // For proper testing, we reset the storage manager before EVERY test.
-    StorageManager::get().reset();
+  void SetUp() override {
+    const auto& param = GetParam();
 
-    for (auto const& [table_name, test_table] : _test_table_cache) {
+    auto table_cache_iter = _table_cache_per_encoding.find(param.encoding_type);
+
+    if (table_cache_iter == _table_cache_per_encoding.end()) {
+      const auto& unencoded_table_cache = _table_cache_per_encoding.at(EncodingType::Unencoded);
+      auto encoded_table_cache = TableCache{};
+
+      for (auto const& [table_name, table_cache_entry] : unencoded_table_cache) {
+        auto table = load_table(table_cache_entry.filename, CHUNK_SIZE);
+
+        auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), EncodingType::Unencoded};
+        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+          if (encoding_supports_data_type(param.encoding_type, table->column_data_type(column_id))) {
+            chunk_encoding_spec[column_id] = param.encoding_type;
+          }
+        }
+
+        ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
+        encoded_table_cache.emplace(table_name, TableCacheEntry{table, table_cache_entry.filename, chunk_encoding_spec, false});
+      }
+
+      table_cache_iter = _table_cache_per_encoding.emplace(param.encoding_type, encoded_table_cache).first;
+    }
+
+    auto& table_cache = table_cache_iter->second;
+
+    // For proper testing, we reset the storage manager before EVERY test.
+    StorageManager::reset();
+
+    for (auto const& [table_name, table_cache_entry] : table_cache) {
       /*
         Opossum:
           We start off with cached tables (SetUpTestCase) and add them to the resetted
@@ -89,16 +134,20 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
         SQLite:
           Drop table and copy the whole table from the master table to reset all accessed tables.
       */
-      if (test_table.dirty) {
+      if (table_cache_entry.dirty) {
         // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
-        auto reloaded_table = load_table(test_table.filename, 10);
+        auto reloaded_table = load_table(table_cache_entry.filename, CHUNK_SIZE);
+        if (param.encoding_type != EncodingType::Unencoded) {
+          ChunkEncoder::encode_all_chunks(reloaded_table, table_cache_entry.chunk_encoding_spec);
+        }
+
         StorageManager::get().add_table(table_name, reloaded_table);
-        _test_table_cache.emplace(table_name, TableCacheEntry{reloaded_table, test_table.filename});
+        table_cache.emplace(table_name, TableCacheEntry{reloaded_table, table_cache_entry.filename});
 
         // When tables in Hyrise have (potentially) modified, the should might be true for SQLite.
         _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
       } else {
-        StorageManager::get().add_table(table_name, test_table.table);
+        StorageManager::get().add_table(table_name, table_cache_entry.table);
       }
     }
 
@@ -121,16 +170,8 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
     return queries;
   }
 
-  // Structure to cache initially loaded tables and store their file paths
-  // to reload the the table from the given tbl file whenever required.
-  struct TableCacheEntry {
-    std::shared_ptr<Table> table;
-    std::string filename;
-    bool dirty{false};
-  };
-
   inline static std::unique_ptr<SQLiteWrapper> _sqlite;
-  inline static std::map<std::string, TableCacheEntry> _test_table_cache;
+  inline static std::map<EncodingType, TableCache> _table_cache_per_encoding;
   inline static std::string _master_table_suffix = "_master_copy";
 };
 
