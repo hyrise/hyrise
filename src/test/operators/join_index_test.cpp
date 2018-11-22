@@ -68,7 +68,6 @@ class JoinIndexTest : public BaseTest {
   void SetUp() override {}
 
   static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
-    std::cout << "loading " << filename << std::endl;
     auto table = load_table(filename, chunk_size);
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});

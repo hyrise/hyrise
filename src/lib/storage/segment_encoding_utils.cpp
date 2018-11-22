@@ -41,12 +41,17 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
 std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, DataType data_type,
                                                    const std::shared_ptr<const BaseValueSegment>& segment,
                                                    std::optional<VectorCompressionType> zero_suppression_type) {
+  std::cout << "encode_segment1" << std::endl;
   auto encoder = create_encoder(encoding_type);
+  std::cout << "encode_segment2" << std::endl;
 
   if (zero_suppression_type.has_value()) {
+  std::cout << "encode_segment3" << std::endl;
     encoder->set_vector_compression(*zero_suppression_type);
+  std::cout << "encode_segment4" << std::endl;
   }
 
+  std::cout << "encode_segment5" << std::endl;
   return encoder->encode(segment, data_type);
 }
 
