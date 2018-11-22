@@ -33,8 +33,8 @@ void process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::
 // inner join loop that joins two segments via their iterators
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
 void join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                    RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                    const ChunkID chunk_id_right, const JoinNestedLoop::JoinParams& params) {
+                             RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                             const ChunkID chunk_id_right, const JoinNestedLoop::JoinParams& params) {
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
     if (left_value.is_null()) continue;
