@@ -1,31 +1,37 @@
 #include "sqlite_testrunner.hpp"
 
+#include "constant_mappings.hpp"
+
 namespace opossum {
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& param = GetParam();
 
+  const auto& sql = std::get<0>(param);
+  const auto use_jit = std::get<1>(param);
+  const auto encoding_type = std::get<2>(param);
+
   std::shared_ptr<LQPTranslator> lqp_translator;
-  if (param.use_jit) {
+  if (use_jit) {
     lqp_translator = std::make_shared<JitAwareLQPTranslator>();
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
 
-  SCOPED_TRACE("SQLite " + param.sql + (param.use_jit ? " with JIT" : " without JIT"));
+  SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " with encoding " + encoding_type_to_string.left.at(encoding_type));
 
-  auto sql_pipeline = SQLPipelineBuilder{param.sql}.with_lqp_translator(lqp_translator).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     for (const auto& table_name : lqp_find_modified_tables(plan)) {
       // mark table cache entry as dirty, when table has been modified
-      _table_cache_per_encoding.at(param.encoding_type).at(table_name).dirty = true;
+      _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
     }
   }
 
-  auto sqlite_result_table = _sqlite->execute_query(param.sql);
+  auto sqlite_result_table = _sqlite->execute_query(sql);
 
   // The problem is that we can only infer column types from sqlite if they have at least one row.
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
@@ -44,7 +50,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
                                 FloatComparisonMode::RelativeDifference))
-        << "Query failed: " << param.sql;
+        << "Query failed: " << sql;
 
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {

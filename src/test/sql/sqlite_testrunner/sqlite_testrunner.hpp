@@ -36,11 +36,7 @@
 
 namespace opossum {
 
-struct SQLiteTestRunnerTestCase {
-  std::string sql;
-  bool use_jit{false};
-  EncodingType encoding_type{EncodingType::Unencoded};
-};
+using SQLiteTestRunnerTestCase = std::tuple<std::string, bool, EncodingType>;
 
 class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
  public:
@@ -96,8 +92,10 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
 
   void SetUp() override {
     const auto& param = GetParam();
-
-    auto table_cache_iter = _table_cache_per_encoding.find(param.encoding_type);
+    
+    const auto encoding_type = std::get<2>(param);
+    
+    auto table_cache_iter = _table_cache_per_encoding.find(encoding_type);
 
     if (table_cache_iter == _table_cache_per_encoding.end()) {
       const auto& unencoded_table_cache = _table_cache_per_encoding.at(EncodingType::Unencoded);
@@ -108,8 +106,8 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
 
         auto chunk_encoding_spec = ChunkEncodingSpec{table->column_count(), EncodingType::Unencoded};
         for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-          if (encoding_supports_data_type(param.encoding_type, table->column_data_type(column_id))) {
-            chunk_encoding_spec[column_id] = param.encoding_type;
+          if (encoding_supports_data_type(encoding_type, table->column_data_type(column_id))) {
+            chunk_encoding_spec[column_id] = encoding_type;
           }
         }
 
@@ -117,7 +115,7 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
         encoded_table_cache.emplace(table_name, TableCacheEntry{table, table_cache_entry.filename, chunk_encoding_spec, false});
       }
 
-      table_cache_iter = _table_cache_per_encoding.emplace(param.encoding_type, encoded_table_cache).first;
+      table_cache_iter = _table_cache_per_encoding.emplace(encoding_type, encoded_table_cache).first;
     }
 
     auto& table_cache = table_cache_iter->second;
@@ -137,7 +135,7 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerTestCase> {
       if (table_cache_entry.dirty) {
         // 1. reload table from tbl file, 2. add table to storage manager, 3. cache table in map
         auto reloaded_table = load_table(table_cache_entry.filename, CHUNK_SIZE);
-        if (param.encoding_type != EncodingType::Unencoded) {
+        if (encoding_type != EncodingType::Unencoded) {
           ChunkEncoder::encode_all_chunks(reloaded_table, table_cache_entry.chunk_encoding_spec);
         }
 
