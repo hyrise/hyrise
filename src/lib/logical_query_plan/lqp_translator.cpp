@@ -153,7 +153,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 
-  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
@@ -405,7 +404,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
   }
-  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(

@@ -50,7 +50,6 @@ DataType FunctionExpression::data_type() const {
     case FunctionType::Concatenate:
       return DataType::String;
   }
-  Fail("GCC thinks this is reachable");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
