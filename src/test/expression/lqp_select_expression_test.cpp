@@ -132,11 +132,11 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
 
 TEST_F(LQPSelectExpressionTest, AsColumnName) {
   EXPECT_TRUE(std::regex_search(select_a->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 
   // Test IN and EXISTS here as well, since they need subselects to function
-  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));  // NOLINT
-  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 }
 
 }  // namespace opossum
