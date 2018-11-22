@@ -593,15 +593,15 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_15 =
-    R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
+    R"(create view revenue_view (supplier_no, total_revenue) as SELECT l_suppkey,
       SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
-      AND l_shipdate < '1993-08-13' GROUP BY l_suppkey';
+      AND l_shipdate < '1993-08-13' GROUP BY l_suppkey;
 
-      PREPARE TPCH15b FROM 'SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
+      SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue_view
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
-      FROM revenue) ORDER BY s_suppkey';
+      FROM revenue_view) ORDER BY s_suppkey;
 
-      ;)";
+      DROP VIEW revenue_view;)";
 
 /**
  * TPC-H 16

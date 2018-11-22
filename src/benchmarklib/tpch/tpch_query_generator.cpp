@@ -1,5 +1,6 @@
 #include "tpch_query_generator.hpp"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <numeric>
 
 #include "tpch_queries.hpp"
@@ -42,6 +43,16 @@ void TPCHQueryGenerator::_generate_preparation_queries() {
 std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
 
+  if(query_id == 14) {
+    // Generating TPC-H Query 15 by hand
+    auto query_15 = std::string{tpch_queries.find(15)->second};
+
+    static auto view_id = 0;
+    boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(view_id++));
+    // TODO(anyone): Set random parameters
+    return query_15;
+  }
+
   static std::vector<std::string> execute_statements = {
       "EXECUTE TPCH1  ('1998-09-02');",
       "EXECUTE TPCH2  (15, '%BRASS', 'EUROPE', 'EUROPE');",
@@ -57,7 +68,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH12 ('MAIL', 'SHIP', '1994-01-01', '1995-01-01');",
       "EXECUTE TPCH13;",
       "EXECUTE TPCH14 ('1995-09-01', '1995-10-01');",
-      tpch_queries.find(15)->second,  // see comment in _generate_preparation_queries.
+      "",  // see comment in _generate_preparation_queries.
       "EXECUTE TPCH16 ('Brand#45', 'MEDIUM POLISHED%', 49, 14, 23, 45, 19, 3, 36, 9);",
       "EXECUTE TPCH17 ('Brand#23', 'MED BOX');",
       "EXECUTE TPCH18 (300);",
