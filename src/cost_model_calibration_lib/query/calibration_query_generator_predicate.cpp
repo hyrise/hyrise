@@ -78,8 +78,8 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto& between_predicate_value = [configuration](const std::shared_ptr<StoredTableNode>& table,
                                                         const CalibrationColumnSpecification& filter_column)
       -> std::optional<std::pair<std::shared_ptr<AbstractExpression>, std::shared_ptr<AbstractExpression>>> {
-    const auto first_filter_column_value = _generate_value_expression(filter_column, configuration.selectivity);
-    const auto second_filter_column_value = _generate_value_expression(filter_column, 0.5f);
+    const auto first_filter_column_value = _generate_value_expression(filter_column, configuration.row_count, configuration.selectivity);
+    const auto second_filter_column_value = _generate_value_expression(filter_column, configuration.row_count, 0.0f);
 
     if (!first_filter_column_value || !second_filter_column_value) return {};
 
@@ -142,7 +142,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto& filter_column_value_functor = [](const std::shared_ptr<StoredTableNode>& table,
                                                const CalibrationColumnSpecification& filter_column,
                                                const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-    return _generate_value_expression(filter_column, configuration.selectivity);
+    return _generate_value_expression(filter_column, configuration.row_count, configuration.selectivity);
   };
 
   return _generate_column_predicate(table, filter_column_value_functor, filter_column, configuration);
@@ -222,7 +222,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
   const CalibrationQueryGeneratorPredicateConfiguration second_configuration{
       configuration.table_name, configuration.encoding_type, configuration.data_type, 0.5f,
-      configuration.reference_column};
+      configuration.reference_column, configuration.row_count};
 
   const auto lhs = generate_predicate_column_value(table, filter_column, configuration);
   const auto rhs = generate_predicate_column_value(table, filter_column, second_configuration);
@@ -285,12 +285,14 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_g
 }
 
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
-    const CalibrationColumnSpecification& column_definition, const float selectivity, const bool trailing_like) {
+    const CalibrationColumnSpecification& column_definition, size_t row_count, const float selectivity, const bool trailing_like) {
   const auto column_type = column_definition.type;
 
-  const auto int_value = static_cast<int>(column_definition.distinct_values * selectivity);
+  const auto distinct_values = std::max(static_cast<int>(row_count / 100), 100);
+
+  const auto int_value = static_cast<int>(distinct_values * selectivity);
   const auto float_value = selectivity;
-  const auto string_value = static_cast<int>(26 * selectivity);
+  const auto string_value = static_cast<int>(25 * selectivity);
 
   switch (column_type) {
     case DataType::Int:

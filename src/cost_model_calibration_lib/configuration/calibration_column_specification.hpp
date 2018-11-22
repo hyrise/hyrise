@@ -41,7 +41,7 @@ inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s
   s.type = data_type_to_string.right.at(data_type_string);
   s.value_distribution = j.value("value_distribution", "uniform");
   s.sorted = j.value("sorted", false);
-  s.distinct_values = j.value("distinct_values", 100);
+  s.distinct_values = j.value("distinct_values", 0);
   auto encoding_string = j.value("encoding", "Unencoded");
   if (encoding_type_to_string.right.find(encoding_string) == encoding_type_to_string.right.end()) {
     Fail("Unsupported encoding");

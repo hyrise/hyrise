@@ -56,7 +56,7 @@ class TrainingDataPipeline:
         # And many more... not sure how to cover this
         scan_operator_categories = ['LIKE', 'NOT LIKE', '>','<', '!=', '=', '<=', '>=', 'BETWEEN', 'Or', 'undefined', 'IN']
 
-        df = df[df['operator_type'] == 'TableScan']
+        df = df[(df['operator_type'] == 'TableScan') | (df['operator_type'] == 'IndexScan')]
 
         df['first_column_segment_encoding'] = df['first_column_segment_encoding']\
             .astype('category', categories=encoding_categories)

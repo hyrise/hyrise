@@ -14,7 +14,7 @@
 namespace opossum {
 
 CalibrationQueryGenerator::CalibrationQueryGenerator(
-    const std::vector<std::string>& table_names,
+    const std::vector<std::pair<std::string, size_t>>& table_names,
     const std::vector<CalibrationColumnSpecification>& column_specifications,
     const CalibrationConfiguration& configuration)
     : _column_specifications(column_specifications), _configuration(configuration), _table_names(table_names) {}
@@ -27,8 +27,8 @@ CalibrationQueryGenerator::_generate_predicate_permutations() const {
     for (const auto& data_type : _configuration.data_types) {
       for (const auto& selectivity : _configuration.selectivities) {
         for (const auto& table_name : _table_names) {
-          output.push_back({table_name, encoding, data_type, selectivity, false});
-          output.push_back({table_name, encoding, data_type, selectivity, true});
+          output.push_back({table_name.first, encoding, data_type, selectivity, false, table_name.second});
+          output.push_back({table_name.first, encoding, data_type, selectivity, true, table_name.second});
         }
       }
     }

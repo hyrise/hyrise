@@ -19,7 +19,7 @@ namespace opossum {
 
 class CalibrationQueryGenerator {
  public:
-  explicit CalibrationQueryGenerator(const std::vector<std::string>& table_names,
+  explicit CalibrationQueryGenerator(const std::vector<std::pair<std::string, size_t>>& table_names,
                                      const std::vector<CalibrationColumnSpecification>& column_specifications,
                                      const CalibrationConfiguration& configuration);
 
@@ -40,7 +40,7 @@ class CalibrationQueryGenerator {
 
   const std::vector<CalibrationColumnSpecification> _column_specifications;
   const CalibrationConfiguration _configuration;
-  const std::vector<std::string> _table_names;
+  const std::vector<std::pair<std::string, size_t>> _table_names;
 };
 
 }  // namespace opossum
