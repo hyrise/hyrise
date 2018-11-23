@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,7 +9,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/filesystem.hpp"
 
 namespace opossum {
 
@@ -148,8 +148,8 @@ TEST_F(StorageManagerTest, ExportTables) {
   sm.export_all_tables_as_csv(opossum::test_data_path);
 
   const std::string filename = opossum::test_data_path + "/third_table.csv";
-  EXPECT_TRUE(filesystem::exists(filename));
-  filesystem::remove(filename);
+  EXPECT_TRUE(std::filesystem::exists(filename));
+  std::filesystem::remove(filename);
 }
 
 }  // namespace opossum

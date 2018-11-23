@@ -1,6 +1,5 @@
+#include <filesystem>
 #include <string>
-
-#include "utils/filesystem.hpp"
 
 namespace opossum {
 
@@ -11,6 +10,6 @@ std::vector<std::string> trim_and_split(const std::string& input);
 std::vector<std::string> split_string_by_delimiter(const std::string& str, char delimiter);
 
 // Returns the name of a plugin from its path. The name is the filename without the "lib" prefix and the file extension.
-const std::string plugin_name_from_path(const filesystem::path& path);
+const std::string plugin_name_from_path(const std::filesystem::path& path);
 
 }  // namespace opossum
