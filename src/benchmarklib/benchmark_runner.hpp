@@ -41,9 +41,6 @@ class BenchmarkRunner {
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries();
 
-  // Some benchmarks (e.g., TPC-H) run PREPARE statements before the actual execution
-  void _prepare_queries();
-
   // Execute warmup run of a query
   void _warmup_query(const QueryID query_id);
 
