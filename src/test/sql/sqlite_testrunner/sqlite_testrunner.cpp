@@ -140,6 +140,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   const auto result_table = sql_pipeline.get_result_table();
 
+  // Mark modified tables as dirty. Doing this AFTER executing the query is potentially dangerous, since the query
+  // might throw an exception after modifying a Table, resulting in this dirty-marking never running
+  // TODO(andybody) Find a solution that doesn't need try/catch in hyrise code
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     for (const auto& table_name : lqp_find_modified_tables(plan)) {
       // mark table cache entry as dirty, when table has been modified
