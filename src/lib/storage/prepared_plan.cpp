@@ -74,7 +74,9 @@ void PreparedPlan::print(std::ostream& stream) const {
 
 std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
     const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const {
-  Assert(parameters.size() == parameter_ids.size(), std::string("Incorrect number of parameters supplied - expected ") + std::to_string(parameter_ids.size()) + " got " + std::to_string(parameters.size()));
+  Assert(parameters.size() == parameter_ids.size(), std::string("Incorrect number of parameters supplied - expected ") +
+                                                        std::to_string(parameter_ids.size()) + " got " +
+                                                        std::to_string(parameters.size()));
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {

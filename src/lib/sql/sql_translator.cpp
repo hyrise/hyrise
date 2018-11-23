@@ -475,7 +475,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
         AssertInput(_use_mvcc == (lqp_is_validated(view->lqp) ? UseMvcc::Yes : UseMvcc::No),
-               "Mismatch between validation of View and query it is used in");
+                    "Mismatch between validation of View and query it is used in");
       } else {
         FailInput(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }

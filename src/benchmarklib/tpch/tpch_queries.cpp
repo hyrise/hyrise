@@ -190,8 +190,8 @@ const char* const tpch_query_5 =
  *
  * SELECT sum(L_EXTENDEDPRICE*L_DISCOUNT) AS REVENUE
  * FROM LINEITEM
- * WHERE L_SHIPDATE >= '1994-01-01' AND L_SHIPDATE < dateadd(yy, 1, cast('1994-01-01' as datetime))
- * AND L_DISCOUNT BETWEEN .06 - 0.01 AND .06 + 0.01 AND L_QUANTITY < 24
+ * WHERE L_SHIPDATE >= '[DATE]' AND L_SHIPDATE < dateadd(yy, 1, cast('[DATE]' as datetime))
+ * AND L_DISCOUNT BETWEEN [DISCOUNT] - 0.01 AND [DISCOUNT] + 0.01 AND L_QUANTITY < [QUANTITY]
  *
  * Changes:
  *  1. dates are not supported
@@ -201,13 +201,11 @@ const char* const tpch_query_5 =
  *    a. Add a small offset ".06 + 0.01001" to include records with a l_discount of "0.07"
  */
 
-// TODO verify if no random
-
 const char* const tpch_query_6 =
     R"(PREPARE TPCH6 FROM 'SELECT sum(l_extendedprice*l_discount) AS REVENUE
       FROM lineitem
-      WHERE l_shipdate >= ''1994-01-01'' AND l_shipdate < ''1995-01-01''
-      AND l_discount BETWEEN .06 - 0.01 AND .06 + 0.01001 AND l_quantity < 24';)";
+      WHERE l_shipdate >= ? AND l_shipdate < ?
+      AND l_discount BETWEEN ? - 0.01 AND ? + 0.01001 AND l_quantity < ?';)";
 
 /**
  * TPC-H 7
@@ -516,7 +514,7 @@ const char* const tpch_query_12 =
  *    FROM customer left outer join orders
  *    on
  *        c_custkey = o_custkey
- *        AND o_comment not like '%special%requests%'
+ *        AND o_comment not like '%[word1]%[word2]%'
  *    GROUP BY c_custkey
  *    ) as c_orders (c_custkey, c_count)
  * GROUP BY c_count
@@ -527,10 +525,9 @@ const char* const tpch_query_12 =
  *  2. Subselect column aliases are moved into subselect because SQLite does not support aliases at the original position
  */
 
-// TODO which random values?
 const char* const tpch_query_13 =
     R"(PREPARE TPCH13 FROM 'SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
-      FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like ''%special%request%''
+      FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like ?
       GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC';)";
 
 /**
@@ -594,8 +591,8 @@ const char* const tpch_query_14 =
  */
 const char* const tpch_query_15 =
     R"(create view revenue_view (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
-      AND l_shipdate < '1993-08-13' GROUP BY l_suppkey;
+      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1996-01-01'
+      AND l_shipdate < '1996-04-01' GROUP BY l_suppkey;
 
       SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue_view
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
@@ -844,7 +841,7 @@ const char* const tpch_query_21 =
  *     FROM
  *         customer
  *    WHERE
- *         SUBSTRING(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17')
+ *         SUBSTRING(c_phone,1,2) IN ('[I1]','[I2]’,'[I3]','[I4]','[I5]','[I6]','[I7]')
  *         AND c_acctbal > (
  *             SELECT
  *                 AVG(c_acctbal)
@@ -852,7 +849,7 @@ const char* const tpch_query_21 =
  *                 customer
  *             WHERE
  *                 c_acctbal > 0.00
- *                 AND SUBSTRING(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17')
+ *                 AND SUBSTRING(c_phone,1,2) IN ('[I1]','[I2]’,'[I3]','[I4]','[I5]','[I6]','[I7]')
  *         )
  *         AND NOT EXISTS (
  *             SELECT
@@ -880,14 +877,14 @@ const char* const tpch_query_22 =
           FROM
             customer
           WHERE
-            SUBSTR(c_phone,1,2) IN (''13'', ''31'', ''23'', ''29'', ''30'', ''18'', ''17'') AND
+            SUBSTR(c_phone,1,2) IN (?, ?, ?, ?, ?, ?, ?) AND
             c_acctbal > (SELECT
                            AVG(c_acctbal)
                          FROM
                            customer
                          WHERE
                           c_acctbal > 0.00 AND
-                          SUBSTR(c_phone,1,2) IN (''13'', ''31'', ''23'', ''29'', ''30'', ''18'', ''17'')) AND
+                          SUBSTR(c_phone,1,2) IN (?, ?, ?, ?, ?, ?, ?)) AND
             NOT EXISTS ( SELECT * FROM orders WHERE o_custkey = c_custkey)
         ) AS CUSTSALE
        GROUP BY CNTRYCODE

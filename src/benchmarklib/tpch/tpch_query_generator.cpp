@@ -43,7 +43,7 @@ void TPCHQueryGenerator::_generate_preparation_queries() {
 std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
 
-  if(query_id == 14) {
+  if (query_id == 14) {
     // Generating TPC-H Query 15 by hand
     auto query_15 = std::string{tpch_queries.find(15)->second};
 
@@ -59,14 +59,14 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH3  ('BUILDING', '1995-03-15', '1995-03-15');",
       "EXECUTE TPCH4  ('1996-07-01', '1996-10-01');",
       "EXECUTE TPCH5  ('AMERICA', '1994-01-01', '1995-01-01');",
-      "EXECUTE TPCH6;",
+      "EXECUTE TPCH6  ('1994-01-01', '1995-01-01', .06, .06, 24);",
       "EXECUTE TPCH7  ('IRAN', 'IRAQ', 'IRAQ', 'IRAN');",
       "EXECUTE TPCH8  ('BRAZIL', 'AMERICA', 'ECONOMY ANODIZED STEEL');",
       "EXECUTE TPCH9  ('%green%');",
       "EXECUTE TPCH10 ('1993-10-01', '1994-01-01');",
       "EXECUTE TPCH11 ('GERMANY', 0.0001, 'GERMANY');",
       "EXECUTE TPCH12 ('MAIL', 'SHIP', '1994-01-01', '1995-01-01');",
-      "EXECUTE TPCH13;",
+      "EXECUTE TPCH13 ('%special%requests%');",
       "EXECUTE TPCH14 ('1995-09-01', '1995-10-01');",
       "",  // see comment in _generate_preparation_queries.
       "EXECUTE TPCH16 ('Brand#45', 'MEDIUM POLISHED%', 49, 14, 23, 45, 19, 3, 36, 9);",
@@ -75,7 +75,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH19 ('Brand#12', 1, 1, 'Brand#23', 10, 10, 'Brand#34', 20, 20);",
       "EXECUTE TPCH20 ('forest%', '1995-01-01', '1994-01-01', 'CANADA');",
       "EXECUTE TPCH21 ('SAUDI ARABIA');",
-      "EXECUTE TPCH22;"};
+      "EXECUTE TPCH22 ('13', '31', '23', '29', '30', '18', '17');"};
 
   if (!execute_statements[query_id].empty()) return execute_statements[query_id];
 
