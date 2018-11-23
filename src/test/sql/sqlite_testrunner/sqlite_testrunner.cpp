@@ -93,7 +93,7 @@ void SQLiteTestRunner::SetUp() {
       StorageManager::get().add_table(table_name, reloaded_table);
       table_cache.emplace(table_name, TableCacheEntry{reloaded_table, table_cache_entry.filename});
 
-      // When tables in Hyrise have (potentially) modified, the should might be true for SQLite.
+      // When tables in Hyrise were (potentially) modified, we assume the same happened in sqlite
       _sqlite->reset_table_from_copy(table_name, table_name + _master_table_suffix);
     } else {
       StorageManager::get().add_table(table_name, table_cache_entry.table);
@@ -122,9 +122,7 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& param = GetParam();
 
-  const auto& sql = std::get<0>(param);
-  const auto use_jit = std::get<1>(param);
-  const auto encoding_type = std::get<2>(param);
+  const auto [sql, use_jit, encoding_type] = param;
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
@@ -133,7 +131,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
 
-  SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " with encoding " +
+  SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
                encoding_type_to_string.left.at(encoding_type));
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
@@ -141,8 +139,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto result_table = sql_pipeline.get_result_table();
 
   // Mark modified tables as dirty. Doing this AFTER executing the query will potentially create confusing test results
-  // after a legimitally failing test has failed. This is since the query might have thrown an exception after modifying
-  // a Table, resulting in this dirty-marking never running
+  // after a broken failing test has failed. This is since the query might have thrown an exception after modifying
+  // a Table, resulting in this dirty-marking never running and future queries running on a modified data set.
   // TODO(andybody) Find a solution that doesn't need try/catch in hyrise code
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     for (const auto& table_name : lqp_find_modified_tables(plan)) {

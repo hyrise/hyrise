@@ -78,7 +78,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " with encoding " +
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
                encoding_type_to_string.left.at(encoding_type));
 
   /**
@@ -135,10 +135,15 @@ INSTANTIATE_TEST_CASE_P(TPCHTestEncodings, TPCHTest,
                                          testing::ValuesIn({false}),
                                          testing::ValuesIn(encoding_type_enum_values)), );  // NOLINT
 
+#if HYRISE_JIT_SUPPORT
+
 INSTANTIATE_TEST_CASE_P(TPCHTestJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
                                          testing::ValuesIn({true}),
                                          testing::ValuesIn({EncodingType::Unencoded})), );  // NOLINT
+
+#endif
+
 // clang-format on
 
 }  // namespace opossum
