@@ -124,12 +124,8 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 
 namespace opossum {
 
-SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
-                             const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator)
-    : _use_mvcc(use_mvcc),
-      _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
-      _parameter_id_allocator(parameter_id_allocator) {}
+SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>()) {}
 
 std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
   const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
@@ -154,6 +150,13 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_re
 
   return result_nodes;
 }
+
+SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
+                             const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
+                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator)
+    : _use_mvcc(use_mvcc),
+      _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
+      _parameter_id_allocator(parameter_id_allocator) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
@@ -252,9 +255,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   return _current_lqp;
 }
 
-std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr) {
+std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
+                                                                       const UseMvcc use_mvcc) {
   // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
-  return SQLTranslator{}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierResolver>());
+  return SQLTranslator{use_mvcc}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierResolver>());
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
@@ -470,8 +474,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
           sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);
         }
 
-        Assert(_use_mvcc == UseMvcc::No || lqp_is_validated(view->lqp),
-               "Can't use unvalidated View in validated Query");
+        AssertInput(_use_mvcc == (lqp_is_validated(view->lqp) ? UseMvcc::Yes : UseMvcc::No),
+               "Mismatch between validation of View and query it is used in");
       } else {
         FailInput(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
@@ -482,7 +486,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every SubSelect must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
-      SQLTranslator sub_select_translator{_use_mvcc};
+      SQLTranslator sub_select_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
       lqp = sub_select_translator._translate_select_statement(*hsql_table_ref.select);
 
       for (const auto& sub_select_expression : lqp->column_expressions()) {
@@ -1031,7 +1035,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
   AssertInput(parse_result.size() == 1u, "PREPAREd statement can only contain a single SQL statement");
 
-  auto prepared_plan_translator = SQLTranslator{};
+  auto prepared_plan_translator = SQLTranslator{_use_mvcc};
 
   const auto lqp = prepared_plan_translator.translate_parser_result(parse_result).at(0);
 
@@ -1045,10 +1049,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
   auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{execute_statement.parameters->size()};
   for (auto parameter_idx = size_t{0}; parameter_idx < execute_statement.parameters->size(); ++parameter_idx) {
-    parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx]);
+    parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx], _use_mvcc);
   }
 
   const auto prepared_plan = StorageManager::get().get_prepared_plan(execute_statement.name);
+
+  AssertInput(_use_mvcc == (lqp_is_validated(prepared_plan->lqp) ? UseMvcc::Yes : UseMvcc::No),
+              "Mismatch between validation of Prepared statement and query it is used in");
 
   return prepared_plan->instantiate(parameters);
 }
