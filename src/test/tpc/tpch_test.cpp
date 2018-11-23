@@ -133,7 +133,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 INSTANTIATE_TEST_CASE_P(TPCHTestEncodings, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
                                          testing::ValuesIn({false}),
-                                         testing::ValuesIn({EncodingType::Unencoded, EncodingType::Dictionary})), );  // NOLINT
+                                         testing::ValuesIn(encoding_type_enum_values)), );  // NOLINT
 
 INSTANTIATE_TEST_CASE_P(TPCHTestJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
