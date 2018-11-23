@@ -27,7 +27,7 @@ void TPCHQueryGenerator::_generate_names() {
   }
 }
 
-std::string TPCHQueryGenerator::setup_queries() const {
+std::string TPCHQueryGenerator::get_preparation_queries() const {
   std::stringstream sql;
   for (auto query_id = QueryID{0}; query_id < 22; ++query_id) {
     if (query_id + 1 == 15) {

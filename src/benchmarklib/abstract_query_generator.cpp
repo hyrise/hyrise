@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-std::string AbstractQueryGenerator::setup_queries() const { return ""; }
+std::string AbstractQueryGenerator::get_preparation_queries() const { return ""; }
 
 const std::vector<std::string>& AbstractQueryGenerator::query_names() const { return _query_names; }
 
