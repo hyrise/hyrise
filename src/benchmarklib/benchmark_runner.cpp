@@ -50,12 +50,18 @@ BenchmarkRunner::~BenchmarkRunner() {
 
 void BenchmarkRunner::run() {
   // Run the preparation queries
-  _config.out << "- Preparing queries..." << std::endl;
-  for (const auto& query_id : _query_generator->selected_queries()) {
-    _config.out << "- Preparing " << _query_generator->query_names()[query_id] << std::endl;
-    _execute_query(query_id, true);
+  {
+    _config.out << "- Preparing queries..." << std::endl;
+    const auto& sql = _query_generator->setup_queries();
+
+    if (!sql.empty()) {
+      auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+      // Execute the query, we don't care about the results
+      pipeline.get_result_table();
+    }
   }
 
+  // Now run the actual benchmark
   _config.out << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
@@ -162,7 +168,7 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(query_id, false, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       }
     } else {
@@ -210,7 +216,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
           }
         };
 
-        auto query_tasks = _schedule_or_execute_query(query_id, false, on_query_done);
+        auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
         tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -258,7 +264,7 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
       // to signal that the query was finished
       auto on_query_done = [&currently_running_clients]() { currently_running_clients--; };
 
-      auto query_tasks = _schedule_or_execute_query(query_id, false, on_query_done);
+      auto query_tasks = _schedule_or_execute_query(query_id, on_query_done);
       tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -274,23 +280,20 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute_query(
-    const QueryID query_id, const bool prepare, const std::function<void()>& done_callback) {
+    const QueryID query_id, const std::function<void()>& done_callback) {
   // Some queries (like TPC-H 15) require execution before we can call get_tasks() on the pipeline.
   // These queries can't be scheduled yet, therefore we fall back to "just" executing the query
   // when we don't use the scheduler anyway, so that they can be executed.
   if (_config.enable_scheduler) {
-    return _schedule_query(query_id, prepare, done_callback);
+    return _schedule_query(query_id, done_callback);
   }
-  _execute_query(query_id, prepare, done_callback);
+  _execute_query(query_id, done_callback);
   return {};
 }
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
-    const QueryID query_id, const bool prepare, const std::function<void()>& done_callback) {
-  const auto& sql =
-      prepare ? _query_generator->preparation_queries()[query_id] : _query_generator->build_query(query_id);
-
-  if (prepare && sql.empty()) return {};
+    const QueryID query_id, const std::function<void()>& done_callback) {
+  const auto& sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
@@ -312,12 +315,8 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
   return query_tasks;
 }
 
-void BenchmarkRunner::_execute_query(const QueryID query_id, const bool prepare,
-                                     const std::function<void()>& done_callback) {
-  const auto& sql =
-      prepare ? _query_generator->preparation_queries()[query_id] : _query_generator->build_query(query_id);
-
-  if (prepare && sql.empty()) return;
+void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
+  const auto& sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();

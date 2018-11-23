@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <numeric>
+#include <sstream>
 
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
@@ -12,13 +13,11 @@ TPCHQueryGenerator::TPCHQueryGenerator() {
   _generate_names();
   _selected_queries.resize(22);
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
-  _generate_preparation_queries();
 }
 
 TPCHQueryGenerator::TPCHQueryGenerator(const std::vector<QueryID>& selected_queries) {
   _generate_names();
   _selected_queries = selected_queries;
-  _generate_preparation_queries();
 }
 
 void TPCHQueryGenerator::_generate_names() {
@@ -28,16 +27,17 @@ void TPCHQueryGenerator::_generate_names() {
   }
 }
 
-void TPCHQueryGenerator::_generate_preparation_queries() {
+std::string TPCHQueryGenerator::setup_queries() const {
+  std::stringstream sql;
   for (auto query_id = QueryID{0}; query_id < 22; ++query_id) {
     if (query_id + 1 == 15) {
       // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
       // to manually build this query once we start randomizing the parameters.
-      _preparation_queries.emplace_back("");
       continue;
     }
-    _preparation_queries.emplace_back(tpch_queries.find(query_id + 1)->second);
+    sql << tpch_queries.find(query_id + 1)->second;
   }
+  return sql.str();
 }
 
 std::string TPCHQueryGenerator::build_query(const QueryID query_id) {

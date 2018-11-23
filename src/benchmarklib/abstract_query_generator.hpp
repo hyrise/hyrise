@@ -17,11 +17,11 @@ class AbstractQueryGenerator {
  public:
   virtual ~AbstractQueryGenerator() = default;
 
+  // Gets the SQL string needed to prepare the following queries. Usually, these would be PREPARE statements.
+  virtual std::string setup_queries() const;
+
   // Generates a SQL string for a given (zero-indexed) query id
   virtual std::string build_query(const QueryID query_id) = 0;
-
-  // Gets the SQL strings needed to prepare the following queries. Usually, these would be PREPARE statements.
-  const std::vector<std::string>& preparation_queries() const;
 
   // Returns the names of the individual queries (e.g., "TPC-H 1")
   const std::vector<std::string>& query_names() const;

@@ -8,6 +8,7 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
  public:
   TPCHQueryGenerator();
   explicit TPCHQueryGenerator(const std::vector<QueryID>& selected_queries);
+  std::string setup_queries() const override;
   std::string build_query(const QueryID query_id) override;
 
  protected:
