@@ -33,7 +33,8 @@ using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
  * Create a ChunkEncodingSpec. For each Column in @param table, check whether the @param desired_segment_encoding
  * supported. If it is supported, use it for this column. If it is not, use EncodingType::Unencoded for this column.
  */
-ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table, const SegmentEncodingSpec& desired_segment_encoding);
+ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
+                                                        const SegmentEncodingSpec& desired_segment_encoding);
 
 /**
  * @brief Interface for encoding chunks

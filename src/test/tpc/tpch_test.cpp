@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -19,7 +20,6 @@
 #include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "constant_mappings.hpp"
 
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_query_generator.hpp"
@@ -78,7 +78,8 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " with encoding " + encoding_type_to_string.left.at(encoding_type));
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " with encoding " +
+               encoding_type_to_string.left.at(encoding_type));
 
   /**
    * Pick a LQPTranslator, depending on whether we use JIT or not
@@ -128,10 +129,11 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 }
 
 // clang-format off
+// TODO(anybody) Remove blockers in #1269 and activate all encodings
 INSTANTIATE_TEST_CASE_P(TPCHTestEncodings, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
                                          testing::ValuesIn({false}),
-                                         testing::ValuesIn({EncodingType::Unencoded})), );  // NOLINT
+                                         testing::ValuesIn({EncodingType::Unencoded, EncodingType::Dictionary})), );  // NOLINT
 
 INSTANTIATE_TEST_CASE_P(TPCHTestJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),

@@ -30,8 +30,8 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sqlite_wrapper.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {

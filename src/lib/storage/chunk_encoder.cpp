@@ -16,7 +16,8 @@
 
 namespace opossum {
 
-ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table, const SegmentEncodingSpec& desired_segment_encoding) {
+ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
+                                                        const SegmentEncodingSpec& desired_segment_encoding) {
   auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
 
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
