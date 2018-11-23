@@ -1,8 +1,8 @@
-#include <filesystem>
 #include <gtest/gtest.h>
 #include "base_test.hpp"
 
 #include "utils/assert.hpp"
+#include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
 std::string opossum::test_data_path;  // NOLINT

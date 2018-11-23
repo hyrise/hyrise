@@ -535,6 +535,7 @@ set(
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
+    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
