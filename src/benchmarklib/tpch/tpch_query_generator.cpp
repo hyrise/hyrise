@@ -75,7 +75,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH19 ('Brand#12', 1, 1, 'Brand#23', 10, 10, 'Brand#34', 20, 20);",
       "EXECUTE TPCH20 ('forest%', '1995-01-01', '1994-01-01', 'CANADA');",
       "EXECUTE TPCH21 ('SAUDI ARABIA');",
-      "EXECUTE TPCH22 ('13', '31', '23', '29', '30', '18', '17');"};
+      "EXECUTE TPCH22 ('13', '31', '23', '29', '30', '18', '17', '13', '31', '23', '29', '30', '18', '17');"};
 
   if (!execute_statements[query_id].empty()) return execute_statements[query_id];
 
