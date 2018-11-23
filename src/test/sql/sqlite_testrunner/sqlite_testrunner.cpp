@@ -138,10 +138,6 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
 
-  sql_pipeline.get_unoptimized_logical_plans().at(0)->print();
-  sql_pipeline.get_optimized_logical_plans().at(0)->print();
-  sql_pipeline.get_physical_plans().at(0)->print();
-
   const auto result_table = sql_pipeline.get_result_table();
 
   for (const auto &plan : sql_pipeline.get_optimized_logical_plans()) {
