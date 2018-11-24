@@ -17,7 +17,7 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
     : _configuration(configuration) {}
 
 void CostModelCalibration::run() const {
-  CostModelCalibrationTableGenerator tableGenerator{_configuration, 10000};
+  CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
   tableGenerator.load_calibration_tables();
   _calibrate();
 

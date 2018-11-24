@@ -285,12 +285,12 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::_g
 }
 
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
-    const CalibrationColumnSpecification& column_definition, size_t row_count, const float selectivity, const bool trailing_like) {
+    const CalibrationColumnSpecification& column_definition, const float selectivity, const bool trailing_like) {
   const auto column_type = column_definition.type;
 
-  const auto distinct_values = std::max(static_cast<int>(row_count / 100), 100);
+  const auto int_value_upper_limit = 10000000;
 
-  const auto int_value = static_cast<int>(distinct_values * selectivity);
+  const auto int_value = static_cast<int>(int_value_upper_limit * selectivity);
   const auto float_value = selectivity;
   const auto string_value = static_cast<int>(25 * selectivity);
 

@@ -73,7 +73,7 @@ class CalibrationQueryGeneratorPredicate {
       const CalibrationQueryGeneratorPredicateConfiguration& configuration);
 
   static const std::shared_ptr<ValueExpression> _generate_value_expression(
-      const CalibrationColumnSpecification& column_definition, size_t row_count, const float selectivity,
+      const CalibrationColumnSpecification& column_definition, const float selectivity,
       const bool trailing_like = false);
 
   static const std::shared_ptr<AbstractExpression> _generate_between(
