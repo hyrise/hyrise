@@ -28,7 +28,7 @@ class Table : private Noncopyable {
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
   explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
-                 const uint32_t max_chunk_size = Chunk::MAX_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
+                 const uint32_t max_chunk_size = Chunk::DEFAULT_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{
