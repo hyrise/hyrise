@@ -79,7 +79,7 @@ const char* const tpch_query_2 =
        s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = ? AND
        ps_supplycost = (SELECT min(ps_supplycost) FROM partsupp, supplier, nation, region
        WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND s_nationkey = n_nationkey
-       AND n_regionkey = r_regionkey AND r_name = ?) ORDER BY s_acctbal DESC, n_name, s_name, p_partkey';)";
+       AND n_regionkey = r_regionkey AND r_name = ?) ORDER BY s_acctbal DESC, n_name, s_name, p_partkey LIMIT 100';)";
 
 /**
  * TPC-H 3
@@ -202,7 +202,7 @@ const char* const tpch_query_5 =
  */
 
 const char* const tpch_query_6 =
-    R"(PREPARE TPCH6 FROM 'SELECT sum(l_extendedprice*l_discount) AS REVENUE
+    R"(PREPARE TPCH6 FROM 'SELECT sum(l_extendedprice*l_discount) AS revenue
       FROM lineitem
       WHERE l_shipdate >= ? AND l_shipdate < ?
       AND l_discount BETWEEN ? - 0.01 AND ? + 0.01001 AND l_quantity < ?';)";

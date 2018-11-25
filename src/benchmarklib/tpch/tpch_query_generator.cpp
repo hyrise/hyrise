@@ -57,10 +57,10 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH1  ('1998-09-02');",
       "EXECUTE TPCH2  (15, '%BRASS', 'EUROPE', 'EUROPE');",
       "EXECUTE TPCH3  ('BUILDING', '1995-03-15', '1995-03-15');",
-      "EXECUTE TPCH4  ('1996-07-01', '1996-10-01');",
-      "EXECUTE TPCH5  ('AMERICA', '1994-01-01', '1995-01-01');",
+      "EXECUTE TPCH4  ('1993-07-01', '1993-10-01');",
+      "EXECUTE TPCH5  ('ASIA', '1994-01-01', '1995-01-01');",
       "EXECUTE TPCH6  ('1994-01-01', '1995-01-01', .06, .06, 24);",
-      "EXECUTE TPCH7  ('IRAN', 'IRAQ', 'IRAQ', 'IRAN');",
+      "EXECUTE TPCH7  ('FRANCE', 'GERMANY', 'GERMANY', 'FRANCE');",
       "EXECUTE TPCH8  ('BRAZIL', 'AMERICA', 'ECONOMY ANODIZED STEEL');",
       "EXECUTE TPCH9  ('%green%');",
       "EXECUTE TPCH10 ('1993-10-01', '1994-01-01');",
@@ -73,7 +73,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       "EXECUTE TPCH17 ('Brand#23', 'MED BOX');",
       "EXECUTE TPCH18 (300);",
       "EXECUTE TPCH19 ('Brand#12', 1, 1, 'Brand#23', 10, 10, 'Brand#34', 20, 20);",
-      "EXECUTE TPCH20 ('forest%', '1995-01-01', '1994-01-01', 'CANADA');",
+      "EXECUTE TPCH20 ('forest%', '1994-01-01', '1995-01-01', 'CANADA');",
       "EXECUTE TPCH21 ('SAUDI ARABIA');",
       "EXECUTE TPCH22 ('13', '31', '23', '29', '30', '18', '17', '13', '31', '23', '29', '30', '18', '17');"};
 

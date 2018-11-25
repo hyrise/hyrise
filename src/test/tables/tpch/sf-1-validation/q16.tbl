@@ -1,0 +1,3 @@
+P_BRAND|P_TYPE|P_SIZE|SUPPLIER_CNT 
+string|string|int|long
+Brand#41|MEDIUM BRUSHED TIN|3|28 
