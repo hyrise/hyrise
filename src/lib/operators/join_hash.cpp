@@ -164,7 +164,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    return std::ceil(std::log2(cluster_count));
+    return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
 
   std::shared_ptr<const Table> _on_execute() override {

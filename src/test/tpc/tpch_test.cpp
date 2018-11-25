@@ -33,7 +33,7 @@ class TPCHTest : public BaseTestWithParam<TestConfiguration> {
   static std::vector<TestConfiguration> build_combinations() {
     std::vector<TestConfiguration> combinations;
     const auto selected_queries = TPCHQueryGenerator{}.selected_queries();
-    for (const auto query_id : selected_queries) {
+    for (const auto& query_id : selected_queries) {
       combinations.emplace_back(query_id, false);
       if constexpr (HYRISE_JIT_SUPPORT) {
         combinations.emplace_back(query_id, true);

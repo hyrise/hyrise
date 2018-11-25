@@ -178,7 +178,6 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
-    utils/are_args_cxxopts_compatible_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
@@ -291,6 +290,9 @@ set(
     ${CMAKE_DL_LIBS}
 )
 
+# This warning does not play well with SCOPED_TRACE
+add_compile_options(-Wno-used-but-marked-unused)
+
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
 
@@ -311,5 +313,6 @@ target_link_libraries(hyriseCostModelCalibrationTest hyrise hyriseCostModelCalib
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

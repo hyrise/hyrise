@@ -57,12 +57,12 @@ DataType Table::column_data_type(const ColumnID column_id) const {
 }
 
 std::vector<DataType> Table::column_data_types() const {
-  std::vector<DataType> data_types;
-  data_types.reserve(_column_definitions.size());
+  std::vector<DataType> types;
+  types.reserve(_column_definitions.size());
   for (const auto& column_definition : _column_definitions) {
-    data_types.emplace_back(column_definition.data_type);
+    types.emplace_back(column_definition.data_type);
   }
-  return data_types;
+  return types;
 }
 
 bool Table::column_is_nullable(const ColumnID column_id) const {
@@ -82,7 +82,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
                                  [&](const auto& column_definition) { return column_definition.name == column_name; });
   Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
-  return static_cast<ColumnID>(std::distance(_column_definitions.begin(), iter));
+  return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
@@ -114,7 +114,7 @@ uint64_t Table::row_count() const {
 
 bool Table::empty() const { return row_count() == 0u; }
 
-ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
+ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
 const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
 

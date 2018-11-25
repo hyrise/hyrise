@@ -21,7 +21,7 @@
 #include "storage/value_segment.hpp"
 
 // A cluster is a chunk of values which agree on their last bits
-STRONG_TYPEDEF(size_t, ClusterID);
+STRONG_TYPEDEF(uint32_t, ClusterID);
 
 /**
    * This class is the entry point to the Multi Phase Sort Merge Join, which is a variant of the Sort Merge Join
@@ -176,7 +176,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   ClusterID _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     const size_t numa_nodes = Topology::get().nodes().size();
-    return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
+    return ClusterID{static_cast<ClusterID::base_type>(std::pow(2, std::floor(std::log2(numa_nodes))))};
   }
 
   /**

@@ -120,13 +120,13 @@ class RadixClusterSort {
 
   // Radix calculation for arithmetic types
   template <typename T2>
-  static std::enable_if_t<std::is_arithmetic_v<T2>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+  static std::enable_if_t<std::is_arithmetic_v<T2>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
     return static_cast<uint32_t>(value) & radix_bitmask;
   }
 
   // Radix calculation for non-arithmetic types
   template <typename T2>
-  static std::enable_if_t<std::is_same_v<T2, std::string>, uint32_t> get_radix(T2 value, uint32_t radix_bitmask) {
+  static std::enable_if_t<std::is_same_v<T2, std::string>, uint32_t> get_radix(T2 value, size_t radix_bitmask) {
     uint32_t radix;
     std::memcpy(&radix, value.c_str(), std::min(value.size(), sizeof(radix)));
     return radix & radix_bitmask;
@@ -288,11 +288,19 @@ class RadixClusterSort {
     std::vector<T> split_values(_cluster_count - 1);
     for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
       // Pick the values with the highest count
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#pragma clang diagnostic ignored "-Wconversion"
+      // TODO(anyone): issue #1208
+
       split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
                                                   // second is the count of the value
                                                   [](auto& a, auto& b) { return a.second < b.second; })
                                      ->second;
     }
+
+#pragma clang diagnostic pop
 
     // Implements range clustering
     auto cluster_count = _cluster_count;

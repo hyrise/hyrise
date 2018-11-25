@@ -1,5 +1,6 @@
 #include "csv_parser.hpp"
 
+#include <boost/algorithm/string/trim.hpp>
 #include <fstream>
 #include <functional>
 #include <list>
@@ -36,10 +37,11 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   auto table = _create_table_from_meta(chunk_size);
 
   std::ifstream csvfile{filename};
-  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
 
   // return empty table if input file is empty
-  if (!csvfile) return table;
+  if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
+
+  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
 
   // make sure content ends with a delimiter for better row processing later
   if (content.back() != _meta.config.delimiter) content.push_back(_meta.config.delimiter);
@@ -179,7 +181,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
       }
 
       try {
-        converters[column_id]->insert(field, row_id);
+        converters[column_id]->insert(field, static_cast<ChunkOffset>(row_id));
       } catch (const std::exception& exception) {
         throw std::logic_error("Exception while parsing CSV, row " + std::to_string(row_id) + ", column " +
                                std::to_string(column_id) + ":\n" + exception.what());

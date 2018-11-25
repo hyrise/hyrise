@@ -465,6 +465,13 @@ int Console::_load_table(const std::string& args) {
   const std::string& extension = file_parts.back();
 
   out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+
+  auto& storage_manager = StorageManager::get();
+  if (storage_manager.has_table(tablename)) {
+    storage_manager.drop_table(tablename);
+    out("Table " + tablename + " already existed. Replacing it.\n");
+  }
+
   if (extension == "csv") {
     auto importer = std::make_shared<ImportCsv>(filepath, Chunk::MAX_SIZE, tablename);
     try {
@@ -480,11 +487,7 @@ int Console::_load_table(const std::string& args) {
       // at some point.
       static constexpr auto DEFAULT_CHUNK_SIZE = 500'000u;
       auto table = opossum::load_table(filepath, DEFAULT_CHUNK_SIZE);
-      auto& storage_manager = StorageManager::get();
-      if (storage_manager.has_table(tablename)) {
-        storage_manager.drop_table(tablename);
-        out("Table " + tablename + " already existed. Replaced it.\n");
-      }
+
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");

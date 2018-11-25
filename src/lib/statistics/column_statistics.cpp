@@ -9,24 +9,6 @@
 namespace opossum {
 
 template <typename ColumnDataType>
-ColumnStatistics<ColumnDataType> ColumnStatistics<ColumnDataType>::dummy() {
-  if constexpr (std::is_same_v<ColumnDataType, std::string>) {
-    return ColumnStatistics{1.0f, 1.0f, {}, {}};
-  } else {
-    return ColumnStatistics{1.0f, 1.0f, {0}, {0}};
-  }
-}
-
-template <typename ColumnDataType>
-ColumnStatistics<ColumnDataType>::ColumnStatistics(const float null_value_ratio, const float distinct_count,
-                                                   const ColumnDataType min, const ColumnDataType max)
-    : BaseColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
-      _min(min),
-      _max(max) {
-  Assert(null_value_ratio >= 0.0f && null_value_ratio <= 1.0f, "NullValueRatio out of range");
-}
-
-template <typename ColumnDataType>
 ColumnDataType ColumnStatistics<ColumnDataType>::min() const {
   return _min;
 }
