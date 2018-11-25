@@ -42,11 +42,11 @@ CalibrationQueryGenerator::_generate_predicate_permutations() const {
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> queries;
 
-  const auto& add_queries_if_present = [](std::vector<std::shared_ptr<AbstractLQPNode>>& vector,
-                                        const std::vector<std::shared_ptr<AbstractLQPNode>>& queries) {
-      for (const auto& query : queries) {
+  const auto& add_queries_if_present = [&](std::vector<std::shared_ptr<AbstractLQPNode>>& existing_queries,
+                                          const std::vector<std::shared_ptr<AbstractLQPNode>>& new_queries) {
+      for (const auto& query : new_queries) {
         if (query) {
-          vector.push_back(query);
+          existing_queries.push_back(query);
         }
       }
   };
@@ -58,30 +58,27 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   const auto permutations = _generate_predicate_permutations();
   for (const auto& permutation : permutations) {
     add_queries_if_present(
-        queries,
+            queries,
         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
 
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
+//    add_queries_if_present(
+//            queries,
+//        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
 
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
+//    add_queries_if_present(
+//            queries,
+//        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
-    add_queries_if_present(
-        queries, _generate_table_scan(permutation,
-                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
-
-    add_queries_if_present(
-        queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
-
-    add_queries_if_present(queries,
-                         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
-
-    add_queries_if_present(
-        queries,
-        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+//    add_queries_if_present(queries, _generate_table_scan(permutation,
+//                                      CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
+//
+//    add_queries_if_present(queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+//
+//    add_queries_if_present(queries,
+//                         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
+//
+//    add_queries_if_present(queries,
+//        _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
   }
 
 //  for (const auto& left_table_name : _table_names) {

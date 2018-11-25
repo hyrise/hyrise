@@ -48,14 +48,14 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   configuration.encodings = encodings;
 
   const auto data_type_strings = j.at("data_types").get<std::vector<std::string>>();
-  std::vector<DataType> data_types{};
+  std::vector<DataType> calibration_data_types{};
   for (const auto& data_type_string : data_type_strings) {
     if (data_type_to_string.right.find(data_type_string) == data_type_to_string.right.end()) {
       Fail("Unsupported data type");
     }
-    data_types.push_back(data_type_to_string.right.at(data_type_string));
+    calibration_data_types.push_back(data_type_to_string.right.at(data_type_string));
   }
-  configuration.data_types = data_types;
+  configuration.data_types = calibration_data_types;
 
   configuration.selectivities = j.at("selectivities").get<std::vector<float>>();
   configuration.columns = j.at("columns").get<std::vector<CalibrationColumnSpecification>>();

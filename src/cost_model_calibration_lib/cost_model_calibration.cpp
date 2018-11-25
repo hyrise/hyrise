@@ -51,7 +51,7 @@ void CostModelCalibration::_calibrate() const {
 
   std::vector<std::pair<std::string, size_t>> table_names;
   for (const auto& table_specification : _configuration.table_specifications) {
-    table_names.push_back(std::make_pair(table_specification.table_name, table_specification.table_size));
+    table_names.emplace_back(std::make_pair(table_specification.table_name, table_specification.table_size));
   }
 
   const auto& columns = _configuration.columns;

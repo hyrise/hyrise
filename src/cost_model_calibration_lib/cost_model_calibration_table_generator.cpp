@@ -11,7 +11,7 @@
 namespace opossum {
 
 CostModelCalibrationTableGenerator::CostModelCalibrationTableGenerator(const CalibrationConfiguration configuration,
-                                                                       const size_t chunk_size)
+                                                                       const ChunkOffset chunk_size)
     : _chunk_size(chunk_size), _configuration(configuration) {}
 
 void CostModelCalibrationTableGenerator::load_calibration_tables() const {

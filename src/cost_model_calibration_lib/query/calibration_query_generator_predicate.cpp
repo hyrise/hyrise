@@ -75,11 +75,12 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorPre
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-  const auto& between_predicate_value = [configuration](const std::shared_ptr<StoredTableNode>& table,
-                                                        const CalibrationColumnSpecification& filter_column)
+    // TODO(Sven): refactoring
+  const auto& between_predicate_value = [configuration](const std::shared_ptr<StoredTableNode>& inner_table,
+                                                        const CalibrationColumnSpecification& inner_filter_column)
       -> std::optional<std::pair<std::shared_ptr<AbstractExpression>, std::shared_ptr<AbstractExpression>>> {
-    const auto first_filter_column_value = _generate_value_expression(filter_column, configuration.selectivity);
-    const auto second_filter_column_value = _generate_value_expression(filter_column, 0.0f);
+    const auto first_filter_column_value = _generate_value_expression(inner_filter_column, configuration.selectivity);
+    const auto second_filter_column_value = _generate_value_expression(inner_filter_column, 0.0f);
 
     if (!first_filter_column_value || !second_filter_column_value) return {};
 
@@ -95,15 +96,16 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-  const auto& between_predicate_column_functor = [](const std::shared_ptr<StoredTableNode>& table,
-                                                    const CalibrationColumnSpecification& filter_column)
+    // TODO(Sven): refactoring
+  const auto& between_predicate_column_functor = [](const std::shared_ptr<StoredTableNode>& inner_table,
+                                                    const CalibrationColumnSpecification& inner_filter_column)
       -> std::optional<std::pair<std::shared_ptr<AbstractExpression>, std::shared_ptr<AbstractExpression>>> {
 
-      const auto column_name = filter_column.column_name;
-    const auto filter_column_expression = lqp_column_(table->get_column(filter_column.column_name));
+      const auto column_name = inner_filter_column.column_name;
+    const auto filter_column_expression = lqp_column_(inner_table->get_column(inner_filter_column.column_name));
 
     static std::mt19937 engine((std::random_device()()));
-    auto remaining_columns = table->get_columns();
+    auto remaining_columns = inner_table->get_columns();
 
     remaining_columns.erase(
         std::remove(remaining_columns.begin(), remaining_columns.end(), filter_column_expression->column_reference));
@@ -139,10 +141,11 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_column_value(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-  const auto& filter_column_value_functor = [](const std::shared_ptr<StoredTableNode>& table,
-                                               const CalibrationColumnSpecification& filter_column,
-                                               const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
-    return _generate_value_expression(filter_column, configuration.selectivity);
+    // TODO(Sven): refactoring
+  const auto& filter_column_value_functor = [](const std::shared_ptr<StoredTableNode>& inner_table,
+                                               const CalibrationColumnSpecification& inner_filter_column,
+                                               const CalibrationQueryGeneratorPredicateConfiguration& inner_configuration) {
+    return _generate_value_expression(inner_filter_column, inner_configuration.selectivity);
   };
 
   return _generate_column_predicate(table, filter_column_value_functor, filter_column, configuration);
@@ -151,18 +154,18 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_column_column(
     const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
+    // TODO(Sven): refactoring
   const auto& filter_column_column_functor =
-      [](const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column,
-         const CalibrationQueryGeneratorPredicateConfiguration& configuration) -> std::shared_ptr<AbstractExpression> {
+      [](const std::shared_ptr<StoredTableNode>& inner_table, const CalibrationColumnSpecification& inner_filter_column,
+         const CalibrationQueryGeneratorPredicateConfiguration& inner_configuration) -> std::shared_ptr<AbstractExpression> {
     static std::mt19937 engine((std::random_device()()));
 
+    const auto column_name = inner_filter_column.column_name;
+          inner_table->column_expressions();
 
-    const auto column_name = filter_column.column_name;
-    table->column_expressions();
+    const auto filter_column_expression = lqp_column_(inner_table->get_column(column_name));
 
-    const auto filter_column_expression = lqp_column_(table->get_column(column_name));
-
-    auto columns = table->get_columns();
+    auto columns = inner_table->get_columns();
     std::shuffle(columns.begin(), columns.end(), engine);
 
     // Find the first column that has the same data type

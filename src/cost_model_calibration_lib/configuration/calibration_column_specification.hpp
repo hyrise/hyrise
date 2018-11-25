@@ -14,7 +14,7 @@ struct CalibrationColumnSpecification {
   DataType type;
   std::string value_distribution;
   bool sorted;
-  uint16_t distinct_values;
+  uint distinct_values;
   EncodingType encoding;
 };
 
