@@ -16,7 +16,16 @@
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
 
-class SystemCounterState;
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnested-anon-types"
+#include "cpucounters.h"
+#pragma clang diagnostic pop
+#elif __GNUC__
+#include "cpucounters.h"
+#endif
+
+// class SystemCounterState;
 
 namespace opossum {
 
@@ -59,6 +68,7 @@ class BenchmarkRunner {
   void _create_report(std::ostream& stream) const;
 
   void _save_pcm_measurements(QueryBenchmarkResult& result, const SystemCounterState& before, const SystemCounterState& after);
+  void _save_pcm_socket_measurements(QueryBenchmarkResult& result, const std::vector<SocketCounterState>& sockets_before, const std::vector<SocketCounterState>& sockets_after);
 
   // Get all the files/tables/queries from a given path
   static std::vector<std::string> _read_table_folder(const std::string& table_path);

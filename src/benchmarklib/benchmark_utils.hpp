@@ -45,6 +45,9 @@ struct QueryBenchmarkResult {
 
   double qpi_to_mc_traffic_ratio = 0.0;
   uint64_t bytesReadFromMC = 0;
+  std::vector<std::vector<double>> qpi_link_utilization_in = {};
+  std::vector<std::vector<double>> qpi_link_utilization_out = {};
+  std::vector<uint64_t> bytesReadFromMC_sockets = {};
 };
 
 using QueryID = size_t;

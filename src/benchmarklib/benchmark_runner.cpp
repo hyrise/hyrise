@@ -195,9 +195,15 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     auto state = BenchmarkState{_config.max_duration};
 
     SystemCounterState system_counter_state_before, system_counter_state_after;
+    auto socket_counters_before = std::vector<SocketCounterState>{};
+    auto socket_counters_after = std::vector<SocketCounterState>{};
 
     if (_context["using_pcm"]) {
-      SystemCounterState system_counter_state_before = getSystemCounterState();
+      system_counter_state_before = getSystemCounterState();
+      const auto number_of_sockets = _context["number_of_sockets"];
+      for (auto socket = size_t{0}; socket < number_of_sockets; ++socket) {
+        socket_counters_before.push_back(getSocketCounterState(socket));
+      }
     }
 
     while (state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_num_query_runs) {
@@ -227,8 +233,13 @@ void BenchmarkRunner::_benchmark_individual_queries() {
     result.duration = state.benchmark_duration;
 
     if (_context["using_pcm"]) {
-      SystemCounterState system_counter_state_after = getSystemCounterState();
+      system_counter_state_after = getSystemCounterState();
+      const auto number_of_sockets = _context["number_of_sockets"];
+      for (auto socket = size_t{0}; socket < number_of_sockets; ++socket) {
+        socket_counters_before.push_back(getSocketCounterState(socket));
+      }
       _save_pcm_measurements(result, system_counter_state_before, system_counter_state_after);
+      _save_pcm_socket_measurements(result, socket_counters_before, socket_counters_after);
     }
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count();
@@ -379,7 +390,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"items_per_second", items_per_second},
                              {"time_unit", "ns"},
                              {"qpi_to_mc_traffic_ratio", query_result.qpi_to_mc_traffic_ratio},
-                             {"bytesReadFromMC", query_result.bytesReadFromMC}
+                             {"bytesReadFromMC", query_result.bytesReadFromMC},
+                             {"qpi_link_utilization_in", query_result.qpi_link_utilization_in},
+                             {"qpi_link_utilization_out", query_result.qpi_link_utilization_out},
+                             {"bytesReadFromMC_sockets", query_result.bytesReadFromMC_sockets}
                            };
 
     benchmarks.push_back(benchmark);
@@ -401,10 +415,42 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 }
 
 void BenchmarkRunner::_save_pcm_measurements(QueryBenchmarkResult& result, const SystemCounterState& before, const SystemCounterState& after) {
+  const auto number_of_sockets = _context["number_of_sockets"];
+  const auto links_per_socket = _context["links_per_socket"];
+
+  for (auto socket = size_t{0}; socket < number_of_sockets; ++socket) {
+    auto qpi_link_utilization_in = std::vector<double>{};
+    auto qpi_link_utilization_out = std::vector<double>{};
+
+    // auto qpi_link_bytes_per_socket_in = uint64_t{0};
+    // auto qpi_link_bytes_per_socket_out = uint64_t{0};
+
+    for (auto link = size_t{0}; link < links_per_socket; ++link) {
+      qpi_link_utilization_in.push_back(getIncomingQPILinkUtilization(socket, link, before, after));
+      qpi_link_utilization_out.push_back(getOutgoingQPILinkUtilization(socket, link, before, after));
+
+      // qpi_link_bytes_per_socket_in += getIncomingQPILinkBytes(socket, link, before, after);
+      // qpi_link_bytes_per_socket_out += getOutgoingQPILinkBytes(socket, link, before, after);
+    }
+
+    result.qpi_link_utilization_in.push_back(qpi_link_utilization_in);
+    result.qpi_link_utilization_out.push_back(qpi_link_utilization_out);
+
+    // result.qpi_link_bytes_per_socket_in.push_back(qpi_link_bytes_per_socket_in);
+    // result.qpi_link_bytes_per_socket_out.push_back(qpi_link_bytes_per_socket_out);
+  }
+
   // result.qpi_all_link_bytes_in = getAllIncomingQPILinkBytes(before, after);
   // result.qpi_all_link_bytes_out = getAllOutgoingQPILinkBytes(before, after);
   result.qpi_to_mc_traffic_ratio = getQPItoMCTrafficRatio(before, after);
   result.bytesReadFromMC = getBytesReadFromMC(before, after);
+}
+
+void BenchmarkRunner::_save_pcm_socket_measurements(QueryBenchmarkResult& result, const std::vector<SocketCounterState>& sockets_before, const std::vector<SocketCounterState>& sockets_after) {
+  const auto number_of_sockets = _context["number_of_sockets"];
+  for (auto socket = size_t{0}; socket < number_of_sockets; ++socket) {
+    result.bytesReadFromMC_sockets.push_back(getBytesReadFromMC(sockets_before[socket], sockets_after[socket]));
+  }
 }
 
 BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std::string& table_path,
