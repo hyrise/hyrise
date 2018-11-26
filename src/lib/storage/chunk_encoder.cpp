@@ -16,19 +16,6 @@
 
 namespace opossum {
 
-ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
-                                                        const SegmentEncodingSpec& desired_segment_encoding) {
-  auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
-
-  for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
-    if (encoding_supports_data_type(desired_segment_encoding.encoding_type, table.column_data_type(column_id))) {
-      chunk_encoding_spec[column_id] = desired_segment_encoding;
-    }
-  }
-
-  return chunk_encoding_spec;
-}
-
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
   Assert((column_data_types.size() == chunk->column_count()),

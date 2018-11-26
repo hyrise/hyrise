@@ -122,7 +122,7 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& param = GetParam();
 
-  const auto [sql, use_jit, encoding_type] = param;
+  const auto [sql, use_jit, encoding_type] = param;  // NOLINT
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
