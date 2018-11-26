@@ -302,7 +302,7 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
     case DataType::Long:
       return value_(int_value);
     case DataType::String: {
-      const auto character = std::string(1, 'A' + string_value);
+      const auto character = std::string(1, static_cast<char>('A' + string_value));
       if (trailing_like) {
         return value_(character + '%');
       }
