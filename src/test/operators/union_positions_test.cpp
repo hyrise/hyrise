@@ -71,8 +71,7 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/10_ints_exclusive_ranges.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("src/test/tables/10_ints_exclusive_ranges.tbl"));
 }
 
 TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
@@ -106,8 +105,7 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float2.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("src/test/tables/int_float2.tbl"));
   EXPECT_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
 }
 
@@ -124,8 +122,7 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float2.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("src/test/tables/int_float2.tbl"));
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
 }
 
@@ -302,9 +299,8 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(
-      set_union_op->get_output(),
-      load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(set_union_op->get_output(),
+                            load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl"));
 }
 
 }  // namespace opossum

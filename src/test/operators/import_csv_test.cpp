@@ -78,7 +78,8 @@ TEST_F(OperatorsImportCsvTest, FileDoesNotExist) {
 }
 
 TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
+  auto importer =
+      std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -86,9 +87,11 @@ TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
-  auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
+  auto importer =
+      std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
   importer->execute();
-  auto retriever = std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
+  auto retriever =
+      std::make_shared<ImportCsv>("src/test/csv/float.csv", Chunk::DEFAULT_SIZE, std::string("float_table"));
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());

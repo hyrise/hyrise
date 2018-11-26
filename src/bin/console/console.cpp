@@ -438,7 +438,8 @@ int Console::_generate_tpch(const std::string& args) {
   if (!args_valid) {
     out("Usage: ");
     out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
     return ReturnCode::Error;
   }
 

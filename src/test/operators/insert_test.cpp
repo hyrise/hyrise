@@ -265,7 +265,8 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, false);
 
-  const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+  const auto target_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   StorageManager::get().add_table("target_table", target_table);
 
   const auto table_int_float = load_table("src/test/tables/int_float.tbl");
