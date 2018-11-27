@@ -124,7 +124,7 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
   void increment() { _wrapper->increment(); }
   void advance(std::ptrdiff_t n) { _wrapper->advance(n); }
   bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
-  std::ptrdiff_t distance_to(const AnySegmentIterator& other) const { return *other._wrapper.get() - *_wrapper.get(); }
+  std::ptrdiff_t distance_to(const AnySegmentIterator& other) const { return other._wrapper->distance_to(_wrapper.get()); }
   SegmentIteratorValue<T> dereference() const { return _wrapper->dereference(); }
 
  private:
