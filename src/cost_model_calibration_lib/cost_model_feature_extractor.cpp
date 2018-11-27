@@ -74,6 +74,7 @@ const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
   operator_features.operator_type = operator_type_to_string.at(op->type());
   // Mainly for debug purposes
   operator_features.operator_description = op->description(DescriptionMode::SingleLine);
+
   // Inputs
   if (op->input_left()) {
     const auto left_input = op->input_left()->get_output();
@@ -139,11 +140,11 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   CalibrationTableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
-  auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
-  //  auto chunk_count = left_input_table->chunk_count();
+  auto chunk_count = left_input_table->chunk_count();
 
-  const auto& table_condition = table_scan_op->predicate();
+  const auto& table_condition = op->predicate();
   features.number_of_computable_or_column_expressions = count_expensive_child_expressions(table_condition);
+  features.number_of_effective_chunks = chunk_count - op->get_number_of_excluded_chunks();
 
   if (table_condition->type == ExpressionType::Predicate) {
     const auto& casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
@@ -170,12 +171,11 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
       const auto predicate_condition_pointer = std::make_shared<PredicateCondition>(predicate_condition);
 
       features.scan_operator_type = predicate_condition_to_string.left.at(predicate_condition);
+      features.number_of_effective_chunks = op->get_number_of_included_chunks();
 
       DebugAssert(left_column_ids.size() == 1, "Expected only one column for IndexScan in FeatureExtractor");
       const auto column_expression = PQPColumnExpression::from_table(*left_input_table, left_column_ids.front());
       features.first_column = _extract_features_for_column_expression(left_input_table, column_expression);
-
-      std::cout << "Extracting features for IndexScan" << std::endl;
 
       return features;
     }

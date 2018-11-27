@@ -68,6 +68,10 @@ const std::vector<AllTypeVariant>& IndexScan::right_values2() const { return _ri
 
 void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
 
+size_t IndexScan::get_number_of_included_chunks() const {
+  return _included_chunk_ids.size();
+}
+
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = input_table_left();
 

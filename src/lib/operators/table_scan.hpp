@@ -37,6 +37,7 @@ class TableScan : public AbstractReadOnlyOperator {
    * excluded chunks and all others a list of included chunks.
    */
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
+  size_t get_number_of_excluded_chunks() const;
 
   const std::shared_ptr<AbstractExpression>& predicate() const;
 
@@ -65,7 +66,7 @@ class TableScan : public AbstractReadOnlyOperator {
 
   std::unique_ptr<AbstractTableScanImpl> _impl;
 
-  // The description of the impl, so that it still available after the _impl is resetted in _on_cleanup()
+  // The description of the impl, so that it is still available after the _impl is resetted in _on_cleanup()
   std::string _impl_description{"Unset"};
 
   std::vector<ChunkID> _excluded_chunk_ids;

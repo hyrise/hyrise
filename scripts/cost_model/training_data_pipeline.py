@@ -22,7 +22,7 @@ class TrainingDataPipeline:
             A tuple of DataFrames for feature and target variables
         """
         x = df.drop(['execution_time_ms', 'execution_time_ns'], axis=1)
-        y = df['execution_time_ms']
+        y = df['execution_time_ns']
 
         return x, y
 
@@ -82,6 +82,9 @@ class TrainingDataPipeline:
 
         df['scan_operator_type'] = df['scan_operator_type'] \
             .astype('category', categories=scan_operator_categories)
+
+        df['operator_type'] = df['operator_type'] \
+            .astype('category', categories=['IndexScan', 'TableScan'])
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
         #df['output_selectivity_rounded'] = df['output_selectivity'].round(2)

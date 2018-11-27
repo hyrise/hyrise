@@ -43,6 +43,8 @@ class IndexScan : public AbstractReadOnlyOperator {
    */
   void set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
+  size_t get_number_of_included_chunks() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() final;
 

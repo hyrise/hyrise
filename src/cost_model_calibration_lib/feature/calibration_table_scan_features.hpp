@@ -17,6 +17,7 @@ struct CalibrationTableScanFeatures {
   bool is_column_comparison = false;
   std::string scan_operator_type = "undefined";
   size_t number_of_computable_or_column_expressions = 0;
+  size_t number_of_effective_chunks = 0;
 
   static const std::vector<std::string> feature_names;
 
@@ -38,6 +39,7 @@ inline const std::vector<std::string> CalibrationTableScanFeatures::feature_name
       output.emplace_back("is_column_comparison");
       output.emplace_back("scan_operator_type");
       output.emplace_back("number_of_computable_or_column_expressions");
+      output.emplace_back("number_of_effective_chunks");
 
       return output;
     }()};
@@ -65,6 +67,7 @@ inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize
   output.emplace_back(features->is_column_comparison);
   output.emplace_back(features->scan_operator_type);
   output.emplace_back(static_cast<int32_t>(features->number_of_computable_or_column_expressions));
+  output.emplace_back(static_cast<int32_t>(features->number_of_effective_chunks));
 
   return output;
 }
