@@ -237,6 +237,9 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorPre
     const std::vector<CalibrationColumnSpecification>& column_definitions,
     const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
   for (const auto& definition : column_definitions) {
+    // we don't want predicates on the primary key as they are on a different value range
+    if (definition.column_name == "column_pk") continue;
+
     if (definition.type == configuration.data_type && definition.encoding == configuration.encoding_type) {
       return definition;
     }
