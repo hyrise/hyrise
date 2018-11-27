@@ -236,7 +236,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
       system_counter_state_after = getSystemCounterState();
       const auto number_of_sockets = _context["number_of_sockets"];
       for (auto socket = size_t{0}; socket < number_of_sockets; ++socket) {
-        socket_counters_before.push_back(getSocketCounterState(socket));
+        socket_counters_after.push_back(getSocketCounterState(socket));
       }
       _save_pcm_measurements(result, system_counter_state_before, system_counter_state_after);
       _save_pcm_socket_measurements(result, socket_counters_before, socket_counters_after);
