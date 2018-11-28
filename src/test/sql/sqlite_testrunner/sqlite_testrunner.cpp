@@ -5,6 +5,13 @@
 namespace opossum {
 
 void SQLiteTestRunner::SetUpTestCase() {
+  /**
+   * This loads the tables used for the SQLiteTestRunner into the Hyrise cache
+   * (_table_cache_per_encoding[EncodingType::Unencoded]) and into SQLite.
+   * Later, when running the individual queries, we only reload tables from disk if they have been modified by the
+   * previous query.
+   */
+
   _sqlite = std::make_unique<SQLiteWrapper>();
 
   auto unencoded_table_cache = TableCache{};
@@ -44,8 +51,10 @@ void SQLiteTestRunner::SetUpTestCase() {
 void SQLiteTestRunner::SetUp() {
   const auto& param = GetParam();
 
+  /**
+   * Encode Tables if no encoded variant of a Table is in the cache
+   */
   const auto encoding_type = std::get<2>(param);
-
   auto table_cache_iter = _table_cache_per_encoding.find(encoding_type);
 
   if (table_cache_iter == _table_cache_per_encoding.end()) {
@@ -67,7 +76,9 @@ void SQLiteTestRunner::SetUp() {
 
   auto& table_cache = table_cache_iter->second;
 
-  // For proper testing, we reset the storage manager before EVERY test.
+  /**
+   * Reset the StorageManager and populate it with mint Tables with the correct encoding from the cache
+   */
   StorageManager::reset();
 
   for (auto const& [table_name, table_cache_entry] : table_cache) {
@@ -120,9 +131,10 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const auto& param = GetParam();
+  const auto [sql, use_jit, encoding_type] = GetParam();  // NOLINT
 
-  const auto [sql, use_jit, encoding_type] = param;  // NOLINT
+  SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
+               encoding_type_to_string.left.at(encoding_type));
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
@@ -131,33 +143,18 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
 
-  SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
-               encoding_type_to_string.left.at(encoding_type));
-
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
 
+  // Execute query in Hyrise and SQLite
   const auto result_table = sql_pipeline.get_result_table();
+  const auto sqlite_result_table = _sqlite->execute_query(sql);
 
-  // Mark modified tables as dirty. Doing this AFTER executing the query will potentially create confusing test results
-  // after a broken failing test has failed. This is since the query might have thrown an exception after modifying
-  // a Table, resulting in this dirty-marking never running and future queries running on a modified data set.
-  // TODO(andybody) Find a solution that doesn't need try/catch in hyrise code
-  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
-    for (const auto& table_name : lqp_find_modified_tables(plan)) {
-      // mark table cache entry as dirty, when table has been modified
-      _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
-    }
-  }
-
-  auto sqlite_result_table = _sqlite->execute_query(sql);
-
-  // The problem is that we can only infer column types from sqlite if they have at least one row.
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
-      << "The SQLiteTestRunner cannot handle queries without results";
+      << "The SQLiteTestRunner cannot handle queries without results. We can only infer column types from sqlite if "
+         "they have at least one row";
 
   auto order_sensitivity = OrderSensitivity::No;
-
   const auto& parse_result = sql_pipeline.get_parsed_sql_statements().back();
   if (parse_result->getStatements().front()->is(hsql::kStmtSelect)) {
     auto select_statement = dynamic_cast<const hsql::SelectStatement*>(parse_result->getStatements().back());
@@ -169,6 +166,14 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
                                 FloatComparisonMode::RelativeDifference))
       << "Query failed: " << sql;
+
+  // Mark Tables modified by the query as dirty
+  for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
+    for (const auto& table_name : lqp_find_modified_tables(plan)) {
+      // mark table cache entry as dirty, when table has been modified
+      _table_cache_per_encoding.at(encoding_type).at(table_name).dirty = true;
+    }
+  }
 
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {

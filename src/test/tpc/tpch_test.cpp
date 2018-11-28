@@ -28,7 +28,8 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-using TPCHTestParam = std::tuple<QueryID, bool /* use_jit */, EncodingType>;
+using TPCHTestParam = std::tuple<QueryID, bool /* use_jit */>;
+
 class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
   void SetUp() override {
@@ -53,7 +54,7 @@ class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
-  const auto [query_idx, use_jit, encoding_type] = GetParam();  // NOLINT
+  const auto [query_idx, use_jit] = GetParam();  // NOLINT
   const auto tpch_idx = query_idx + 1;
   const auto query = TPCHQueryGenerator{}.build_query(query_idx);
 
@@ -65,21 +66,10 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   TpchDbGenerator{scale_factor, 10'000}.generate_and_store();
   for (const auto& tpch_table_name : tpch_table_names) {
     const auto table = StorageManager::get().get_table(tpch_table_name);
-
-    if (encoding_type == EncodingType::Unencoded) {
-      // Do not call ChunkEncoder when in Unencoded mode since the ChunkEncoder will also generate
-      // pruning statistics and we want to run this test without them as well, so we hijack the Unencoded
-      // mode for this.
-      // TODO(anybody) Extract pruning statistics generation from ChunkEncoder, possibly as part of # 1153
-      auto chunk_encoding_spec = create_compatible_chunk_encoding_spec(*table, encoding_type);
-      ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
-    }
-
     _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
-               encoding_type_to_string.left.at(encoding_type));
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT"));
 
   /**
    * Pick a LQPTranslator, depending on whether we use JIT or not
@@ -129,18 +119,16 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 }
 
 // clang-format off
-// TODO(anybody) Remove blockers in #1269 and activate all encodings
-INSTANTIATE_TEST_CASE_P(TPCHTestEncodings, TPCHTest,
+
+INSTANTIATE_TEST_CASE_P(TPCHTestNoJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
-                                         testing::ValuesIn({false}),
-                                         testing::ValuesIn(encoding_type_enum_values)), );  // NOLINT
+                                         testing::ValuesIn({false})), );  // NOLINT
 
 #if HYRISE_JIT_SUPPORT
 
 INSTANTIATE_TEST_CASE_P(TPCHTestJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
-                                         testing::ValuesIn({true}),
-                                         testing::ValuesIn({EncodingType::Unencoded})), );  // NOLINT
+                                         testing::ValuesIn({true})), );  // NOLINT
 
 #endif
 
