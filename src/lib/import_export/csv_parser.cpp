@@ -1,5 +1,6 @@
 #include "csv_parser.hpp"
 
+#include <boost/algorithm/string/trim.hpp>
 #include <fstream>
 #include <functional>
 #include <list>
@@ -36,10 +37,11 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   auto table = _create_table_from_meta(chunk_size);
 
   std::ifstream csvfile{filename};
-  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
 
   // return empty table if input file is empty
-  if (!csvfile) return table;
+  if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
+
+  std::string content{std::istreambuf_iterator<char>(csvfile), {}};
 
   // make sure content ends with a delimiter for better row processing later
   if (content.back() != _meta.config.delimiter) content.push_back(_meta.config.delimiter);

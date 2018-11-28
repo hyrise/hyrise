@@ -25,9 +25,9 @@ class AbstractTableScanImpl {
    */
 
   template <bool CheckForNull, bool FunctorIsVectorizable, typename BinaryFunctor, typename LeftIterator>
-  void __attribute__((noinline))
+  static void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out) const {
+                       const ChunkID chunk_id, PosList& matches_out) {
     // Can't use a default argument for this because default arguments are non-type deduced contexts
     auto false_type = std::false_type{};
     _scan_with_iterators<CheckForNull, FunctorIsVectorizable>(func, left_it, left_end, chunk_id, matches_out,
@@ -37,9 +37,9 @@ class AbstractTableScanImpl {
   template <bool CheckForNull, bool FunctorIsVectorizable, typename BinaryFunctor, typename LeftIterator,
             typename RightIterator>
   // noinline reduces compile time drastically
-  void __attribute__((noinline))
+  static void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) const {
+                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // SIMD has no benefit for iterators that are too complex (mostly iterators that do not operate on contiguous
     // storage). Currently, it is only enabled for std::vector (as used by FixedSizeByteAlignedVector). Also, the
     // AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for `IS_DEBUG`
@@ -87,9 +87,9 @@ class AbstractTableScanImpl {
   }
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
-                                 const ChunkID chunk_id, PosList& matches_out,
-                                 [[maybe_unused]] RightIterator& right_it) const {
+  static void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
+                                        const ChunkID chunk_id, PosList& matches_out,
+                                        [[maybe_unused]] RightIterator& right_it) {
 #if defined(__has_feature)
 #if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
     return;

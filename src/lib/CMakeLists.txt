@@ -530,8 +530,6 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
-    utils/are_args_cxxopts_compatible.cpp
-    utils/are_args_cxxopts_compatible.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
