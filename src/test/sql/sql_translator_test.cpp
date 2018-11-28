@@ -79,9 +79,22 @@ class SQLTranslatorTest : public ::testing::Test {
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-    const auto lqps = opossum::SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+    const auto lqps = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
+  }
+
+  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, std::vector<ParameterID>> compile_prepared_query(
+      const std::string& query) {
+    hsql::SQLParserResult parser_result;
+    hsql::SQLParser::parseSQLString(query, &parser_result);
+    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+    SQLTranslator sql_translator{UseMvcc::No};
+    const auto lqps = sql_translator.translate_parser_result(parser_result);
+    Assert(lqps.size() == 1, "Expected just one LQP");
+    return {lqps.at(0), sql_translator.parameter_ids_of_value_placeholders()};
   }
 
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
@@ -1086,9 +1099,46 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
+  // NOLINTNEXTLINE
+  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+      "SELECT ? + (SELECT a + ? FROM int_float2) FROM (SELECT a FROM int_float WHERE ? > (SELECT a + ? FROM "
+      "int_string)) s1");
+
+  ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 4u);
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{3});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{0});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{1});
+
+  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
+  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{3});
+  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{0});
+  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{1});
+
+  // clang-format off
+  const auto subselect_a_lqp =
+  ProjectionNode::make(expression_vector(add_(int_float2_a, placeholder_1)),
+                       stored_table_node_int_float2);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto subselect_b_lqp =
+  ProjectionNode::make(expression_vector(add_(int_string_a, placeholder_3)),
+    stored_table_node_int_string);
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(placeholder_0, subselect_a)),
+    ProjectionNode::make(expression_vector(int_float_a),
+      PredicateNode::make(greater_than_(placeholder_2, subselect_b),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   /**
-   * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
+   * Test that ParameterIDs are correctly allocated to correlated Parameters
    */
 
   const auto query = "SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float";
@@ -1097,7 +1147,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  SQLTranslator sql_translator;
+  SQLTranslator sql_translator{UseMvcc::No};
 
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
@@ -1133,70 +1183,55 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
    */
   const auto query =
       "SELECT ?, "
-      "  (SELECT MIN(b) + int_float.a FROM int_float2), "
-      "  (SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
-      "FROM int_float WHERE a > ?";
+      "  (SELECT ? + MAX(b) + (SELECT int_float2.a + ? + int_float2.b) FROM int_float2) "
+      "FROM (SELECT a + ? AS k FROM int_float) s1 WHERE k > (SELECT ? FROM int_string)";
 
-  hsql::SQLParserResult parser_result;
-  hsql::SQLParser::parseSQLString(query, &parser_result);
-  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+  // NOLINTNEXTLINE
+  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
 
-  SQLTranslator sql_translator;
-  const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
+  ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{3});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{5});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{0});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{1});
+
+  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
+  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{3});
+  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{5});
+  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{0});
+  const auto placeholder_4 = uncorrelated_parameter_(ParameterID{1});
+
+  const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
+  const auto parameter_int_float2_b = correlated_parameter_(ParameterID{6}, int_float2_b);
 
   // clang-format off
-  const auto parameter_int_float_a = correlated_parameter_(ParameterID{2}, int_float_a);
-  const auto parameter_int_float_b = correlated_parameter_(ParameterID{3}, int_float_b);
-  const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
 
-  // "(SELECT MIN(b) + int_float.a FROM int_float2)"
-  const auto expected_sub_select_lqp_a =
-  ProjectionNode::make(expression_vector(add_(min_(int_float2_b), parameter_int_float_a)),
-    AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
-      stored_table_node_int_float2));
-
-  const auto expected_sub_select_a = lqp_select_(expected_sub_select_lqp_a,
-                                                 std::make_pair(ParameterID{2}, int_float_a));
-
-  // "(SELECT int_float2.a + int_float.b)"
-  const auto expected_sub_sub_select_lqp =
-  ProjectionNode::make(expression_vector(add_(parameter_int_float2_a, parameter_int_float_b)),
+  // SELECT int_float2.a + ? + int_float2.b
+  const auto subselect_a_lqp =
+  ProjectionNode::make(expression_vector(add_(add_(parameter_int_float2_a, placeholder_2), parameter_int_float2_b)),
     DummyTableNode::make());
+  const auto subselect_a = lqp_select_(subselect_a_lqp, std::make_pair(ParameterID{6}, int_float2_b),
+    std::make_pair(ParameterID{4}, int_float2_a));
 
-  const auto sub_sub_select = lqp_select_(expected_sub_sub_select_lqp,
-                                      std::make_pair(ParameterID{4}, int_float2_a));
-
-
-  // "(SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
-  const auto expected_sub_select_lqp_b =
-  ProjectionNode::make(expression_vector(add_(add_(max_(int_float2_b), parameter_int_float_b), sub_sub_select)),
+  // (SELECT ? + MAX(b) + (subselect_a) FROM int_float2)
+  const auto subselect_b_lqp =
+  ProjectionNode::make(expression_vector(add_(add_(placeholder_1, max_(int_float2_b)), subselect_a)),
     AggregateNode::make(expression_vector(), expression_vector(max_(int_float2_b)),
       stored_table_node_int_float2));
-  const auto expected_sub_select_b = lqp_select_(expected_sub_select_lqp_b,
-                                                 std::make_pair(ParameterID{3}, int_float_b));
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
+
+  // SELECT ? FROM int_string
+  const auto subselect_c_lqp = ProjectionNode::make(expression_vector(placeholder_4), stored_table_node_int_string);
+  const auto subselect_c = lqp_select_(subselect_c_lqp);
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(uncorrelated_parameter_(ParameterID{1}),
-                                         expected_sub_select_a,
-                                         expected_sub_select_b),
-    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
-      stored_table_node_int_float));
+  ProjectionNode::make(expression_vector(placeholder_0, subselect_b),
+    PredicateNode::make(greater_than_(add_(int_float_a, placeholder_3), subselect_c),
+      AliasNode::make(expression_vector(add_(int_float_a, placeholder_3)), std::vector<std::string>{"k"},
+        ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_3)),
+          stored_table_node_int_float))));
   // clang-format on
-
-  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().size(), 2u);
-  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().at(0), ParameterID{1});
-  EXPECT_EQ(sql_translator.parameter_ids_of_value_placeholders().at(1), ParameterID{0});
-
-  const auto actual_projection_node = std::dynamic_pointer_cast<ProjectionNode>(actual_lqp);
-  ASSERT_TRUE(actual_projection_node);
-
-  const auto actual_sub_select_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->node_expressions.at(1));
-  ASSERT_TRUE(actual_sub_select_a);
-
-  const auto actual_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->node_expressions.at(2));
-  ASSERT_TRUE(actual_sub_select_b);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

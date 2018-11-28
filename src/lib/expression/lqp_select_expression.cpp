@@ -38,7 +38,11 @@ std::string LQPSelectExpression::as_column_name() const {
   stream << "SUBSELECT (LQP, " << lqp.get();
 
   if (!arguments.empty()) {
-    stream << ", Parameters: " << expression_column_names(arguments);
+    stream << ", Parameters: ";
+    for (auto parameter_idx = size_t{0}; parameter_idx < arguments.size(); ++parameter_idx) {
+      stream << "[" << arguments[parameter_idx]->as_column_name() << ", id=" << parameter_ids[parameter_idx] << "]";
+      if (parameter_idx + 1 < arguments.size()) stream << ", ";
+    }
   }
 
   stream << ")";
