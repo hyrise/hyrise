@@ -40,11 +40,6 @@ struct enum_constant {
  *
  * Example: enum_c<DataType::Int> (compare to: hana::type_c<int32_t>)
  */
-// Unfortunately there is a bug in GCC 7.2.0 so we cannot use this yet.
-// template <auto enum_value>
-// [[maybe_unused]] constexpr auto enum_c = enum_constant<decltype(enum_value), enum_value>{};
-
-// Workaround: enum_c<DataType, DataType::Int> (compare to: hana::integral_c<int, 13>)
 template <typename EnumType, EnumType enum_value>
 [[maybe_unused]] constexpr auto enum_c = enum_constant<EnumType, enum_value>{};
 
