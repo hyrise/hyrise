@@ -57,12 +57,9 @@ class PerformanceWarningDisabler {
   }
 };
 
-#ifndef TRIMMED_FILENAME
-#define TRIMMED_FILENAME (__FILE__ + SOURCE_PATH_SIZE)
-#endif
 #define PerformanceWarning(text)                                                                     \
   {                                                                                                  \
-    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(TRIMMED_FILENAME) + \
+    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILE__) + \
                                         ":" BOOST_PP_STRINGIZE(__LINE__));                           \
   }  // NOLINT
 

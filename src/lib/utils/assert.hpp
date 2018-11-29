@@ -39,11 +39,6 @@
  *     invalid input might want to be caught.
  */
 
-// TRIMMED_FILENAME is __FILE__ with irrelevant leading chars trimmed
-#ifndef TRIMMED_FILENAME
-#define TRIMMED_FILENAME (__FILE__ + SOURCE_PATH_SIZE)
-#endif
-
 namespace opossum {
 
 [[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
@@ -56,7 +51,7 @@ namespace opossum {
 
 #define Assert(expr, msg)                                                                      \
   if (!static_cast<bool>(expr)) {                                                              \
-    opossum::Fail(std::string(TRIMMED_FILENAME) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+    opossum::Fail(std::string(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   }
 
 #define AssertInput(expr, msg)                                               \
