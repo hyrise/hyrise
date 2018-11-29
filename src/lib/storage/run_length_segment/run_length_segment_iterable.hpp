@@ -11,7 +11,7 @@ namespace opossum {
 template <typename T>
 class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLengthSegmentIterable<T>> {
  public:
-  using ColumnDataType = T;
+  using ValueType = T;
 
   explicit RunLengthSegmentIterable(const RunLengthSegment<T>& segment) : _segment{segment} {}
 
@@ -43,6 +43,8 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
  private:
   class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = RunLengthSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
     using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
@@ -97,6 +99,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
    */
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = RunLengthSegmentIterable<T>;
+
     explicit PointAccessIterator(const pmr_vector<T>& values, const pmr_vector<bool>& null_values,
                                  const pmr_vector<ChunkOffset>& end_positions,
                                  const PosList::const_iterator position_filter_begin,

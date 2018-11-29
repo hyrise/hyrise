@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "join_mpsm/radix_cluster_sort_numa.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"

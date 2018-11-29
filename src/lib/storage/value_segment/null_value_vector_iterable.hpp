@@ -14,7 +14,7 @@ namespace opossum {
  */
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
-  using ColumnDataType = bool;
+  using ValueType = bool;
 
   explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
@@ -38,6 +38,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
  private:
   class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorNullValue> {
    public:
+    using ValueType = bool;
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
    public:
@@ -62,6 +63,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue> {
    public:
+    using ValueType = bool;
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:

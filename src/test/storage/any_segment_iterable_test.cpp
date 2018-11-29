@@ -9,85 +9,94 @@
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "storage/create_iterable_from_segment.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/segment_encoding_utils.hpp"
 
 namespace opossum {
 
-class AnySegmentIterableTest : public BaseTest {
- protected:
-  static constexpr auto row_count = 200u;
+class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
+ public:
+  static void SetUpTestCase() {
+    int_values = {1, 2, 2, 2, 5, 2, 2, 8, 2, 2};
+    float_values = {1.5f, 2.5f, 3.5f, 4.5f, 5.5f, 6.5f, 7.5f, 8.5f, 9.5f, 10.5f};
+    string_values = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
+    null_values = {false, true, true, false, false, true, false, true, true, false};
 
-  void SetUp() override { _segment = create_int_w_null_value_segment(); }
-
-  std::shared_ptr<ValueSegment<int32_t>> create_int_w_null_value_segment() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
-
-    std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, 10u};
-    std::bernoulli_distribution bernoulli_dist{0.3};
-
-    for (auto i = 0u; i < row_count; ++i) {
-      values[i] = dist(engine);
-      null_values[i] = bernoulli_dist(engine);
-    }
-
-    return std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+    auto row_ids = PosList{
+      {ChunkID{0}, ChunkOffset{0}},
+      {ChunkID{0}, ChunkOffset{8}},
+      {ChunkID{0}, ChunkOffset{7}},
+      {ChunkID{0}, ChunkOffset{1}},
+      {ChunkID{0}, ChunkOffset{1}},
+      {ChunkID{0}, ChunkOffset{5}}
+    };
+    position_filter = std::make_shared<PosList>(std::move(row_ids));
+    position_filter->guarantee_single_chunk();
   }
 
-  std::shared_ptr<PosList> create_sequential_position_filter() {
-    auto list = std::make_shared<PosList>();
-    list->guarantee_single_chunk();
+  void SetUp() override {
+    const auto param = GetParam();
 
-    std::default_random_engine engine{};
-    std::bernoulli_distribution bernoulli_dist{0.5};
+    int_segment = std::make_shared<ValueSegment<int32_t>>(int_values);
 
-    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < row_count; ++offset_in_referenced_chunk) {
-      if (bernoulli_dist(engine)) {
-        list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
+    if (param.encoding_type != EncodingType::Unencoded) {
+      if (param.vector_compression_type) {
+        int_segment = encode_segment(param.encoding_type,
+                                     DataType::Int,
+                                     std::dynamic_pointer_cast<ValueSegment<int32_t>>(int_segment),
+                                     *param.vector_compression_type);
+      } else {
+        int_segment = encode_segment(param.encoding_type,
+                                     DataType::Int,
+                                     std::dynamic_pointer_cast<ValueSegment<int32_t>>(int_segment));
       }
     }
-
-    return list;
   }
 
  protected:
-  std::shared_ptr<ValueSegment<int32_t>> _segment;
+  std::shared_ptr<BaseSegment> int_segment;
+  std::shared_ptr<BaseSegment> float_segment;
+  std::shared_ptr<BaseSegment> string_segment;
+
+  inline static std::vector<int32_t> int_values;
+  inline static std::vector<float> float_values;
+  inline static std::vector<std::string> string_values;
+  inline static std::vector<bool> null_values;
+  inline static std::shared_ptr<PosList> position_filter;
 };
 
-TEST_F(AnySegmentIterableTest, SequentiallyIterateOverSegment) {
-  auto iterable = ValueSegmentIterable<int32_t>{*_segment};
-  auto any_iterable = AnySegmentIterable{iterable};
+TEST_P(AnySegmentIterableTest, Int) {
+  auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
-  iterable.with_iterators([&](auto it, auto end) {
-    any_iterable.with_iterators([&](auto any_it, auto any_end) {
-      for (; any_it != any_end; ++any_it, ++it) {
-        EXPECT_EQ(it->is_null(), any_it->is_null());
-
-        if (!it->is_null()) {
-          EXPECT_EQ(it->value(), any_it->value());
-        }
-      }
-    });
+  auto values = std::vector<int32_t>{};
+  any_segment_iterable_int.for_each([&](const auto& value) {
+    values.emplace_back(value.value());
   });
+
+
+  EXPECT_EQ(values, int_values);
 }
 
-TEST_F(AnySegmentIterableTest, RandomlyIterateOverSegment) {
-  auto iterable = ValueSegmentIterable<int32_t>{*_segment};
-  auto any_iterable = AnySegmentIterable{iterable};
+TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
+  auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
-  const auto chunk_offsets_list = create_sequential_position_filter();
-
-  iterable.with_iterators(chunk_offsets_list, [&](auto it, auto end) {
-    any_iterable.with_iterators(chunk_offsets_list, [&](auto any_it, auto any_end) {
-      for (; any_it != any_end; ++any_it, ++it) {
-        EXPECT_EQ(it->is_null(), any_it->is_null());
-
-        if (!it->is_null()) {
-          EXPECT_EQ(it->value(), any_it->value());
-        }
-      }
-    });
+  auto index = size_t{0};
+  any_segment_iterable_int.for_each(position_filter, [&](const auto& value) {
+    EXPECT_EQ(value.value(), int_values[(*position_filter)[index].chunk_offset]);
+    ++index;
   });
+
+  EXPECT_EQ(index, position_filter->size());
 }
+
+INSTANTIATE_TEST_CASE_P(AnySegmentIterableTestInstances,
+                        AnySegmentIterableTest,
+                        ::testing::Values(
+                          SegmentEncodingSpec{EncodingType::Unencoded},
+                          SegmentEncodingSpec{EncodingType::Dictionary},
+                          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}
+                        ), );
 
 }  // namespace opossum

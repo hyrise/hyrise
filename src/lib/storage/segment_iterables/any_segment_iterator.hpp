@@ -66,7 +66,7 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
 
 }  // namespace detail
 
-template <typename IterableT>
+template <typename T>
 class AnySegmentIterable;
 
 /**
@@ -88,6 +88,9 @@ class AnySegmentIterable;
 template <typename T>
 class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, SegmentIteratorValue<T>> {
  public:
+using ValueType = T;
+using IterableType = AnySegmentIterable<T>;
+
   /**
    * Prevents AnySegmentIterator from being created
    * by anything else but AnySegmentIterable

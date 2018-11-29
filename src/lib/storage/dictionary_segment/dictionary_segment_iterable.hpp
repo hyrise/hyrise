@@ -14,7 +14,7 @@ namespace opossum {
 template <typename T, typename Dictionary>
 class DictionarySegmentIterable : public PointAccessibleSegmentIterable<DictionarySegmentIterable<T, Dictionary>> {
  public:
-  using ColumnDataType = T;
+  using ValueType = T;
 
   explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
       : _segment{segment}, _dictionary(segment.dictionary()) {}
@@ -57,7 +57,11 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
  private:
   template <typename ZsIteratorType>
   class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentIteratorValue<T>> {
+
    public:
+    using ValueType = T;
+    using IterableType = DictionarySegmentIterable<T, Dictionary>;
+
     explicit Iterator(const Dictionary& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
                       ChunkOffset chunk_offset)
         : _dictionary{dictionary},
@@ -99,6 +103,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = DictionarySegmentIterable<T, Dictionary>;
+
     PointAccessIterator(const Dictionary& dictionary, const ValueID null_value_id,
                         ZsDecompressorType& attribute_decompressor, const PosList::const_iterator position_filter_begin,
                         PosList::const_iterator position_filter_it)

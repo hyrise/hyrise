@@ -10,6 +10,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "storage/segment_iteration.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -70,31 +71,31 @@ class ColumnMaterializer {
                                                                   ColumnID column_id) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id] {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
-      resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
-        (*output)[chunk_id] = _materialize_segment(typed_segment, chunk_id, null_rows_output);
-      });
+
+      if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
+        (*output)[chunk_id] = _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output);
+      } else {
+        (*output)[chunk_id] = _generic_materialize_segment(*segment, chunk_id, null_rows_output);
+      }
     });
   }
 
   /**
    * Materialization works of all types of segments
    */
-  template <typename SegmentType>
-  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const SegmentType& segment, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _generic_materialize_segment(const BaseSegment& segment, ChunkID chunk_id,
                                                                std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
-    auto iterable = create_iterable_from_segment<T>(segment);
-
-    iterable.for_each([&](const auto& segment_value) {
-      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
-      if (segment_value.is_null()) {
+    segment_for_each<T>(segment, [&](const auto& value) {
+      const auto row_id = RowID{chunk_id, value.chunk_offset()};
+      if (value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, segment_value.value());
+        output.emplace_back(row_id, value.value());
       }
     });
 
@@ -109,7 +110,7 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
                                                                std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());

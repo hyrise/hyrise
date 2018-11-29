@@ -6,10 +6,10 @@
 
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iteration.hpp"
+#include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/table.hpp"
-
 #include "utils/assert.hpp"
-
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
 
@@ -34,13 +34,13 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   auto matches_out = std::make_shared<PosList>();
 
-  resolve_data_and_segment_type(*left_segment, [&](auto left_type, auto& typed_left_segment) {
-    resolve_data_and_segment_type(*right_segment, [&](auto right_type, auto& typed_right_segment) {
-      using LeftSegmentType = std::decay_t<decltype(typed_left_segment)>;
-      using RightSegmentType = std::decay_t<decltype(typed_right_segment)>;
+  segment_with_iterators_and_data_type_resolve(*left_segment, [&](auto left_it, const auto left_end) {
+    segment_with_iterators_and_data_type_resolve(*right_segment, [&](auto right_it, const auto right_end) {
+      using LeftSegmentIterableType = typename decltype(left_it)::IterableType;
+      using RightSegmentIterableType = typename decltype(right_it)::IterableType;
 
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
+      using LeftType = typename decltype(left_it)::ValueType;
+      using RightType = typename decltype(right_it)::ValueType;
 
       /**
        * This generic lambda is instantiated for each type (int, long, etc.) and
@@ -52,8 +52,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
        * reduces the number of combinations to 85.
        */
 
-      constexpr auto LEFT_IS_REFERENCE_SEGMENT = (std::is_same<LeftSegmentType, ReferenceSegment>{});
-      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = (std::is_same<RightSegmentType, ReferenceSegment>{});
+      constexpr auto LEFT_IS_REFERENCE_SEGMENT = std::is_same<LeftSegmentIterableType, ReferenceSegmentIterable<LeftType>>{};
+      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = std::is_same<RightSegmentIterableType, ReferenceSegmentIterable<RightType>>{};
 
       constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
       constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
@@ -66,26 +66,19 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
       if constexpr ((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
                     (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
-        auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
-        auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
 
         // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
         const auto chunk_id_copy = chunk_id;
         const auto matches_out_copy = matches_out;
         const auto condition = _predicate_condition;
 
-        left_segment_iterable.with_iterators(
-            [&right_segment_iterable, &chunk_id_copy, &matches_out_copy, condition](auto left_it, auto left_end) {
-              right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
-                with_comparator(condition, [&](auto predicate_comparator) {
-                  auto comparator = [predicate_comparator](const auto& left, const auto& right) {
-                    return predicate_comparator(left.value(), right.value());
-                  };
-                  AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id_copy,
-                                                                    *matches_out_copy, right_it);
-                });
-              });
-            });
+        with_comparator(condition, [&](auto predicate_comparator) {
+          auto comparator = [predicate_comparator](const auto& left, const auto& right) {
+            return predicate_comparator(left.value(), right.value());
+          };
+          AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id_copy,
+                                                            *matches_out_copy, right_it);
+        });
       } else {
         Fail("Invalid segment combination detected!");  // NOLINT - cpplint.py does not know about constexpr
       }

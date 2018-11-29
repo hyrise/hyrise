@@ -135,7 +135,7 @@ auto erase_type_from_iterable(const IterableT& iterable) {
   if constexpr(is_any_segment_iterable_v<IterableT>) {
     return iterable;
   } else {
-    return AnySegmentIterable<typename IterableT::ColumnDataType>{iterable};
+    return AnySegmentIterable<typename IterableT::ValueType>{iterable};
   }
   // clang-format on
 }

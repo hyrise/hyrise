@@ -9,6 +9,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iteration.hpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -123,9 +124,11 @@ class ColumnMaterializerNUMA {
 
     return std::make_shared<JobTask>(
         [this, &output, &null_rows_output, segment, chunk_id, alloc, numa_node_id] {
-          resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
-            _materialize_segment(typed_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
-          });
+          if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
+            _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
+          } else {
+            _generic_materialize_segment(*segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
+          }
         },
         SchedulePriority::Default, false);
   }
@@ -133,23 +136,19 @@ class ColumnMaterializerNUMA {
   /**
    * Materialization works for all types of segments
    */
-  template <typename SegmentType>
-  void _materialize_segment(const SegmentType& segment, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
+  void _generic_materialize_segment(const BaseSegment& segment, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
                             MaterializedNUMAPartition<T>& partition) {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
-
     output->reserve(segment.size());
 
-    auto iterable = create_iterable_from_segment<T>(segment);
-
-    iterable.for_each([&](const auto& segment_value) {
-      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
-      if (segment_value.is_null()) {
+    segment_for_each<T>(segment, [&](const auto& value) {
+      const auto row_id = RowID{chunk_id, value.chunk_offset()};
+      if (value.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output->emplace_back(row_id, segment_value.value());
+        output->emplace_back(row_id, value.value());
       }
     });
 
@@ -159,11 +158,11 @@ class ColumnMaterializerNUMA {
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
+  void _materialize_dictionary_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
                                                                std::unique_ptr<PosList>& null_rows_output,
-                                                               MaterializedValueAllocator<T> alloc) {
-    auto output = MaterializedSegment<T>{alloc};
-    output.reserve(segment.size());
+                                                                          MaterializedNUMAPartition<T>& partition) {
+    auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
+    output->reserve(segment.size());
 
     auto value_ids = segment.attribute_vector();
     auto dict = segment.dictionary();
@@ -176,11 +175,11 @@ class ColumnMaterializerNUMA {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, segment_value.value());
+        output->emplace_back(row_id, segment_value.value());
       }
     });
 
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
+    partition._materialized_segments[chunk_id] = output;
   }
 
  private:

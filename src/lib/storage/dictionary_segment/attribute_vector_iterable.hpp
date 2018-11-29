@@ -9,7 +9,7 @@ namespace opossum {
 
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
-  using ColumnDataType = ValueID;
+  using ValueType = ValueID;
 
   explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}

@@ -12,7 +12,7 @@ namespace opossum {
 template <typename T>
 class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfReferenceIterable<T>> {
  public:
-  using ColumnDataType = T;
+  using ValueType = T;
 
   explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
 
@@ -55,6 +55,8 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   template <typename OffsetValueIteratorT>
   class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = FrameOfReferenceIterable<T>;
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
@@ -105,6 +107,9 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   class PointAccessIterator
       : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = FrameOfReferenceIterable<T>;
+
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         OffsetValueDecompressorT* attribute_decompressor,

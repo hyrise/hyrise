@@ -14,7 +14,7 @@ namespace opossum {
 template <typename T>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T>> {
  public:
-  using ColumnDataType = T;
+  using ValueType = T;
 
   explicit ReferenceSegmentIterable(const ReferenceSegment& segment) : _segment{segment} {}
 
@@ -64,6 +64,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   template <typename Accessor>
   class SingleChunkIterator : public BaseSegmentIterator<SingleChunkIterator<Accessor>, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = ReferenceSegmentIterable<T>;
     using PosListIterator = PosList::const_iterator;
 
    public:
@@ -105,6 +107,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
   // The iterator for cases where we potentially iterate over multiple referenced chunks
   class MultipleChunkIterator : public BaseSegmentIterator<MultipleChunkIterator, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = ReferenceSegmentIterable<T>;
     using PosListIterator = PosList::const_iterator;
 
    public:

@@ -11,6 +11,7 @@
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
+#include "storage/segment_iteration.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -91,10 +92,11 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                                 const std::shared_ptr<const BaseSegment>& segment_right,
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
-  resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
-    resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
+
+  segment_with_iterators_and_data_type_resolve(*segment_left, [&](auto left_it, const auto left_end) {
+    segment_with_iterators_and_data_type_resolve(*segment_right, [&](auto right_it, const auto right_end) {
+      using LeftType = typename decltype(left_it)::ValueType;
+      using RightType = typename decltype(right_it)::ValueType;
 
       // make sure that we do not compile invalid versions of these lambdas
       constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
@@ -104,23 +106,17 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
       if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
-        auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
-        auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
-
         // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
         const auto params_copy = params;
         const auto chunk_id_left_copy = chunk_id_left;
         const auto chunk_id_right_copy = chunk_id_right;
 
-        iterable_left.with_iterators(
-            [&params_copy, &iterable_right, chunk_id_left_copy, chunk_id_right_copy](auto left_it, auto left_end) {
-              iterable_right.with_iterators([&](auto right_it, auto right_end) {
-                with_comparator(params_copy.predicate_condition, [&](auto comparator) {
-                  join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left_copy,
-                                          chunk_id_right_copy, params_copy);
-                });
-              });
-            });
+        with_comparator(params_copy.predicate_condition, [&](auto comparator) {
+          join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left_copy,
+                                  chunk_id_right_copy, params_copy);
+        });
+      } else {
+        Fail("Cannot join String with non-String column");
       }
     });
   });

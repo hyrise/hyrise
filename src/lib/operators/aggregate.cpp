@@ -21,6 +21,7 @@
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "storage/segment_iteration.hpp"
 
 namespace opossum {
 
@@ -213,39 +214,30 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  // clang-format off
-  resolve_segment_type<ColumnDataType>(
-      // clang-format on
-      base_segment, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_segment) {
-        auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
+  ChunkOffset chunk_offset{0};
+  segment_for_each<ColumnDataType>(base_segment, [&](const auto& value) {
+    auto& hash_entry = results[hash_keys[chunk_offset]];
+    hash_entry.row_id = RowID(chunk_id, chunk_offset);
 
-        ChunkOffset chunk_offset{0};
+    /**
+    * If the value is NULL, the current aggregate value does not change.
+    */
+    if (!value.is_null()) {
+      // If we have a value, use the aggregator lambda to update the current aggregate value for this group
+      aggregator(value.value(), hash_entry.current_aggregate);
 
-        // Now that all relevant types have been resolved, we can iterate over the segment and build the aggregations.
-        iterable.for_each([&, chunk_id, aggregator](const auto& value) {
-          auto& hash_entry = results[hash_keys[chunk_offset]];
-          hash_entry.row_id = RowID(chunk_id, chunk_offset);
+      // increase value counter
+      ++hash_entry.aggregate_count;
 
-          /**
-          * If the value is NULL, the current aggregate value does not change.
-          */
-          if (!value.is_null()) {
-            // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-            aggregator(value.value(), hash_entry.current_aggregate);
+      if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
+        // for the case of CountDistinct, insert this value into the set to keep track of distinct values
+        hash_entry.distinct_values.insert(value.value());
+      }
+    }
 
-            // increase value counter
-            ++hash_entry.aggregate_count;
-
-            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-              // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
-              // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-              hash_entry.distinct_values.insert(value.value());
-            }
-          }
-
-          ++chunk_offset;
-        });
-      });
+    ++chunk_offset;
+  });
 }
 
 template <typename AggregateKey>

@@ -77,7 +77,7 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
   pmr_concurrent_vector(tbb::concurrent_vector<T> other, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
-  pmr_concurrent_vector(std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
+  pmr_concurrent_vector(const std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
 
   template <class I>

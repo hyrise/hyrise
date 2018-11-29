@@ -11,7 +11,7 @@ namespace opossum {
 template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {
  public:
-  using ColumnDataType = T;
+  using ValueType = T;
 
   explicit ValueSegmentIterable(const ValueSegment<T>& segment) : _segment{segment} {}
 
@@ -51,6 +51,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
  private:
   class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
 
    public:
@@ -77,6 +79,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
