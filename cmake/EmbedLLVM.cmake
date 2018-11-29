@@ -56,21 +56,14 @@ function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
     set(MANGLED_SYMBOL _ZN7opossum${SYMBOL_NAME_LENGTH}${SYMBOL_NAME}E)
     math(EXPR SYMBOL_NAME_SIZE_LENGTH "${SYMBOL_NAME_LENGTH} + 5")
     set(MANGLED_SIZE_SYMBOL _ZN7opossum${SYMBOL_NAME_SIZE_LENGTH}${SYMBOL_NAME}_sizeE)
-    file(WRITE ${ASM_FILE} "
-        .global ${MANGLED_SYMBOL}
-        .global _${MANGLED_SYMBOL}
-        .global ${MANGLED_SIZE_SYMBOL}
-        .global _${MANGLED_SIZE_SYMBOL}
-        .p2align 3
-        ${MANGLED_SYMBOL}:
-        _${MANGLED_SYMBOL}:
-        .incbin \"${LLVM_BUNDLE_FILE}\"
-        1:
-        .p2align 3
-        ${MANGLED_SIZE_SYMBOL}:
-        _${MANGLED_SIZE_SYMBOL}:
-        .8byte 1b - ${MANGLED_SYMBOL}"
+        
+    configure_file("${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/jit_llvm_bundle.s" ${ASM_FILE})
+
+    set_source_files_properties(
+        ${ASM_FILE}
+        PROPERTIES
+            OBJECT_DEPENDS ${LLVM_BUNDLE_FILE}
     )
-    set_source_files_properties(${ASM_FILE} PROPERTIES GENERATED TRUE OBJECT_DEPENDS ${LLVM_BUNDLE_FILE})
+
     set(${OUTPUT_FILE} ${ASM_FILE} PARENT_SCOPE)
 endfunction()
