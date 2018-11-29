@@ -27,7 +27,7 @@ class Table : private Noncopyable {
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
-  // We want a common interface for tables that contain data (TableType::Data) and tables than contain reference
+  // We want a common interface for tables that contain data (TableType::Data) and tables that contain reference
   // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
