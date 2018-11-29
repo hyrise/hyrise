@@ -9,6 +9,8 @@ namespace opossum {
 
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
+  using ColumnDataType = ValueID;
+
   explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
@@ -25,17 +27,21 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
 
-      auto begin = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter.cbegin(),
-                                                           position_filter.cbegin()};
-      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter.cbegin(),
-                                                         position_filter.cend()};
+      auto begin = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter->cbegin(),
+                                                           position_filter->cbegin()};
+      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter->cbegin(),
+                                                         position_filter->cend()};
       functor(begin, end);
     });
+  }
+
+  size_t _on_size() const {
+    return _attribute_vector.size();
   }
 
  private:

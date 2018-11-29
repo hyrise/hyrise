@@ -14,6 +14,8 @@ namespace opossum {
 template <typename T, typename Dictionary>
 class DictionarySegmentIterable : public PointAccessibleSegmentIterable<DictionarySegmentIterable<T, Dictionary>> {
  public:
+  using ColumnDataType = T;
+
   explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
       : _segment{segment}, _dictionary(segment.dictionary()) {}
 
@@ -33,15 +35,15 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
 
       auto begin = PointAccessIterator<ZsDecompressorType>{*_dictionary, _segment.null_value_id(), *decompressor,
-                                                           position_filter.cbegin(), position_filter.cbegin()};
+                                                           position_filter->cbegin(), position_filter->cbegin()};
       auto end = PointAccessIterator<ZsDecompressorType>{*_dictionary, _segment.null_value_id(), *decompressor,
-                                                         position_filter.cbegin(), position_filter.cend()};
+                                                         position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     });
   }

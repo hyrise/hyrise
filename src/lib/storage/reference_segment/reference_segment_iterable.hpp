@@ -14,6 +14,8 @@ namespace opossum {
 template <typename T>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T>> {
  public:
+  using ColumnDataType = T;
+
   explicit ReferenceSegmentIterable(const ReferenceSegment& segment) : _segment{segment} {}
 
   template <typename Functor>

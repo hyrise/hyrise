@@ -18,13 +18,6 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
       _pos_list(pos) {
   Assert(_referenced_column_id < _referenced_table->column_count(), "ColumnID out of range")
       DebugAssert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
-
-  // Theoretically, a ReferenceSegment can become bigger than the input segments of the operator. This can happen, for
-  // example, if a hash-based join puts all entries into the same bucket and generates a single segment. It is the duty
-  // of the operator to make sure that, once a ReferenceSegment is full, the next one is started. So far, most
-  // operators ignore this, simply because we have not experienced the issue and have not considered it to be a
-  // priority. This assert makes sure that we become aware of it becoming relevant.
-  Assert(pos->size() <= Chunk::MAX_SIZE, "PosList exceeds Chunk::MAX_SIZE");
 }
 
 const AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {

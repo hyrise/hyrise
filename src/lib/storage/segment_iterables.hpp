@@ -149,7 +149,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
       _self()._on_with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
-      _self()._on_with_iterators(*position_filter, functor);
+      _self()._on_with_iterators(position_filter, functor);
     }
   }
 
@@ -170,4 +170,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 };
 
-}  // namespace opossum
+template <typename T>
+constexpr auto is_point_accessible_segment_iterable_v = std::is_base_of_v<PointAccessibleSegmentIterable<T>, T>;
+
+};  // namespace opossum

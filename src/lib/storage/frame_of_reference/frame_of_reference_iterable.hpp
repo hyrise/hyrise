@@ -12,6 +12,8 @@ namespace opossum {
 template <typename T>
 class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfReferenceIterable<T>> {
  public:
+  using ColumnDataType = T;
+
   explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
@@ -29,16 +31,16 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decompressor.get(), position_filter.cbegin(),
-                                                                 position_filter.cbegin()};
+                                                                 decompressor.get(), position_filter->cbegin(),
+                                                                 position_filter->cbegin()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter.cbegin(), position_filter.cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
     });

@@ -8,6 +8,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 

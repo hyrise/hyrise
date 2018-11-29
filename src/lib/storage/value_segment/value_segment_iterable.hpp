@@ -11,6 +11,8 @@ namespace opossum {
 template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {
  public:
+  using ColumnDataType = T;
+
   explicit ValueSegmentIterable(const ValueSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
@@ -19,25 +21,24 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
       auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
       functor(begin, end);
-      return;
+    } else {
+      auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
+      auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend()};
+      functor(begin, end);
     }
-
-    auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
-    auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend()};
-    functor(begin, end);
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     if (_segment.is_nullable()) {
-      auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), position_filter.cbegin(),
-                                       position_filter.cbegin()};
-      auto end = PointAccessIterator{_segment.values(), _segment.null_values(), position_filter.cbegin(),
-                                     position_filter.cend()};
+      auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), position_filter->cbegin(),
+                                       position_filter->cbegin()};
+      auto end = PointAccessIterator{_segment.values(), _segment.null_values(), position_filter->cbegin(),
+                                     position_filter->cend()};
       functor(begin, end);
     } else {
-      auto begin = NonNullPointAccessIterator{_segment.values(), position_filter.cbegin(), position_filter.cbegin()};
-      auto end = NonNullPointAccessIterator{_segment.values(), position_filter.cbegin(), position_filter.cend()};
+      auto begin = NonNullPointAccessIterator{_segment.values(), position_filter->cbegin(), position_filter->cbegin()};
+      auto end = NonNullPointAccessIterator{_segment.values(), position_filter->cbegin(), position_filter->cend()};
       functor(begin, end);
     }
   }
