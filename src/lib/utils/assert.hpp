@@ -41,7 +41,7 @@
 
 // TRIMMED_FILENAME is __FILE__ with irrelevant leading chars trimmed
 #ifndef TRIMMED_FILENAME
-#define TRIMMED_FILENAME (__FILE__)
+#define TRIMMED_FILENAME (__FILE__ + SOURCE_PATH_SIZE)
 #endif
 
 namespace opossum {
