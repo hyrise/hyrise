@@ -87,6 +87,7 @@ node {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "mkdir ./clang-debug/run-shuffled"
             sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+            sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
           } else {
             Utils.markStageSkippedForConditional("clangDebugRunShuffled")
           }
