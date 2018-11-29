@@ -368,7 +368,7 @@ int Console::_help(const std::string&) {
   out("  visualize [options] [SQL]               - Visualize a SQL query\n");
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                                 Default: noexec\n");
+  out("                                                                 Default: exec\n");
   out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
   out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                       Default: pqp\n");
