@@ -644,7 +644,6 @@ int Console::_visualize(const std::string& input) {
   const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
-  // Visualize the Logical Query Plan
   switch (plan_type) {
     case PlanType::LQP:
     case PlanType::UnoptLQP: {
@@ -681,9 +680,6 @@ int Console::_visualize(const std::string& input) {
         _handle_rollback();
         return ReturnCode::Error;
       }
-
-      PQPVisualizer visualizer;
-      visualizer.visualize(physical_plans, graph_filename, img_filename);
     } break;
 
     case PlanType::Joins: {
