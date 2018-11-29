@@ -13,6 +13,7 @@
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -113,6 +114,19 @@ class BaseTestWithParam
     }
 
     return std::make_shared<TableScan>(in, predicate);
+  }
+
+  static ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
+                                                                 const SegmentEncodingSpec& desired_segment_encoding) {
+    auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
+
+    for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
+      if (encoding_supports_data_type(desired_segment_encoding.encoding_type, table.column_data_type(column_id))) {
+        chunk_encoding_spec[column_id] = desired_segment_encoding;
+      }
+    }
+
+    return chunk_encoding_spec;
   }
 };
 
