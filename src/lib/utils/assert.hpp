@@ -64,7 +64,7 @@ namespace opossum {
     throw InvalidInputException(std::string("Invalid input error: ") + msg); \
   }
 
-#if IS_DEBUG
+#if HYRISE_IS_DEBUG
 #define DebugAssert(expr, msg) Assert(expr, msg)
 #else
 #define DebugAssert(expr, msg)

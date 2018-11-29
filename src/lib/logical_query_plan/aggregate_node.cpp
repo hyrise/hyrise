@@ -21,7 +21,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
     : AbstractLQPNode(LQPNodeType::Aggregate, {/* Expressions added below*/}),
       aggregate_expressions_begin_idx{group_by_expressions.size()} {
-#if IS_DEBUG
+#if HYRISE_IS_DEBUG
   for (const auto& aggregate_expression : aggregate_expressions) {
     DebugAssert(aggregate_expression->type == ExpressionType::Aggregate,
                 "Expression used as aggregate expression must be of type AggregateExpression.");

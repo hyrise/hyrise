@@ -13,7 +13,7 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition pr
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
                                                      const std::shared_ptr<AbstractExpression>& right_operand)
     : AbstractPredicateExpression(predicate_condition, {left_operand, right_operand}) {
-#if IS_DEBUG
+#if HYRISE_IS_DEBUG
   const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
                                            PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
                                            PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,

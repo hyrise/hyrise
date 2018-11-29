@@ -532,7 +532,7 @@ TEST_F(SQLPipelineStatementTest, GetTimes) {
 }
 
 TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_IS_DEBUG) return;
 
   auto sql_pipeline = SQLPipelineBuilder{_invalid_sql}.create_pipeline_statement();
   try {

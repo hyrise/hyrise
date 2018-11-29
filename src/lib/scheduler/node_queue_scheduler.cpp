@@ -20,7 +20,7 @@ namespace opossum {
 NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (IS_DEBUG && _active) {
+  if (HYRISE_IS_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
     std::exit(EXIT_FAILURE);
@@ -67,7 +67,7 @@ void NodeQueueScheduler::finish() {
   }
 
   // All queues SHOULD be empty by now
-  if (IS_DEBUG) {
+  if (HYRISE_IS_DEBUG) {
     for ([[maybe_unused]] auto& queue : _queues) {
       DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
     }

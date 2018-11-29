@@ -441,7 +441,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"date", timestamp_stream.str()},
       {"chunk_size", config.chunk_size},
       {"compiler", compiler.str()},
-      {"build_type", IS_DEBUG ? "debug" : "release"},
+      {"build_type", HYRISE_IS_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},

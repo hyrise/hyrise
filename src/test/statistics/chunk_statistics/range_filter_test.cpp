@@ -111,7 +111,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_IS_DEBUG) return;
 
   const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
                                           std::numeric_limits<TypeParam>::lowest()};
