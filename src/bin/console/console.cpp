@@ -666,8 +666,6 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      auto physical_plans = std::vector<std::shared_ptr<AbstractOperator>>{};
-
       try {
         if (!no_execute) {
           _sql_pipeline->get_result_table();
