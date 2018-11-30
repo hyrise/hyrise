@@ -35,7 +35,7 @@ else()
     MESSAGE(STATUS "Building without NUMA support")
 endif()
 
-# Enable coverage if requested   - this is only operating on Hyrise's source (src/) so we don't check coverage of
+# Enable coverage if requested - this is only operating on Hyrise's source (src/) so we don't check coverage of
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
