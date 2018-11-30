@@ -55,7 +55,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
 }
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
-  if (!HYRISE_IS_DEBUG) return;
+  if (!HYRISE_DEBUG) return;
   std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
   auto gt_c = std::make_shared<TableWrapper>(std::move(test_table_c));
   gt_c->execute();
@@ -66,7 +66,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
 }
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
-  if (!HYRISE_IS_DEBUG) return;
+  if (!HYRISE_DEBUG) return;
   std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
   auto gt_d = std::make_shared<TableWrapper>(std::move(test_table_d));
   gt_d->execute();

@@ -29,7 +29,7 @@ TEST_F(FixedStringVectorTest, SubscriptOperator) {
   EXPECT_EQ((*fixed_string_vector)[0u], "foo");
   EXPECT_EQ((*fixed_string_vector)[1u], "barbaz");
   EXPECT_EQ((*fixed_string_vector)[2u], "str3");
-  if (HYRISE_IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::exception);
   } else {
     fixed_string_vector->push_back("opossum");
@@ -44,7 +44,7 @@ TEST_F(FixedStringVectorTest, AtOperator) {
 
   EXPECT_EQ(fixed_string_vector->at(1u).string(), "barbaz");
 
-  if (HYRISE_IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::exception);
   } else {
     fixed_string_vector->push_back("opossum");

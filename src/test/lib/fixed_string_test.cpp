@@ -26,7 +26,7 @@ TEST_F(FixedStringTest, Constructors) {
   auto str2 = FixedString(str1);
   EXPECT_EQ(str2, "foo");
 
-  if (HYRISE_IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     EXPECT_THROW(str1 = FixedString(&charvector2[0], 6u), std::exception);
   } else {
     str1 = FixedString(&charvector2[0], 6u);
