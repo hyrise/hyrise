@@ -368,7 +368,7 @@ int Console::_help(const std::string&) {
   out("  visualize [options] [SQL]               - Visualize a SQL query\n");
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                                 Default: noexec\n");
+  out("                                                                 Default: exec\n");
   out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
   out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                       Default: pqp\n");
@@ -641,7 +641,6 @@ int Console::_visualize(const std::string& input) {
   const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
-  // Visualize the Logical Query Plan
   switch (plan_type) {
     case PlanType::LQP:
     case PlanType::UnoptLQP: {
@@ -664,8 +663,6 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      auto physical_plans = std::vector<std::shared_ptr<AbstractOperator>>{};
-
       try {
         if (!no_execute) {
           _sql_pipeline->get_result_table();
@@ -678,9 +675,6 @@ int Console::_visualize(const std::string& input) {
         _handle_rollback();
         return ReturnCode::Error;
       }
-
-      PQPVisualizer visualizer;
-      visualizer.visualize(physical_plans, graph_filename, img_filename);
     } break;
 
     case PlanType::Joins: {
