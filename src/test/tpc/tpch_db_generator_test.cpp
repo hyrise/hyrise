@@ -57,7 +57,7 @@ TEST(TpchDbGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(StorageManager::get().has_table("region"));
 
   // Small scale factor
-  TpchDbGenerator(0.01f, Chunk::MAX_SIZE).generate_and_store();
+  TpchDbGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
 
   EXPECT_TRUE(StorageManager::get().has_table("part"));
   EXPECT_TRUE(StorageManager::get().has_table("supplier"));

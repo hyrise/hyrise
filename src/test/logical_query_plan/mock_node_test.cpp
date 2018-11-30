@@ -18,7 +18,7 @@ namespace opossum {
 class MockNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
+    auto table = load_table("src/test/tables/int_float_double_string.tbl");
     _statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
 
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{

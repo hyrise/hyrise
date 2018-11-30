@@ -244,7 +244,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 
 // A table with reference segments is materialized while exporting. The content of the export file should not be
 // different from a exported table with ValueSegments and the same content.
-// They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
+// It assumes that the TableScan produces one output segment per input segment.
 TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
@@ -325,7 +325,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -351,7 +351,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});

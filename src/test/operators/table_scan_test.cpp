@@ -73,7 +73,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Int);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References, 5);
+    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References);
 
     const auto test_table_part_compressed = _int_int_partly_compressed->get_output();
 
