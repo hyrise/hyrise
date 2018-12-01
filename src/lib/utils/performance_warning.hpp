@@ -57,10 +57,10 @@ class PerformanceWarningDisabler {
   }
 };
 
-#define PerformanceWarning(text)                                                                     \
-  {                                                                                                  \
+#define PerformanceWarning(text)                                                             \
+  {                                                                                          \
     static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILE__) + \
-                                        ":" BOOST_PP_STRINGIZE(__LINE__));                           \
+                                        ":" BOOST_PP_STRINGIZE(__LINE__));                   \
   }  // NOLINT
 
 }  // namespace opossum
