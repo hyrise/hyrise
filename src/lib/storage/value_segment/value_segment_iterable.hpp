@@ -115,6 +115,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   class NonNullPointAccessIterator
       : public BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = ValueSegmentIterable<T>;
     using ValueVector = pmr_concurrent_vector<T>;
 
    public:
@@ -141,6 +143,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>> {
    public:
+    using ValueType = T;
+    using IterableType = ValueSegmentIterable<T>;
     using ValueVector = pmr_concurrent_vector<T>;
     using NullValueVector = pmr_concurrent_vector<bool>;
 

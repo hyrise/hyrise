@@ -38,14 +38,16 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, matches, position_filter);
-  });
+  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+    _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+  } else {
+    _scan_non_dictionary_segment(segment, chunk_id, matches, position_filter);
+  }
 }
 
-void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                                const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_and_data_type_resolve(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 
     auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
@@ -58,7 +60,7 @@ void ColumnBetweenTableScanImpl::_scan_segment(const BaseSegment& segment, const
   });
 }
 
-void ColumnBetweenTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                PosList& matches,
                                                const std::shared_ptr<const PosList>& position_filter) const {
   const auto left_value_id = segment.lower_bound(_left_value);

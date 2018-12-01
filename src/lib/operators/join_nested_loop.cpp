@@ -93,8 +93,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
 
-  segment_with_iterators_and_data_type_resolve(*segment_left, [&](auto left_it, const auto left_end) {
-    segment_with_iterators_and_data_type_resolve(*segment_right, [&](auto right_it, const auto right_end) {
+  segment_with_iterators(*segment_left, [&](auto left_it, const auto left_end) {
+    segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;
 
@@ -180,18 +180,12 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
 
-      resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
-        using RightType = typename decltype(right_type)::type;
-
-        auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
-
-        iterable_right.for_each([&](const auto& right_value) {
-          const auto row_id = RowID{chunk_id_right, right_value.chunk_offset()};
-          if (!_right_matches[chunk_id_right][row_id.chunk_offset]) {
-            _pos_list_left->emplace_back(NULL_ROW_ID);
-            _pos_list_right->emplace_back(row_id);
-          }
-        });
+      segment_for_each(*segment_right, [&](const auto& value) {
+        const auto row_id = RowID{chunk_id_right, value.chunk_offset()};
+        if (!_right_matches[chunk_id_right][row_id.chunk_offset]) {
+          _pos_list_left->emplace_back(NULL_ROW_ID);
+          _pos_list_right->emplace_back(row_id);
+        }
       });
     }
   }

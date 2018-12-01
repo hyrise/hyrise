@@ -30,22 +30,18 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
 
   auto matches = std::make_shared<PosList>();
 
-  _scan_non_reference_segment(*segment, chunk_id, *matches, nullptr);
+  if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
+    _scan_value_segment(*value_segment, chunk_id, *matches, nullptr);
+  } else {
+    _scan_non_value_segment(*segment, chunk_id, *matches, nullptr);
+  }
 
   return matches;
 }
 
-void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-    const std::shared_ptr<const PosList>& position_filter) const {
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, matches, position_filter);
-  });
-}
-
-void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnIsNullTableScanImpl::_scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                               const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_and_data_type_resolve(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
 
@@ -53,7 +49,7 @@ void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const 
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
+void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
                                               const std::shared_ptr<const PosList>& position_filter) const {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter, segment.size());

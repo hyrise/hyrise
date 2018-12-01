@@ -1,5 +1,7 @@
 #include "generate_column_statistics.hpp"
 
+#include "storage/segment_iteration.hpp"
+
 namespace opossum {
 
 /**
@@ -22,22 +24,19 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
 
-    resolve_segment_type<std::string>(*base_segment, [&](auto& segment) {
-      auto iterable = create_iterable_from_segment<std::string>(segment);
-      iterable.for_each([&](const auto& segment_value) {
-        if (segment_value.is_null()) {
-          ++null_value_count;
+    segment_for_each<std::string>(*base_segment, [&](const auto& value) {
+      if (value.is_null()) {
+        ++null_value_count;
+      } else {
+        if (distinct_set.empty()) {
+          min = value.value();
+          max = value.value();
         } else {
-          if (distinct_set.empty()) {
-            min = segment_value.value();
-            max = segment_value.value();
-          } else {
-            min = std::min(min, segment_value.value());
-            max = std::max(max, segment_value.value());
-          }
-          distinct_set.insert(segment_value.value());
+          min = std::min(min, value.value());
+          max = std::max(max, value.value());
         }
-      });
+        distinct_set.insert(value.value());
+      }
     });
   }
 

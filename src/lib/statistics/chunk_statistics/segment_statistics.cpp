@@ -11,7 +11,7 @@
 #include "min_max_filter.hpp"
 #include "range_filter.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iteration.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
@@ -43,6 +43,7 @@ static std::shared_ptr<SegmentStatistics> build_statistics_from_dictionary(const
 std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
     DataType data_type, const std::shared_ptr<const BaseSegment>& segment) {
   std::shared_ptr<SegmentStatistics> statistics;
+
   resolve_data_and_segment_type(*segment, [&statistics](auto type, auto& typed_segment) {
     using SegmentType = std::decay_t<decltype(typed_segment)>;
     using DataTypeT = typename decltype(type)::type;

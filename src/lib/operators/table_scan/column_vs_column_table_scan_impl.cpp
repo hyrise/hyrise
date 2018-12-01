@@ -34,8 +34,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   auto matches_out = std::make_shared<PosList>();
 
-  segment_with_iterators_and_data_type_resolve(*left_segment, [&](auto left_it, const auto left_end) {
-    segment_with_iterators_and_data_type_resolve(*right_segment, [&](auto right_it, const auto right_end) {
+  segment_with_iterators(*left_segment, [&](auto left_it, const auto left_end) {
+    segment_with_iterators(*right_segment, [&](auto right_it, const auto right_end) {
       using LeftSegmentIterableType = typename decltype(left_it)::IterableType;
       using RightSegmentIterableType = typename decltype(right_it)::IterableType;
 

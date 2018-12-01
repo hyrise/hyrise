@@ -350,32 +350,28 @@ void Aggregate::_aggregate() {
           const auto chunk_in = input_table->get_chunk(chunk_id);
           const auto base_segment = chunk_in->get_segment(column_id);
 
-          resolve_segment_type<ColumnDataType>(*base_segment, [&](auto& typed_segment) {
-            auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-
-            ChunkOffset chunk_offset{0};
-            iterable.for_each([&](const auto& value) {
-              if (value.is_null()) {
-                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                  keys_per_chunk[chunk_id][chunk_offset] = 0u;
-                } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
-                }
+          ChunkOffset chunk_offset{0};
+          segment_for_each<ColumnDataType>(*base_segment, [&](const auto& value) {
+            if (value.is_null()) {
+              if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                keys_per_chunk[chunk_id][chunk_offset] = 0u;
               } else {
-                auto inserted = id_map.try_emplace(value.value(), id_counter);
-                // store either the current id_counter or the existing ID of the value
-                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                  keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
-                } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
-                }
-
-                // if the id_map didn't have the value as a key and a new element was inserted
-                if (inserted.second) ++id_counter;
+                keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+              }
+            } else {
+              auto inserted = id_map.try_emplace(value.value(), id_counter);
+              // store either the current id_counter or the existing ID of the value
+              if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
+              } else {
+                keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
               }
 
-              ++chunk_offset;
-            });
+              // if the id_map didn't have the value as a key and a new element was inserted
+              if (inserted.second) ++id_counter;
+            }
+
+            ++chunk_offset;
           });
         }
       });

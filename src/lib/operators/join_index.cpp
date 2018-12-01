@@ -94,7 +94,7 @@ void JoinIndex::_perform_join() {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
         const auto segment_left = input_table_left()->get_chunk(chunk_id_left)->get_segment(_column_ids.first);
 
-        segment_with_iterators_and_data_type_resolve(*segment_left, [&](auto it, const auto end) {
+        segment_with_iterators(*segment_left, [&](auto it, const auto end) {
           _join_two_segments_using_index(it, end, chunk_id_left, chunk_id_right, index);
         });
       }
