@@ -61,7 +61,8 @@ function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
     # specific to the build (MANGLED_SYMBOL, LLVM_BUNDLE_FILE, ...)
     # Using configure_file() means that this configuration will only happen when cmake runs; there is NO dependency
     # checking at build time, so if you change ".../specialization/llvm/jit_llvm_bundle.s", this will have no effect
-    # on the build unless cmake is run again.
+    # on the build unless cmake is run again. For now, using `add_custom_command` to properly solve this seems
+    # unnecessary, but is possible if this becomes a problem.
     configure_file("${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/jit_llvm_bundle.s" ${ASM_FILE})
     set_source_files_properties(
         ${ASM_FILE}
