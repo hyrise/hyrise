@@ -1,7 +1,7 @@
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DIS_DEBUG=1)
+    add_definitions(-DHYRISE_DEBUG=1)
 else()
-    add_definitions(-DIS_DEBUG=0)
+    add_definitions(-DHYRISE_DEBUG=0)
 endif()
 
 # Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang

@@ -80,7 +80,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 // Check, that aggregates on invalid data types are rejected.
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   // Test case is only run in debug mode as checks are DebugAsserts, which are not present in release mode.
-  if constexpr (IS_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(
         _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Avg),
         std::logic_error);
