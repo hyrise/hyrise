@@ -368,7 +368,7 @@ int Console::_help(const std::string&) {
   out("  visualize [options] [SQL]               - Visualize a SQL query\n");
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                                 Default: noexec\n");
+  out("                                                                 Default: exec\n");
   out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
   out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                       Default: pqp\n");
@@ -430,7 +430,7 @@ int Console::_generate_tpch(const std::string& args) {
     args_valid = false;
   }
 
-  auto chunk_size = Chunk::MAX_SIZE;
+  auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
   }
@@ -438,7 +438,8 @@ int Console::_generate_tpch(const std::string& args) {
   if (!args_valid) {
     out("Usage: ");
     out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is unlimited by default. \n");
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
     return ReturnCode::Error;
   }
 
@@ -473,7 +474,7 @@ int Console::_load_table(const std::string& args) {
   }
 
   if (extension == "csv") {
-    auto importer = std::make_shared<ImportCsv>(filepath, Chunk::MAX_SIZE, tablename);
+    auto importer = std::make_shared<ImportCsv>(filepath, Chunk::DEFAULT_SIZE, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
@@ -482,11 +483,7 @@ int Console::_load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      // We used this chunk size in order to be able to test chunk pruning
-      // on sizeable data sets. This should probably be made configurable
-      // at some point.
-      static constexpr auto DEFAULT_CHUNK_SIZE = 500'000u;
-      auto table = opossum::load_table(filepath, DEFAULT_CHUNK_SIZE);
+      auto table = opossum::load_table(filepath);
 
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
@@ -644,7 +641,6 @@ int Console::_visualize(const std::string& input) {
   const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
-  // Visualize the Logical Query Plan
   switch (plan_type) {
     case PlanType::LQP:
     case PlanType::UnoptLQP: {
@@ -667,8 +663,6 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      auto physical_plans = std::vector<std::shared_ptr<AbstractOperator>>{};
-
       try {
         if (!no_execute) {
           _sql_pipeline->get_result_table();
@@ -681,9 +675,6 @@ int Console::_visualize(const std::string& input) {
         _handle_rollback();
         return ReturnCode::Error;
       }
-
-      PQPVisualizer visualizer;
-      visualizer.visualize(physical_plans, graph_filename, img_filename);
     } break;
 
     case PlanType::Joins: {

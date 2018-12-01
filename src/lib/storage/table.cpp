@@ -19,14 +19,16 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
   return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
-Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const uint32_t max_chunk_size,
-             const UseMvcc use_mvcc)
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
+             const std::optional<uint32_t> max_chunk_size, const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
-      _max_chunk_size(max_chunk_size),
+      _max_chunk_size(type == TableType::Data ? max_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
       _append_mutex(std::make_unique<std::mutex>()) {
-  Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
+  // _max_chunk_size has no meaning if the table is a reference table.
+  DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
+  DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }

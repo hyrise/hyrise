@@ -107,11 +107,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_left = virtual_pos_list_left.size();
   const auto num_rows_right = virtual_pos_list_right.size();
 
-  // Somewhat random way to decide on a chunk size.
-  const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
-
-  auto out_table =
-      std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, out_chunk_size);
+  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
@@ -147,6 +143,10 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
    * derived from std::set_union() and only differs from it insofar as that it builds the output table at the same
    * time as merging the two ReferenceMatrices
    */
+
+  // Somewhat random way to decide on a chunk size.
+  const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
+
   size_t chunk_row_idx = 0;
   for (; left_idx < num_rows_left || right_idx < num_rows_right;) {
     /**

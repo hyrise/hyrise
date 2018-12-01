@@ -36,9 +36,9 @@ class CsvParser {
    * @returns             The table that was created from the csv file.
    */
   std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt,
-                               const ChunkOffset chunk_size = Chunk::MAX_SIZE);
+                               const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
   std::shared_ptr<Table> create_table_from_meta_file(const std::string& filename,
-                                                     const ChunkOffset chunk_size = Chunk::MAX_SIZE);
+                                                     const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
  protected:
   /*
