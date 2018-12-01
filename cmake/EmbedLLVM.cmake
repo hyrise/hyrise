@@ -56,9 +56,13 @@ function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
     set(MANGLED_SYMBOL _ZN7opossum${SYMBOL_NAME_LENGTH}${SYMBOL_NAME}E)
     math(EXPR SYMBOL_NAME_SIZE_LENGTH "${SYMBOL_NAME_LENGTH} + 5")
     set(MANGLED_SIZE_SYMBOL _ZN7opossum${SYMBOL_NAME_SIZE_LENGTH}${SYMBOL_NAME}_sizeE)
-        
-    configure_file("${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/jit_llvm_bundle.s" ${ASM_FILE})
 
+    # We use `configure_file` to copy the .s template file to the build directory and configure it with variables
+    # specific to the build (MANGLED_SYMBOL, LLVM_BUNDLE_FILE, ...)
+    # Using configure_file() means that this configuration will only happen when cmake runs; there is NO dependency
+    # checking at build time, so if you change ".../specialization/llvm/jit_llvm_bundle.s", this will have no effect
+    # on the build unless cmake is run again.
+    configure_file("${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/jit_llvm_bundle.s" ${ASM_FILE})
     set_source_files_properties(
         ${ASM_FILE}
         PROPERTIES
