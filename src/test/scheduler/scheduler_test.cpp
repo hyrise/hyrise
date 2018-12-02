@@ -214,19 +214,19 @@ TEST_F(SchedulerTest, MultipleOperators) {
 }
 
 TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
-  Topology::use_non_numa_topology(8);
+  Topology::use_non_numa_topology(4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
 
-  Topology::use_fake_numa_topology(8);
+  Topology::use_fake_numa_topology(4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(8, CurrentScheduler::get()->queues().size());
+  EXPECT_EQ(4, CurrentScheduler::get()->queues().size());
 
-  Topology::use_fake_numa_topology(8, 4);
+  Topology::use_fake_numa_topology(4, 2);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(2, CurrentScheduler::get()->queues().size());
 
-  Topology::use_fake_numa_topology(8, 8);
+  Topology::use_fake_numa_topology(4, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
 
