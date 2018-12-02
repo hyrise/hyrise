@@ -4,14 +4,14 @@
 #include <string>
 #include <type_traits>
 
+#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iteration.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
+#include "storage/segment_iteration.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
-#include "resolve_type.hpp"
 #include "type_comparison.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -52,8 +52,10 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
        * reduces the number of combinations.
        */
 
-      constexpr auto LEFT_IS_REFERENCE_SEGMENT = std::is_same<LeftSegmentIterableType, ReferenceSegmentIterable<LeftType>>{};
-      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = std::is_same<RightSegmentIterableType, ReferenceSegmentIterable<RightType>>{};
+      constexpr auto LEFT_IS_REFERENCE_SEGMENT =
+          std::is_same<LeftSegmentIterableType, ReferenceSegmentIterable<LeftType>>{};
+      constexpr auto RIGHT_IS_REFERENCE_SEGMENT =
+          std::is_same<RightSegmentIterableType, ReferenceSegmentIterable<RightType>>{};
 
       constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
       constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
@@ -66,7 +68,6 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
       if constexpr ((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
                     (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
-
         // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
         const auto left_it_copy = left_it;
         const auto left_end_copy = left_end;

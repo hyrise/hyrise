@@ -80,10 +80,10 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
 
       if (is_nullable) {
         context.inputs.push_back(
-        std::make_shared<JitSegmentReader<IteratorType, Type, true>>(it, input_column.tuple_value));
+            std::make_shared<JitSegmentReader<IteratorType, Type, true>>(it, input_column.tuple_value));
       } else {
         context.inputs.push_back(
-        std::make_shared<JitSegmentReader<IteratorType, Type, false>>(it, input_column.tuple_value));
+            std::make_shared<JitSegmentReader<IteratorType, Type, false>>(it, input_column.tuple_value));
       }
     });
   }

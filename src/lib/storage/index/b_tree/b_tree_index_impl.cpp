@@ -1,7 +1,7 @@
 #include "b_tree_index_impl.hpp"
 
-#include "storage/segment_iteration.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/segment_iteration.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

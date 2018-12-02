@@ -188,7 +188,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       }
 
       histograms[chunk_id] = std::move(histogram);
-
     }));
     jobs.back()->schedule();
   }

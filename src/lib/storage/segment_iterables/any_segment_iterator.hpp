@@ -88,8 +88,8 @@ class AnySegmentIterable;
 template <typename T>
 class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, SegmentIteratorValue<T>> {
  public:
-using ValueType = T;
-using IterableType = AnySegmentIterable<T>;
+  using ValueType = T;
+  using IterableType = AnySegmentIterable<T>;
 
   /**
    * Prevents AnySegmentIterator from being created
@@ -118,6 +118,5 @@ using IterableType = AnySegmentIterable<T>;
  private:
   std::unique_ptr<opossum::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
-
 
 }  // namespace opossum

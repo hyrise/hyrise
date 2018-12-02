@@ -30,7 +30,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
-#include "storage/materialize.hpp"
+#include "storage/segment_iteration.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -1317,15 +1317,32 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
     std::vector<ColumnDataType> values;
-    materialize_values(segment, values);
+    values.resize(segment.size());
+
+    auto chunk_offset = ChunkOffset{0};
 
     if (_table->column_is_nullable(column_id)) {
       std::vector<bool> nulls;
-      materialize_nulls<ColumnDataType>(segment, nulls);
+      nulls.resize(segment.size());
+
+      segment_for_each<ColumnDataType>(segment, [&](const auto& value) {
+        if (value.is_null()) {
+          nulls[chunk_offset] = true;
+        } else {
+          values[chunk_offset] = value.value();
+        }
+        ++chunk_offset;
+      });
+
       _segment_materializations[column_id] =
           std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
 
     } else {
+      segment_for_each<ColumnDataType>(segment, [&](const auto& value) {
+        values[chunk_offset] = value.value();
+        ++chunk_offset;
+      });
+
       _segment_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values));
     }
   });
@@ -1480,19 +1497,31 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 
     std::vector<bool> result_nulls;
     std::vector<Result> result_values;
-    result_values.reserve(table->row_count());
+    result_values.resize(table->row_count());
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-      materialize_values(result_segment, result_values);
-    }
+    auto chunk_offset = ChunkOffset{0};
 
     if (table->column_is_nullable(ColumnID{0})) {
-      result_nulls.reserve(table->row_count());
+      result_nulls.resize(table->row_count());
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-        materialize_nulls<Result>(result_segment, result_nulls);
+        segment_for_each<Result>(result_segment, [&](const auto& value) {
+          if (value.is_null()) {
+            result_nulls[chunk_offset] = true;
+          } else {
+            result_values[chunk_offset] = value.value();
+          }
+          ++chunk_offset;
+        });
+      }
+    } else {
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+        segment_for_each<Result>(result_segment, [&](const auto& value) {
+          result_values[chunk_offset] = value.value();
+          ++chunk_offset;
+        });
       }
     }
 

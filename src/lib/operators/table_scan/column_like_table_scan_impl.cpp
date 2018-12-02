@@ -13,9 +13,9 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iteration.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
-#include "storage/segment_iteration.hpp"
 
 namespace opossum {
 
@@ -31,7 +31,6 @@ std::string ColumnLikeTableScanImpl::description() const { return "LikeScan"; }
 void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
-
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
@@ -39,9 +38,9 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& seg
   }
 }
 
-void ColumnLikeTableScanImpl::_scan_non_dictionary_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                            const std::shared_ptr<const PosList>& position_filter) const {
-
+void ColumnLikeTableScanImpl::_scan_non_dictionary_segment(
+    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
     using Type = typename decltype(it)::ValueType;
     if constexpr (!std::is_same_v<Type, std::string>) {
@@ -56,8 +55,8 @@ void ColumnLikeTableScanImpl::_scan_non_dictionary_segment(const BaseSegment& se
 }
 
 void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                            PosList& matches,
-                                            const std::shared_ptr<const PosList>& position_filter) const {
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
   std::pair<size_t, std::vector<bool>> result;
 
   if (segment.encoding_type() == EncodingType::Dictionary) {

@@ -6,8 +6,8 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/value_segment/null_value_vector_iterable.hpp"
 #include "storage/segment_iteration.hpp"
+#include "storage/value_segment/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -39,8 +39,9 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
   return matches;
 }
 
-void ColumnIsNullTableScanImpl::_scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                              const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnIsNullTableScanImpl::_scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                        PosList& matches,
+                                                        const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
@@ -49,8 +50,9 @@ void ColumnIsNullTableScanImpl::_scan_non_value_segment(const BaseSegment& segme
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                              const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id,
+                                                    PosList& matches,
+                                                    const std::shared_ptr<const PosList>& position_filter) const {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter, segment.size());
     return;

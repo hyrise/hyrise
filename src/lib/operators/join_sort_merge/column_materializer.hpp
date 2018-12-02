@@ -9,8 +9,8 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/segment_iteration.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -84,7 +84,7 @@ class ColumnMaterializer {
    * Materialization works of all types of segments
    */
   std::shared_ptr<MaterializedSegment<T>> _generic_materialize_segment(const BaseSegment& segment, ChunkID chunk_id,
-                                                               std::unique_ptr<PosList>& null_rows_output) {
+                                                                       std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
@@ -110,8 +110,9 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
-                                                               std::unique_ptr<PosList>& null_rows_output) {
+  std::shared_ptr<MaterializedSegment<T>> _materialize_dictionary_segment(const DictionarySegment<T>& segment,
+                                                                          ChunkID chunk_id,
+                                                                          std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 

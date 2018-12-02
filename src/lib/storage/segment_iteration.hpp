@@ -3,9 +3,9 @@
 #include "pos_list.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
-#include "storage/segment_iterables/any_segment_iterable.hpp"
-#include "storage/segment_iterables.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 
 /**
  * This file provides the main entry points to read Segment data, irrespective of the underlying encoding.
@@ -39,7 +39,9 @@ struct ResolveDataTypeTag {};
 
 enum class SegmentIterationTypeErasure { OnlyInDebug, Always };
 
-template <typename T = ResolveDataTypeTag, SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
+// Variant without PosList
+template <typename T = ResolveDataTypeTag,
+          SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
 void segment_with_iterators(const BaseSegment& base_segment, const Functor& functor) {
   if constexpr (std::is_same_v<T, ResolveDataTypeTag>) {
     resolve_data_type(base_segment.data_type(), [&](const auto data_type_t) {
@@ -47,7 +49,7 @@ void segment_with_iterators(const BaseSegment& base_segment, const Functor& func
       segment_with_iterators<ColumnDataType, type_erasure>(base_segment, functor);
     });
   } else {
-    if constexpr (IS_DEBUG || type_erasure == SegmentIterationTypeErasure::Always) {
+    if constexpr (HYRISE_DEBUG || type_erasure == SegmentIterationTypeErasure::Always) {
       const auto any_segment_iterable = create_any_segment_iterable<T>(base_segment);
       any_segment_iterable.with_iterators(functor);
     } else {
@@ -59,7 +61,9 @@ void segment_with_iterators(const BaseSegment& base_segment, const Functor& func
   }
 }
 
-template <typename T = ResolveDataTypeTag, SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
+// Variant with PosList
+template <typename T = ResolveDataTypeTag,
+          SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
 void segment_with_iterators(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
                             const Functor& functor) {
   if (!position_filter) {
@@ -73,7 +77,7 @@ void segment_with_iterators(const BaseSegment& base_segment, const std::shared_p
       segment_with_iterators<ColumnDataType, type_erasure>(base_segment, position_filter, functor);
     });
   } else {
-    if constexpr (IS_DEBUG || type_erasure == SegmentIterationTypeErasure::Always) {
+    if constexpr (HYRISE_DEBUG || type_erasure == SegmentIterationTypeErasure::Always) {
       const auto any_segment_iterable = create_any_segment_iterable<T>(base_segment);
       any_segment_iterable.with_iterators(position_filter, functor);
     } else {
@@ -89,7 +93,9 @@ void segment_with_iterators(const BaseSegment& base_segment, const std::shared_p
   }
 }
 
-template <typename T = ResolveDataTypeTag, SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
+// Variant with PosList
+template <typename T = ResolveDataTypeTag,
+          SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
 void segment_for_each(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
                       const Functor& functor) {
   segment_with_iterators<T, type_erasure>(base_segment, position_filter, [&](auto it, const auto end) {
@@ -100,7 +106,9 @@ void segment_for_each(const BaseSegment& base_segment, const std::shared_ptr<con
   });
 }
 
-template <typename T = ResolveDataTypeTag, SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
+// Variant without PosList
+template <typename T = ResolveDataTypeTag,
+          SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
 void segment_for_each(const BaseSegment& base_segment, const Functor& functor) {
   segment_with_iterators<T, type_erasure>(base_segment, [&](auto it, const auto end) {
     while (it != end) {

@@ -17,11 +17,11 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iteration.hpp"
 #include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
-#include "storage/segment_iteration.hpp"
 
 namespace opossum {
 

@@ -6,12 +6,12 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "storage/chunk_encoder.hpp"
+#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 
 namespace opossum {
 
@@ -23,14 +23,8 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
     string_values = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"};
     null_values = {false, true, true, false, false, true, false, true, true, false};
 
-    auto row_ids = PosList{
-      {ChunkID{0}, ChunkOffset{0}},
-      {ChunkID{0}, ChunkOffset{8}},
-      {ChunkID{0}, ChunkOffset{7}},
-      {ChunkID{0}, ChunkOffset{1}},
-      {ChunkID{0}, ChunkOffset{1}},
-      {ChunkID{0}, ChunkOffset{5}}
-    };
+    auto row_ids = PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{8}}, {ChunkID{0}, ChunkOffset{7}},
+                           {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{5}}};
     position_filter = std::make_shared<PosList>(std::move(row_ids));
     position_filter->guarantee_single_chunk();
   }
@@ -42,13 +36,11 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
 
     if (param.encoding_type != EncodingType::Unencoded) {
       if (param.vector_compression_type) {
-        int_segment = encode_segment(param.encoding_type,
-                                     DataType::Int,
+        int_segment = encode_segment(param.encoding_type, DataType::Int,
                                      std::dynamic_pointer_cast<ValueSegment<int32_t>>(int_segment),
                                      *param.vector_compression_type);
       } else {
-        int_segment = encode_segment(param.encoding_type,
-                                     DataType::Int,
+        int_segment = encode_segment(param.encoding_type, DataType::Int,
                                      std::dynamic_pointer_cast<ValueSegment<int32_t>>(int_segment));
       }
     }
@@ -70,10 +62,7 @@ TEST_P(AnySegmentIterableTest, Int) {
   auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
   auto values = std::vector<int32_t>{};
-  any_segment_iterable_int.for_each([&](const auto& value) {
-    values.emplace_back(value.value());
-  });
-
+  any_segment_iterable_int.for_each([&](const auto& value) { values.emplace_back(value.value()); });
 
   EXPECT_EQ(values, int_values);
 }
@@ -90,13 +79,10 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-INSTANTIATE_TEST_CASE_P(AnySegmentIterableTestInstances,
-                        AnySegmentIterableTest,
-                        ::testing::Values(
-                          SegmentEncodingSpec{EncodingType::Unencoded},
-                          SegmentEncodingSpec{EncodingType::Dictionary},
-                          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}
-                        ), );
+INSTANTIATE_TEST_CASE_P(
+    AnySegmentIterableTestInstances, AnySegmentIterableTest,
+    ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
+                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}), );
 
 }  // namespace opossum

@@ -7,8 +7,8 @@
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/table.hpp"
 #include "storage/segment_iteration.hpp"
+#include "storage/table.hpp"
 
 #include "utils/assert.hpp"
 
@@ -45,8 +45,9 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
   }
 }
 
-void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(
+    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+    const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 
@@ -61,8 +62,8 @@ void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(const BaseSegment&
 }
 
 void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                               PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
+                                                          PosList& matches,
+                                                          const std::shared_ptr<const PosList>& position_filter) const {
   const auto left_value_id = segment.lower_bound(_left_value);
   const auto right_value_id = segment.upper_bound(_right_value);
 

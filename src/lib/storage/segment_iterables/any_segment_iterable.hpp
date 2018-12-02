@@ -3,9 +3,9 @@
 #include <iterator>
 #include <type_traits>
 
+#include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
-#include "storage/reference_segment/reference_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -44,21 +44,24 @@ template <typename IterableT>
 constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<IterableT>::value;
 /**@}*/
 
-template<typename ValueType> using AnySegmentIterableFunctorWrapper = std::function<void(AnySegmentIterator<ValueType>, AnySegmentIterator<ValueType>)>;
+template <typename ValueType>
+using AnySegmentIterableFunctorWrapper =
+    std::function<void(AnySegmentIterator<ValueType>, AnySegmentIterator<ValueType>)>;
 
-template<typename ValueType>
+template <typename ValueType>
 class BaseAnySegmentIterableWrapper {
  public:
   virtual ~BaseAnySegmentIterableWrapper() = default;
   virtual void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
-  virtual void with_iterators(const std::shared_ptr<const PosList>& position_filter, const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
+  virtual void with_iterators(const std::shared_ptr<const PosList>& position_filter,
+                              const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
   virtual size_t size() const = 0;
 };
 
-template<typename ValueType, typename IterableT>
+template <typename ValueType, typename IterableT>
 class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType> {
  public:
-  explicit AnySegmentIterableWrapper(const IterableT& iterable): iterable(iterable) {}
+  explicit AnySegmentIterableWrapper(const IterableT& iterable) : iterable(iterable) {}
 
   void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     iterable.with_iterators([&](auto begin, const auto end) {
@@ -68,7 +71,8 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
     });
   }
 
-  void with_iterators(const std::shared_ptr<const PosList>& position_filter, const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
+  void with_iterators(const std::shared_ptr<const PosList>& position_filter,
+                      const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     if (position_filter) {
       if constexpr (is_point_accessible_segment_iterable_v<IterableT>) {
         iterable.with_iterators(position_filter, [&](auto begin, const auto end) {
@@ -84,9 +88,7 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
     }
   }
 
-  size_t size() const override {
-    return iterable._on_size();
-  }
+  size_t size() const override { return iterable._on_size(); }
 
   IterableT iterable;
 };
@@ -108,9 +110,9 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
  public:
   using ValueType = T;
 
-  template<typename IterableT>
-  explicit AnySegmentIterable(const IterableT& iterable) :
-    _iterable_wrapper{std::make_shared<AnySegmentIterableWrapper<T, IterableT>>(iterable)} {
+  template <typename IterableT>
+  explicit AnySegmentIterable(const IterableT& iterable)
+      : _iterable_wrapper{std::make_shared<AnySegmentIterableWrapper<T, IterableT>>(iterable)} {
     static_assert(!is_any_segment_iterable_v<IterableT>, "Iterables should not be wrapped twice.");
   }
 
@@ -148,7 +150,7 @@ auto erase_type_from_iterable(const IterableT& iterable) {
 
 template <typename IterableT>
 decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable) {
-#if IS_DEBUG
+#if HYRISE_DEBUG
   return erase_type_from_iterable(iterable);
 #else
   return iterable;
@@ -160,15 +162,15 @@ namespace detail {
 // We want to instantiate create_any_segment_iterable() for all data types, but our EXPLICITLY_INSTANTIATE_DATA_TYPES
 // macro only supports classes. So we wrap create_any_segment_iterable() in this class and instantiate the class in the
 // .cpp
-template<typename T>
+template <typename T>
 class CreateAnySegmentIterable {
  public:
-  static AnySegmentIterable<T> create(const BaseSegment &base_segment);
+  static AnySegmentIterable<T> create(const BaseSegment& base_segment);
 };
-}
+}  // namespace detail
 
-template<typename T>
-AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment &base_segment) {
+template <typename T>
+AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment& base_segment) {
   return opossum::detail::CreateAnySegmentIterable<T>::create(base_segment);
 }
 

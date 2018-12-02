@@ -428,7 +428,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-  // clang-format off
+// clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
@@ -442,7 +442,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"date", timestamp_stream.str()},
       {"chunk_size", config.chunk_size},
       {"compiler", compiler.str()},
-      {"build_type", IS_DEBUG ? "debug" : "release"},
+      {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},

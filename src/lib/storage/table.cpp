@@ -146,7 +146,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
                          const std::shared_ptr<ChunkAccessCounter>& access_counter) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
-#if IS_DEBUG
+#if HYRISE_DEBUG
   for (const auto& segment : segments) {
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
@@ -171,7 +171,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
-#if IS_DEBUG
+#if HYRISE_DEBUG
   for (const auto& segment : chunk->segments()) {
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {

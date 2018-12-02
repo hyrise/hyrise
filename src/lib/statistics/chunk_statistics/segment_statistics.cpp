@@ -11,10 +11,10 @@
 #include "min_max_filter.hpp"
 #include "range_filter.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/segment_iteration.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
+#include "storage/segment_iteration.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 

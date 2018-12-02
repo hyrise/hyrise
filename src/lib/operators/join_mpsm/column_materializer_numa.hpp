@@ -136,8 +136,9 @@ class ColumnMaterializerNUMA {
   /**
    * Materialization works for all types of segments
    */
-  void _generic_materialize_segment(const BaseSegment& segment, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
-                            MaterializedNUMAPartition<T>& partition) {
+  void _generic_materialize_segment(const BaseSegment& segment, ChunkID chunk_id,
+                                    std::unique_ptr<PosList>& null_rows_output,
+                                    MaterializedNUMAPartition<T>& partition) {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
     output->reserve(segment.size());
 
@@ -159,8 +160,8 @@ class ColumnMaterializerNUMA {
    * Specialization for dictionary segments
    */
   void _materialize_dictionary_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
-                                                               std::unique_ptr<PosList>& null_rows_output,
-                                                                          MaterializedNUMAPartition<T>& partition) {
+                                       std::unique_ptr<PosList>& null_rows_output,
+                                       MaterializedNUMAPartition<T>& partition) {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
     output->reserve(segment.size());
 

@@ -41,9 +41,9 @@ class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
                                    const std::shared_ptr<const PosList>& position_filter) const override;
 
   void _scan_non_dictionary_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+                                    const std::shared_ptr<const PosList>& position_filter) const;
   void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+                                const std::shared_ptr<const PosList>& position_filter) const;
 
   /**
    * Used for dictionary segments

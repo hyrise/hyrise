@@ -26,11 +26,11 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
 
  protected:
   void _scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+                               const std::shared_ptr<const PosList>& position_filter) const;
 
   // Optimized scan on ValueSegments
   void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+                           const std::shared_ptr<const PosList>& position_filter) const;
 
   /**
    * @defgroup Methods used for handling value segments

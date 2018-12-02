@@ -9,8 +9,8 @@
 
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
-#include "storage/value_segment.hpp"
 #include "storage/segment_iteration.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

@@ -40,9 +40,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     });
   }
 
-  size_t _on_size() const {
-    return _attribute_vector.size();
-  }
+  size_t _on_size() const { return _attribute_vector.size(); }
 
  private:
   const BaseCompressedVector& _attribute_vector;

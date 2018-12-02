@@ -33,11 +33,11 @@ class ColumnBetweenTableScanImpl : public AbstractSingleColumnTableScanImpl {
                                    const std::shared_ptr<const PosList>& position_filter) const override;
 
   void _scan_non_dictionary_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+                                    const std::shared_ptr<const PosList>& position_filter) const;
 
   // Optimized scan on DictionarySegments
   void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+                                const std::shared_ptr<const PosList>& position_filter) const;
 
   const AllTypeVariant _left_value;
   const AllTypeVariant _right_value;
