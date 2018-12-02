@@ -35,8 +35,8 @@ TEST_F(StringUtilsTest, trim_and_split_double_spaces) {
 }
 
 TEST_F(StringUtilsTest, trim_source_file_path) {
-  EXPECT_EQ(trim_source_file_path("/home/user/checkout/src/file.cpp"), "src/file.cpp")
-  EXPECT_EQ(trim_source_file_path("hello/file.cpp"), "hello/file.cpp")
+  EXPECT_EQ(trim_source_file_path("/home/user/checkout/src/file.cpp"), "src/file.cpp");
+  EXPECT_EQ(trim_source_file_path("hello/file.cpp"), "hello/file.cpp");
 }
 
 }  // namespace opossum
