@@ -164,7 +164,7 @@ class CreateAnySegmentIterable {
 
 template<typename T>
 AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment &base_segment) {
-  return detail::CreateAnySegmentIterable<T>::create(base_segment);
+  return opossum::detail::CreateAnySegmentIterable<T>::create(base_segment);
 }
 
 }  // namespace opossum
