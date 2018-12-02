@@ -2,13 +2,12 @@
 
 namespace opossum {
 
-/**
- * Utility method to create a SegmentAccessor for a given BaseSegment.
- */
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+namespace detail {
+template<typename T>
+std::unique_ptr<BaseSegmentAccessor<T>>
+CreateSegmentAccessor<T>::create(const std::shared_ptr<const BaseSegment> &segment) {
   std::unique_ptr<BaseSegmentAccessor<T>> accessor;
-  resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
+  resolve_segment_type<T>(*segment, [&](const auto &typed_segment) {
     using SegmentType = std::decay_t<decltype(typed_segment)>;
     if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
       if (typed_segment.pos_list()->references_single_chunk() && typed_segment.pos_list()->size() > 0) {
@@ -22,16 +21,7 @@ std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::share
   });
   return accessor;
 }
-
-template std::unique_ptr<BaseSegmentAccessor<int32_t>> create_segment_accessor(
-    const std::shared_ptr<const BaseSegment>& segment);
-template std::unique_ptr<BaseSegmentAccessor<int64_t>> create_segment_accessor(
-    const std::shared_ptr<const BaseSegment>& segment);
-template std::unique_ptr<BaseSegmentAccessor<float>> create_segment_accessor(
-    const std::shared_ptr<const BaseSegment>& segment);
-template std::unique_ptr<BaseSegmentAccessor<double>> create_segment_accessor(
-    const std::shared_ptr<const BaseSegment>& segment);
-template std::unique_ptr<BaseSegmentAccessor<std::string>> create_segment_accessor(
-    const std::shared_ptr<const BaseSegment>& segment);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(CreateSegmentAccessor);
+}  // namespace detail
 
 }  // namespace opossum

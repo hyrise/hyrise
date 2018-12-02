@@ -12,14 +12,26 @@
 
 namespace opossum {
 
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
+namespace detail {
 
-extern template std::unique_ptr<BaseSegmentAccessor<int32_t>> create_segment_accessor(const std::shared_ptr<const BaseSegment> &segment);
-extern template std::unique_ptr<BaseSegmentAccessor<int64_t>> create_segment_accessor(const std::shared_ptr<const BaseSegment> &segment);
-extern template std::unique_ptr<BaseSegmentAccessor<float>> create_segment_accessor(const std::shared_ptr<const BaseSegment> &segment);
-extern template std::unique_ptr<BaseSegmentAccessor<double>> create_segment_accessor(const std::shared_ptr<const BaseSegment> &segment);
-extern template std::unique_ptr<BaseSegmentAccessor<std::string>> create_segment_accessor(const std::shared_ptr<const BaseSegment> &segment);
+// We want to instantiate create_segment_accessor() for all data types, but our EXPLICITLY_INSTANTIATE_DATA_TYPES macro
+// only supports classes. So we wrap create_segment_accessor() in this class and instantiate the class in the .cpp
+template<typename T>
+class CreateSegmentAccessor {
+ public:
+  static std::unique_ptr<BaseSegmentAccessor<T>> create(const std::shared_ptr<const BaseSegment>& segment);
+};
+
+}  // namespace detail
+
+/**
+ * Utility method to create a SegmentAccessor for a given BaseSegment.
+ */
+template <typename T>
+std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+    return opossum::detail::CreateSegmentAccessor<T>::create(segment);
+}
+
 
 /**
  * A SegmentAccessor is templated per SegmentType and DataType (T).

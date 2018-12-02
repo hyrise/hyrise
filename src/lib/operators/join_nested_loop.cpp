@@ -93,7 +93,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
 
-  segment_with_iterators(*segment_left, [&](auto left_it, const auto left_end) {
+  segment_with_iterators<ResolveDataTypeTag, SegmentIterationTypeErasure::Always>(*segment_left, [&](auto left_it, const auto left_end) {
     segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;
@@ -107,12 +107,16 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
 
       if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
         // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto left_it_copy = left_it;
+        const auto left_end_copy = left_end;
+        const auto right_it_copy = right_it;
+        const auto right_end_copy = right_end;
         const auto params_copy = params;
         const auto chunk_id_left_copy = chunk_id_left;
         const auto chunk_id_right_copy = chunk_id_right;
 
         with_comparator(params_copy.predicate_condition, [&](auto comparator) {
-          join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left_copy,
+          join_two_typed_segments(comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy, chunk_id_left_copy,
                                   chunk_id_right_copy, params_copy);
         });
       } else {

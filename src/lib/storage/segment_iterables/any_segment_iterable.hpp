@@ -98,9 +98,10 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
  * Since iterables are almost always used in highly templated code,
  * the functor or lambda passed to their with_iterators methods is
  * called using many different iterators, which leads to a lot of code
- * being generated. This affects compile times.
+ * being generated.
  *
- * TODO(moritz) Update comment
+ * The AnySegmentIterable erases the type of the Iterable and the Iterator, with each value retrieval incurring the cost
+ * of two virtual function calls.
  */
 template <typename T>
 class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentIterable<T>> {
@@ -155,6 +156,10 @@ decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable) {
 }
 
 namespace detail {
+
+// We want to instantiate create_any_segment_iterable() for all data types, but our EXPLICITLY_INSTANTIATE_DATA_TYPES
+// macro only supports classes. So we wrap create_any_segment_iterable() in this class and instantiate the class in the
+// .cpp
 template<typename T>
 class CreateAnySegmentIterable {
  public:
