@@ -83,6 +83,6 @@ INSTANTIATE_TEST_CASE_P(
     AnySegmentIterableTestInstances, AnySegmentIterableTest,
     ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}), );
+                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128}), );  // NOLINT
 
 }  // namespace opossum
