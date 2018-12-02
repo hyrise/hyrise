@@ -531,7 +531,6 @@ set(
     uid_allocator.hpp
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
-    utils/assert.cpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
