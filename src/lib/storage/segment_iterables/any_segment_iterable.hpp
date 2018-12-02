@@ -50,6 +50,7 @@ template<typename ValueType>
 class BaseAnySegmentIterableWrapper {
  public:
   virtual ~BaseAnySegmentIterableWrapper() = default;
+  virtual void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
   virtual void with_iterators(const std::shared_ptr<const PosList>& position_filter, const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const = 0;
   virtual size_t size() const = 0;
 };
@@ -58,6 +59,14 @@ template<typename ValueType, typename IterableT>
 class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType> {
  public:
   explicit AnySegmentIterableWrapper(const IterableT& iterable): iterable(iterable) {}
+
+  void with_iterators(const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
+    iterable.with_iterators([&](auto begin, const auto end) {
+      const auto any_segment_iterator_begin = AnySegmentIterator<ValueType>(begin);
+      const auto any_segment_iterator_end = AnySegmentIterator<ValueType>(end);
+      functor_wrapper(any_segment_iterator_begin, any_segment_iterator_end);
+    });
+  }
 
   void with_iterators(const std::shared_ptr<const PosList>& position_filter, const AnySegmentIterableFunctorWrapper<ValueType>& functor_wrapper) const override {
     if (position_filter) {
@@ -71,11 +80,7 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
         Fail("Point access into non-PointAccessIterable not possible");
       }
     } else {
-      iterable.with_iterators([&](auto begin, const auto end) {
-        const auto any_segment_iterator_begin = AnySegmentIterator<ValueType>(begin);
-        const auto any_segment_iterator_end = AnySegmentIterator<ValueType>(end);
-        functor_wrapper(any_segment_iterator_begin, any_segment_iterator_end);
-      });
+      with_iterators(functor_wrapper);
     }
   }
 
@@ -114,7 +119,7 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     const auto functor_wrapper = AnySegmentIterableFunctorWrapper<T>{functor};
-    _iterable_wrapper->with_iterators(nullptr, functor_wrapper);
+    _iterable_wrapper->with_iterators(functor_wrapper);
   }
 
   template <typename Functor>
@@ -149,7 +154,17 @@ decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable) {
 #endif
 }
 
+namespace detail {
 template<typename T>
-AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment& base_segment);
+class CreateAnySegmentIterable {
+ public:
+  static AnySegmentIterable<T> create(const BaseSegment &base_segment);
+};
+}
+
+template<typename T>
+AnySegmentIterable<T> create_any_segment_iterable(const BaseSegment &base_segment) {
+  return detail::CreateAnySegmentIterable<T>::create(base_segment);
+}
 
 }  // namespace opossum

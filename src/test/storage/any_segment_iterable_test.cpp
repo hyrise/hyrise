@@ -67,7 +67,7 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
 };
 
 TEST_P(AnySegmentIterableTest, Int) {
-  auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
+  auto any_segment_iterable_int = CreateAnySegmentIterable<int32_t>::create(*int_segment);
 
   auto values = std::vector<int32_t>{};
   any_segment_iterable_int.for_each([&](const auto& value) {
