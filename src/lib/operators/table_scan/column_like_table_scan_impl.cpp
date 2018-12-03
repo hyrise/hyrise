@@ -46,6 +46,7 @@ void ColumnLikeTableScanImpl::_scan_non_dictionary_segment(
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using Type = typename decltype(it)::ValueType;
     if constexpr (!std::is_same_v<Type, std::string>) {
+      // gcc complains without this
       consume_unused_variable(end);
       Fail("Can only handle strings");
     } else {
