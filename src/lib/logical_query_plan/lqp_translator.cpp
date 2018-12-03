@@ -200,19 +200,38 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto table = StorageManager::get().get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
+  // TODO(Sven): Each chunk could have different indices.. there needs to be an IndexScan for each occurring IndexType
+  // This implementation assumes there is only a single index type per table.
+  bool found_group_key_index = false;
+  bool found_btree_index = false;
   for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    //    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-    if (chunk->get_index(SegmentIndexType::BTree, column_ids)) {
+    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+      found_group_key_index = true;
       indexed_chunks.emplace_back(chunk_id);
     }
+    if (chunk->get_index(SegmentIndexType::BTree, column_ids)) {
+      found_btree_index = true;
+      indexed_chunks.emplace_back(chunk_id);
+    }
+    // Potentially there could be other index types, which are not handled yet.
   }
+
+  Assert(found_group_key_index != found_btree_index, "LQPTranslator can only handle tables that contain either BTree or GroupKey indices, but neither both nor none.");
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  //  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::BTree, column_ids,
-                                                predicate->predicate_condition, right_values, right_values2);
+  std::shared_ptr<IndexScan> index_scan;
+  if (found_group_key_index) {
+    index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+                                             predicate->predicate_condition, right_values, right_values2);
+  } else if (found_btree_index) {
+    index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::BTree, column_ids,
+                                             predicate->predicate_condition, right_values, right_values2);
+  }
+
+  Assert(index_scan, "LQPTranslator can only translate IndexScan for GroupKey and BTree Indices. Did not find either.");
+
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 

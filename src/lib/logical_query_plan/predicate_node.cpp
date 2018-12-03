@@ -24,7 +24,7 @@ PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicat
 
 std::string PredicateNode::description() const {
   std::stringstream stream;
-  stream << "[Predicate] " << scan_type_to_string.at(scan_type) << " - " << predicate()->as_column_name();
+  stream << "[Predicate] " << scan_type_to_string.at(scan_type) << ": " << predicate()->as_column_name();
   return stream.str();
 }
 

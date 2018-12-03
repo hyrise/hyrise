@@ -340,12 +340,12 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
   std::stringstream stream;
   lqp->print(stream);
 
-  EXPECT_EQ(stream.str(), R"([0] [Predicate] a > 5
+  EXPECT_EQ(stream.str(), R"([0] [Predicate] TableScan: a > 5
  \_[1] [Join] Mode: Inner a = a
     \_[2] [UnionNode] Mode: UnionPositions
-    |  \_[3] [Predicate] a = 5
+    |  \_[3] [Predicate] TableScan: a = 5
     |  |  \_[4] [StoredTable] Name: 'int_int'
-    |  \_[5] [Predicate] a = 6
+    |  \_[5] [Predicate] TableScan: a = 6
     |     \_Recurring Node --> [4]
     \_[6] [StoredTable] Name: 'int_int_int'
 )");
@@ -381,11 +381,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
   EXPECT_TRUE(std::regex_search(stream.str().c_str(),
-                                std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+                                std::regex{R"(\[0\] \[Predicate\] TableScan: a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
   EXPECT_TRUE(
-      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
+      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] TableScan: a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] TableScan: a = 5)"}));
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {

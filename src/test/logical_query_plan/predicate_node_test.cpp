@@ -32,7 +32,12 @@ class PredicateNodeTest : public ::testing::Test {
   std::shared_ptr<PredicateNode> _predicate_node;
 };
 
-TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5"); }
+TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] TableScan: i = 5"); }
+
+TEST_F(PredicateNodeTest, DescriptionsForIndexScan) {
+    _predicate_node->scan_type = ScanType::IndexScan;
+    EXPECT_EQ(_predicate_node->description(), "[Predicate] IndexScan: i = 5");
+}
 
 TEST_F(PredicateNodeTest, Equals) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
