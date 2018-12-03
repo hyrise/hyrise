@@ -5,9 +5,9 @@ node {
     // Check if the user who opened the PR is a member of our organization. If not, abort for safety reasons.
     withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
       PR_CREATED_BY = pullRequest.createdBy
-      sh script: '''
+      sh '''
         curl -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/orgs/hyrise/memberships/${PR_CREATED_BY} 2>/dev/null | grep '"state": "active",'
-      ''', 
+      '''
     }
     echo pullRequest.labels.contains('FullCI') ? "ja" : "nein"
 
