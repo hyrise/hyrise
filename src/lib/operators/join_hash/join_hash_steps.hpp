@@ -145,7 +145,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
         using IterableType = typename decltype(it)::IterableType;
 
         while (it != end) {
-          const auto& value = *(it++);
+          const auto& value = *it;
+          ++it;
 
           if (!value.is_null() || consider_null_values) {
             const Hash hashed_value = hash_function(type_cast<HashedType>(value.value()));
