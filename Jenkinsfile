@@ -4,8 +4,8 @@ node {
   stage ("Start") {
     // Check if the user who opened the PR is a member of our organization. If not, abort for safety reasons.
     withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-      sh cmd: '''
-        curl -I -H "Authorization: tolen ${env.GITHUB_TOKEN}" https://github.com/api/orgs/hyrise/repos?per_page=100
+      sh '''
+        curl -I -H "Authorization: token ${env.GITHUB_USERNAME}" https://github.com/api/orgs/hyrise/repos?per_page=100
       ''', name: 'Verify credentials'
     }
 
