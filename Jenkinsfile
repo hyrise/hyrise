@@ -7,13 +7,13 @@ node {
       withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
         env.PR_CREATED_BY = pullRequest.createdBy
         sh '''
-          curl -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/orgs/hyrise/memberships/${PR_CREATED_BY} 2>/dev/null | grep '"state": "active",'
+          curl -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/orgs/hyrise/memberships/${PR_CREATED_BY} 2>/dev/null | head -n 1 | grep "HTTP/1.1 No Content"
         '''
       }
     } catch (error) {
       stage ("User unknown") {
         script {
-          githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a member of the Hyrise org'
+          githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
         }
       }
       throw error
