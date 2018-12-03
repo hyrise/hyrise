@@ -6,7 +6,7 @@ node {
     withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
       sh '''
         curl -I -H "Authorization: token ${env.GITHUB_USERNAME}" https://github.com/api/orgs/hyrise/repos?per_page=100
-      ''', name: 'Verify credentials'
+      '''
     }
 
     script {
