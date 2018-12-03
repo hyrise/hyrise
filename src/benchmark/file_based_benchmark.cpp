@@ -56,7 +56,7 @@ void _load_table_folder(const BenchmarkConfig& config, const std::string& table_
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;
-    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
+    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config, config.out);
     StorageManager::get().add_table(table_name, table);
   }
 }
