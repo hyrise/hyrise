@@ -29,14 +29,15 @@ std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnCom
 std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
-  const auto left_segment = chunk->get_segment(_left_column_id);
-  const auto right_segment = chunk->get_segment(_right_column_id);
+  const auto left_base_segment = chunk->get_segment(_left_column_id);
+  const auto right_base_segment = chunk->get_segment(_right_column_id);
 
   auto matches_out = std::make_shared<PosList>();
 
-  segment_with_iterators(*left_segment, [&](auto left_it, const auto left_end) {
-    segment_with_iterators(*right_segment, [&](auto right_it, const auto right_end) {
-      using LeftSegmentIterableType = typename decltype(left_it)::IterableType;
+  resolve_segment_type(*left_base_segment, [&](const auto& left_segment) {
+    using LeftSegmentIterableType = typename decltype(left_it)::IterableType;
+
+    resolve_segment_type(*right_base_segment, [&](const auto& right_segment) {
       using RightSegmentIterableType = typename decltype(right_it)::IterableType;
 
       using LeftType = typename decltype(left_it)::ValueType;
@@ -73,7 +74,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
         const auto left_end_copy = left_end;
         const auto right_it_copy = right_it;
         const auto chunk_id_copy = chunk_id;
-        const auto& matches_out_copy = matches_out; 
+        const auto& matches_out_copy = matches_out;
         const auto condition = _predicate_condition;
 
         with_comparator(condition, [&](auto predicate_comparator) {
