@@ -11,8 +11,8 @@
  * This file provides the main entry points to read Segment data, irrespective of the underlying encoding.
  *
  * Two main signatures are provided:
- *      segment_with_iterators[_and_position_filter]()    Calls the functor with a begin and end iterator
- *      segment_iterate[_and_position_filter]()           Calls the functor with each value in the segment
+ *      segment_with_iterators[_filtered]()    Calls the functor with a begin and end iterator
+ *      segment_iterate[_filtered]()           Calls the functor with each value in the segment
  *
  * Both functions optionally take a PosList which allows for selective access to the values in a segment.
  *
@@ -64,8 +64,8 @@ void segment_with_iterators(const BaseSegment& base_segment, const Functor& func
 // Variant with PosList
 template <typename T = ResolveDataTypeTag,
           SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
-void segment_with_iterators_and_position_filter(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
-                            const Functor& functor) {
+void segment_with_iterators_filtered(const BaseSegment& base_segment,
+                                     const std::shared_ptr<const PosList>& position_filter, const Functor& functor) {
   if (!position_filter) {
     segment_with_iterators<T, type_erasure>(base_segment, functor);
     return;
@@ -74,7 +74,7 @@ void segment_with_iterators_and_position_filter(const BaseSegment& base_segment,
   if constexpr (std::is_same_v<T, ResolveDataTypeTag>) {
     resolve_data_type(base_segment.data_type(), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      segment_with_iterators_and_position_filter<ColumnDataType, type_erasure>(base_segment, position_filter, functor);
+      segment_with_iterators_filtered<ColumnDataType, type_erasure>(base_segment, position_filter, functor);
     });
   } else {
     if constexpr (HYRISE_DEBUG || type_erasure == SegmentIterationTypeErasure::Always) {
@@ -96,9 +96,9 @@ void segment_with_iterators_and_position_filter(const BaseSegment& base_segment,
 // Variant with PosList
 template <typename T = ResolveDataTypeTag,
           SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
-void segment_iterate_and_position_filter(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
-                      const Functor& functor) {
-  segment_with_iterators_and_position_filter<T, type_erasure>(base_segment, position_filter, [&](auto it, const auto end) {
+void segment_iterate_filtered(const BaseSegment& base_segment, const std::shared_ptr<const PosList>& position_filter,
+                              const Functor& functor) {
+  segment_with_iterators_filtered<T, type_erasure>(base_segment, position_filter, [&](auto it, const auto end) {
     while (it != end) {
       functor(*it);
       ++it;

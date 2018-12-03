@@ -42,7 +42,7 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
 void ColumnIsNullTableScanImpl::_scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                         PosList& matches,
                                                         const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_and_position_filter(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
 

@@ -14,6 +14,7 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/consume_unused_variable.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
@@ -128,6 +129,10 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                       chunk_id_left_copy, chunk_id_right_copy, params_copy);
             });
           } else {
+            // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+            consume_unused_variable(right_end);
+            consume_unused_variable(left_end);
+
             Fail("Cannot join String with non-String column");
           }
         });

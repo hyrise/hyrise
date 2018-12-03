@@ -46,7 +46,7 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
 void ColumnVsValueTableScanImpl::_scan_non_dictionary_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_and_position_filter(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
     auto typed_value = type_cast_variant<ColumnDataType>(_value);
 
