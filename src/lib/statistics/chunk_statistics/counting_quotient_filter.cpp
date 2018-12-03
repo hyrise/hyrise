@@ -5,7 +5,7 @@
 #include <string>
 
 #include "resolve_type.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -87,7 +87,7 @@ size_t CountingQuotientFilter<ElementType>::_hash(const ElementType& value) cons
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const BaseSegment>& segment) {
-  segment_for_each<ElementType>(*segment, [&](const auto& value) {
+  segment_iterate<ElementType>(*segment, [&](const auto& value) {
     if (value.is_null()) return;
     insert(value.value());
   });

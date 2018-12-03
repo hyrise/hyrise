@@ -1,7 +1,7 @@
 #include "b_tree_index_impl.hpp"
 
 #include "storage/index/base_index.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -64,7 +64,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   std::vector<std::pair<ChunkOffset, DataType>> values;
 
   // Materialize
-  segment_for_each<DataType>(*segment, [&](const auto& value) {
+  segment_iterate<DataType>(*segment, [&](const auto& value) {
     if (value.is_null()) return;
     values.push_back(std::make_pair(value.chunk_offset(), value.value()));
   });

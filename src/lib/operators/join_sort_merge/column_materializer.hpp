@@ -9,7 +9,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
@@ -88,7 +88,7 @@ class ColumnMaterializer {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());
 
-    segment_for_each<T>(segment, [&](const auto& value) {
+    segment_iterate<T>(segment, [&](const auto& value) {
       const auto row_id = RowID{chunk_id, value.chunk_offset()};
       if (value.is_null()) {
         if (_materialize_null) {

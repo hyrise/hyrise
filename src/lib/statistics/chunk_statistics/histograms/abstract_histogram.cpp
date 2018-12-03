@@ -12,7 +12,7 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -60,7 +60,7 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
     const std::shared_ptr<const BaseSegment>& segment) {
   std::map<T, HistogramCountType> value_counts;
 
-  segment_for_each<T>(*segment, [&](const auto& value) {
+  segment_iterate<T>(*segment, [&](const auto& value) {
     if (!value.is_null()) {
       value_counts[value.value()]++;
     }

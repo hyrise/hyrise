@@ -12,7 +12,7 @@
 #include "join_nested_loop.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

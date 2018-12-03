@@ -14,7 +14,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 

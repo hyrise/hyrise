@@ -2,7 +2,7 @@
 
 #include "../jit_types.hpp"
 #include "resolve_type.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 

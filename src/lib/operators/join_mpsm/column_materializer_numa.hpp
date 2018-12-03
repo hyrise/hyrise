@@ -9,7 +9,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -142,7 +142,7 @@ class ColumnMaterializerNUMA {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
     output->reserve(segment.size());
 
-    segment_for_each<T>(segment, [&](const auto& value) {
+    segment_iterate<T>(segment, [&](const auto& value) {
       const auto row_id = RowID{chunk_id, value.chunk_offset()};
       if (value.is_null()) {
         if (_materialize_null) {

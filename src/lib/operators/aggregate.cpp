@@ -17,7 +17,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
@@ -215,7 +215,7 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
   ChunkOffset chunk_offset{0};
-  segment_for_each<ColumnDataType>(base_segment, [&](const auto& value) {
+  segment_iterate<ColumnDataType>(base_segment, [&](const auto& value) {
     auto& hash_entry = results[hash_keys[chunk_offset]];
     hash_entry.row_id = RowID(chunk_id, chunk_offset);
 
@@ -351,7 +351,7 @@ void Aggregate::_aggregate() {
           const auto base_segment = chunk_in->get_segment(column_id);
 
           ChunkOffset chunk_offset{0};
-          segment_for_each<ColumnDataType>(*base_segment, [&](const auto& value) {
+          segment_iterate<ColumnDataType>(*base_segment, [&](const auto& value) {
             if (value.is_null()) {
               if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                 keys_per_chunk[chunk_id][chunk_offset] = 0u;

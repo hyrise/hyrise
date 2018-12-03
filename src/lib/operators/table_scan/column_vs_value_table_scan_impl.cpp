@@ -8,7 +8,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -35,6 +35,7 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
+  // Select optimized or generic scanning implementation based on segment type
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
@@ -45,7 +46,7 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
 void ColumnVsValueTableScanImpl::_scan_non_dictionary_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_and_position_filter(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
     auto typed_value = type_cast_variant<ColumnDataType>(_value);
 

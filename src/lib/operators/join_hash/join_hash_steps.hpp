@@ -9,7 +9,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "uninitialized_vector.hpp"

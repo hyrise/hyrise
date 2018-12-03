@@ -8,7 +8,7 @@
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"

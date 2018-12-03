@@ -6,7 +6,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
@@ -42,7 +42,7 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
 void ColumnIsNullTableScanImpl::_scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                         PosList& matches,
                                                         const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_and_position_filter(segment, position_filter, [&](auto it, const auto end) {
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
 

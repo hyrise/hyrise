@@ -11,7 +11,7 @@
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -92,6 +92,14 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                                 const std::shared_ptr<const BaseSegment>& segment_right,
                                                 const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                 JoinNestedLoop::JoinParams& params) {
+  /**
+   * The nested loops.
+   *
+   * The value in the outer loop is retrieved via virtual function calls ("SegmentIterationTypeErasure::Always") and
+   * only the inner loop gets inlined. This is to keep the compile time of the JoinNestedLoop *somewhat* at bay, if we
+   * inline both the inner and the outer loop, the JoinNestedLoop becomes the most expensive-to-compile file in all of
+   * Hyrise by a margin
+   */
   segment_with_iterators<ResolveDataTypeTag, SegmentIterationTypeErasure::Always>(
       *segment_left, [&](auto left_it, const auto left_end) {
         segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
@@ -184,7 +192,7 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
 
-      segment_for_each(*segment_right, [&](const auto& value) {
+      segment_iterate(*segment_right, [&](const auto& value) {
         const auto row_id = RowID{chunk_id_right, value.chunk_offset()};
         if (!_right_matches[chunk_id_right][row_id.chunk_offset]) {
           _pos_list_left->emplace_back(NULL_ROW_ID);

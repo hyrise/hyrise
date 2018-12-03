@@ -7,7 +7,7 @@
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -38,6 +38,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
+  // Select optimized or generic scanning implementation based on segment type
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
@@ -48,7 +49,7 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
 void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_and_position_filter(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 
     auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);

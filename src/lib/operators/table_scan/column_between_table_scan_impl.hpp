@@ -12,7 +12,7 @@ namespace opossum {
 class Table;
 
 /**
- * @brief Compares a column to two scalar values (... WHERE col BETWEEN left_value and right_value)
+ * @brief Compares a column to two scalar values (... WHERE col BETWEEN left_value AND right_value)
  *
  * Limitations:
  * - We expect left_value and right_value to be scalar values, not columns

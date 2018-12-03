@@ -1,6 +1,6 @@
 #include "generate_column_statistics.hpp"
 
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -24,7 +24,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
 
-    segment_for_each<std::string>(*base_segment, [&](const auto& value) {
+    segment_iterate<std::string>(*base_segment, [&](const auto& value) {
       if (value.is_null()) {
         ++null_value_count;
       } else {

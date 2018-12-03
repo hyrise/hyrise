@@ -30,7 +30,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -1325,7 +1325,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
       std::vector<bool> nulls;
       nulls.resize(segment.size());
 
-      segment_for_each<ColumnDataType>(segment, [&](const auto& value) {
+      segment_iterate<ColumnDataType>(segment, [&](const auto& value) {
         if (value.is_null()) {
           nulls[chunk_offset] = true;
         } else {
@@ -1338,7 +1338,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
           std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
 
     } else {
-      segment_for_each<ColumnDataType>(segment, [&](const auto& value) {
+      segment_iterate<ColumnDataType>(segment, [&](const auto& value) {
         values[chunk_offset] = value.value();
         ++chunk_offset;
       });
@@ -1506,7 +1506,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-        segment_for_each<Result>(result_segment, [&](const auto& value) {
+        segment_iterate<Result>(result_segment, [&](const auto& value) {
           if (value.is_null()) {
             result_nulls[chunk_offset] = true;
           } else {
@@ -1518,7 +1518,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     } else {
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-        segment_for_each<Result>(result_segment, [&](const auto& value) {
+        segment_iterate<Result>(result_segment, [&](const auto& value) {
           result_values[chunk_offset] = value.value();
           ++chunk_offset;
         });

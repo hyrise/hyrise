@@ -9,7 +9,7 @@
 
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {
@@ -216,7 +216,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
       auto base_segment = chunk->get_segment(_column_id);
 
-      segment_for_each<SortColumnType>(*base_segment, [&](const auto& value) {
+      segment_iterate<SortColumnType>(*base_segment, [&](const auto& value) {
         if (value.is_null()) {
           null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
         } else {

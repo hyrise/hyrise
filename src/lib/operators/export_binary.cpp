@@ -9,7 +9,7 @@
 #include "import_export/binary.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/segment_iteration.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
