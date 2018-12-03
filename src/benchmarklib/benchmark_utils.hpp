@@ -93,11 +93,6 @@ struct EncodingConfig {
   static const char* description;
 };
 
-class BenchmarkTableEncoder {
- public:
-  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table, const EncodingConfig& config);
-};
-
 // View BenchmarkConfig::description to see format of the JSON-version
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
@@ -127,6 +122,13 @@ struct BenchmarkConfig {
 
  private:
   BenchmarkConfig() : out(std::cout) {}
+};
+
+class BenchmarkTableEncoder {
+ public:
+  // @param out   stream for logging info
+  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table,
+                     const EncodingConfig& encoding_config, std::ostream& out);
 };
 
 class CLIConfigParser {
