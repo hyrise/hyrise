@@ -3,7 +3,7 @@
 namespace opossum {
 
 /**
- * Sometimes it is not really avoidable to have named-but-unused variables that the compiler may complain about
+ * Sometimes the compiler may complain about unused variables.
  * Call this function with those variables to silence the compiler.
  *
  * USAGE EXAMPLE (not a good example of an unavoidable unused variable ;) )
