@@ -73,7 +73,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
         const auto left_end_copy = left_end;
         const auto right_it_copy = right_it;
         const auto chunk_id_copy = chunk_id;
-        const auto matches_out_copy = matches_out;
+        const auto& matches_out_copy = matches_out; 
         const auto condition = _predicate_condition;
 
         with_comparator(condition, [&](auto predicate_comparator) {
