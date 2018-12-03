@@ -127,7 +127,7 @@ struct BenchmarkConfig {
 class BenchmarkTableEncoder {
  public:
   // @param out   stream for logging info
-  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table, const EncodingConfig& config,
+  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table, const EncodingConfig& encoding_config,
                      std::ostream& stream);
 };
 
