@@ -24,7 +24,7 @@ void CostModelCalibration::run_tpch6_costing() const {
   CostModelCalibrationQueryRunner queryRunner{_configuration};
 
   for (const auto& encoding : {EncodingType::Dictionary, EncodingType::Unencoded, EncodingType::RunLength}) {
-    std:.cout << "Now running with EncodingType::" << encoding_type_to_string.left.at(encoding);
+    std::cout << "Now running with EncodingType::" << encoding_type_to_string.left.at(encoding);
     tableGenerator.load_tpch_tables(0.01f, encoding);
 
     const auto& queries = CalibrationQueryGenerator::generate_tpch_6();

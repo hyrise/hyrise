@@ -3,6 +3,8 @@ set(
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
+    sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_testrunner.hpp
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
@@ -130,7 +132,7 @@ set(
     sql/sql_pipeline_test.cpp
     sql/query_plan_cache_test.cpp
     sql/sql_translator_test.cpp
-    sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
     statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
@@ -186,6 +188,16 @@ set(
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
+)
+
+set (
+    SYSTEM_TEST_SOURCES
+    ${SHARED_SOURCES}
+    server/server_test_runner.cpp
+    sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpch_test.cpp
+    tpc/tpch_db_generator_test.cpp
+    gtest_main.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -255,29 +267,25 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
     )
+
+    set(SYSTEM_TEST_SOURCES
+        ${SYSTEM_TEST_SOURCES}
+        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp
+    )
 endif()
 
 set (
-    SYSTEM_TEST_SOURCES
-    ${SHARED_SOURCES}
-    server/server_test_runner.cpp
-    tpc/tpch_test.cpp
-    tpc/tpch_db_generator_test.cpp
-    gtest_main.cpp
-)
+HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES
+${SHARED_SOURCES}
 
-set (
-    HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES
-    ${SHARED_SOURCES}
-
-    cost_model_calibration/configuration/calibration_column_specification_test.cpp
-    cost_model_calibration/cost_model_feature_extractor_test.cpp
-    cost_model_calibration/feature/calibration_feature_test.cpp
-    cost_model_calibration/query/calibration_query_generator_test.cpp
-    cost_model_calibration/query/calibration_query_generator_join_test.cpp
-    cost_model_calibration/query/calibration_query_generator_predicates_test.cpp
-    cost_model_calibration/query/calibration_query_generator_projection_test.cpp
-    gtest_main.cpp
+cost_model_calibration/configuration/calibration_column_specification_test.cpp
+cost_model_calibration/cost_model_feature_extractor_test.cpp
+cost_model_calibration/feature/calibration_feature_test.cpp
+cost_model_calibration/query/calibration_query_generator_test.cpp
+cost_model_calibration/query/calibration_query_generator_join_test.cpp
+cost_model_calibration/query/calibration_query_generator_predicates_test.cpp
+cost_model_calibration/query/calibration_query_generator_projection_test.cpp
+gtest_main.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these

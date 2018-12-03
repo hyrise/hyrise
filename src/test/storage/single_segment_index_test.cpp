@@ -172,7 +172,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) return;
   auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 

@@ -142,9 +142,6 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneUpdateInputs) {
   const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
-  expected_lqp->print();
-  actual_lqp->print();
-
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 

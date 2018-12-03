@@ -1,7 +1,7 @@
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DIS_DEBUG=1)
+    add_definitions(-DHYRISE_DEBUG=1)
 else()
-    add_definitions(-DIS_DEBUG=0)
+    add_definitions(-DHYRISE_DEBUG=0)
 endif()
 
 # Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang
@@ -51,16 +51,6 @@ if (${ENABLE_COVERAGE})
         message(FATAL_ERROR "Don't know how to run coverage on your compiler (${CMAKE_CXX_COMPILER_ID}).")
     endif()
 endif()
-
-# This will be used by the DebugAssert macro to output
-# a file path relative to CMAKE_SOURCE_DIR
-string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
-if (CMAKE_CXX_COMPILER_LAUNCHER)
-    if (${CMAKE_CXX_COMPILER_LAUNCHER} STREQUAL "ccache")
-        string(LENGTH "" SOURCE_PATH_SIZE)
-    endif()
-endif()
-add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 # Global flags and include directories
 # When generating a dtrace header file, symbols containing dollar-signs are created This file needs to be compiled as well.

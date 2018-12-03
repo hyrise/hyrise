@@ -36,7 +36,7 @@ using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, 
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) return;
   EXPECT_THROW(std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan),
                std::logic_error);

@@ -107,11 +107,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_left = virtual_pos_list_left.size();
   const auto num_rows_right = virtual_pos_list_right.size();
 
-  // Somewhat random way to decide on a chunk size.
-  const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
-
-  auto out_table =
-      std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, out_chunk_size);
+  auto out_table = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
@@ -147,6 +143,10 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
    * derived from std::set_union() and only differs from it insofar as that it builds the output table at the same
    * time as merging the two ReferenceMatrices
    */
+
+  // Somewhat random way to decide on a chunk size.
+  const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
+
   size_t chunk_row_idx = 0;
   for (; left_idx < num_rows_left || right_idx < num_rows_right;) {
     /**
@@ -218,7 +218,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
          "UnionPositions doesn't support non-reference tables yet");
 
   /**
-   * Identify the ColumnClusters (verification that this is the same for all chunks happens in the #if IS_DEBUG block
+   * Identify the ColumnClusters (verification that this is the same for all chunks happens in the #if HYRISE_DEBUG block
    * below)
    */
   const auto add = [&](const auto& table) {
@@ -244,7 +244,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
-   * in the #if IS_DEBUG block below)
+   * in the #if HYRISE_DEBUG block below)
    */
   const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
@@ -255,7 +255,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 
   /**
    * Identify the column_ids referenced by each column (verification that this is the same for all chunks happens
-   * in the #if IS_DEBUG block below)
+   * in the #if HYRISE_DEBUG block below)
    */
   for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
     const auto segment = first_chunk_left->get_segment(column_id);
@@ -263,7 +263,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
     _referenced_column_ids.emplace_back(ref_segment->referenced_column_id());
   }
 
-#if IS_DEBUG
+#if HYRISE_DEBUG
   /**
    * Make sure all chunks have the same ColumnClusters and actually reference the tables and column_ids that the
    * segments in the first chunk of the left input table reference

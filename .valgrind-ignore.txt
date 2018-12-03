@@ -78,3 +78,10 @@
    ...
    fun:_ZN7opossum*JitCodeSpecializer*specialize_and_compile_function*
 }
+
+# This is a false positive when evaluating if a particular std::optional is set:
+{
+   <False_positive_optional>
+   Memcheck:Cond
+   fun:_ZN7opossum14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
+}
