@@ -7,10 +7,11 @@ namespace opossum {
 
 class CostModelCalibrationTableGenerator {
  public:
-  explicit CostModelCalibrationTableGenerator(const CalibrationConfiguration configuration, const ChunkOffset chunk_size);
+  explicit CostModelCalibrationTableGenerator(const CalibrationConfiguration configuration,
+                                              const ChunkOffset chunk_size);
 
   void load_calibration_tables() const;
-  void load_tpch_tables(const float scale_factor) const;
+  void load_tpch_tables(const float scale_factor, const EncodingType encoding = EncodingType::Dictionary) const;
 
  private:
   const ChunkOffset _chunk_size;

@@ -16,13 +16,32 @@ namespace opossum {
 CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration)
     : _configuration(configuration) {}
 
+void CostModelCalibration::run_tpch6_costing() const {
+  CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
+
+  _write_csv_header(_configuration.output_path);
+
+  CostModelCalibrationQueryRunner queryRunner{_configuration};
+
+  for (const auto& encoding : {EncodingType::Dictionary, EncodingType::Unencoded, EncodingType::RunLength}) {
+    std:.cout << "Now running with EncodingType::" << encoding_type_to_string.left.at(encoding);
+    tableGenerator.load_tpch_tables(0.01f, encoding);
+
+    const auto& queries = CalibrationQueryGenerator::generate_tpch_6();
+    for (const auto& query : queries) {
+      const auto examples = queryRunner.calibrate_query_from_lqp(query);
+      _append_to_result_csv(_configuration.output_path, examples);
+    }
+  }
+}
+
 void CostModelCalibration::run() const {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
   tableGenerator.load_calibration_tables();
+  //    tableGenerator.load_tpch_tables(1.0f, Encoding::RunLength);
   _calibrate();
 
   std::cout << "Finished Calibration, now starting TPC-H" << std::endl;
-  //  tableGenerator.load_tpch_tables(0.01f);
   //  _run_tpch();
 }
 

@@ -14,6 +14,8 @@ class CostModelCalibration {
 
   void run() const;
 
+  void run_tpch6_costing() const;
+
  private:
   void _append_to_result_csv(const std::string& output_path, const std::vector<CalibrationExample>& examples) const;
   void _calibrate() const;

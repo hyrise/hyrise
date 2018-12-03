@@ -1,8 +1,8 @@
 #include "cost_model_calibration_table_generator.hpp"
 
 #include "query/calibration_query_generator.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
@@ -47,17 +47,29 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
   }
 }
 
-void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_factor) const {
+void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_factor, const EncodingType encoding) const {
   const auto tables = opossum::TpchDbGenerator(scale_factor, _chunk_size).generate();
 
   for (auto& tpch_table : tables) {
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
     const auto& table = tpch_table.second;
 
-    // Default is DictionaryEncoding
-    ChunkEncodingSpec chunk_spec(table->column_count());
+    if (table_name != "lineitem") continue;
+
+    ChunkEncodingSpec chunk_spec;
+    const auto column_count = table->column_count();
+    for (size_t i = 0; i < column_count; ++i) {
+      chunk_spec.push_back(encoding);
+    }
+
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
-    StorageManager::get().add_table(table_name, table);
+    auto& storage_manager = StorageManager::get();
+
+    if (storage_manager.has_table(table_name)) {
+      storage_manager.drop_table(table_name);
+    }
+
+    storage_manager.add_table(table_name, table);
 
     std::cout << "Encoded table " << table_name << " successfully." << std::endl;
   }

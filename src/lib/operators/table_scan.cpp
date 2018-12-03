@@ -45,9 +45,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
 
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
-size_t TableScan::get_number_of_excluded_chunks() const {
-  return _excluded_chunk_ids.size();
-}
+size_t TableScan::get_number_of_excluded_chunks() const { return _excluded_chunk_ids.size(); }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 

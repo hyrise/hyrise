@@ -25,7 +25,7 @@ class CalibrationQueryGenerator {
 
   const std::vector<std::shared_ptr<AbstractLQPNode>> generate_queries() const;
 
-  const std::vector<std::shared_ptr<AbstractLQPNode>> generate_tpch_6() const;
+  static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_tpch_6();
 
  private:
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_table_scan(
@@ -36,7 +36,8 @@ class CalibrationQueryGenerator {
       const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::string& left_table_name,
       const std::string& right_table_name) const;
 
-  const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_projection(const std::vector<LQPColumnReference>& columns) const;
+  const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_projection(
+      const std::vector<LQPColumnReference>& columns) const;
 
   const std::vector<CalibrationQueryGeneratorPredicateConfiguration> _generate_predicate_permutations() const;
 

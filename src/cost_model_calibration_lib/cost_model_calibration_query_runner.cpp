@@ -38,7 +38,7 @@ const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate
     const std::string& query) const {
   std::cout << query << std::endl;
 
-//  SQLQueryCache<SQLQueryPlan>::get().clear();
+  //  SQLQueryCache<SQLQueryPlan>::get().clear();
 
   auto pipeline_builder = SQLPipelineBuilder{query};
   pipeline_builder.disable_mvcc();

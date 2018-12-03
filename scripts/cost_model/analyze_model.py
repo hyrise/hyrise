@@ -15,48 +15,62 @@ from math import sqrt
 import warnings
 warnings.filterwarnings('ignore')
 
+def mean_absolute_percentage_error_impl(y, y_pred):
+    return np.mean(np.abs((y - y_pred) / y))
+
+def mean_percentage_error_impl(y, y_pred):
+    return np.mean((y - y_pred) / y)
+
+def root_mean_squared_error_impl(y, y_pred):
+    return sqrt(mean_squared_error(y, y_pred))
+
+def lnq_error_impl(y, y_pred):
+    return np.mean(np.log(y_pred / y))
+
+def normalized_root_mean_squared_error_impl(y, y_pred):
+    return root_mean_squared_error_impl(y, y_pred) / np.mean(y)
 
 class ModelAnalyzer:
 
+    mean_absolute_percentage_error_scorer = make_scorer(
+        score_func=mean_absolute_percentage_error_impl,
+        greater_is_better=False)
+
+    mean_percentage_error_scorer = make_scorer(
+        score_func=mean_percentage_error_impl,
+        greater_is_better=False)
+
+    root_mean_squared_error_scorer = make_scorer(
+        score_func=root_mean_squared_error_impl,
+        greater_is_better=False)
+
+    lnq_error_scorer = make_scorer(
+        score_func=lnq_error_impl,
+        greater_is_better=False)
+
+    normalized_root_mean_squared_error_scorer = make_scorer(
+        score_func=normalized_root_mean_squared_error_impl,
+        greater_is_better=False)
+
     @staticmethod
     def mean_absolute_percentage_error(y, y_pred):
-        return np.mean(np.abs((y - y_pred) / y))
-
-    mean_absolute_percentage_error_scorer = make_scorer(
-        score_func=mean_absolute_percentage_error,
-        greater_is_better=False)
+        return mean_absolute_percentage_error_impl(y, y_pred)
 
     @staticmethod
     def mean_percentage_error(y, y_pred):
-        return np.mean((y - y_pred) / y)
-
-    mean_percentage_error_scorer = make_scorer(
-        score_func=mean_percentage_error,
-        greater_is_better=False)
+        return mean_percentage_error_impl(y, y_pred)
 
     @staticmethod
     def root_mean_squared_error(y, y_pred):
-        return sqrt(mean_squared_error(y, y_pred))
-
-    root_mean_squared_error_scorer = make_scorer(
-        score_func=root_mean_squared_error,
-        greater_is_better=False)
+        return root_mean_squared_error_impl(y, y_pred)
 
     @staticmethod
     def lnq_error(y, y_pred):
-        return np.mean(np.log(y_pred / y))
-
-    lnq_error_scorer = make_scorer(
-        score_func=lnq_error,
-        greater_is_better=False)
+        return lnq_error_impl(y, y_pred)
 
     @staticmethod
     def normalized_root_mean_squared_error(y, y_pred):
-        return ModelAnalyzer.root_mean_squared_error(y, y_pred) / np.mean(y)
-
-    normalized_root_mean_squared_error_scorer = make_scorer(
-        score_func=normalized_root_mean_squared_error,
-        greater_is_better=False)
+        return normalized_root_mean_squared_error_impl(y, y_pred)
 
     @staticmethod
     def cross_validation(model_class, data):
@@ -75,21 +89,21 @@ class ModelAnalyzer:
             model_class,
             X=data['X'],
             y=data['Y'],
-            scoring=[
-                explained_variance_scorer,
-                r2_scorer,
-                neg_mean_absolute_error_scorer,
-                neg_mean_squared_error_scorer,
-                neg_mean_squared_log_error_scorer,
-                neg_median_absolute_error_scorer,
-                ModelAnalyzer.mean_absolute_percentage_error_scorer,
-                ModelAnalyzer.mean_percentage_error_scorer,
-                ModelAnalyzer.root_mean_squared_error_scorer,
-                ModelAnalyzer.normalized_root_mean_squared_error_scorer
-            ],
-            cv=10,
+            scoring={
+                "explained_variance": explained_variance_scorer,
+                "r2": r2_scorer,
+                "mean_absolute_error": neg_mean_absolute_error_scorer,
+                "mean_squared_error": neg_mean_squared_error_scorer,
+                #"mean_squared_log_error": neg_mean_squared_log_error_scorer,
+                "median_absolute_error": neg_median_absolute_error_scorer,
+                "mean_absolute_percentage_error": ModelAnalyzer.mean_absolute_percentage_error_scorer,
+                "mean_percentage_error": ModelAnalyzer.mean_percentage_error_scorer,
+                "root_mean_squared_error": ModelAnalyzer.root_mean_squared_error_scorer,
+                "normalized_root_mean_squared_error": ModelAnalyzer.normalized_root_mean_squared_error_scorer
+            },
+            cv=5,
             n_jobs=-1,
-            return_train_score=True,
+            return_train_score=False,
             return_estimator=True,
         )
 

@@ -161,24 +161,24 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   return features;
 }
 
-    const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
-            const std::shared_ptr<const IndexScan>& op) {
-      CalibrationTableScanFeatures features{};
+const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const IndexScan>& op) {
+  CalibrationTableScanFeatures features{};
 
-      auto left_input_table = op->input_table_left();
-      const auto left_column_ids = op->left_columns_ids();
-      const auto& predicate_condition = op->predicate_condition();
-      const auto predicate_condition_pointer = std::make_shared<PredicateCondition>(predicate_condition);
+  auto left_input_table = op->input_table_left();
+  const auto left_column_ids = op->left_columns_ids();
+  const auto& predicate_condition = op->predicate_condition();
+  const auto predicate_condition_pointer = std::make_shared<PredicateCondition>(predicate_condition);
 
-      features.scan_operator_type = predicate_condition_to_string.left.at(predicate_condition);
-      features.number_of_effective_chunks = op->get_number_of_included_chunks();
+  features.scan_operator_type = predicate_condition_to_string.left.at(predicate_condition);
+  features.number_of_effective_chunks = op->get_number_of_included_chunks();
 
-      DebugAssert(left_column_ids.size() == 1, "Expected only one column for IndexScan in FeatureExtractor");
-      const auto column_expression = PQPColumnExpression::from_table(*left_input_table, left_column_ids.front());
-      features.first_column = _extract_features_for_column_expression(left_input_table, column_expression);
+  DebugAssert(left_column_ids.size() == 1, "Expected only one column for IndexScan in FeatureExtractor");
+  const auto column_expression = PQPColumnExpression::from_table(*left_input_table, left_column_ids.front());
+  features.first_column = _extract_features_for_column_expression(left_input_table, column_expression);
 
-      return features;
-    }
+  return features;
+}
 
 CalibrationColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
     std::shared_ptr<const Table>& left_input_table, std::shared_ptr<PQPColumnExpression> column_expression) {

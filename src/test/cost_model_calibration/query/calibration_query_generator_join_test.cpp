@@ -32,7 +32,8 @@ TEST_F(CalibrationQueryGeneratorJoinTest, GenerateJoinPredicate) {
   const auto left_input = StoredTableNode::make("SomeTable");
   const auto right_input = StoredTableNode::make("SomeTable");
 
-  CalibrationQueryGeneratorJoinConfiguration join_configuration{"SomeTable", "SomeTable", EncodingType::Unencoded, DataType::Int, false};
+  CalibrationQueryGeneratorJoinConfiguration join_configuration{"SomeTable", "SomeTable", EncodingType::Unencoded,
+                                                                DataType::Int, false};
   auto join_predicate = CalibrationQueryGeneratorJoin::generate_join_predicate(join_configuration, left_input,
                                                                                right_input, column_definitions);
 

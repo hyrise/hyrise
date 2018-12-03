@@ -202,7 +202,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-//    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+    //    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
     if (chunk->get_index(SegmentIndexType::BTree, column_ids)) {
       indexed_chunks.emplace_back(chunk_id);
     }
@@ -210,7 +210,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-//  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+  //  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
   auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::BTree, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
