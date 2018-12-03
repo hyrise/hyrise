@@ -4,9 +4,7 @@ node {
   stage ("Start") {
     // Check if the user who opened the PR is a member of our organization. If not, abort for safety reasons.
     withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-      echo pullRequest.createdBy
-      echo pullRequest.labels.contains('FullCI') ? "ja" : "nein"
-      PR_CREATED_BY = pullRequest.createdBy
+      env.PR_CREATED_BY = pullRequest.createdBy
       sh '''
         curl -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/orgs/hyrise/memberships/${PR_CREATED_BY} 2>/dev/null | grep '"state": "active",'
       '''
@@ -52,7 +50,7 @@ node {
         mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         wait"
-        full_ci = sh(script: "./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true).trim() == "true"
+        full_ci = pullRequest.labels.contains('FullCI')
       }
 
       parallel clangDebug: {
