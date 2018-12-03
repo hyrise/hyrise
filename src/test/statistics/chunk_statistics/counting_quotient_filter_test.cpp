@@ -136,7 +136,7 @@ class CountingQuotientFilterTest : public BaseTest {
 };
 
 using Types = ::testing::Types<int32_t, int64_t, float, double, std::string>;
-TYPED_TEST_CASE(CountingQuotientFilterTest, Types);
+TYPED_TEST_CASE(CountingQuotientFilterTest, Types, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CountingQuotientFilterTest, ValueCounts) {
   this->test_value_counts(this->cqf2);
