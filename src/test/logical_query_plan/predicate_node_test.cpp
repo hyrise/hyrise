@@ -35,8 +35,8 @@ class PredicateNodeTest : public ::testing::Test {
 TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] TableScan: i = 5"); }
 
 TEST_F(PredicateNodeTest, DescriptionsForIndexScan) {
-    _predicate_node->scan_type = ScanType::IndexScan;
-    EXPECT_EQ(_predicate_node->description(), "[Predicate] IndexScan: i = 5");
+  _predicate_node->scan_type = ScanType::IndexScan;
+  EXPECT_EQ(_predicate_node->description(), "[Predicate] IndexScan: i = 5");
 }
 
 TEST_F(PredicateNodeTest, Equals) {

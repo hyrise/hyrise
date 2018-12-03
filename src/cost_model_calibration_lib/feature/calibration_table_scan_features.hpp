@@ -50,8 +50,8 @@ inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize
     const auto serialized_column = CalibrationColumnFeatures::serialize({});
     const auto column_feature_count = 3 * serialized_column.size();
 
-    // +3 for the three table scan features
-    std::vector<AllTypeVariant> output(column_feature_count + 3, NullValue{});
+    // +4 for the three table scan features
+    std::vector<AllTypeVariant> output(column_feature_count + 4, NullValue{});
     return output;
   }
 

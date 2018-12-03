@@ -31,12 +31,15 @@ TEST_F(CalibrationQueryGeneratorTest, SimpleTest) {
   std::vector<CalibrationColumnSpecification> columns = {
       CalibrationColumnSpecification{"column_pk", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
       CalibrationColumnSpecification{"a", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
-      CalibrationColumnSpecification{"b", DataType::String, "uniform", false, 100, EncodingType::Unencoded}};
+      CalibrationColumnSpecification{"b", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
+      CalibrationColumnSpecification{"c", DataType::Int, "uniform", false, 100, EncodingType::Unencoded},
+      CalibrationColumnSpecification{"d", DataType::String, "uniform", false, 100, EncodingType::Unencoded},
+  };
 
   const CalibrationConfiguration configuration{
-      {}, "", "", 1, {EncodingType::Unencoded}, {DataType::Int, DataType::String}, {0.1, 0.8}, {}};
+      {}, "", "", 1, {EncodingType::Unencoded}, {DataType::Int, DataType::String}, {0.1f, 0.8f}, {}};
 
-  const CalibrationQueryGenerator generator({"SomeTable"}, columns, configuration);
+  const CalibrationQueryGenerator generator({{"SomeTable", 100}}, columns, configuration);
   const auto query_templates = generator.generate_queries();
 
   for (const auto& query : query_templates) {

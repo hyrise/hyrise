@@ -14,10 +14,10 @@
 namespace opossum {
 
 CalibrationQueryGenerator::CalibrationQueryGenerator(
-    const std::vector<std::pair<std::string, size_t>>& table_names,
+    const std::vector<std::pair<std::string, size_t>>& tables,
     const std::vector<CalibrationColumnSpecification>& column_specifications,
     const CalibrationConfiguration& configuration)
-    : _column_specifications(column_specifications), _configuration(configuration), _table_names(table_names) {}
+    : _column_specifications(column_specifications), _configuration(configuration), _tables(tables) {}
 
 const std::vector<CalibrationQueryGeneratorPredicateConfiguration>
 CalibrationQueryGenerator::_generate_predicate_permutations() const {
@@ -26,9 +26,9 @@ CalibrationQueryGenerator::_generate_predicate_permutations() const {
   for (const auto& encoding : _configuration.encodings) {
     for (const auto& data_type : _configuration.data_types) {
       for (const auto& selectivity : _configuration.selectivities) {
-        for (const auto& table_name : _table_names) {
-          output.push_back({table_name.first, encoding, data_type, selectivity, false, table_name.second});
-          output.push_back({table_name.first, encoding, data_type, selectivity, true, table_name.second});
+        for (const auto& table : _tables) {
+          output.push_back({table.first, encoding, data_type, selectivity, false, table.second});
+          output.push_back({table.first, encoding, data_type, selectivity, true, table.second});
         }
       }
     }
@@ -156,9 +156,13 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
 
   const auto predicates = CalibrationQueryGeneratorPredicate::generate_predicates(
       predicate_generator, _column_specifications, table, configuration);
+
   // TODO(Sven): Add test
   if (predicates.empty()) return {};
 
+  std::vector<std::shared_ptr<AbstractLQPNode>> output;
+
+  // Use additional ValidateNode to force a reference-segment TableScan
   for (const auto& predicate_node : predicates) {
     if (configuration.reference_column) {
       const auto validate_node = ValidateNode::make();
@@ -167,9 +171,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
     } else {
       predicate_node->set_left_input(table);
     }
+
+    output.push_back(predicate_node);
   }
 
-  return predicates;
+  return output;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join(

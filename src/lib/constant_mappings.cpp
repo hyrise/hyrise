@@ -36,6 +36,18 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
+const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
+    {ExpressionType::Aggregate, "Aggregate"}, {ExpressionType::Arithmetic, "Arithmetic"},
+    {ExpressionType::Cast, "Cast"},           {ExpressionType::Case, "Case"},
+    {ExpressionType::PQPColumn, "PQPColumn"}, {ExpressionType::LQPColumn, "LQPColumn"},
+    {ExpressionType::Exists, "Exist"},        {ExpressionType::Extract, "Extract"},
+    {ExpressionType::Function, "Function"},   {ExpressionType::List, "List"},
+    {ExpressionType::Logical, "Logical"},     {ExpressionType::Parameter, "Parameter"},
+    {ExpressionType::Predicate, "Predicate"}, {ExpressionType::PQPSelect, "PQPSelect"},
+    {ExpressionType::LQPSelect, "LQPSelect"}, {ExpressionType::UnaryMinus, "UnaryMinus"},
+    {ExpressionType::Value, "Value"},
+};
+
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "Ascending"},
     {OrderByMode::Descending, "Descending"},

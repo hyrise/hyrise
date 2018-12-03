@@ -217,7 +217,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     // Potentially there could be other index types, which are not handled yet.
   }
 
-  Assert(found_group_key_index != found_btree_index, "LQPTranslator can only handle tables that contain either BTree or GroupKey indices, but neither both nor none.");
+  Assert(
+      found_group_key_index != found_btree_index,
+      "LQPTranslator can only handle tables that contain either BTree or GroupKey indices, but neither both nor none.");
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
@@ -231,7 +233,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   }
 
   Assert(index_scan, "LQPTranslator can only translate IndexScan for GroupKey and BTree Indices. Did not find either.");
-
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 

@@ -25,7 +25,7 @@ enum class ScanType : uint8_t;
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
 extern const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string;
 extern const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode;
-extern const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string;
+extern const std::unordered_map<ExpressionType, std::string> expression_type_to_string;
 extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<JoinType, std::string> join_type_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;

@@ -12,8 +12,7 @@
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
- * used
- * to both harden code by programming by contract and document the invariants enforced in messages.
+ * used to both harden code by programming by contract and document the invariants enforced in messages.
  *
  * --> Use DebugAssert() whenever a certain invariant must hold, as in
  *
