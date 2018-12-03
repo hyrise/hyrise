@@ -108,7 +108,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
     remaining_columns.erase(
         std::remove(remaining_columns.begin(), remaining_columns.end(), filter_column_expression->column_reference));
 
-    std::shuffle(remaining_columns.begin(), remaining_columns.end(), engine);
+    //std::shuffle(remaining_columns.begin(), remaining_columns.end(), engine);
 
     std::shared_ptr<AbstractExpression> second_column;
     for (const auto& column : remaining_columns) {
@@ -165,7 +165,8 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
     const auto filter_column_expression = lqp_column_(inner_table->get_column(column_name));
 
     auto columns = inner_table->get_columns();
-    std::shuffle(columns.begin(), columns.end(), engine);
+    // TODO(Sven): generate for all columns
+    //std::shuffle(columns.begin(), columns.end(), engine);
 
     // Find the first column that has the same data type
     for (const auto& column : columns) {
@@ -209,7 +210,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto lqp_column_reference = table->get_column(column_name);
   const auto lhs = lqp_column_(table->get_column(column_name));
 
-  // TODO(Sven): Get one existing value from column and filter by that
+  // Get an existing value from column and filter by that
   const auto stored_table = StorageManager::get().get_table(table->table_name);
   const auto column_id = lqp_column_reference.original_column_id();
 

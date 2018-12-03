@@ -38,7 +38,7 @@ void CostModelCalibration::run_tpch6_costing() const {
 void CostModelCalibration::run() const {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
   tableGenerator.load_calibration_tables();
-  //    tableGenerator.load_tpch_tables(1.0f, Encoding::RunLength);
+  //    tableGenerator.load_tpch_tables(1.0f);
   _calibrate();
 
   std::cout << "Finished Calibration, now starting TPC-H" << std::endl;

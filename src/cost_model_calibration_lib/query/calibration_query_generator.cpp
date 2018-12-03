@@ -39,6 +39,9 @@ CalibrationQueryGenerator::_generate_predicate_permutations() const {
   return output;
 }
 
+/**
+ * This function generates all TableScan permutations for TPCH-6
+ */
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_tpch_6() {
   std::vector<std::shared_ptr<AbstractLQPNode>> queries;
 
