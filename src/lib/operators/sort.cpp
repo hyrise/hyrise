@@ -53,7 +53,7 @@ class Sort::SortImplMaterializeOutput {
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
-  std::shared_ptr<const Table> execute() {
+  std::shared_ptr<const Table> execute(const OrderByMode order_by_mode) {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
@@ -127,6 +127,7 @@ class Sort::SortImplMaterializeOutput {
             chunk_offset_out = 0u;
             auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                                 std::move(value_segment_null_vector));
+            value_segment->set_sort_order(order_by_mode);
             chunk_it->push_back(value_segment);
             value_segment_value_vector = pmr_concurrent_vector<ColumnDataType>();
             value_segment_null_vector = pmr_concurrent_vector<bool>();
@@ -138,6 +139,7 @@ class Sort::SortImplMaterializeOutput {
         if (chunk_offset_out > 0u) {
           auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(value_segment_value_vector),
                                                                               std::move(value_segment_null_vector));
+          value_segment->set_sort_order(order_by_mode);
           chunk_it->push_back(value_segment);
         }
       });
@@ -200,7 +202,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     // full and create the next one. Each chunk is filled row by row.
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
-    return materialization->execute();
+    return materialization->execute(_order_by_mode);
   }
 
   // completely materializes the sort column to create a vector of RowID-Value pairs
