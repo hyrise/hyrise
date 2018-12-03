@@ -4,10 +4,9 @@ node {
   stage ("Start") {
     // Check if the user who opened the PR is a member of our organization. If not, abort for safety reasons.
     withCredentials([usernameColonPassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', variable: 'GITHUB_TOKEN')]) {
-      sh '''
-        curl -I -H "Authorization: token $GITHUB_TOKEN" https://github.com/api/orgs/hyrise/repos?per_page=100
-      '''
-      // echo "I can access my secret token of ${env.GITHUB_TOKEN} now"
+      sh cmd: '''
+        curl -I -H "Authorization: token ${env.GITHUB_TOKEN}" https://github.com/api/orgs/hyrise/repos?per_page=100
+      ''', name: 'Verify credentials'
     }
 
     script {
