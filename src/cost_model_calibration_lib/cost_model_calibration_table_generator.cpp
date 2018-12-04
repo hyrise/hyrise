@@ -54,7 +54,7 @@ void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_fact
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
     const auto& table = tpch_table.second;
 
-    if (table_name != "lineitem") continue;
+    //    if (table_name != "lineitem") continue;
 
     ChunkEncodingSpec chunk_spec;
     const auto column_count = table->column_count();

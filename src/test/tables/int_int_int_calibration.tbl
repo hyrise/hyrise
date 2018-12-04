@@ -1,6 +1,0 @@
-column_pk|a|b|c|d
-int|int|int|int|string
-1|9|10|11|aa
-2|10|10|10|bb
-3|11|10|11|cc
-4|9|10|9|dd

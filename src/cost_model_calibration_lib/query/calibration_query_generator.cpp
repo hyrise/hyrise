@@ -11,6 +11,8 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/validate_node.hpp"
 
+using namespace opossum::expression_functional;  // NOLINT
+
 namespace opossum {
 
 CalibrationQueryGenerator::CalibrationQueryGenerator(
@@ -23,12 +25,25 @@ const std::vector<CalibrationQueryGeneratorPredicateConfiguration>
 CalibrationQueryGenerator::_generate_predicate_permutations() const {
   std::vector<CalibrationQueryGeneratorPredicateConfiguration> output{};
 
-  for (const auto& encoding : _configuration.encodings) {
-    for (const auto& data_type : _configuration.data_types) {
-      for (const auto& selectivity : _configuration.selectivities) {
-        for (const auto& table : _tables) {
-          output.push_back({table.first, encoding, data_type, selectivity, false, table.second});
-          output.push_back({table.first, encoding, data_type, selectivity, true, table.second});
+  // Generating all combinations
+  for (const auto& first_encoding : _configuration.encodings) {
+    for (const auto& first_data_type : _configuration.data_types) {
+      for (const auto& second_encoding : _configuration.encodings) {
+        for (const auto& second_data_type : _configuration.data_types) {
+          if (first_data_type != second_data_type) continue;
+          for (const auto& third_encoding : _configuration.encodings) {
+            for (const auto& third_data_type : _configuration.data_types) {
+              if (first_data_type != third_data_type) continue;
+              for (const auto& selectivity : _configuration.selectivities) {
+                for (const auto& table : _tables) {
+                  output.push_back({table.first, first_encoding, first_data_type, second_encoding, second_data_type,
+                                    third_encoding, third_data_type, selectivity, false, table.second});
+                  output.push_back({table.first, first_encoding, first_data_type, second_encoding, second_data_type,
+                                    third_encoding, third_data_type, selectivity, true, table.second});
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -51,15 +66,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   const auto discount_column = lineitem->get_column("l_discount");
   const auto quantity_column = lineitem->get_column("l_quantity");
 
-  const auto shipdate_gte = PredicateNode::make(expression_functional::greater_than_equals_(
-      expression_functional::lqp_column_(shipdate_column), expression_functional::value_("1994-01-01")));
-  const auto shipdate_lt = PredicateNode::make(expression_functional::less_than_(
-      expression_functional::lqp_column_(shipdate_column), expression_functional::value_("1995-01-01")));
-  const auto discount = PredicateNode::make(
-      expression_functional::between_(expression_functional::lqp_column_(discount_column),
-                                      expression_functional::value_(0.05), expression_functional::value_(0.07001)));
-  const auto quantity = PredicateNode::make(expression_functional::less_than_(
-      expression_functional::lqp_column_(quantity_column), expression_functional::value_(24)));
+  const auto shipdate_gte =
+      PredicateNode::make(greater_than_equals_(lqp_column_(shipdate_column), value_("1994-01-01")));
+  const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(shipdate_column), value_("1995-01-01")));
+  const auto discount = PredicateNode::make(between_(lqp_column_(discount_column), value_(0.05), value_(0.07001)));
+  const auto quantity = PredicateNode::make(less_than_(lqp_column_(quantity_column), value_(24)));
 
   std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
       {shipdate_gte, shipdate_lt, discount, quantity}, {shipdate_gte, shipdate_lt, quantity, discount},

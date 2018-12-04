@@ -1,0 +1,6 @@
+column_pk|a|b|c|d|e
+int|int|int|int|string|float
+1|9|10|11|aa|0.3
+2|10|10|10|bb|0.4
+3|11|10|11|cc|0.5
+4|9|10|9|dd|0.6
