@@ -50,7 +50,6 @@ CalibrationQueryGenerator::_generate_predicate_permutations() const {
   }
 
   std::cout << "Generated " << output.size() << " Permutations for Predicates" << std::endl;
-
   return output;
 }
 

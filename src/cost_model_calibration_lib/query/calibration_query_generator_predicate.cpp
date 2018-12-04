@@ -243,6 +243,10 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto rhs = generate_predicate_column_value(
       {generator_configuration.table, generator_configuration.column_definitions, second_configuration});
 
+  if (!lhs || !rhs) {
+    return {};
+  }
+
   return or_(lhs, rhs);
 }
 

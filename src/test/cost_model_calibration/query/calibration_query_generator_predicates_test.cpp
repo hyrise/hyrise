@@ -174,6 +174,21 @@ TEST_F(CalibrationQueryGeneratorPredicatesTest, BetweenColumnColumn) {
   EXPECT_EQ("a BETWEEN b AND c", predicate->as_column_name());
 }
 
+TEST_F(CalibrationQueryGeneratorPredicatesTest, Or) {
+  CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable",   EncodingType::Unencoded,
+                                                                    DataType::Int, EncodingType::Unencoded,
+                                                                    DataType::Int, EncodingType::Unencoded,
+                                                                    DataType::Int, 0.1f,
+                                                                    false,         6};
+  const auto table = StoredTableNode::make("SomeTable");
+
+  const auto predicate =
+          CalibrationQueryGeneratorPredicate::generate_predicate_or({table, _columns, configuration});
+
+  ASSERT_TRUE(predicate);
+  EXPECT_EQ("a <= 1000000 OR a <= 5000000", predicate->as_column_name());
+}
+
 TEST_F(CalibrationQueryGeneratorPredicatesTest, ColumnValue) {
   CalibrationQueryGeneratorPredicateConfiguration configuration{"SomeTable",   EncodingType::Unencoded,
                                                                 DataType::Int, EncodingType::Unencoded,
