@@ -510,7 +510,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
 
   /**
    * Build LQP and translate to PQP

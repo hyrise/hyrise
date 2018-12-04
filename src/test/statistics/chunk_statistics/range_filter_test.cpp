@@ -92,7 +92,7 @@ T get_random_number(std::mt19937& rng, distribution<T> distribution) {
 }
 
 using FilterTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_CASE(RangeFilterTest, FilterTypes);
+TYPED_TEST_CASE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // Create vector with a huge gap in the middle whose length exceeds the type's limits.
@@ -111,7 +111,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
 
   const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
                                           std::numeric_limits<TypeParam>::lowest()};

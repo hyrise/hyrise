@@ -191,7 +191,7 @@ TEST_F(JoinHashStepsTest, DetermineChunkOffsets) {
 }
 
 TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
 
   size_t radix_bit_count = 0;
   std::vector<std::vector<size_t>> histograms;

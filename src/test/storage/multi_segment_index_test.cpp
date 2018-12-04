@@ -50,7 +50,7 @@ class MultiSegmentIndexTest : public BaseTest {
 
 // List of indices to test
 typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndices;
-TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndices);
+TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
@@ -165,7 +165,7 @@ TYPED_TEST(MultiSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(MultiSegmentIndexTest, TooManyReferenceValues) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }

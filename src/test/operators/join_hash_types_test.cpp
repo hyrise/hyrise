@@ -48,7 +48,7 @@ void test_hash_map(const std::vector<T>& values) {
 }
 
 using DataTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_CASE(JoinHashTypesTest, DataTypes);
+TYPED_TEST_CASE(JoinHashTypesTest, DataTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinHashTypesTest, BuildSingleValueLargePosList) {
   int test_item_count = 500;
