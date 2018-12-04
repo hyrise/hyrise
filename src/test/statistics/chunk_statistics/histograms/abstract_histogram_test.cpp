@@ -22,7 +22,7 @@ class AbstractHistogramIntTest : public BaseTest {
 
 using HistogramIntTypes =
     ::testing::Types<EqualDistinctCountHistogram<int32_t>, EqualWidthHistogram<int32_t>, EqualHeightHistogram<int32_t>>;
-TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes);
+TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramIntTest, EqualsPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
@@ -155,7 +155,7 @@ class AbstractHistogramStringTest : public BaseTest {
 
 using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::string>,
                                               EqualWidthHistogram<std::string>, EqualHeightHistogram<std::string>>;
-TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes);
+TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramStringTest, StringConstructorTests) {
   // Histogram checks prefix length for overflow.

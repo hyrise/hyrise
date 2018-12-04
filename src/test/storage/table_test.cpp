@@ -158,7 +158,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
-  if (!HYRISE_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   TableColumnDefinitions column_definitions{};
   EXPECT_THROW(Table(column_definitions, TableType::Data, 0), std::logic_error);
 }
