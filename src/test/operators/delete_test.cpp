@@ -138,7 +138,7 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
 }
 
 TEST_F(OperatorsDeleteTest, EmptyDelete) {
-  auto tx_context = TransactionManager::get().new_transaction_context();
+  auto tx_context_modification = TransactionManager::get().new_transaction_context();
 
   auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "112233");
 
@@ -147,19 +147,19 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   EXPECT_EQ(table_scan->get_output()->chunk_count(), 0u);
 
   auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
-  delete_op->set_transaction_context(tx_context);
+  delete_op->set_transaction_context(tx_context_modification);
 
   delete_op->execute();
 
   EXPECT_FALSE(delete_op->execute_failed());
 
   // MVCC commit.
-  tx_context->commit();
+  tx_context_modification->commit();
 
   // Get validated table which should be the original one
-  auto t_context = TransactionManager::get().new_transaction_context();
+  auto tx_context_verification = TransactionManager::get().new_transaction_context();
   auto validate = std::make_shared<Validate>(_gt);
-  validate->set_transaction_context(t_context);
+  validate->set_transaction_context(tx_context_verification);
 
   validate->execute();
 
