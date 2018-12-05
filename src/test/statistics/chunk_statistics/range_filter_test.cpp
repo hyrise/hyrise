@@ -19,13 +19,15 @@ template <typename T>
 class RangeFilterTest : public ::testing::Test {
  protected:
   void SetUp() override {
+    // Manually created vector. Largest exlusive gap (only gap when gap_count == 1) will
+    // be 103-123456, second largest -1000 to 2, third 17-100.
     _values = pmr_vector<T>{-1000, 2, 3, 4, 7, 8, 10, 17, 100, 101, 102, 103, 123456};
+
     _min_value = *std::min_element(std::begin(_values), std::end(_values));
     _max_value = *std::max_element(std::begin(_values), std::end(_values));
 
     // `_in_between` in a value in the largest gap of the test data.
-    // When test data is changed, ensure that value is not part of a range in ranges unless |ranges| == 1.
-    _in_between = static_cast<T>(_min_value + 0.5 * (_max_value - _min_value));
+    _in_between = T{1024};
 
     _before_range = _min_value - 1;  // value smaller than the minimum
     _after_range = _max_value + 1;   // value larger than the maximum
@@ -228,7 +230,7 @@ TYPED_TEST(RangeFilterTest, Between) {
 
   // This one has bounds in gaps, but cannot prune.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {this->_max_value - 1}, {this->_after_range}));
-  
+
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-3000}, {-2000}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-999}, {1}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {104}, {1004}));
