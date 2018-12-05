@@ -22,7 +22,7 @@ namespace opossum {
 
 std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 
-bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
   // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
   auto actually_used_columns = _collect_actually_used_columns(lqp);
@@ -35,7 +35,7 @@ bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   _prune_columns_in_projections(lqp, actually_used_columns);
 
   // Search the plan for leaf nodes and prune all columns from them that are not referenced
-  return _prune_columns_from_leaves(lqp, actually_used_columns);
+  _prune_columns_from_leaves(lqp, actually_used_columns);
 }
 
 ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
@@ -84,10 +84,8 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
   return consumed_columns;
 }
 
-bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
+void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                    const ExpressionUnorderedSet& referenced_columns) {
-  auto lqp_changed = false;
-
   // Collect all parents of leaves and on which input side their leave is
   // (if a node has two leaves as inputs, it will be collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
@@ -123,10 +121,7 @@ bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
     // If a leaf outputs columns that are never used, prune those columns by inserting a ProjectionNode that only
     // contains the used columns
     lqp_insert_node(parent, leaf_input_side, ProjectionNode::make(referenced_leaf_columns));
-    lqp_changed = true;
   }
-
-  return lqp_changed;
 }
 
 void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
