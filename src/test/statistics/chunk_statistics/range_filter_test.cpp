@@ -238,7 +238,7 @@ TYPED_TEST(RangeFilterTest, Between) {
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {101}, {103}));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {102}, {1004}));
 
-  // SQL between in inclusive
+  // SQL's between is inclusive
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {103}, {123456}));
 }
 
