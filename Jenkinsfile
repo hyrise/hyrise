@@ -3,7 +3,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 node {
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-    if (pullRequest != null) {
+    if (binding.hasVariable('pullRequest')) {
       try {
         withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
           env.PR_CREATED_BY = pullRequest.createdBy
