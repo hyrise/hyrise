@@ -121,7 +121,7 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
     EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, third_gap_min, third_gap_max));
   }
   {
-    // starting with 3 ranges, all tested gaps should be covered
+    // starting with 4 ranges, all tested gaps should be covered
     for (uint32_t range_count : {4, 5, 100, 1'000}) {
       {
         const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, range_count);
@@ -155,7 +155,7 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
 
 // create more ranges than distinct values in the test data
 TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
-  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {17}));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Like, {17}));
@@ -215,6 +215,11 @@ TYPED_TEST(RangeFilterTest, Between) {
   // This one has bounds in gaps, but cannot prune.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {this->_max_value - 1}, {this->_value_larger_than_maximum}));
 
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-3000}, {-2000}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-999}, {1}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {104}, {1004}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {10'000'000}, {20'000'000}));
+
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-2000}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, TypeParam{-999}, TypeParam{1}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, TypeParam{104}, TypeParam{1004}));
@@ -224,7 +229,7 @@ TYPED_TEST(RangeFilterTest, Between) {
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, TypeParam{101}, TypeParam{103}));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, TypeParam{102}, TypeParam{1004}));
 
-  // SQL between in inclusive
+  // SQL's between is inclusive
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, TypeParam{103}, TypeParam{123456}));
 }
 

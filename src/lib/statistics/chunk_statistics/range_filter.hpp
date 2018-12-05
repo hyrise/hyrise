@@ -71,10 +71,10 @@ class RangeFilter : public AbstractFilter {
         return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
       }
       case PredicateCondition::Between: {
-        /* There are two scenarios, where a between predicate can be pruned:
+        /* There are two scenarios where a between predicate can be pruned:
          *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
          *      the minimum or both are larger than the maximum
-         *    - both bounds are the same gap
+         *    - both bounds are within the same gap
          */
 
         Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
@@ -90,17 +90,17 @@ class RangeFilter : public AbstractFilter {
           return true;
         }
 
+        const auto range_comp = [](std::pair<T, T> range, T compare_value) -> bool {
+          return range.second < compare_value;
+        };
         // Get value range or next larger value range if searched value is in a gap.
-        auto start_lower = std::lower_bound(
-            std::begin(_ranges), std::end(_ranges), value,
-            [](std::pair<T, T> range, T compare_value) -> bool { return range.second < compare_value; });
-        auto end_lower = std::lower_bound(
-            std::begin(_ranges), std::end(_ranges), value2,
-            [](std::pair<T, T> range, T compare_value) -> bool { return range.second < compare_value; });
+        const auto start_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value, range_comp);
+        const auto end_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value2, range_comp);
 
-        const bool start_in_value_range = (*start_lower).first <= value && value <= (*start_lower).second;
+        const bool start_in_value_range =
+            (start_lower != std::end(_ranges)) && (*start_lower).first <= value && value <= (*start_lower).second;
         const bool end_in_value_range =
-            (end_lower == std::end(_ranges)) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+            (end_lower != std::end(_ranges)) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
         // Check if both bounds are within the same gap.
         if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
