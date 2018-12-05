@@ -67,6 +67,12 @@ template <>
 double get_test_value<double>(size_t run) {
   return static_cast<double>(123457.0 + run);
 }
+
+// template<typename T, typename T2 = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
+// T get_test_value<T>(size_t run) {
+//   return static_cast<T>(T{123457} + run);
+// }
+
 template <>
 std::string get_test_value<std::string>(size_t run) {
   return std::string("test_value") + std::to_string(run);
@@ -159,7 +165,7 @@ TYPED_TEST(CountingQuotientFilterTest, CanNotPrune) {
  * sanity checking, making sure the FPR is below a very lenient threshold. If these tests fail it is very likely,
  * however not absolutely certain, that there is a bug in the CQF.
  */
-TYPED_TEST(CountingQuotientFilterTest, DISABLED_FalsePositiveRate /* #1220 */) {
+TYPED_TEST(CountingQuotientFilterTest, FalsePositiveRate) {
   this->test_false_positive_rate(this->cqf2);
   this->test_false_positive_rate(this->cqf4);
   this->test_false_positive_rate(this->cqf8);
