@@ -228,7 +228,7 @@ TYPED_TEST(RangeFilterTest, Between) {
 
   // This one has bounds in gaps, but cannot prune.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {this->_max_value - 1}, {this->_after_range}));
-  
+
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-3000}, {-2000}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-999}, {1}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {104}, {1004}));
