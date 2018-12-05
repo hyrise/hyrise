@@ -167,7 +167,7 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_max_value}));
 }
 
-// create more ranges than distinct values in the test data
+// Test predicates which are not supported by the range filter
 TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
