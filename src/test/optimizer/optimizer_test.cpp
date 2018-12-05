@@ -124,9 +124,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    public:
     std::string name() const override { return "Mock"; }
 
-    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
-      ++counter;
-    }
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override { ++counter; }
 
     mutable size_t counter{0};
   };
