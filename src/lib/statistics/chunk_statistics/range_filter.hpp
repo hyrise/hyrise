@@ -94,13 +94,13 @@ class RangeFilter : public AbstractFilter {
           return range.second < compare_value;
         };
         // Get value range or next larger value range if searched value is in a gap.
-        const auto start_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value, range_comp);
-        const auto end_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value2, range_comp);
+        const auto start_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value, range_comp);
+        const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
 
         const bool start_in_value_range =
-            (start_lower != std::end(_ranges)) && (*start_lower).first <= value && value <= (*start_lower).second;
+            (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
         const bool end_in_value_range =
-            (end_lower != std::end(_ranges)) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+            (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
         // Check if both bounds are within the same gap.
         if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
