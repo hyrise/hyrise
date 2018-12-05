@@ -169,7 +169,7 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
 
 // create more ranges than distinct values in the test data
 TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
-  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 5);
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {17}));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Like, {17}));
