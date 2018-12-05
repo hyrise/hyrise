@@ -90,8 +90,10 @@ class RangeFilter : public AbstractFilter {
           return true;
         }
 
+        const auto range_comp = [](std::pair<T, T> range, T compare_value) -> bool {
+          return range.second < compare_value;
+        };
         // Get value range or next larger value range if searched value is in a gap.
-        const auto range_comp = [](std::pair<T, T> range, T compare_value) -> bool { return range.second < compare_value; };
         const auto start_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value, range_comp);
         const auto end_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value2, range_comp);
 
