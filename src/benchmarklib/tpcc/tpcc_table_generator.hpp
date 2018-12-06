@@ -10,7 +10,7 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "benchmark_utilities/abstract_benchmark_table_generator.hpp"
+#include "abstract_benchmark_table_generator.hpp"
 #include "benchmark_utils.hpp"
 #include "tpcc_random_generator.hpp"
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "benchmark_utilities/random_generator.hpp"
+#include "random_generator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

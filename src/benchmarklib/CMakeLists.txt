@@ -3,9 +3,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(
     SOURCES
 
-    benchmark_utilities/abstract_benchmark_table_generator.hpp
-    benchmark_utilities/random_generator.hpp
-
     tpcc/constants.hpp
     tpcc/defines.hpp
     tpcc/helper.hpp
@@ -21,11 +18,16 @@ set(
     tpch/tpch_db_generator.cpp
     tpch/tpch_db_generator.hpp
 
+    abstract_benchmark_table_generator.hpp
+    abstract_table_generator.cpp
+    abstract_table_generator.hpp
+    abstract_query_generator.hpp
+    abstract_query_generator.cpp
+    encoding_config.cpp
+    encoding_config.hpp
     table_generator.cpp
     table_generator.hpp
-
-    abstract_query_generator.cpp
-    abstract_query_generator.hpp
+    random_generator.hpp
     benchmark_runner.cpp
     benchmark_runner.hpp
     benchmark_utils.cpp
