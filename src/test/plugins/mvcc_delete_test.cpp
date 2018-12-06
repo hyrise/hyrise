@@ -7,6 +7,7 @@
 #include "storage/storage_manager.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
 #include "utils/load_table.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/table_scan.hpp"
@@ -27,23 +28,24 @@ class MvccDeleteTest : public BaseTest {
     const auto table = load_table("src/test/tables/10_ints.tbl", 10);
     sm.add_table(name, table);
 
-    //const auto& column_a = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "a");
-    const auto& transaction_context = TransactionManager::get().new_transaction_context();
-    const auto get_table = std::make_shared<GetTable>(name);
+    EXPECT_EQ(table->row_count(), 10);
+    EXPECT_EQ(table->chunk_count(), 1);
 
+    const auto& column_a = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+    const auto& transaction_context = TransactionManager::get().new_transaction_context();
+
+    const auto get_table = std::make_shared<GetTable>(name);
     get_table->set_transaction_context(transaction_context);
     get_table->execute();
 
-    //const auto updated_values_projection = std::make_shared<Projection>(get_table, expression_functional::expression_vector(column_a, 0));
-    //updated_values_projection->set_transaction_context(transaction_context);
-    //updated_values_projection->execute();
+    const auto where_scan = std::make_shared<TableScan>(get_table, expression_functional::greater_than_(column_a, 0));
+    where_scan->set_transaction_context(transaction_context);
+    where_scan->execute();
 
-    const auto& table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
-    const auto& update = std::make_shared<Update>(name, get_table, table_wrapper);
+    const auto& update = std::make_shared<Update>(name, where_scan, where_scan);
     update->set_transaction_context(transaction_context);
     update->execute();
+
     transaction_context->commit();
   }
 
@@ -65,9 +67,18 @@ TEST_F(MvccDeleteTest, LoadUnloadPlugin) {
 
 TEST_F(MvccDeleteTest, RemoveChunk) {
   load_and_update_table("test_table");
-  //TODO: Check for number of Chunks, Values
+
+  auto& sm = StorageManager::get();
+  const auto& table = sm.tables().find("test_table")->second;
+
+  EXPECT_EQ(table->row_count(), 20);
+  EXPECT_EQ(table->chunk_count(), 2);
+
   load_plugin();
-  //TODO: Check for number of Chunks, Values
+
+  EXPECT_EQ(table->row_count(), 10);
+  EXPECT_EQ(table->chunk_count(), 1);
+
   unload_plugin();
 }
 
