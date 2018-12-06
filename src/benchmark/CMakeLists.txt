@@ -15,7 +15,6 @@ add_executable(
     operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
-    operators/update_benchmark.cpp
     operators/mvcc_benchmark.cpp
     statistics/generate_table_statistics_benchmark.cpp
     tpch_db_generator_benchmark.cpp
