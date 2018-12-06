@@ -22,12 +22,6 @@ namespace opossum {
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_MVCC)(benchmark::State& state) {
   _clear_cache();
 
-  const auto table = load_table("../src/test/tables/int_float2.tbl", 10);
-
-  auto& storage_manager = StorageManager::get();
-
-  storage_manager.add_table("benchmark_table", table);
-
   for(auto _ : state) {
     for(int i = 0; i < state.range(0); ++i) {
       const auto& column_a = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "a");

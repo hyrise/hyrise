@@ -18,63 +18,17 @@
 
 namespace opossum {
 
-void queryTable(std::string& tableName) {
+BENCHMARK_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)(benchmark::State& state) {
+
+  // TODO Update some values or just do a table scan in order to iterate across the table with its invalidated lines
 
   // Preparation
-  const auto get_table = std::make_shared<GetTable>(tableName);
-  const auto where_scan = std::make_shared<TableScan>(get_table, expression_functional::equals_(column, 1));
-  get_table->execute();
-
-  auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "column0");
-}
-
-
-void applyUpdatesToTable(std::string& tableName) {
-
-  const auto updated_values_projection = std::make_shared<Projection>(where_scan, expression_functional::expression_vector(column, 1));
-
-  where_scan->execute();
-  updated_values_projection->execute();
-
-  while (state.KeepRunning()) {
-
-    const auto transaction_context = TransactionManager::get().new_transaction_context();
-    const auto update = std::make_shared<Update>("update_table", where_scan, updated_values_projection);
-    update->set_transaction_context(transaction_context);
-    update->execute();
-    transaction_context->commit();
-  }
+  const auto get_table = std::make_shared<GetTable>(_table_name);
 
 }
 
 
-
-BENCHMARK_F(MVCC_Benchmark_Fixture, BM_Update)(benchmark::State& state) {
-
-  const int updateCycles = 100;
-
-
-  for (int i = 0; i < updateCycles; i++) {
-
-      // Query table data
-      _clear_cache();
-
-      // TODO measure time ----->
-
-      queryTable();
-
-      // TODO <------------------
-
-
-      // ##### Modify table #####
-
-      applyUpdatesToTable(_table_name)
-
-
-
-  }
-
-}
-
+// Run benchmark with using a table with up to 80000 invalidated lines
+BENCHMARK_REGISTER_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)->RangeMultiplier(2)->Range(1, 80000);
 
 }  // namespace opossum
