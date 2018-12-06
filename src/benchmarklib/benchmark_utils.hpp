@@ -11,17 +11,10 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "encoding_config.hpp"
+#include "benchmark_config.hpp"
 
 namespace opossum {
-
-/**
- * IndividualQueries runs each query a number of times and then the next one
- * PermutedQuerySet runs the queries as set permuting their order after each run (this exercises caches)
- */
-enum class BenchmarkMode { IndividualQueries, PermutedQuerySet };
-
-using Duration = std::chrono::high_resolution_clock::duration;
-using TimePoint = std::chrono::high_resolution_clock::time_point;
 
 
 /**
@@ -63,37 +56,6 @@ struct BenchmarkState {
   Duration benchmark_duration = Duration{};
 
   Duration max_duration;
-};
-
-// View BenchmarkConfig::description to see format of the JSON-version
-struct BenchmarkConfig {
-  BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
-                  const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
-                  const Duration& warmup_duration, const UseMvcc use_mvcc,
-                  const std::optional<std::string>& output_file_path, const bool enable_scheduler, const uint cores,
-                  const uint clients, const bool enable_visualization, std::ostream& out);
-
-  static BenchmarkConfig get_default_config();
-
-  const BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
-  const bool verbose = false;
-  const ChunkOffset chunk_size = 100'000;
-  const EncodingConfig encoding_config = EncodingConfig{};
-  const size_t max_num_query_runs = 1000;
-  const Duration max_duration = std::chrono::seconds(60);
-  const Duration warmup_duration = std::chrono::seconds(0);
-  const UseMvcc use_mvcc = UseMvcc::No;
-  const std::optional<std::string> output_file_path = std::nullopt;
-  const bool enable_scheduler = false;
-  const uint cores = 0;
-  const uint clients = 1;
-  const bool enable_visualization = false;
-  std::ostream& out;
-
-  static const char* description;
-
- private:
-  BenchmarkConfig() : out(std::cout) {}
 };
 
 class BenchmarkTableEncoder {

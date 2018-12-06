@@ -17,9 +17,11 @@
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
+                                 std::unique_ptr<AbstractQueryGenerator> query_generator,
+                                 std::unique_ptr<AbstractTableGenerator> table_generator,
                                  const nlohmann::json& context)
-    : _config(config), _query_generator(std::move(query_generator)), _context(context) {
+    : _config(config), _query_generator(std::move(query_generator)), _table_generator(std::move(table_generator)), _context(context) {
   // In non-verbose mode, disable performance warnings
   if (!config.verbose) {
     _performance_warning_disabler.emplace();
@@ -50,6 +52,9 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
+  _config.out << "- Loading tables" << std::endl;
+  _table_generator->generate_and_store();
+
   _config.out << "\n- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();

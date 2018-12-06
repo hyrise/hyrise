@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "abstract_query_generator.hpp"
+#include "abstract_table_generator.hpp"
 #include "benchmark_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
@@ -24,7 +25,9 @@ class SQLPipeline;
 
 class BenchmarkRunner {
  public:
-  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+  BenchmarkRunner(const BenchmarkConfig& config,
+                  std::unique_ptr<AbstractQueryGenerator> query_generator,
+                  std::unique_ptr<AbstractTableGenerator> table_generator,
                   const nlohmann::json& context);
   ~BenchmarkRunner();
 
@@ -74,6 +77,7 @@ class BenchmarkRunner {
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractQueryGenerator> _query_generator;
+  std::unique_ptr<AbstractTableGenerator> _table_generator;
 
   // Stores the results of the query executions. Its length is defined by the number of available queries.
   std::vector<QueryBenchmarkResult> _query_results;

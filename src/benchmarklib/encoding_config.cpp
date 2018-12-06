@@ -1,5 +1,7 @@
 #include "encoding_config.hpp"
 
+#include "constant_mappings.hpp"
+
 namespace opossum {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
