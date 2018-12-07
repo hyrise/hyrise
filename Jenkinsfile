@@ -3,20 +3,22 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 node {
   stage ("Start") {
     // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-    try {
-      withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
-        env.PR_CREATED_BY = pullRequest.createdBy
-        sh '''
-          curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
-        '''
-      }
-    } catch (error) {
-      stage ("User unknown") {
-        script {
-          githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+    if (binding.hasVariable('pullRequest')) {
+      try {
+        withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
+          env.PR_CREATED_BY = pullRequest.createdBy
+          sh '''
+            curl -s -I -H "Authorization: token ${GITHUB_TOKEN}" https://api.github.com/repos/hyrise/hyrise/collaborators/${PR_CREATED_BY} | head -n 1 | grep "HTTP/1.1 204 No Content"
+          '''
         }
+      } catch (error) {
+        stage ("User unknown") {
+          script {
+            githubNotify context: 'CI Pipeline', status: 'FAILURE', description: 'User is not a collaborator'
+          }
+        }
+        throw error
       }
-      throw error
     }
 
     script {
@@ -59,7 +61,7 @@ node {
         mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         wait"
-        full_ci = pullRequest.labels.contains('FullCI')
+        full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
       }
 
       parallel clangDebug: {
