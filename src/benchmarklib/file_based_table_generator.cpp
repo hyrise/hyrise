@@ -2,6 +2,14 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "benchmark_config.hpp"
+#include "import_export/binary.hpp"
+#include "operators/import_binary.hpp"
+#include "import_export/csv_parser.hpp"
+#include "utils/load_table.hpp"
+
+using namespace std::string_literals;
+
 namespace opossum {
 
 //void _load_table_folder(const BenchmarkConfig &benchmark_config, const std::string &table_path) {
@@ -56,7 +64,10 @@ void FileBasedTableGenerator::_generate() {
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
 
   /**
-   * Recursively walk through the specified directory and add all files on the way
+   * 1. Explore the directory and identify tables to be loaded
+   * Recursively walk through the specified directory and collect all tables found on the way. A tables name is
+   * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
+   * binary version of a table.
    */
   for (const auto &directory_entry : filesystem::recursive_directory_iterator(_path)) {
     if (!std::filesystem::is_regular_file(directory_entry)) continue;
@@ -76,10 +87,45 @@ void FileBasedTableGenerator::_generate() {
 
     auto& table_entry = table_entries_iter->second;
 
-    Assert(table_entry.source_files_by_extension.find(extension) == table_entry.source_files_by_extension.end(), "Multiple files with same extension found for '"s + table_name.string() + "'");
-    table_entries_iter->second.source_files_by_extension[extension] = directory_entry.path();
+    if (extension == ".bin") {
+      Assert(!table_entry.binary_file_path, "Multiple binary files found for table '"s + table_name.string() + "'");
+      table_entry.binary_file_path = directory_entry.path();
+    } else {
+      Assert(!table_entry.text_file_path, "Multiple text files found for table '"s + table_name.string() + "'");
+      table_entry.text_file_path = directory_entry.path();
+    }
+  }
 
-    std::cout << "Added entry: " << extension << "; " << table_name << "; " << directory_entry.path().string() << std::endl;
+  /**
+   * 2. Actually load the tables. Load from binary file if a binary file exists for a Table.
+   */
+  for (auto& [table_name, table_entry] : _table_entries) {
+    _benchmark_config->out << "- Loading table '" << table_name << "'" << std::endl;
+
+    // Pick a source file to load a table from, prefer the binary version
+    if (table_entry.binary_file_path) {
+      auto import_operator = ImportBinary{*table_entry.binary_file_path};
+      import_operator.execute();
+      table_entry.table = import_operator.get_output();
+      table_entry.loaded_from_binary = true;
+    } else {
+      const auto extension = table_entry.text_file_path->extension();
+      if (extension == ".tbl") {
+        table_entry.table = load_table(*table_entry.text_file_path, _benchmark_config->chunk_size);
+      } else if (extension == ".csv") {
+        table_entry.table = CsvParser{}.parse(*table_entry.text_file_path, std::nullopt, _benchmark_config->chunk_size);
+      } else {
+        Fail("Unknown textual file format. This should have been caught earlier.");
+      }
+
+    }
+  }
+
+  /**
+   * 3. Encode the Tables
+   */
+  for (auto& [table_name, table_entry] : _table_entries) {
+
   }
 
   exit(0);

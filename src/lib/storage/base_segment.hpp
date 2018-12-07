@@ -6,6 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/format_bytes.hpp"
+#include "chunk_encoder.hpp"
 
 namespace opossum {
 
@@ -30,6 +31,9 @@ class BaseSegment : private Noncopyable {
 
   // Copies a segment using a new allocator. This is useful for placing the segment on a new NUMA node.
   virtual std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+
+  // returns the encoding and vector compression used for this segment
+  virtual SegmentEncodingSpec encoding() const = 0;
 
   // Estimate how much memory the segment is using.
   // Might be inaccurate, especially if the segment contains non-primitive data,

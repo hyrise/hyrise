@@ -58,13 +58,6 @@ struct BenchmarkState {
   Duration max_duration;
 };
 
-class BenchmarkTableEncoder {
- public:
-  // @param out   stream for logging info
-  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table,
-                     const EncodingConfig& encoding_config, std::ostream& out);
-};
-
 class CLIConfigParser {
  public:
   static bool cli_has_json_config(const int argc, char** argv);

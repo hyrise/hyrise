@@ -16,7 +16,10 @@ class FileBasedTableGenerator : public AbstractTableGenerator {
 
  private:
   struct TableEntry {
-    std::unordered_map<std::string, std::filesystem::path> source_files_by_extension;
+    std::optional<std::filesystem::path> binary_file_path;
+    std::optional<std::filesystem::path> text_file_path;
+    bool loaded_from_binary{false};
+    std::shared_ptr<const Table> table;
   };
 
   std::unordered_map<std::string, TableEntry> _table_entries;

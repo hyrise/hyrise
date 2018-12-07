@@ -25,6 +25,8 @@ set(
     abstract_query_generator.cpp
     benchmark_config.cpp
     benchmark_config.hpp
+    benchmark_table_encoder.cpp
+    benchmark_table_encoder.hpp
     encoding_config.cpp
     encoding_config.hpp
     file_based_table_generator.cpp
