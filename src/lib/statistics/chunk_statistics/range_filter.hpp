@@ -31,8 +31,14 @@ class RangeFilter : public AbstractFilter {
 
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
-    // Early exit for NULL variants.
-    if (variant_is_null(variant_value)) {
+    /*
+     * Early exit for NULL-checking predicates and NULL variants. Predicates with one or 
+     * more variant parameter being NULL are not prunable. Malformed predicates such as
+     * can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not pruned either,
+     * the caller is expected to call the function correctly.
+     */
+    if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
+        predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
       return false;
     }
 
@@ -77,7 +83,7 @@ class RangeFilter : public AbstractFilter {
          *    - both bounds are within the same gap
          */
 
-        Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+        Assert(variant_value2.has_value(), "Between operator needs two values.");
         const auto value2 = type_cast_variant<T>(*variant_value2);
 
         // Smaller than the segment's minimum.
