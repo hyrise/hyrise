@@ -7,10 +7,12 @@ namespace opossum {
 const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
 
 void MvccDeletePlugin::start() {
-
+  //TODO: Implement MVCC Delete logic
 }
 
-void MvccDeletePlugin::stop() { StorageManager::get().drop_table("DummyTable"); }
+void MvccDeletePlugin::stop() {
+  //TODO: Implement if necessary
+}
 
 EXPORT_PLUGIN(MvccDeletePlugin)
 
