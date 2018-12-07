@@ -17,7 +17,8 @@ using TableSegmentEncodingMapping =
 std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
 
 // View EncodingConfig::description to see format of encoding JSON
-struct EncodingConfig {
+class EncodingConfig {
+ public:
   EncodingConfig();
   EncodingConfig(const SegmentEncodingSpec& default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                  TableSegmentEncodingMapping encoding_mapping);

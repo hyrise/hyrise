@@ -18,6 +18,7 @@
 
 #include "resolve_type.hpp"
 #include "types.hpp"
+#include "benchmark_table_encoder.hpp"
 
 namespace opossum {
 

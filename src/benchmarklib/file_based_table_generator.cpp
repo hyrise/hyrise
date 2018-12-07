@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "benchmark_config.hpp"
+#include "benchmark_table_encoder.hpp"
 #include "import_export/binary.hpp"
 #include "operators/import_binary.hpp"
 #include "import_export/csv_parser.hpp"
@@ -125,7 +126,7 @@ void FileBasedTableGenerator::_generate() {
    * 3. Encode the Tables
    */
   for (auto& [table_name, table_entry] : _table_entries) {
-
+    BenchmarkTableEncoder::encode(table_name, table_entry.table, _benchmark_config->encoding_config, _benchmark_config->out);
   }
 
   exit(0);

@@ -64,8 +64,6 @@ class ValueSegment : public BaseValueSegment {
   // Return the number of entries in the segment.
   size_t size() const final;
 
-  SegmentEncodingSpec encoding() const final;
-
   // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 

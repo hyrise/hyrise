@@ -1,21 +1,58 @@
 #include "benchmark_table_encoder.hpp"
 
 #include "constant_mappings.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
+#include "storage/base_value_segment.hpp"
 #include "types.hpp"
+#include "resolve_type.hpp"
 #include "encoding_config.hpp"
 
 namespace {
 
 using namespace opossum;  // NOLINT
 
+SegmentEncodingSpec _generate_segment_encoding_spec(const BaseValueSegment&) {
+  return {EncodingType::Unencoded};
+}
+
+SegmentEncodingSpec _generate_segment_encoding_spec(const ReferenceSegment&) {
+  Fail("Did not expect a ReferenceSegment in base table");
+}
+
+SegmentEncodingSpec _generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
+  auto vector_compression_type = VectorCompressionType{};
+
+  switch (base_encoded_segment.compressed_vector_type()) {
+    case CompressedVectorType::Invalid:
+      vector_compression_type = VectorCompressionType::Invalid;
+      break;
+    case CompressedVectorType::FixedSize1ByteAligned:
+    case CompressedVectorType::FixedSize2ByteAligned:
+    case CompressedVectorType::FixedSize4ByteAligned:
+      vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
+      break;
+    case CompressedVectorType::SimdBp128:
+      vector_compression_type = VectorCompressionType::SimdBp128;
+      break;
+  }
+
+  return {base_encoded_segment.encoding_type(), vector_compression_type};
+}
+
 ChunkEncodingSpec _generate_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
 
   for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
+    const auto& base_segment = *chunk.get_segment(column_id);
 
+    resolve_data_and_segment_type(base_segment, [&](const auto /* data_type_t */, const auto& segment) {
+      chunk_encoding_spec[column_id] = _generate_segment_encoding_spec(segment);
+    });
   }
+
+  return chunk_encoding_spec;
 }
 
 }

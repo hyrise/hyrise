@@ -23,6 +23,10 @@ struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
       : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 
+  bool operator==(const SegmentEncodingSpec& rhs) const {
+    return encoding_type == rhs.encoding_type && vector_compression_type == rhs.vector_compression_type;
+  }
+
   EncodingType encoding_type;
   std::optional<VectorCompressionType> vector_compression_type;
 };
@@ -45,7 +49,7 @@ class ChunkEncoder {
    * All segments of the chunk need to be of type ValueSegment<T>,
    * i.e., recompression is not yet supported.
    *
-   * Note: In some cases, it might be benificial to
+   * Note: In some cases, it might be beneficial to
    *       leave certain segments of a chunk unencoded.
    *       Use EncodingType::Unencoded in this case.
    */
