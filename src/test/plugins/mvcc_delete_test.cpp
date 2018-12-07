@@ -51,12 +51,12 @@ class MvccDeleteTest : public BaseTest {
 
   void load_plugin() {
     auto& pm = PluginManager::get();
-    pm.load_plugin(build_dylib_path("libMvccDelete"));
+    pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
   }
 
   void unload_plugin() {
     auto& pm = PluginManager::get();
-    pm.unload_plugin(build_dylib_path("MvccDelete"));
+    pm.unload_plugin(build_dylib_path("MvccDeletePlugin"));
   }
 };
 
