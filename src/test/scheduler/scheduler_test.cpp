@@ -214,6 +214,9 @@ TEST_F(SchedulerTest, MultipleOperators) {
 }
 
 TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
+  if (std::thread::hardware_concurrency() < 4) {
+    GTEST_SKIP();
+  }
   Topology::use_non_numa_topology(4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
