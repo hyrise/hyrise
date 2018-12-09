@@ -1,6 +1,7 @@
 #include "benchmark/benchmark.h"
 
 #include "tpch/tpch_table_generator.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -11,7 +12,8 @@ namespace opossum {
  */
 static void BM_TpchDbGenerator(benchmark::State& state) {  // NOLINT
   while (state.KeepRunning()) {
-    TpchTableGenerator(0.5f, 1000).generate();
+    TpchTableGenerator(0.5f, 1000).generate_and_store();
+    StorageManager::reset();
   }
 }
 BENCHMARK(BM_TpchDbGenerator);

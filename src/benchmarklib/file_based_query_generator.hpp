@@ -1,7 +1,7 @@
 #pragma once
 
 #include "abstract_query_generator.hpp"
-#include "benchmark_utils.hpp"
+#include "benchmark_config.hpp"
 
 namespace opossum {
 
