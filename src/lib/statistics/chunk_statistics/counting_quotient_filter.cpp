@@ -49,11 +49,8 @@ CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType value, size_t count) {
-  const auto bitmask = static_cast<size_t>(std::pow(2, _hash_bits)) - 1;
-  const auto hash = bitmask & _hash(value);
-  for (size_t idx = 0; idx < count; ++idx) {
-    boost::apply_visitor([&](auto& filter) { qf_insert(&filter, hash, 0, 1); }, _quotient_filter);
-  }
+  const auto hash = get_hash_bits(value, _hash_bits);
+  boost::apply_visitor([&](auto& filter) { qf_insert(&filter, hash, 0, count); }, _quotient_filter);
 }
 
 template <typename ElementType>
@@ -72,8 +69,7 @@ bool CountingQuotientFilter<ElementType>::can_prune(const PredicateCondition pre
 
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) const {
-  const auto bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
-  const auto hash = bitmask & _hash(value);
+  const auto hash = get_hash_bits(value, _hash_bits);
 
   auto count = size_t{0};
   boost::apply_visitor([&](auto& filter) { count = qf_count_key_value(&filter, hash, 0); }, _quotient_filter);
@@ -81,8 +77,22 @@ size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) cons
 }
 
 template <typename ElementType>
-size_t CountingQuotientFilter<ElementType>::_hash(const ElementType& value) const {
-  return std::hash<ElementType>{}(value);
+inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementType>::get_hash_bits(const ElementType& value, const uint64_t bit_count) {
+  /*
+   *  Counting Quotient Filters use variable length hash values to build their internal data structures.
+   *  These can be as low 8 bit. Hence, it has to be ensured that the lower bits include enough
+   *  entropy. For integers                                                                                                                 TODO
+   *
+   *  For non-integral types (e.g., floats), use simplified fibonacci hashing:
+   *      https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-
+   *      that-the-world-forgot-or-a-better-alternative-to-integer-modulo/
+   */
+  if constexpr (std::is_integral<ElementType>::value) {
+    return static_cast<uint64_t>(std::hash<ElementType>{}(value) % static_cast<ElementType>(std::pow(2, bit_count)));
+  } else {
+    // return static_cast<uint64_t>((std::hash<ElementType>{}(value) * 11400714819323198485llu) % bit_count);
+    return static_cast<uint64_t>((std::hash<ElementType>{}(value) * 11400714819323198485llu) >> (64 - bit_count));
+  }
 }
 
 template <typename ElementType>

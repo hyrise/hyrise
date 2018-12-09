@@ -3,10 +3,10 @@
 #include <string>
 #include <unordered_set>
 #include <utility>
+#include <type_traits>
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "storage/base_segment.hpp"
@@ -67,11 +67,6 @@ template <>
 double get_test_value<double>(size_t run) {
   return static_cast<double>(123457.0 + run);
 }
-
-// template<typename T, typename T2 = typename std::enable_if<std::is_arithmetic<T>::value, T>::type>
-// T get_test_value<T>(size_t run) {
-//   return static_cast<T>(T{123457} + run);
-// }
 
 template <>
 std::string get_test_value<std::string>(size_t run) {
@@ -137,7 +132,7 @@ class CountingQuotientFilterTest : public BaseTest {
       }
     }
     const auto false_positive_rate = false_positives / static_cast<float>(runs);
-    EXPECT_TRUE(false_positive_rate < 0.5f);
+    EXPECT_TRUE(false_positive_rate < 0.4f);
   }
 };
 
@@ -171,6 +166,37 @@ TYPED_TEST(CountingQuotientFilterTest, FalsePositiveRate) {
   this->test_false_positive_rate(this->cqf8);
   this->test_false_positive_rate(this->cqf16);
   this->test_false_positive_rate(this->cqf32);
+}
+
+TYPED_TEST(CountingQuotientFilterTest, StaticHashBits) {
+  if constexpr (!std::is_same<TypeParam, int>::value) {
+    GTEST_SKIP();
+  }
+
+  // Test for integers whether simple values are handled as expected (i.e.,
+  // identity funkcion for integers) and whether they are correctly modulo'ed.
+  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(17, 8), 17);
+  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(17, 16), 17);
+  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(17, 32), 17);
+  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(267, 8), 11);
+}
+
+TYPED_TEST(CountingQuotientFilterTest, HashBits) {
+  for (auto bit_count : {8, 16, 32, 64}) {
+    if constexpr (std::is_arithmetic<TypeParam>::value) {
+      for (auto numeric_value : {-28.938, -0.0, 0.0, 17.1717, 32'323'323.323323}) {
+        const auto return_value = CountingQuotientFilter<TypeParam>::get_hash_bits(static_cast<TypeParam>(numeric_value), bit_count);
+        EXPECT_TRUE(return_value >= 0);
+        EXPECT_TRUE(return_value < std::pow(2, bit_count));
+      }
+    } else {
+      for (auto& string_value : {"alpha", "beta", "charlie", "zeier"}) {
+        const auto return_value = CountingQuotientFilter<TypeParam>::get_hash_bits(string_value, bit_count);
+        EXPECT_TRUE(return_value >= 0);
+        EXPECT_TRUE(return_value < std::pow(2, bit_count));
+      }
+    }
+  }
 }
 
 }  // namespace opossum
