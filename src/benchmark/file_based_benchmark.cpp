@@ -2,7 +2,6 @@
 #include <cxxopts.hpp>
 
 #include "benchmark_runner.hpp"
-#include "benchmark_utils.hpp"
 #include "file_based_table_generator.hpp"
 #include "file_based_query_generator.hpp"
 #include "import_export/csv_parser.hpp"

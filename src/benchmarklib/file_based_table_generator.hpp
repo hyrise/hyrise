@@ -12,19 +12,9 @@ class FileBasedTableGenerator : public AbstractTableGenerator {
   FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string& path);
 
  protected:
-  void _generate() override;
+  std::unordered_map<std::string, TableEntry> _generate() override;
 
  private:
-  struct TableEntry {
-    std::optional<std::filesystem::path> binary_file_path;
-    std::optional<std::filesystem::path> text_file_path;
-    bool loaded_from_binary{false};
-    bool reencoded{false};
-    std::shared_ptr<Table> table;
-  };
-
-  std::unordered_map<std::string, TableEntry> _table_entries;
-
   const std::string _path;
 };
 

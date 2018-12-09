@@ -15,8 +15,8 @@ set(
     tpch/tpch_queries.hpp
     tpch/tpch_query_generator.cpp
     tpch/tpch_query_generator.hpp
-    tpch/tpch_db_generator.cpp
-    tpch/tpch_db_generator.hpp
+    tpch/tpch_table_generator.cpp
+    tpch/tpch_table_generator.hpp
 
     abstract_benchmark_table_generator.hpp
     abstract_table_generator.cpp
@@ -25,8 +25,14 @@ set(
     abstract_query_generator.cpp
     benchmark_config.cpp
     benchmark_config.hpp
+    benchmark_runner.cpp
+    benchmark_runner.hpp
+    benchmark_state.cpp
+    benchmark_state.hpp
     benchmark_table_encoder.cpp
     benchmark_table_encoder.hpp
+    cli_config_parser.cpp
+    cli_config_parser.hpp
     encoding_config.cpp
     encoding_config.hpp
     file_based_table_generator.cpp
@@ -34,10 +40,8 @@ set(
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp
-    benchmark_runner.cpp
-    benchmark_runner.hpp
-    benchmark_utils.cpp
-    benchmark_utils.hpp
+    query_benchmark_result.cpp
+    query_benchmark_result.hpp
 )
 
 

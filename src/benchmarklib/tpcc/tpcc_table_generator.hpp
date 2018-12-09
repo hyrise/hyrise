@@ -11,7 +11,7 @@
 #include "tbb/concurrent_vector.h"
 
 #include "abstract_benchmark_table_generator.hpp"
-#include "benchmark_utils.hpp"
+#include "encoding_config.hpp"
 #include "tpcc_random_generator.hpp"
 
 namespace opossum {

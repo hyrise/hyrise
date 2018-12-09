@@ -8,9 +8,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cxxopts.hpp"
+
 #include "abstract_query_generator.hpp"
 #include "abstract_table_generator.hpp"
-#include "benchmark_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -18,6 +19,7 @@
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
+#include "query_benchmark_result.hpp"
 
 namespace opossum {
 

@@ -59,12 +59,36 @@ ChunkEncodingSpec _generate_chunk_encoding_spec(const Chunk& chunk) {
   return chunk_encoding_spec;
 }
 
+bool _is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec, const ChunkEncodingSpec& actual_chunk_encoding_spec) {
+  if (expected_chunk_encoding_spec.size() != actual_chunk_encoding_spec.size()) return false;
+
+  for (auto column_id = ColumnID{0}; column_id < actual_chunk_encoding_spec.size(); ++column_id) {
+    if (expected_chunk_encoding_spec[column_id].encoding_type != actual_chunk_encoding_spec[column_id].encoding_type) {
+      return false;
+    }
+
+    // If an explicit VectorCompressionType is requested, check whether it is used in the Segment. Otherwise, do not
+    // care about the VectorCompressionType used.
+    if (expected_chunk_encoding_spec[column_id].vector_compression_type) {
+      if (expected_chunk_encoding_spec[column_id].vector_compression_type != actual_chunk_encoding_spec[column_id].vector_compression_type) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 }
 
 namespace opossum {
 
 bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
                                    const EncodingConfig& encoding_config, std::ostream& out) {
+
+  /**
+   * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
+   */
   const auto& type_mapping = encoding_config.type_encoding_mapping;
   const auto& custom_mapping = encoding_config.custom_encoding_mapping;
 
@@ -109,13 +133,13 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   }
 
   /**
-   * Encode chunks
+   * 2. Actually encode chunks
    */
   auto encoding_performed = false;
   const auto column_data_types = table->column_data_types();
 
   for (const auto& chunk : table->chunks()) {
-    if (chunk_encoding_spec != _generate_chunk_encoding_spec(*chunk)) {
+    if (!_is_chunk_encoding_spec_satisfied(chunk_encoding_spec, _generate_chunk_encoding_spec(*chunk))) {
       ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
       encoding_performed = true;
     }

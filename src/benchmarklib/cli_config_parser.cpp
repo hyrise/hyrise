@@ -1,62 +1,16 @@
-#include <boost/algorithm/string.hpp>
+#include "cli_config_parser.hpp"
 
+#include <iostream>
 #include <fstream>
 
-#include "benchmark_utils.hpp"
+#include "boost/algorithm/string.hpp"
+
 #include "constant_mappings.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
-#include "storage/table.hpp"
-#include "utils/filesystem.hpp"
+#include "utils/assert.hpp"
+#include "utils/null_streambuf.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
-
-std::ostream& get_out_stream(const bool verbose) {
-  if (verbose) {
-    return std::cout;
-  }
-
-  // Create no-op stream that just swallows everything streamed into it
-  // See https://stackoverflow.com/a/11826666
-  class NullBuffer : public std::streambuf {
-   public:
-    int overflow(int c) override { return c; }
-  };
-
-  static NullBuffer null_buffer;
-  static std::ostream null_stream(&null_buffer);
-  return null_stream;
-}
-
-BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
-
-bool BenchmarkState::keep_running() {
-  switch (state) {
-    case State::NotStarted:
-      benchmark_begin = std::chrono::high_resolution_clock::now();
-      state = State::Running;
-      break;
-    case State::Over:
-      return false;
-    default: {}
-  }
-
-  benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;
-
-  // Stop execution if we reached the time limit
-  if (benchmark_duration >= max_duration) {
-    set_done();
-    return false;
-  }
-
-  return true;
-}
-
-void BenchmarkState::set_done() { state = State::Over; }
-
-bool BenchmarkState::is_done() { return state == State::Over; }
 
 bool CLIConfigParser::cli_has_json_config(const int argc, char** argv) {
   const auto has_json = argc > 1 && boost::algorithm::ends_with(argv[1], ".json");
@@ -82,7 +36,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   // Should the benchmark be run in verbose mode
   const auto verbose = json_config.value("verbose", default_config.verbose);
-  auto& out = get_out_stream(verbose);
+  auto& out = verbose ? std::cout : get_null_streambuf();
 
   // Display info about output destination
   std::optional<std::string> output_file_path;
@@ -142,7 +96,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     Assert(compression_type_str.empty(), "Specified both compression type and an encoding file. Invalid combination.");
   } else {
     encoding_config = std::make_unique<EncodingConfig>(
-        EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
+    EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
     out << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
@@ -167,9 +121,16 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
+  const auto cache_binary_tables = json_config.value("cache_binary_tables", false);
+  if (cache_binary_tables) {
+    out << "- Caching tables as binary files" << std::endl;
+  } else {
+    out << "- Not caching tables as binary files" << std::endl;
+  }
+
   return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,       *encoding_config, max_runs, timeout_duration,
                          warmup_duration,      use_mvcc, output_file_path, enable_scheduler, cores,    clients,
-                         enable_visualization, out};
+                         enable_visualization, cache_binary_tables, out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -193,6 +154,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
+  json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
 
   return json_config;
 }

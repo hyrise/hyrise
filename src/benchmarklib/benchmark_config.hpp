@@ -22,7 +22,7 @@ class BenchmarkConfig {
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const Duration& warmup_duration, const UseMvcc use_mvcc,
                   const std::optional<std::string>& output_file_path, const bool enable_scheduler, const uint32_t cores,
-                  const uint32_t clients, const bool enable_visualization, std::ostream& out);
+                  const uint32_t clients, const bool enable_visualization, const bool cache_binary_tables, std::ostream& out);
 
   static BenchmarkConfig get_default_config();
 
@@ -39,7 +39,7 @@ class BenchmarkConfig {
   const uint32_t cores = 0;
   const uint32_t clients = 1;
   const bool enable_visualization = false;
-  const bool cache_tables_as_binaries = true;
+  const bool cache_binary_tables = true;
   std::ostream& out;
 
   static const char* description;

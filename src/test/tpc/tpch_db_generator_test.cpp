@@ -2,7 +2,7 @@
 
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -12,7 +12,7 @@ TEST(TpchDbGeneratorTest, RowCounts) {
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
   const auto scale_factor = 0.001f;
-  const auto tables = TpchDbGenerator(scale_factor, 100).generate();
+  const auto tables = TpchTableGenerator(scale_factor, 100).generate();
 
   EXPECT_EQ(tables.at(TpchTable::Part)->row_count(), std::floor(200'000 * scale_factor));
   EXPECT_EQ(tables.at(TpchTable::Supplier)->row_count(), std::floor(10'000 * scale_factor));
@@ -25,12 +25,12 @@ TEST(TpchDbGeneratorTest, RowCounts) {
 
 TEST(TpchDbGeneratorTest, TableContents) {
   /**
-   * Check whether that data TpchDbGenerator generates with a scale factor of 0.001 is the exact same that dbgen
+   * Check whether that data TpchTableGenerator generates with a scale factor of 0.001 is the exact same that dbgen
    *     generates
    */
   const auto scale_factor = 0.001f;
   const auto chunk_size = 1000;
-  const auto tables = TpchDbGenerator(scale_factor, chunk_size).generate();
+  const auto tables = TpchTableGenerator(scale_factor, chunk_size).generate();
 
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part), load_table("src/test/tables/tpch/sf-0.001/part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Supplier),
@@ -57,7 +57,7 @@ TEST(TpchDbGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(StorageManager::get().has_table("region"));
 
   // Small scale factor
-  TpchDbGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
+  TpchTableGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
 
   EXPECT_TRUE(StorageManager::get().has_table("part"));
   EXPECT_TRUE(StorageManager::get().has_table("supplier"));

@@ -21,7 +21,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "tpch/tpch_query_generator.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -63,7 +63,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
    */
   const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
-  TpchDbGenerator{scale_factor, 10'000}.generate_and_store();
+  TpchTableGenerator{scale_factor, 10'000}.generate_and_store();
   for (const auto& tpch_table_name : tpch_table_names) {
     const auto table = StorageManager::get().get_table(tpch_table_name);
     _sqlite_wrapper->create_table(*table, tpch_table_name);

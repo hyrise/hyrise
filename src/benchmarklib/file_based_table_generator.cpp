@@ -4,8 +4,6 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
-#include "import_export/binary.hpp"
-#include "operators/export_binary.hpp"
 #include "operators/import_binary.hpp"
 #include "import_export/csv_parser.hpp"
 #include "utils/load_table.hpp"
@@ -15,15 +13,16 @@ using namespace std::string_literals;
 namespace opossum {
 
 FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string &path) :
-AbstractTableGenerator(benchmark_config), _path(path)
+  AbstractTableGenerator(benchmark_config), _path(path)
 {
 
 }
 
-void FileBasedTableGenerator::_generate() {
+std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTableGenerator::_generate() {
   // TODO(moritz)
-  Assert(!std::filesystem::is_regular_file(_path), "")
+  Assert(!std::filesystem::is_regular_file(_path), "");
 
+  auto table_entries = std::unordered_map<std::string, TableEntry>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
 
   /**
@@ -42,10 +41,10 @@ void FileBasedTableGenerator::_generate() {
     auto table_name = directory_entry.path().filename();
     table_name.replace_extension("");
 
-    auto table_entries_iter = _table_entries.find(table_name);
+    auto table_entries_iter = table_entries.find(table_name);
 
-    if (table_entries_iter == _table_entries.end()) {
-      table_entries_iter = _table_entries.emplace(table_name, TableEntry{}).first;
+    if (table_entries_iter == table_entries.end()) {
+      table_entries_iter = table_entries.emplace(table_name, TableEntry{}).first;
     }
 
     auto& table_entry = table_entries_iter->second;
@@ -62,7 +61,7 @@ void FileBasedTableGenerator::_generate() {
   /**
    * 2. Actually load the tables. Load from binary file if a binary file exists for a Table.
    */
-  for (auto& [table_name, table_entry] : _table_entries) {
+  for (auto& [table_name, table_entry] : table_entries) {
     _benchmark_config->out << "- Loading table '" << table_name << "' ";
 
     // Pick a source file to load a table from, prefer the binary version
@@ -84,35 +83,7 @@ void FileBasedTableGenerator::_generate() {
     }
   }
 
-  /**
-   * 3. Encode the Tables
-   */
-  for (auto& [table_name, table_entry] : _table_entries) {
-    table_entry.reencoded = BenchmarkTableEncoder::encode(table_name, table_entry.table, _benchmark_config->encoding_config, _benchmark_config->out);
-  }
-
-  /**
-   * 4. Write the Tables into binary files if required
-   */
-  if (_benchmark_config->cache_tables_as_binaries) {
-    for (auto& [table_name, table_entry] : _table_entries) {
-      if (!table_entry.loaded_from_binary || table_entry.reencoded) {
-        auto binary_file_path = std::filesystem::path{};
-        if (table_entry.binary_file_path) {
-          binary_file_path = *table_entry.binary_file_path;
-        } else {
-          binary_file_path = *table_entry.text_file_path;
-          binary_file_path.replace_extension(".bin");
-        }
-
-        _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'";
-        ExportBinary::write_binary(*table_entry.table, binary_file_path);
-      }
-    }
-  }
-
-  exit(0);
+  return table_entries;
 }
 }
 
-using namespace std::string_literals;  // NOLINE
