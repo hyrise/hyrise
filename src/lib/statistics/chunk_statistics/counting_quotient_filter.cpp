@@ -35,7 +35,7 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
   } else if (remainder_size == 32) {
     _quotient_filter = gqf32::quotient_filter{};
   } else {
-    Fail("Invalid remainder remainder_size");
+    Fail("Invalid remainder_size");
   }
 
   const auto number_of_slots = static_cast<size_t>(std::pow(2, quotient_size));
