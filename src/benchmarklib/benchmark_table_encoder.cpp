@@ -22,11 +22,11 @@ SegmentEncodingSpec _generate_segment_encoding_spec(const ReferenceSegment&) {
 }
 
 SegmentEncodingSpec _generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
-  auto vector_compression_type = VectorCompressionType{};
+  auto vector_compression_type = std::optional<VectorCompressionType>{};
 
   switch (base_encoded_segment.compressed_vector_type()) {
     case CompressedVectorType::Invalid:
-      vector_compression_type = VectorCompressionType::Invalid;
+      vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
       break;
     case CompressedVectorType::FixedSize1ByteAligned:
     case CompressedVectorType::FixedSize2ByteAligned:
@@ -38,7 +38,11 @@ SegmentEncodingSpec _generate_segment_encoding_spec(const BaseEncodedSegment& ba
       break;
   }
 
-  return {base_encoded_segment.encoding_type(), vector_compression_type};
+  if (vector_compression_type) {
+    return {base_encoded_segment.encoding_type(), *vector_compression_type};
+  } else {
+    return {base_encoded_segment.encoding_type()};
+  }
 }
 
 ChunkEncodingSpec _generate_chunk_encoding_spec(const Chunk& chunk) {

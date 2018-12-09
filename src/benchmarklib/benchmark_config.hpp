@@ -39,6 +39,7 @@ class BenchmarkConfig {
   const uint32_t cores = 0;
   const uint32_t clients = 1;
   const bool enable_visualization = false;
+  const bool cache_tables_as_binaries = true;
   std::ostream& out;
 
   static const char* description;

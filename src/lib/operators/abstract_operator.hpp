@@ -166,7 +166,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const AbstractOperator> _input_right;
 
   // Is nullptr until the operator is executed
-  std::shared_ptr<Table> _output;
+  std::shared_ptr<const Table> _output;
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;

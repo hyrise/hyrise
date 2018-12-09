@@ -19,7 +19,8 @@ class FileBasedTableGenerator : public AbstractTableGenerator {
     std::optional<std::filesystem::path> binary_file_path;
     std::optional<std::filesystem::path> text_file_path;
     bool loaded_from_binary{false};
-    std::shared_ptr<const Table> table;
+    bool reencoded{false};
+    std::shared_ptr<Table> table;
   };
 
   std::unordered_map<std::string, TableEntry> _table_entries;
