@@ -1,7 +1,7 @@
 #include "null_streambuf.hpp"
 
-#include <streambuf>
 #include <iostream>
+#include <streambuf>
 
 namespace opossum {
 
@@ -18,4 +18,4 @@ std::ostream& get_null_streambuf() {
   return null_stream;
 }
 
-}
+}  // namespace opossum

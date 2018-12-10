@@ -35,8 +35,7 @@ class TpchTableGenerator final : public AbstractTableGenerator {
   // Constructor for creating a TpchTableGenerator in a benchmark
   explicit TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
- protected:
-  std::unordered_map<std::string, TableEntry> _generate() override;
+  std::unordered_map<std::string, TableEntry> generate() override;
 
  private:
   float _scale_factor;

@@ -2,22 +2,23 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "operators/export_binary.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
-AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config):
-  _benchmark_config(benchmark_config) {}
+AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+    : _benchmark_config(benchmark_config) {}
 
 void AbstractTableGenerator::generate_and_store() {
-  auto table_entries = _generate();
+  auto table_entries = generate();
 
   /**
    * Encode the Tables
    */
   for (auto& [table_name, table_entry] : table_entries) {
-    table_entry.re_encoded = BenchmarkTableEncoder::encode(table_name, table_entry.table, _benchmark_config->encoding_config, _benchmark_config->out);
+    table_entry.re_encoded = BenchmarkTableEncoder::encode(table_name, table_entry.table,
+                                                           _benchmark_config->encoding_config, _benchmark_config->out);
   }
 
   /**
@@ -34,7 +35,8 @@ void AbstractTableGenerator::generate_and_store() {
           binary_file_path.replace_extension(".bin");
         }
 
-        _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'" << std::endl;
+        _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'"
+                               << std::endl;
         ExportBinary::write_binary(*table_entry.table, binary_file_path);
       }
     }
@@ -49,11 +51,9 @@ void AbstractTableGenerator::generate_and_store() {
 }
 
 std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_minimal_benchmark_config(uint32_t chunk_size) {
-  return std::make_shared<BenchmarkConfig>(
-    BenchmarkMode::IndividualQueries, true, chunk_size,
-   EncodingConfig{}, 0, Duration{}, Duration{}, UseMvcc::No, std::nullopt, false, 1,
-  1, false, false, std::cout
-  );
+  return std::make_shared<BenchmarkConfig>(BenchmarkMode::IndividualQueries, true, chunk_size, EncodingConfig{}, 0,
+                                           Duration{}, Duration{}, UseMvcc::No, std::nullopt, false, 1, 1, false, false,
+                                           std::cout);
 }
 
 }  // namespace opossum

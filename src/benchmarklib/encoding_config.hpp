@@ -5,8 +5,8 @@
 
 #include "json.hpp"
 
-#include "storage/encoding_type.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace opossum {
 
@@ -14,7 +14,7 @@ using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec
 
 // Map<TABLE_NAME, Map<column_name, SegmentEncoding>>
 using TableSegmentEncodingMapping =
-std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
+    std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
 
 // View EncodingConfig::description to see format of encoding JSON
 class EncodingConfig {
@@ -40,4 +40,4 @@ class EncodingConfig {
   static const char* description;
 };
 
-}
+}  // namespace opossum

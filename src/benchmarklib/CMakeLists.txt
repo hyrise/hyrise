@@ -37,6 +37,8 @@ set(
     encoding_config.hpp
     file_based_table_generator.cpp
     file_based_table_generator.hpp
+    file_based_query_generator.cpp
+    file_based_query_generator.hpp
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp

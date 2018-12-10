@@ -8,4 +8,4 @@ namespace opossum {
 // See https://stackoverflow.com/a/11826666
 std::ostream& get_null_streambuf();
 
-};
+};  // namespace opossum

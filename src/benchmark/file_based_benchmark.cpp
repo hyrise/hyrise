@@ -3,8 +3,8 @@
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
-#include "file_based_table_generator.hpp"
 #include "file_based_query_generator.hpp"
+#include "file_based_table_generator.hpp"
 #include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -19,7 +19,7 @@
 using namespace opossum;  // NOLINT
 
 int main(int argc, char* argv[]) {
-  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
 
   // clang-format off
   cli_options.add_options()
@@ -31,14 +31,14 @@ int main(int argc, char* argv[]) {
   std::string query_path;
   std::string table_path;
 
-  if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
+  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
-    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
+    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
     table_path = json_config.value("tables", "");
     query_path = json_config.value("queries", "");
 
-    benchmark_config = std::make_shared<opossum::BenchmarkConfig>(
-        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
+    benchmark_config = std::make_shared<BenchmarkConfig>(
+        CLIConfigParser::parse_basic_options_json_config(json_config));
 
   } else {
     // Parse regular command line args
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
 
     // Display usage and quit
     if (cli_parse_result.count("help")) {
-      std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
+      std::cout << CLIConfigParser::detailed_help(cli_options) << std::endl;
       return 0;
     }
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
     table_path = cli_parse_result["tables"].as<std::string>();
 
     benchmark_config =
-        std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+        std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
   // Check that the options 'queries' and 'tables' were specifiedc
@@ -68,12 +68,9 @@ int main(int argc, char* argv[]) {
   benchmark_config->out << "- Running on tables from " << table_path << std::endl;
 
   // Run the benchmark
-  auto context = opossum::BenchmarkRunner::create_context(*benchmark_config);
+  auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  table_generator->generate_and_store();
-
   auto query_generator = std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path);
 
-  opossum::BenchmarkRunner{*benchmark_config, 
-                           std::move(query_generator), std::move(table_generator), context}.run();
+  BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
 }

@@ -12,9 +12,9 @@ extern "C" {
 #include "boost/hana/integral_constant.hpp"
 #include "boost/hana/zip_with.hpp"
 
+#include "benchmark_config.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
-#include "benchmark_config.hpp"
 
 extern char** asc_date;
 extern seed_t seed[];
@@ -203,12 +203,10 @@ std::unordered_map<TpchTable, std::string> tpch_table_names = {
 TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
     : AbstractTableGenerator(create_minimal_benchmark_config(chunk_size)), _scale_factor(scale_factor) {}
 
-TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config):
-  AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {
+TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+    : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-}
-
-std::unordered_map<std::string, AbstractTableGenerator::TableEntry> TpchTableGenerator::_generate() {
+std::unordered_map<std::string, AbstractTableGenerator::TableEntry> TpchTableGenerator::generate() {
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
 
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
@@ -219,18 +217,22 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> TpchTableGen
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names, UseMvcc::Yes,
-                                customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes, order_count};
-  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names, UseMvcc::Yes,
-                                order_count * 4};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes, part_count};
-  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names, UseMvcc::Yes,
-                                part_count * 4};
-  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names, UseMvcc::Yes,
-                                supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes, nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes, region_count};
+  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
+                                UseMvcc::Yes, customer_count};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes,
+                             order_count};
+  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                UseMvcc::Yes, order_count * 4};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes,
+                            part_count};
+  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+                                UseMvcc::Yes, part_count * 4};
+  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
+                                UseMvcc::Yes, supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes,
+                              nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
+                              region_count};
 
   dbgen_reset_seeds();
 

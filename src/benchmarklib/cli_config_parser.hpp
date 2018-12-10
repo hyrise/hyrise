@@ -3,12 +3,11 @@
 #include <filesystem>
 #include <string>
 
-#include "json.hpp"
 #include "cxxopts.hpp"
+#include "json.hpp"
 
 #include "benchmark_config.hpp"
 #include "encoding_config.hpp"
-
 
 namespace opossum {
 

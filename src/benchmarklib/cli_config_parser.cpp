@@ -1,7 +1,7 @@
 #include "cli_config_parser.hpp"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include "boost/algorithm/string.hpp"
 
@@ -96,7 +96,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     Assert(compression_type_str.empty(), "Specified both compression type and an encoding file. Invalid combination.");
   } else {
     encoding_config = std::make_unique<EncodingConfig>(
-    EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
+        EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
     out << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
@@ -128,9 +128,21 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     out << "- Not caching tables as binary files" << std::endl;
   }
 
-  return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,       *encoding_config, max_runs, timeout_duration,
-                         warmup_duration,      use_mvcc, output_file_path, enable_scheduler, cores,    clients,
-                         enable_visualization, cache_binary_tables, out};
+  return BenchmarkConfig{benchmark_mode,
+                         verbose,
+                         chunk_size,
+                         *encoding_config,
+                         max_runs,
+                         timeout_duration,
+                         warmup_duration,
+                         use_mvcc,
+                         output_file_path,
+                         enable_scheduler,
+                         cores,
+                         clients,
+                         enable_visualization,
+                         cache_binary_tables,
+                         out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {

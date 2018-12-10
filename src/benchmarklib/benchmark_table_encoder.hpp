@@ -17,4 +17,4 @@ class BenchmarkTableEncoder {
                      const EncodingConfig& encoding_config, std::ostream& out);
 };
 
-}
+}  // namespace opossum

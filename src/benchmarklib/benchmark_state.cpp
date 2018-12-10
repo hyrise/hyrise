@@ -32,4 +32,4 @@ void BenchmarkState::set_done() { state = State::Over; }
 
 bool BenchmarkState::is_done() { return state == State::Over; }
 
-}
+}  // namespace opossum

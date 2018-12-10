@@ -1,7 +1,7 @@
 #include "benchmark/benchmark.h"
 
-#include "tpch/tpch_table_generator.hpp"
 #include "storage/storage_manager.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
 

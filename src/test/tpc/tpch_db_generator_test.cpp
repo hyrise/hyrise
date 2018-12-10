@@ -12,15 +12,15 @@ TEST(TpchDbGeneratorTest, RowCounts) {
    * Mostly intended to generate coverage and trigger potential leaks in third_party/tpch_dbgen
    */
   const auto scale_factor = 0.001f;
-  const auto tables = TpchTableGenerator(scale_factor, 100).generate();
+  const auto table_entries = TpchTableGenerator(scale_factor, 100).generate();
 
-  EXPECT_EQ(tables.at(TpchTable::Part)->row_count(), std::floor(200'000 * scale_factor));
-  EXPECT_EQ(tables.at(TpchTable::Supplier)->row_count(), std::floor(10'000 * scale_factor));
-  EXPECT_EQ(tables.at(TpchTable::PartSupp)->row_count(), std::floor(800'000 * scale_factor));
-  EXPECT_EQ(tables.at(TpchTable::Customer)->row_count(), std::floor(150'000 * scale_factor));
-  EXPECT_EQ(tables.at(TpchTable::Orders)->row_count(), std::floor(1'500'000 * scale_factor));
-  EXPECT_EQ(tables.at(TpchTable::Nation)->row_count(), std::floor(25));
-  EXPECT_EQ(tables.at(TpchTable::Region)->row_count(), std::floor(5));
+  EXPECT_EQ(table_entries.at("part").table->row_count(), std::floor(200'000 * scale_factor));
+  EXPECT_EQ(table_entries.at("supplier").table->row_count(), std::floor(10'000 * scale_factor));
+  EXPECT_EQ(table_entries.at("partsupp").table->row_count(), std::floor(800'000 * scale_factor));
+  EXPECT_EQ(table_entries.at("customer").table->row_count(), std::floor(150'000 * scale_factor));
+  EXPECT_EQ(table_entries.at("orders").table->row_count(), std::floor(1'500'000 * scale_factor));
+  EXPECT_EQ(table_entries.at("nation").table->row_count(), std::floor(25));
+  EXPECT_EQ(table_entries.at("region").table->row_count(), std::floor(5));
 }
 
 TEST(TpchDbGeneratorTest, TableContents) {
@@ -30,20 +30,21 @@ TEST(TpchDbGeneratorTest, TableContents) {
    */
   const auto scale_factor = 0.001f;
   const auto chunk_size = 1000;
-  const auto tables = TpchTableGenerator(scale_factor, chunk_size).generate();
+  const auto table_entries = TpchTableGenerator(scale_factor, chunk_size).generate();
 
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part), load_table("src/test/tables/tpch/sf-0.001/part.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Supplier),
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("part").table,
+                          load_table("src/test/tables/tpch/sf-0.001/part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("supplier").table,
                           load_table("src/test/tables/tpch/sf-0.001/supplier.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::PartSupp),
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("partsupp").table,
                           load_table("src/test/tables/tpch/sf-0.001/partsupp.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Customer),
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("customer").table,
                           load_table("src/test/tables/tpch/sf-0.001/customer.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Orders),
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("orders").table,
                           load_table("src/test/tables/tpch/sf-0.001/orders.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Nation),
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("nation").table,
                           load_table("src/test/tables/tpch/sf-0.001/nation.tbl", chunk_size));
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Region),
+  EXPECT_TABLE_EQ_ORDERED(table_entries.at("region").table,
                           load_table("src/test/tables/tpch/sf-0.001/region.tbl", chunk_size));
 }
 

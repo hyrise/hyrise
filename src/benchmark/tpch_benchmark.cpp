@@ -10,8 +10,8 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
-#include "cxxopts.hpp"
 #include "cli_config_parser.hpp"
+#include "cxxopts.hpp"
 #include "json.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -20,14 +20,14 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_table_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_query_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-using namespace opossum;
+using namespace opossum;  // NOLINT
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -122,5 +122,7 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(query_ids), std::make_unique<TpchTableGenerator>(scale_factor, config), context).run();
+  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(query_ids),
+                           std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+      .run();
 }

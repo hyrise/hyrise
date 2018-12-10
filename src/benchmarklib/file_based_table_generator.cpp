@@ -4,21 +4,21 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
-#include "operators/import_binary.hpp"
 #include "import_export/csv_parser.hpp"
+#include "operators/import_binary.hpp"
 #include "utils/load_table.hpp"
+#include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string &path) :
-  AbstractTableGenerator(benchmark_config), _path(path)
-{
+FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config,
+                                                 const std::string& path)
+    : AbstractTableGenerator(benchmark_config), _path(path) {}
 
-}
-
-std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTableGenerator::_generate() {
+std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTableGenerator::generate() {
   // TODO(moritz)
   Assert(!std::filesystem::is_regular_file(_path), "");
 
@@ -31,7 +31,7 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTab
    * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
    * binary version of a table.
    */
-  for (const auto &directory_entry : filesystem::recursive_directory_iterator(_path)) {
+  for (const auto& directory_entry : filesystem::recursive_directory_iterator(_path)) {
     if (!std::filesystem::is_regular_file(directory_entry)) continue;
 
     const auto extension = directory_entry.path().extension();
@@ -62,6 +62,8 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTab
    * 2. Actually load the tables. Load from binary file if a binary file exists for a Table.
    */
   for (auto& [table_name, table_entry] : table_entries) {
+    Timer timer;
+
     _benchmark_config->out << "- Loading table '" << table_name << "' ";
 
     // Pick a source file to load a table from, prefer the binary version
@@ -79,11 +81,11 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTab
       } else {
         Fail("Unknown textual file format. This should have been caught earlier.");
       }
-
     }
+
+    std::cout << "    Loaded in " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
   }
 
   return table_entries;
 }
-}
-
+}  // namespace opossum

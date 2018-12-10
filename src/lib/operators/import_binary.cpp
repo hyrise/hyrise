@@ -27,7 +27,6 @@ ImportBinary::ImportBinary(const std::string& filename, const std::optional<std:
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
 std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
-
   std::ifstream file;
   file.open(filename, std::ios::binary);
 

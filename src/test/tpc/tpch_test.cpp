@@ -21,8 +21,8 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
-#include "tpch/tpch_table_generator.hpp"
 #include "tpch/tpch_query_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

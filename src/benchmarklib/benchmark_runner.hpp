@@ -14,12 +14,12 @@
 #include "abstract_table_generator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "query_benchmark_result.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
-#include "query_benchmark_result.hpp"
 
 namespace opossum {
 
@@ -27,10 +27,8 @@ class SQLPipeline;
 
 class BenchmarkRunner {
  public:
-  BenchmarkRunner(const BenchmarkConfig& config,
-                  std::unique_ptr<AbstractQueryGenerator> query_generator,
-                  std::unique_ptr<AbstractTableGenerator> table_generator,
-                  const nlohmann::json& context);
+  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
   void run();

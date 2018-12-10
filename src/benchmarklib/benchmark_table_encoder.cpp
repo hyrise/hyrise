@@ -1,21 +1,19 @@
 #include "benchmark_table_encoder.hpp"
 
 #include "constant_mappings.hpp"
+#include "encoding_config.hpp"
+#include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
-#include "storage/base_value_segment.hpp"
 #include "types.hpp"
-#include "resolve_type.hpp"
-#include "encoding_config.hpp"
 
 namespace {
 
 using namespace opossum;  // NOLINT
 
-SegmentEncodingSpec _generate_segment_encoding_spec(const BaseValueSegment&) {
-  return {EncodingType::Unencoded};
-}
+SegmentEncodingSpec _generate_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
 
 SegmentEncodingSpec _generate_segment_encoding_spec(const ReferenceSegment&) {
   Fail("Did not expect a ReferenceSegment in base table");
@@ -59,7 +57,8 @@ ChunkEncodingSpec _generate_chunk_encoding_spec(const Chunk& chunk) {
   return chunk_encoding_spec;
 }
 
-bool _is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec, const ChunkEncodingSpec& actual_chunk_encoding_spec) {
+bool _is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec,
+                                       const ChunkEncodingSpec& actual_chunk_encoding_spec) {
   if (expected_chunk_encoding_spec.size() != actual_chunk_encoding_spec.size()) return false;
 
   for (auto column_id = ColumnID{0}; column_id < actual_chunk_encoding_spec.size(); ++column_id) {
@@ -70,7 +69,8 @@ bool _is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_e
     // If an explicit VectorCompressionType is requested, check whether it is used in the Segment. Otherwise, do not
     // care about the VectorCompressionType used.
     if (expected_chunk_encoding_spec[column_id].vector_compression_type) {
-      if (expected_chunk_encoding_spec[column_id].vector_compression_type != actual_chunk_encoding_spec[column_id].vector_compression_type) {
+      if (expected_chunk_encoding_spec[column_id].vector_compression_type !=
+          actual_chunk_encoding_spec[column_id].vector_compression_type) {
         return false;
       }
     }
@@ -79,13 +79,12 @@ bool _is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_e
   return true;
 }
 
-}
+}  // namespace
 
 namespace opossum {
 
 bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
                                    const EncodingConfig& encoding_config, std::ostream& out) {
-
   /**
    * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
    */

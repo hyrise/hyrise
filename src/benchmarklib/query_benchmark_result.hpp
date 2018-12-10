@@ -20,5 +20,4 @@ struct QueryBenchmarkResult : public Noncopyable {
   tbb::concurrent_vector<Duration> iteration_durations;
 };
 
-
 }  // namespace opossum

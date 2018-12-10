@@ -21,11 +21,12 @@
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
-                                 std::unique_ptr<AbstractQueryGenerator> query_generator,
-                                 std::unique_ptr<AbstractTableGenerator> table_generator,
-                                 const nlohmann::json& context)
-    : _config(config), _query_generator(std::move(query_generator)), _table_generator(std::move(table_generator)), _context(context) {
+BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
+    : _config(config),
+      _query_generator(std::move(query_generator)),
+      _table_generator(std::move(table_generator)),
+      _context(context) {
   // In non-verbose mode, disable performance warnings
   if (!config.verbose) {
     _performance_warning_disabler.emplace();
@@ -438,7 +439,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-  // clang-format off
+// clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

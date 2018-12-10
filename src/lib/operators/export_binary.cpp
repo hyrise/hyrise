@@ -162,8 +162,7 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
   export_string_values(ofstream, column_names);
 }
 
-void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream,
-                                const ChunkID& chunk_id) {
+void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
 
