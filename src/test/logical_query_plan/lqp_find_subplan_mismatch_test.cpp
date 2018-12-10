@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -33,7 +32,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPFindSubplanMismatchTest : public ::testing::Test {
+class LQPFindSubplanMismatchTest : public BaseTest {
  protected:
   struct QueryNodes {
     std::shared_ptr<ValidateNode> validate_node;

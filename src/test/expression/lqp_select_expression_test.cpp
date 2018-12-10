@@ -1,6 +1,6 @@
 #include <regex>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -18,7 +18,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPSelectExpressionTest : public ::testing::Test {
+class LQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));

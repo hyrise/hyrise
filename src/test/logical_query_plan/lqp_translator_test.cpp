@@ -4,8 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -54,7 +53,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPTranslatorTest : public ::testing::Test {
+class LQPTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
     table_int_float = load_table("src/test/tables/int_float.tbl");
