@@ -31,8 +31,14 @@ class RangeFilter : public AbstractFilter {
 
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
-    // Early exit for NULL variants.
-    if (variant_is_null(variant_value)) {
+    /*
+     * Early exit for NULL-checking predicates and NULL variants. Predicates with one or 
+     * more variant parameter being NULL are not prunable. Malformed predicates such as
+     * can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not pruned either,
+     * the caller is expected to call the function correctly.
+     */
+    if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
+        predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
       return false;
     }
 
@@ -77,7 +83,7 @@ class RangeFilter : public AbstractFilter {
          *    - both bounds are within the same gap
          */
 
-        Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+        Assert(variant_value2.has_value(), "Between operator needs two values.");
         const auto value2 = type_cast_variant<T>(*variant_value2);
 
         // Smaller than the segment's minimum.
@@ -94,13 +100,13 @@ class RangeFilter : public AbstractFilter {
           return range.second < compare_value;
         };
         // Get value range or next larger value range if searched value is in a gap.
-        const auto start_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value, range_comp);
-        const auto end_lower = std::lower_bound(std::begin(_ranges), std::end(_ranges), value2, range_comp);
+        const auto start_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value, range_comp);
+        const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
 
         const bool start_in_value_range =
-            (start_lower != std::end(_ranges)) && (*start_lower).first <= value && value <= (*start_lower).second;
+            (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
         const bool end_in_value_range =
-            (end_lower != std::end(_ranges)) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+            (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
         // Check if both bounds are within the same gap.
         if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {

@@ -14,7 +14,7 @@ JoinOrderingRule::JoinOrderingRule(const std::shared_ptr<AbstractCostEstimator>&
 
 std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
-bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   /**
    * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it
@@ -32,10 +32,6 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
   }
 
   root->set_left_input(result_lqp);
-
-  // Figuring out whether the JoinOrderingRule changed the LQP is hard (and the rule should be applied only once,
-  // anyway). So, return false.
-  return false;
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(

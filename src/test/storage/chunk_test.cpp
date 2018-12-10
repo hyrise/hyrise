@@ -71,10 +71,9 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
 
 TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
-  if (HYRISE_DEBUG) {
-    auto wrapper = []() { make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Null); };
-    EXPECT_THROW(wrapper(), std::logic_error);
-  }
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+  auto wrapper = []() { make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Null); };
+  EXPECT_THROW(wrapper(), std::logic_error);
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {

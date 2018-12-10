@@ -1,7 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -15,7 +14,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class JoinGraphBuilderTest : public ::testing::Test {
+class JoinGraphBuilderTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");

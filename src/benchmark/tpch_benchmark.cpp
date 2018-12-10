@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
     auto& table = tpch_table.second;
 
-    opossum::BenchmarkTableEncoder::encode(table_name, table, config->encoding_config);
+    opossum::BenchmarkTableEncoder::encode(table_name, table, config->encoding_config, config->out);
     opossum::StorageManager::get().add_table(table_name, table);
   }
   config->out << "- ... done." << std::endl;

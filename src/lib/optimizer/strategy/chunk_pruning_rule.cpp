@@ -18,10 +18,11 @@ namespace opossum {
 
 std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
-bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // we only want to follow chains of predicates
   if (node->type != LQPNodeType::Predicate) {
-    return _apply_to_inputs(node);
+    _apply_to_inputs(node);
+    return;
   }
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
@@ -34,7 +35,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
     current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
     if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
-      return _apply_to_inputs(node);
+      _apply_to_inputs(node);
+      return;
     }
   }
 
@@ -44,7 +46,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {
-    return _apply_to_inputs(node);
+    _apply_to_inputs(node);
+    return;
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
@@ -73,9 +76,6 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   } else {
     stored_table->set_excluded_chunk_ids(std::vector<ChunkID>(excluded_chunk_ids.begin(), excluded_chunk_ids.end()));
   }
-
-  // always returns false as we never modify the LQP
-  return false;
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(

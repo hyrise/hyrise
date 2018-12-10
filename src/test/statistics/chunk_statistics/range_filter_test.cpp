@@ -37,7 +37,7 @@ class RangeFilterTest : public ::testing::Test {
 };
 
 using FilterTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_CASE(RangeFilterTest, FilterTypes);
+TYPED_TEST_CASE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // Create vector with a huge gap in the middle whose length exceeds the type's limits.
@@ -56,7 +56,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
-  if (!HYRISE_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
 
   const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
                                           std::numeric_limits<TypeParam>::lowest()};
@@ -153,7 +153,7 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_max_value}));
 }
 
-// create more ranges than distinct values in the test data
+// Test predicates which are not supported by the range filter
 TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
@@ -166,6 +166,11 @@ TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, {17}));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, NULL_VALUE));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, NULL_VALUE));
+
+  // For the default filter, the following value is prunable.
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}));
+  // But malformed predicates are skipped intentially and are thus not prunable
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}, NULL_VALUE));
 }
 
 // this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
@@ -214,11 +219,6 @@ TYPED_TEST(RangeFilterTest, Between) {
 
   // This one has bounds in gaps, but cannot prune.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, {this->_max_value - 1}, {this->_value_larger_than_maximum}));
-
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-3000}, {-2000}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {-999}, {1}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {104}, {1004}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, {10'000'000}, {20'000'000}));
 
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-2000}));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, TypeParam{-999}, TypeParam{1}));

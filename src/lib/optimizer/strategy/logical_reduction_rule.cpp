@@ -16,7 +16,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 std::string LogicalReductionRule::name() const { return "Logical Expression Reducer Rule"; }
 
-bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->type == LQPNodeType::Root, "LogicalReductionRule needs root to hold onto");
 
   /**
@@ -53,8 +53,6 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
     }
     lqp_remove_node(predicate_node);
   }
-
-  return false;
 }
 
 std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(
