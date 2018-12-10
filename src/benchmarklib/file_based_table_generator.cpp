@@ -18,11 +18,11 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
                                                  const std::string& path)
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
-std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTableGenerator::generate() {
+std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
   // TODO(moritz)
   Assert(!std::filesystem::is_regular_file(_path), "");
 
-  auto table_entries = std::unordered_map<std::string, TableEntry>{};
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
 
   /**
@@ -41,52 +41,52 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTab
     auto table_name = directory_entry.path().filename();
     table_name.replace_extension("");
 
-    auto table_entries_iter = table_entries.find(table_name);
+    auto table_info_by_name_iter = table_info_by_name.find(table_name);
 
-    if (table_entries_iter == table_entries.end()) {
-      table_entries_iter = table_entries.emplace(table_name, TableEntry{}).first;
+    if (table_info_by_name_iter == table_info_by_name.end()) {
+      table_info_by_name_iter = table_info_by_name.emplace(table_name, BenchmarkTableInfo{}).first;
     }
 
-    auto& table_entry = table_entries_iter->second;
+    auto& table_info = table_info_by_name_iter->second;
 
     if (extension == ".bin") {
-      Assert(!table_entry.binary_file_path, "Multiple binary files found for table '"s + table_name.string() + "'");
-      table_entry.binary_file_path = directory_entry.path();
+      Assert(!table_info.binary_file_path, "Multiple binary files found for table '"s + table_name.string() + "'");
+      table_info.binary_file_path = directory_entry.path();
     } else {
-      Assert(!table_entry.text_file_path, "Multiple text files found for table '"s + table_name.string() + "'");
-      table_entry.text_file_path = directory_entry.path();
+      Assert(!table_info.text_file_path, "Multiple text files found for table '"s + table_name.string() + "'");
+      table_info.text_file_path = directory_entry.path();
     }
   }
 
   /**
    * 2. Actually load the tables. Load from binary file if a binary file exists for a Table.
    */
-  for (auto& [table_name, table_entry] : table_entries) {
+  for (auto& [table_name, table_info] : table_info_by_name) {
     Timer timer;
 
     _benchmark_config->out << "- Loading table '" << table_name << "' ";
 
     // Pick a source file to load a table from, prefer the binary version
-    if (table_entry.binary_file_path) {
-      _benchmark_config->out << " from '" << *table_entry.binary_file_path << std::endl;
-      table_entry.table = ImportBinary::read_binary(*table_entry.binary_file_path);
-      table_entry.loaded_from_binary = true;
+    if (table_info.binary_file_path) {
+      _benchmark_config->out << " from '" << *table_info.binary_file_path << std::endl;
+      table_info.table = ImportBinary::read_binary(*table_info.binary_file_path);
+      table_info.loaded_from_binary = true;
     } else {
-      _benchmark_config->out << " from '" << *table_entry.text_file_path << std::endl;
-      const auto extension = table_entry.text_file_path->extension();
+      _benchmark_config->out << " from '" << *table_info.text_file_path << std::endl;
+      const auto extension = table_info.text_file_path->extension();
       if (extension == ".tbl") {
-        table_entry.table = load_table(*table_entry.text_file_path, _benchmark_config->chunk_size);
+        table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
       } else if (extension == ".csv") {
-        table_entry.table = CsvParser{}.parse(*table_entry.text_file_path, std::nullopt, _benchmark_config->chunk_size);
+        table_info.table = CsvParser{}.parse(*table_info.text_file_path, std::nullopt, _benchmark_config->chunk_size);
       } else {
         Fail("Unknown textual file format. This should have been caught earlier.");
       }
     }
 
-    std::cout << "    Loaded " << table_entry.table->row_count() << " rows in "
+    std::cout << "    Loaded " << table_info.table->row_count() << " rows in "
               << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
   }
 
-  return table_entries;
+  return table_info_by_name;
 }
 }  // namespace opossum

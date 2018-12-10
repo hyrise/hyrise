@@ -206,7 +206,7 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
 TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-std::unordered_map<std::string, AbstractTableGenerator::TableEntry> TpchTableGenerator::generate() {
+std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
 
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
@@ -321,18 +321,18 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> TpchTableGen
   /**
    * Return
    */
-  std::unordered_map<std::string, AbstractTableGenerator::TableEntry> table_entries;
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-  table_entries["customer"].table = customer_builder.finish_table();
-  table_entries["orders"].table = order_builder.finish_table();
-  table_entries["lineitem"].table = lineitem_builder.finish_table();
-  table_entries["part"].table = part_builder.finish_table();
-  table_entries["partsupp"].table = partsupp_builder.finish_table();
-  table_entries["supplier"].table = supplier_builder.finish_table();
-  table_entries["nation"].table = nation_builder.finish_table();
-  table_entries["region"].table = region_builder.finish_table();
+  table_info_by_name["customer"].table = customer_builder.finish_table();
+  table_info_by_name["orders"].table = order_builder.finish_table();
+  table_info_by_name["lineitem"].table = lineitem_builder.finish_table();
+  table_info_by_name["part"].table = part_builder.finish_table();
+  table_info_by_name["partsupp"].table = partsupp_builder.finish_table();
+  table_info_by_name["supplier"].table = supplier_builder.finish_table();
+  table_info_by_name["nation"].table = nation_builder.finish_table();
+  table_info_by_name["region"].table = region_builder.finish_table();
 
-  return table_entries;
+  return table_info_by_name;
 }
 
 }  // namespace opossum

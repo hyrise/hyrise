@@ -10,6 +10,14 @@ namespace opossum {
 
 class BenchmarkConfig;
 
+struct BenchmarkTableInfo {
+  std::optional<std::filesystem::path> binary_file_path;
+  std::optional<std::filesystem::path> text_file_path;
+  bool loaded_from_binary{false};
+  bool re_encoded{false};
+  std::shared_ptr<Table> table;
+};
+
 class AbstractTableGenerator {
  public:
   explicit AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config);
@@ -17,18 +25,10 @@ class AbstractTableGenerator {
 
   void generate_and_store();
 
-  struct TableEntry {
-    std::optional<std::filesystem::path> binary_file_path;
-    std::optional<std::filesystem::path> text_file_path;
-    bool loaded_from_binary{false};
-    bool re_encoded{false};
-    std::shared_ptr<Table> table;
-  };
-
   /**
    * @return A table_name -> TableEntry mapping
    */
-  virtual std::unordered_map<std::string, TableEntry> generate() = 0;
+  virtual std::unordered_map<std::string, BenchmarkTableInfo> generate() = 0;
 
  protected:
   /**

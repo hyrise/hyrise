@@ -23,10 +23,6 @@ struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
       : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 
-  bool operator==(const SegmentEncodingSpec& rhs) const {
-    return encoding_type == rhs.encoding_type && vector_compression_type == rhs.vector_compression_type;
-  }
-
   EncodingType encoding_type;
   std::optional<VectorCompressionType> vector_compression_type;
 };

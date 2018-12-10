@@ -11,13 +11,13 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
     : _benchmark_config(benchmark_config) {}
 
 void AbstractTableGenerator::generate_and_store() {
-  auto table_entries = generate();
+  auto table_info_by_name = generate();
 
   /**
    * Encode the Tables
    */
-  for (auto& [table_name, table_entry] : table_entries) {
-    table_entry.re_encoded = BenchmarkTableEncoder::encode(table_name, table_entry.table,
+  for (auto& [table_name, table_info] : table_info_by_name) {
+    table_info.re_encoded = BenchmarkTableEncoder::encode(table_name, table_info.table,
                                                            _benchmark_config->encoding_config, _benchmark_config->out);
   }
 
@@ -25,19 +25,19 @@ void AbstractTableGenerator::generate_and_store() {
    * Write the Tables into binary files if required
    */
   if (_benchmark_config->cache_binary_tables) {
-    for (auto& [table_name, table_entry] : table_entries) {
-      if (!table_entry.loaded_from_binary || table_entry.re_encoded) {
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      if (!table_info.loaded_from_binary || table_info.re_encoded) {
         auto binary_file_path = std::filesystem::path{};
-        if (table_entry.binary_file_path) {
-          binary_file_path = *table_entry.binary_file_path;
+        if (table_info.binary_file_path) {
+          binary_file_path = *table_info.binary_file_path;
         } else {
-          binary_file_path = *table_entry.text_file_path;
+          binary_file_path = *table_info.text_file_path;
           binary_file_path.replace_extension(".bin");
         }
 
         _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'"
                                << std::endl;
-        ExportBinary::write_binary(*table_entry.table, binary_file_path);
+        ExportBinary::write_binary(*table_info.table, binary_file_path);
       }
     }
   }
@@ -46,8 +46,8 @@ void AbstractTableGenerator::generate_and_store() {
    * Add the Tables to the StorageManager
    */
   _benchmark_config->out << "- Adding Tables to StorageManager" << std::endl;
-  for (auto& [table_name, table_entry] : table_entries) {
-    StorageManager::get().add_table(table_name, table_entry.table);
+  for (auto& [table_name, table_info] : table_info_by_name) {
+    StorageManager::get().add_table(table_name, table_info.table);
   }
 }
 
