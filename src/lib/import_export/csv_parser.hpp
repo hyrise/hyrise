@@ -72,7 +72,5 @@ class CsvParser {
 
   // CSV meta information like chunk_size, column information, delimitor/seperator characters, etc.
   CsvMeta _meta;
-
-  std::string _escaped_linebreak;
 };
 }  // namespace opossum
