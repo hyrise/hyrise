@@ -109,8 +109,8 @@ void Delete::_on_rollback_records() {
 }
 
 /**
- * values_to_delete must be a table with at least one chunk, containing at least one ReferenceSegment
- * that all reference the table specified by table_name.
+ * values_to_delete must be a table either without chunks or with at least one ReferenceSegment
+ * where all segments reference the table specified by table_name.
  */
 bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
@@ -120,8 +120,6 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   if (!StorageManager::get().has_table(_table_name)) return false;
 
   const auto table = StorageManager::get().get_table(_table_name);
-
-  if (values_to_delete->chunk_count() == 0u) return false;
 
   for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto chunk = values_to_delete->get_chunk(chunk_id);

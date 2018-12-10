@@ -47,7 +47,7 @@ class MinMaxFilterTest<std::string> : public ::testing::Test {
 };
 
 using FilterTypes = ::testing::Types<int, float, double, std::string>;
-TYPED_TEST_CASE(MinMaxFilterTest, FilterTypes);
+TYPED_TEST_CASE(MinMaxFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());

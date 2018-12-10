@@ -30,10 +30,10 @@ class JoinFullTest : public JoinTest {};
 
 // here we define all Join types
 typedef ::testing::Types<JoinNestedLoop, JoinSortMerge, JoinIndex> JoinFullTypes;
-TYPED_TEST_CASE(JoinFullTest, JoinFullTypes);
+TYPED_TEST_CASE(JoinFullTest, JoinFullTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinFullTest, CrossJoin) {
-  if (!HYRISE_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
 
   EXPECT_THROW(std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Cross,
                                            ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals),

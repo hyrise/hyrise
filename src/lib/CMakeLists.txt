@@ -295,8 +295,6 @@ set(
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
-    optimizer/strategy/rule_batch.cpp
-    optimizer/strategy/rule_batch.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp

@@ -92,7 +92,7 @@ typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKe
                          BTreeIndex /* add further indices */>
     DerivedIndices;
 
-TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
+TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk

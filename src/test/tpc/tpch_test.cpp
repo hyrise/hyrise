@@ -122,13 +122,13 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
 INSTANTIATE_TEST_CASE_P(TPCHTestNoJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
-                                         testing::ValuesIn({false})), );  // NOLINT
+                                         testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)  // NOLINT
 
 #if HYRISE_JIT_SUPPORT
 
 INSTANTIATE_TEST_CASE_P(TPCHTestJIT, TPCHTest,
                         testing::Combine(testing::ValuesIn(TPCHQueryGenerator{}.selected_queries()),
-                                         testing::ValuesIn({true})), );  // NOLINT
+                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)  // NOLINT
 
 #endif
 
