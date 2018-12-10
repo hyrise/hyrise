@@ -33,8 +33,7 @@ class CalibrationQueryGenerator {
       const PredicateGeneratorFunctor& predicate_generator) const;
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_aggregate(const std::string& table_name) const;
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_join(
-      const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::string& left_table_name,
-      const std::string& right_table_name) const;
+      const CalibrationQueryGeneratorJoinConfiguration& configuration) const;
 
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_projection(
       const std::vector<LQPColumnReference>& columns) const;

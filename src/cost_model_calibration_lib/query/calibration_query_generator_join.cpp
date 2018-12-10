@@ -11,6 +11,29 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
+    const std::vector<CalibrationQueryGeneratorJoinConfiguration>
+    CalibrationQueryGeneratorJoin::generate_join_permutations(
+            const std::vector<std::pair<std::string, size_t>>& tables,
+            const CalibrationConfiguration& configuration) {
+      std::vector<CalibrationQueryGeneratorJoinConfiguration> output{};
+
+      // Generating all combinations
+      for (const auto& data_type : configuration.data_types) {
+        for (const auto& encoding : configuration.encodings) {
+          for (const auto& left_table : tables) {
+            for (const auto& right_table : tables) {
+              output.push_back({left_table.first, right_table.first, encoding, data_type, false});
+              output.push_back({left_table.first, right_table.first, encoding, data_type, true});
+            }
+          }
+        }
+      }
+
+      std::cout << "Generated " << output.size() << " Permutations for Predicates" << std::endl;
+      return output;
+    }
+
+
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoin::generate_join(
     const CalibrationQueryGeneratorJoinConfiguration& configuration,
     const JoinGeneratorFunctor& join_predicate_generator, const std::shared_ptr<StoredTableNode>& left_table,

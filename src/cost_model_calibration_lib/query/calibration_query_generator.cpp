@@ -112,15 +112,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
   }
 
-  //  for (const auto& left_table_name : _table_names) {
-  //    for (const auto& right_table_name : _table_names) {
-  //      CalibrationQueryGeneratorJoinConfiguration join_configuration{left_table_name, right_table_name,
-  //                                                                    EncodingType::Unencoded, DataType::Int, false};
-  // Generates the same query using all available JoinTypes
-  //      const auto& join_queries = _generate_join(join_configuration, left_table_name, right_table_name);
-  //      add_queries_if_present(queries, join_queries);
-  //    }
-  //  }
+  const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
+  for (const auto &permutation : join_permutations) {
+    const auto& join_queries = _generate_join(permutation);
+    add_queries_if_present(queries, join_queries);
+  }
 
   std::cout << "Generated " << queries.size() << " queries." << std::endl;
 
@@ -157,10 +153,9 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join(
-    const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::string& left_table_name,
-    const std::string& right_table_name) const {
-  const auto left_table = StoredTableNode::make(left_table_name);
-  const auto right_table = StoredTableNode::make(right_table_name);
+    const CalibrationQueryGeneratorJoinConfiguration& configuration) const {
+  const auto left_table = StoredTableNode::make(configuration.left_table_name);
+  const auto right_table = StoredTableNode::make(configuration.right_table_name);
 
   const auto join_nodes = CalibrationQueryGeneratorJoin::generate_join(
       configuration, CalibrationQueryGeneratorJoin::generate_join_predicate, left_table, right_table,
