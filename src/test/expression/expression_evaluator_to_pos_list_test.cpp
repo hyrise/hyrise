@@ -138,7 +138,7 @@ TEST_F(ExpressionEvaluatorToPosListTest, LogicalWithNulls) {
 TEST_F(ExpressionEvaluatorToPosListTest, Exists) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
   const auto table_scan =
-      std::make_shared<TableScan>(table_wrapper, equals_(d, uncorrelated_parameter_(ParameterID{0})));
+      std::make_shared<TableScan>(table_wrapper, equals_(d, placeholder_(ParameterID{0})));
   const auto select = pqp_select_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select), {}));

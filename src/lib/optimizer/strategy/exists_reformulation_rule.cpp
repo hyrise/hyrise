@@ -8,7 +8,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
-#include "expression/parameter_expression.hpp"
+#include "expression/abstract_parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

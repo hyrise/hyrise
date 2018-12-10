@@ -3,7 +3,7 @@
 #include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/parameter_expression.hpp"
+#include "expression/abstract_parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"

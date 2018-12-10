@@ -3,7 +3,7 @@
 #include <utility>
 
 #include "abstract_expression.hpp"
-#include "parameter_expression.hpp"
+#include "abstract_parameter_expression.hpp"
 
 namespace opossum {
 

@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-#include "expression/parameter_expression.hpp"
+#include "expression/abstract_parameter_expression.hpp"
 
 namespace opossum {
 

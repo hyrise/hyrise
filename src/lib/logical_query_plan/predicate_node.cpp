@@ -10,7 +10,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "expression/parameter_expression.hpp"
+#include "expression/abstract_parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/table_statistics.hpp"

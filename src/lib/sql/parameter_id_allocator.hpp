@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include "expression/parameter_expression.hpp"
+#include "expression/abstract_parameter_expression.hpp"
 
 #include "types.hpp"
 

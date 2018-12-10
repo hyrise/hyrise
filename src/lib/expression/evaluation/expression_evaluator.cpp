@@ -705,7 +705,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     const auto& value_expression = static_cast<const ValueExpression&>(expression);
     value = value_expression.value;
   } else {
-    const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
+    const auto& correlated_parameter_expression = static_cast<const ParameterExpression&>(expression);
     Assert(parameter_expression.value().has_value(), "ParameterExpression: Parameter not set, cannot evaluate");
     value = *parameter_expression.value();
   }

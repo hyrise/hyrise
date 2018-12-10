@@ -50,7 +50,7 @@ class TableStatisticsTest : public BaseTest {
 
     auto left_operand = std::shared_ptr<AbstractExpression>{};
     if (is_parameter_id(value)) {
-      left_operand = uncorrelated_parameter_(boost::get<ParameterID>(value));
+      left_operand = placeholder_(boost::get<ParameterID>(value));
     } else {
       left_operand = value_(boost::get<AllTypeVariant>(value));
     }

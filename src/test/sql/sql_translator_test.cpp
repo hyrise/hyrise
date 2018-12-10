@@ -1087,9 +1087,9 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, uncorrelated_parameter_(ParameterID{1})),
-                                         uncorrelated_parameter_(ParameterID{2})),
-    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_(ParameterID{1})),
+                                         placeholder_(ParameterID{2})),
+    PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1108,10 +1108,10 @@ TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{0});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{1});
 
-  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
-  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{3});
-  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{0});
-  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{1});
+  const auto placeholder_0 = placeholder_(ParameterID{2});
+  const auto placeholder_1 = placeholder_(ParameterID{3});
+  const auto placeholder_2 = placeholder_(ParameterID{0});
+  const auto placeholder_3 = placeholder_(ParameterID{1});
 
   // clang-format off
   const auto subselect_a_lqp =
@@ -1193,11 +1193,11 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{0});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{1});
 
-  const auto placeholder_0 = uncorrelated_parameter_(ParameterID{2});
-  const auto placeholder_1 = uncorrelated_parameter_(ParameterID{3});
-  const auto placeholder_2 = uncorrelated_parameter_(ParameterID{5});
-  const auto placeholder_3 = uncorrelated_parameter_(ParameterID{0});
-  const auto placeholder_4 = uncorrelated_parameter_(ParameterID{1});
+  const auto placeholder_0 = placeholder_(ParameterID{2});
+  const auto placeholder_1 = placeholder_(ParameterID{3});
+  const auto placeholder_2 = placeholder_(ParameterID{5});
+  const auto placeholder_3 = placeholder_(ParameterID{0});
+  const auto placeholder_4 = placeholder_(ParameterID{1});
 
   const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
   const auto parameter_int_float2_b = correlated_parameter_(ParameterID{6}, int_float2_b);
@@ -1603,8 +1603,8 @@ TEST_F(SQLTranslatorTest, PrepareWithParameters) {
 
   // clang-format off
   const auto statement_lqp =
-  PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
-    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{1})),
+  PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
+    PredicateNode::make(less_than_(int_float_b, placeholder_(ParameterID{1})),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1635,9 +1635,9 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
 
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{1}, int_float_a));
 
-  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
   PredicateNode::make(less_than_(int_float_a, subselect),
-    PredicateNode::make(less_than_(int_float_b, uncorrelated_parameter_(ParameterID{2})),
+    PredicateNode::make(less_than_(int_float_b, placeholder_(ParameterID{2})),
        stored_table_node_int_float)));
   // clang-format on
 
@@ -1651,7 +1651,7 @@ TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
 
 TEST_F(SQLTranslatorTest, Execute) {
   // clang-format off
-  const auto uncorrelated_parameter = uncorrelated_parameter_(ParameterID{3});
+  const auto uncorrelated_parameter = placeholder_(ParameterID{3});
   const auto correlated_parameter = correlated_parameter_(ParameterID{2}, int_float_a);
 
   const auto prepared_subselect_lqp = AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
@@ -1661,8 +1661,8 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_subselect = lqp_select_(prepared_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
 
   const auto prepared_plan_lqp =
-  PredicateNode::make(greater_than_(int_string_a, uncorrelated_parameter_(ParameterID{1})),
-    PredicateNode::make(less_than_(int_string_b, uncorrelated_parameter_(ParameterID{0})),
+  PredicateNode::make(greater_than_(int_string_a, placeholder_(ParameterID{1})),
+    PredicateNode::make(less_than_(int_string_b, placeholder_(ParameterID{0})),
       PredicateNode::make(equals_(int_string_a, prepared_subselect), stored_table_node_int_string)));
   // clang-format on
 
