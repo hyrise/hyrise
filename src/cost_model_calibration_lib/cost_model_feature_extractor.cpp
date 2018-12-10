@@ -3,6 +3,7 @@
 #include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/index_scan.hpp"
@@ -181,7 +182,7 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
 }
 
 CalibrationColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
-    std::shared_ptr<const Table>& left_input_table, std::shared_ptr<PQPColumnExpression> column_expression) {
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression> column_expression) {
   auto chunk_count = left_input_table->chunk_count();
   const auto& column_id = column_expression->column_id;
 
@@ -292,11 +293,22 @@ const std::optional<CalibrationProjectionFeatures> CostModelFeatureExtractor::_e
 
   return operator_result;
 }
+
 const std::optional<CalibrationJoinFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
     const std::shared_ptr<const AbstractJoinOperator>& op) {
   CalibrationJoinFeatures operator_result{};
 
-  // TODO(Sven): Add some join specific features
+  const auto& left_table = op->input_table_left();
+  const auto& right_table = op->input_table_right();
+
+  const auto& column_ids = op->column_ids();
+
+  const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
+  const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
+
+//  operator_result.join_type = op->type();
+  operator_result.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression);
+  operator_result.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression);
 
   return operator_result;
 }
