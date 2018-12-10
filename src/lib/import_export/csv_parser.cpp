@@ -21,9 +21,9 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_duration.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
-#include "utils/format_duration.hpp"
 
 namespace opossum {
 
@@ -58,7 +58,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   csvfile.seekg(0);
   csvfile.read(content.data(), csvfile_size);
 
-  std::cout << "Loading: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
+  std::cout << "Loading: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
+            << std::endl;
   // make sure content ends with a delimiter for better row processing later
   if (content.back() != _meta.config.delimiter) content.push_back(_meta.config.delimiter);
 
@@ -69,7 +70,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
-    std::cout << "_find_fields_in_chunk: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
+    std::cout << "_find_fields_in_chunk: "
+              << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
     // create empty chunk
     segments_by_chunks.emplace_back();
     auto& segments = segments_by_chunks.back();
@@ -85,7 +87,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
       _parse_into_chunk(relevant_content, field_ends, *table, segments);
     }));
     tasks.back()->schedule();
-    std::cout << "_parse_into_chunk: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
+    std::cout << "_parse_into_chunk: "
+              << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
   }
 
   CurrentScheduler::wait_for_tasks(tasks);
@@ -173,8 +176,6 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
 size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
                                     const Table& table, Segments& segments) {
-
-
   // For each csv column, create a CsvConverter which builds up a ValueSegment
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
