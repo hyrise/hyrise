@@ -66,9 +66,9 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
                                                PosList& matches,
                                                const std::shared_ptr<const PosList>& position_filter) const {
   /**
-   * ValueID search_vid; // left value id
-   * AlLTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
-   * Variant _value; // right value
+   * ValueID search_vid;              // left value id
+   * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
+   * Variant _value;                  // right value
    *
    * A ValueID value_id from the attribute vector is included in the result iff
    *
@@ -86,7 +86,7 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   /**
    * Early Outs
    *
-   * Operator         | All                                                     | None
+   * Operator         | All rows match if:                                      | No rows match if:
    * column == _value | search_vid_value == _value && unique_values_count == 1  | search_vid_value != _value
    * column != _value | search_vid_value != _value                              | search_vid_value == _value && unique_values_count == 1
    * column <  _value | search_vid == INVALID_VALUE_ID                          | search_vid == 0
