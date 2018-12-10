@@ -82,9 +82,11 @@ inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementTyp
    * Counting Quotient Filters use variable length hash values to build their internal data structures.
    * These can be as low 6 bits. Hence, it has to be ensured that the lower bits include enough entropy.
    * Using std::hash and the least significant bits can lead to ineffective pruning and bad cardality
-   * estimations. As a consequence, fibonacci hashing is applied and the most significant bits are returned
-   *      https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-
-   *      that-the-world-forgot-or-a-better-alternative-to-integer-modulo/
+   * estimations. As a consequence, we use multiply-shift (cf. Richter et al., A Seven-Dimensional
+   * Analysis of Hashing Methods and its Implications on Query Processing, PVLDB 2015) to generate
+   * fast but sufficiently scrambled hashes (here in form of fibonacci hashing, cf.
+   * https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-
+   * that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
    */
   return static_cast<uint64_t>((std::hash<ElementType>{}(value) * 11400714819323198485llu) >> (64 - bit_count));
 }

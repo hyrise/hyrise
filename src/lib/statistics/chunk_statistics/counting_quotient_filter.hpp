@@ -52,9 +52,9 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   /**
-   * Calculate hash of value and shift the value to
+   * Calculate hash of value and return requested number of bits.
    * @param value       value to hash
-   * @param bit_mask    the bit mask for modulo remainer calculation of 64bit hash
+   * @param bit_count   the number of bits requested
    *
    * @return            The least significant bit-count bits of the hashed value (if bit_count < sizeof(size_t),
    *                    the most significant bits are zero padded).
