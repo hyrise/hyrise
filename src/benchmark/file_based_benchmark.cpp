@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-      ("tables", "Specify tables to load, either a single .csv/.tbl file or a directory with these files", cxxopts::value<std::string>()->default_value("")) // NOLINT
+      ("tables", "Specify directory from which tables are loaded", cxxopts::value<std::string>()->default_value("")) // NOLINT
       ("queries", "Specify queries to run, either a single .sql file or a directory with these files", cxxopts::value<std::string>()->default_value("")); // NOLINT
   // clang-format on
 
