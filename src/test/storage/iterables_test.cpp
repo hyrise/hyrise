@@ -66,9 +66,9 @@ struct AppendWithIterator {
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = load_table("src/test/tables/int_float6.tbl");
-    table_with_null = load_table("src/test/tables/int_float_with_null.tbl");
-    table_strings = load_table("src/test/tables/string.tbl");
+    table = load_table("artifacts/test_data/tbl/int_float6.tbl");
+    table_with_null = load_table("artifacts/test_data/tbl/int_float_with_null.tbl");
+    table_strings = load_table("artifacts/test_data/tbl/string.tbl");
 
     position_filter = std::make_shared<PosList>(
         PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
@@ -238,7 +238,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
   // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
   // have been created with the function: <IterableClass>.with_iterators(<Callback>)
 
-  const auto table = load_table("src/test/tables/int_int.tbl");
+  const auto table = load_table("artifacts/test_data/tbl/int_int.tbl");
 
   auto pos_list = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 0u}});
   pos_list->guarantee_single_chunk();

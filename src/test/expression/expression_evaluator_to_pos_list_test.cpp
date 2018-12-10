@@ -30,8 +30,8 @@ namespace opossum {
 class ExpressionEvaluatorToPosListTest : public ::testing::Test {
  public:
   void SetUp() override {
-    table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl", 4);
-    table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl", 4);
+    table_a = load_table("artifacts/test_data/tbl/expression_evaluator/input_a.tbl", 4);
+    table_b = load_table("artifacts/test_data/tbl/expression_evaluator/input_b.tbl", 4);
     c = PQPColumnExpression::from_table(*table_a, "c");
     d = PQPColumnExpression::from_table(*table_a, "d");
     s1 = PQPColumnExpression::from_table(*table_a, "s1");

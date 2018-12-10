@@ -56,18 +56,18 @@ namespace opossum {
 class LQPTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    table_int_float = load_table("src/test/tables/int_float.tbl");
-    table_int_string = load_table("src/test/tables/int_string.tbl");
-    table_int_float2 = load_table("src/test/tables/int_float2.tbl");
-    table_int_float5 = load_table("src/test/tables/int_float5.tbl");
-    table_alias_name = load_table("src/test/tables/table_alias_name.tbl");
+    table_int_float = load_table("artifacts/test_data/tbl/int_float.tbl");
+    table_int_string = load_table("artifacts/test_data/tbl/int_string.tbl");
+    table_int_float2 = load_table("artifacts/test_data/tbl/int_float2.tbl");
+    table_int_float5 = load_table("artifacts/test_data/tbl/int_float5.tbl");
+    table_alias_name = load_table("artifacts/test_data/tbl/table_alias_name.tbl");
 
     StorageManager::get().add_table("table_int_float", table_int_float);
     StorageManager::get().add_table("table_int_string", table_int_string);
     StorageManager::get().add_table("table_int_float2", table_int_float2);
     StorageManager::get().add_table("table_int_float5", table_int_float5);
     StorageManager::get().add_table("table_alias_name", table_alias_name);
-    StorageManager::get().add_table("int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
+    StorageManager::get().add_table("int_float_chunked", load_table("artifacts/test_data/tbl/int_float.tbl", 1));
     ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");

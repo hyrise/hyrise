@@ -27,7 +27,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/int_float.tbl");
+    _table = load_table("artifacts/test_data/tbl/int_float.tbl");
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
@@ -208,7 +208,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   for (const auto value : {456.7, 457.7}) {
     auto context = TransactionManager::get().new_transaction_context();
 
-    auto values_to_insert = load_table("src/test/tables/int_float3.tbl");
+    auto values_to_insert = load_table("artifacts/test_data/tbl/int_float3.tbl");
     auto table_name_for_insert = "bla";
     StorageManager::get().add_table(table_name_for_insert, values_to_insert);
     auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
@@ -260,7 +260,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto expected_result = load_table("src/test/tables/int_float_deleted.tbl");
+    auto expected_result = load_table("artifacts/test_data/tbl/int_float_deleted.tbl");
 
     EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
 

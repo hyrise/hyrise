@@ -193,7 +193,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
-  auto test_table = load_table("src/test/tables/int_float.tbl", 2);
+  auto test_table = load_table("artifacts/test_data/tbl/int_float.tbl", 2);
   StorageManager::get().add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
@@ -209,7 +209,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
   CurrentScheduler::get()->finish();
 
-  auto expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  auto expected_result = load_table("artifacts/test_data/tbl/int_float_filtered2.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
 }
 

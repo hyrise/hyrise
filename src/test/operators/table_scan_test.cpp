@@ -37,8 +37,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   void SetUp() override {
     _encoding_type = GetParam();
 
-    auto int_int_7 = load_table("src/test/tables/int_int_shuffled.tbl", 7);
-    auto int_int_5 = load_table("src/test/tables/int_int_shuffled_2.tbl", 5);
+    auto int_int_7 = load_table("artifacts/test_data/tbl/int_int_shuffled.tbl", 7);
+    auto int_int_5 = load_table("artifacts/test_data/tbl/int_int_shuffled_2.tbl", 5);
 
     ChunkEncoder::encode_chunks(int_int_7, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
     // partly compressed table
@@ -51,19 +51,20 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<TableWrapper> get_table_op() {
-    auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    auto table_wrapper = std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_float.tbl", 2));
     table_wrapper->execute();
     return table_wrapper;
   }
 
   std::shared_ptr<TableWrapper> get_int_string_table_op() {
-    auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 2));
+    auto table_wrapper = std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_string.tbl", 2));
     table_wrapper->execute();
     return table_wrapper;
   }
 
   std::shared_ptr<TableWrapper> get_table_op_null() {
-    auto table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
+    auto table_wrapper_null =
+        std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_float_with_null.tbl", 2));
     table_wrapper_null->execute();
     return table_wrapper_null;
   }
@@ -146,7 +147,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_segment) {
-    const auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+    const auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
     if (references_dict_segment) {
       ChunkEncoder::encode_all_chunks(table, _encoding_type);
@@ -229,7 +230,7 @@ INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanTest,
                         formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("artifacts/test_data/tbl/int_float_filtered.tbl", 2);
 
   auto scan_1 = create_table_scan(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
@@ -249,7 +250,7 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("artifacts/test_data/tbl/int_float_filtered2.tbl", 1);
 
   auto scan = create_table_scan(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
@@ -386,7 +387,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionar
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValues) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -401,7 +402,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValue
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWithNullValues) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -416,7 +417,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWit
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNullValues) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -432,7 +433,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNul
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatColumnWithNullValues) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -511,7 +512,8 @@ TEST_P(OperatorsTableScanTest, OperatorName) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4));
+  auto table_wrapper =
+      std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4));
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -522,7 +524,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -536,7 +538,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
-  auto table = load_table("src/test/tables/int_float.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -548,7 +550,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutNulls) {
-  auto table = load_table("src/test/tables/int_float.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_float.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -560,7 +562,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutN
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -573,7 +575,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedSegments) {
-  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("artifacts/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));

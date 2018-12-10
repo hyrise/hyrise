@@ -21,7 +21,7 @@ namespace opossum {
 class LQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("int_float", load_table("artifacts/test_data/tbl/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
     a = {int_float_node_a, ColumnID{0}};
