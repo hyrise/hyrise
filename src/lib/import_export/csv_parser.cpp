@@ -197,7 +197,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   try {
     for (; row_id < row_count; ++row_id) {
-      for (; column_id < column_count; ++column_id, ++field_idx) {
+      for (column_id = ColumnID{0}; column_id < column_count; ++column_id, ++field_idx) {
         const auto end = field_ends[field_idx];
         auto field = std::string{csv_chunk.substr(start, end - start)};
         start = end + 1;
