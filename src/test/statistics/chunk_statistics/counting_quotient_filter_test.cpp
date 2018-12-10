@@ -1,9 +1,9 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
-#include <type_traits>
 #include <vector>
 
 #include "base_test.hpp"
@@ -133,7 +133,7 @@ class CountingQuotientFilterTest : public BaseTest {
     }
     const auto false_positive_rate = false_positives / static_cast<float>(runs);
     std::cout << "achieved " << false_positive_rate << std::endl;
-    EXPECT_TRUE(false_positive_rate < 0.4f);
+    EXPECT_LT(false_positive_rate, 0.4f);
   }
 };
 
@@ -174,15 +174,16 @@ TYPED_TEST(CountingQuotientFilterTest, HashBits) {
   for (auto bit_count : {8, 16, 32, 64}) {
     if constexpr (std::is_arithmetic<TypeParam>::value) {
       for (auto numeric_value : {-28.938, -0.0, 0.0, 17.1717, 32'323'323.323323}) {
-        const auto return_value = CountingQuotientFilter<TypeParam>::get_hash_bits(static_cast<TypeParam>(numeric_value), bit_count);
-        EXPECT_TRUE(return_value >= 0);
-        EXPECT_TRUE(return_value < std::pow(2, bit_count));
+        const auto return_value =
+            CountingQuotientFilter<TypeParam>::get_hash_bits(static_cast<TypeParam>(numeric_value), bit_count);
+        EXPECT_GE(return_value, 0);
+        EXPECT_LT(return_value, std::pow(2, bit_count));
       }
     } else {
       for (auto& string_value : {"alpha", "beta", "charlie", "zeier"}) {
         const auto return_value = CountingQuotientFilter<TypeParam>::get_hash_bits(string_value, bit_count);
-        EXPECT_TRUE(return_value >= 0);
-        EXPECT_TRUE(return_value < std::pow(2, bit_count));
+        EXPECT_GE(return_value, 0);
+        EXPECT_LT(return_value, std::pow(2, bit_count));
       }
     }
   }
