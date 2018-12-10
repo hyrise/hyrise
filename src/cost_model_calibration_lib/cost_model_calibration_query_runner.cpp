@@ -14,13 +14,6 @@ CostModelCalibrationQueryRunner::CostModelCalibrationQueryRunner(const Calibrati
 
 const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  //  TODO(Sven): Print query
-
-  //  TODO(Sven): Do we need an optimizer? PredicateNodes might not be in optimal order..
-  // but since we only want to calibrate them, it shouldn't make any difference.
-  // This will decrease the overall calibration performance
-  //  const auto optimizer = Optimizer::create_default_optimizer();
-  //  const auto optimized_lqp = optimizer->optimize(query);
   lqp->print();
   auto transaction_context = TransactionManager::get().new_transaction_context();
 

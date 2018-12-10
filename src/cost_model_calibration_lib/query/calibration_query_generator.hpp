@@ -39,8 +39,6 @@ class CalibrationQueryGenerator {
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_projection(
       const std::vector<LQPColumnReference>& columns) const;
 
-  const std::vector<CalibrationQueryGeneratorPredicateConfiguration> _generate_predicate_permutations() const;
-
   const std::vector<CalibrationColumnSpecification> _column_specifications;
   const CalibrationConfiguration _configuration;
   const std::vector<std::pair<std::string, size_t>> _tables;

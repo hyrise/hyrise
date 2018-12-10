@@ -21,38 +21,6 @@ CalibrationQueryGenerator::CalibrationQueryGenerator(
     const CalibrationConfiguration& configuration)
     : _column_specifications(column_specifications), _configuration(configuration), _tables(tables) {}
 
-const std::vector<CalibrationQueryGeneratorPredicateConfiguration>
-CalibrationQueryGenerator::_generate_predicate_permutations() const {
-  std::vector<CalibrationQueryGeneratorPredicateConfiguration> output{};
-
-  // Generating all combinations
-  for (const auto& first_encoding : _configuration.encodings) {
-    for (const auto& first_data_type : _configuration.data_types) {
-      for (const auto& second_encoding : _configuration.encodings) {
-        for (const auto& second_data_type : _configuration.data_types) {
-          if (first_data_type != second_data_type) continue;
-          for (const auto& third_encoding : _configuration.encodings) {
-            for (const auto& third_data_type : _configuration.data_types) {
-              if (first_data_type != third_data_type) continue;
-              for (const auto& selectivity : _configuration.selectivities) {
-                for (const auto& table : _tables) {
-                  output.push_back({table.first, first_encoding, first_data_type, second_encoding, second_data_type,
-                                    third_encoding, third_data_type, selectivity, false, table.second});
-                  output.push_back({table.first, first_encoding, first_data_type, second_encoding, second_data_type,
-                                    third_encoding, third_data_type, selectivity, true, table.second});
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  std::cout << "Generated " << output.size() << " Permutations for Predicates" << std::endl;
-  return output;
-}
-
 /**
  * This function generates all TableScan permutations for TPCH-6
  */
@@ -115,7 +83,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   //    add_queries_if_present(queries, _generate_aggregate(table_name));
   //  }
 
-  const auto permutations = _generate_predicate_permutations();
+  const auto permutations = CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
   for (const auto& permutation : permutations) {
     add_queries_if_present(
         queries,
