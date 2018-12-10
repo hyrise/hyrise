@@ -45,6 +45,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add the Tables to the StorageManager
    */
+  _benchmark_config->out << "- Adding Tables to StorageManager" << std::endl;
   for (auto& [table_name, table_entry] : table_entries) {
     StorageManager::get().add_table(table_name, table_entry.table);
   }

@@ -9,7 +9,7 @@ using namespace opossum;  // NOLINT
 
 int main() {
   Timer timer;
-  CsvParser{}.parse("imdb/name.csv");
+  CsvParser{}.parse("imdb/name.csv", std::nullopt, 1'000'000);
 
   std::cout << "Duration: " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
 

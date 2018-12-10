@@ -83,7 +83,7 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTab
       }
     }
 
-    std::cout << "    Loaded in " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
+    std::cout << "    Loaded "<< table_entry.table->row_count() << " rows in " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
   }
 
   return table_entries;
