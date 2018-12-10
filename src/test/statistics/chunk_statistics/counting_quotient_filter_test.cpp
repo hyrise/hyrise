@@ -132,6 +132,7 @@ class CountingQuotientFilterTest : public BaseTest {
       }
     }
     const auto false_positive_rate = false_positives / static_cast<float>(runs);
+    std::cout << "achieved " << false_positive_rate << std::endl;
     EXPECT_TRUE(false_positive_rate < 0.4f);
   }
 };
@@ -168,19 +169,7 @@ TYPED_TEST(CountingQuotientFilterTest, FalsePositiveRate) {
   this->test_false_positive_rate(this->cqf32);
 }
 
-TYPED_TEST(CountingQuotientFilterTest, StaticHashBits) {
-  if constexpr (!std::is_same<TypeParam, int>::value) {
-    GTEST_SKIP();
-  }
-
-  // Test for integers whether simple values are handled as expected (i.e.,
-  // identity funkcion for integers) and whether they are correctly modulo'ed.
-  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(17, 8), 17);
-  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(17, 16), 17);
-  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(17, 32), 17);
-  EXPECT_EQ(CountingQuotientFilter<int>::get_hash_bits(267, 8), 11);
-}
-
+// Testing the get_hash_bits functions which is used in the CQF.
 TYPED_TEST(CountingQuotientFilterTest, HashBits) {
   for (auto bit_count : {8, 16, 32, 64}) {
     if constexpr (std::is_arithmetic<TypeParam>::value) {

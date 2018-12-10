@@ -79,18 +79,16 @@ size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) cons
 template <typename ElementType>
 inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementType>::get_hash_bits(const ElementType& value, const uint64_t bit_count) {
   /*
-   *  Counting Quotient Filters use variable length hash values to build their internal data structures.
-   *  These can be as low 8 bit. Hence, it has to be ensured that the lower bits include enough
-   *  entropy. For integers                                                                                                                 TODO
-   *
-   *  For non-integral types (e.g., floats), use simplified fibonacci hashing:
+   * Counting Quotient Filters use variable length hash values to build their internal data structures.
+   * These can be as low 6 bits. Hence, it has to be ensured that the lower bits include enough entropy.
+   * As a consequence, fibonacci hashing is applied and the most significant bits are returned.
    *      https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-
    *      that-the-world-forgot-or-a-better-alternative-to-integer-modulo/
    */
-  if constexpr (std::is_integral<ElementType>::value) {
-    return static_cast<uint64_t>(std::hash<ElementType>{}(value) % static_cast<ElementType>(std::pow(2, bit_count)));
+  if constexpr (std::is_floating_point<ElementType>::value) {
+    const auto new_value = value * static_cast<ElementType>(1.0000304000000123);
+    return static_cast<uint64_t>((std::hash<ElementType>{}(new_value) * 11400714819323198485llu) >> (64 - bit_count));
   } else {
-    // return static_cast<uint64_t>((std::hash<ElementType>{}(value) * 11400714819323198485llu) % bit_count);
     return static_cast<uint64_t>((std::hash<ElementType>{}(value) * 11400714819323198485llu) >> (64 - bit_count));
   }
 }
