@@ -37,8 +37,7 @@ int main(int argc, char* argv[]) {
     table_path = json_config.value("tables", "");
     query_path = json_config.value("queries", "");
 
-    benchmark_config = std::make_shared<BenchmarkConfig>(
-        CLIConfigParser::parse_basic_options_json_config(json_config));
+    benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
 
   } else {
     // Parse regular command line args
@@ -53,8 +52,7 @@ int main(int argc, char* argv[]) {
     query_path = cli_parse_result["queries"].as<std::string>();
     table_path = cli_parse_result["tables"].as<std::string>();
 
-    benchmark_config =
-        std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+    benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
   // Check that the options 'queries' and 'tables' were specifiedc

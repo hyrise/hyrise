@@ -6,8 +6,8 @@
 #include "benchmark_table_encoder.hpp"
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
-#include "utils/load_table.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/load_table.hpp"
 #include "utils/timer.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -83,7 +83,8 @@ std::unordered_map<std::string, AbstractTableGenerator::TableEntry> FileBasedTab
       }
     }
 
-    std::cout << "    Loaded "<< table_entry.table->row_count() << " rows in " << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
+    std::cout << "    Loaded " << table_entry.table->row_count() << " rows in "
+              << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
   }
 
   return table_entries;
