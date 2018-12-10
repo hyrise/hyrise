@@ -215,11 +215,9 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 }
 
 void CsvParser::_sanitize_field(std::string& field) {
-  constexpr size_t ESCAPED_LINEBREAK_SIZE = 2;
-
   std::string::size_type pos = 0;
   while ((pos = field.find(_escaped_linebreak, pos)) != std::string::npos) {
-    field.replace(pos, ESCAPED_LINEBREAK_SIZE, 1, _meta.config.delimiter);
+    field.replace(pos, _escaped_linebreak.size(), 1, _meta.config.delimiter);
     ++pos;
   }
 }
