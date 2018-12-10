@@ -40,8 +40,6 @@ class ExpressionTest : public ::testing::Test {
     b_nullable = {int_float_node_nullable, ColumnID{1}};
   }
 
-  void TearDown() { StorageManager::reset(); }
-
   LQPColumnReference a, b;
   LQPColumnReference a_nullable, b_nullable;
   std::shared_ptr<StoredTableNode> int_float_node, int_float_node_nullable;

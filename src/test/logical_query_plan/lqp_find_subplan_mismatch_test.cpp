@@ -62,8 +62,6 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     _init_query_nodes(_query_nodes_rhs);
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   void _init_query_nodes(QueryNodes& query_nodes) const {
     query_nodes.stored_table_node_a = StoredTableNode::make("table_a");
     query_nodes.validate_node = ValidateNode::make();

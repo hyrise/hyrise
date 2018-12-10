@@ -43,8 +43,6 @@ class PQPSelectExpressionTest : public ::testing::Test {
     select_table = std::make_shared<PQPSelectExpression>(pqp_table);
   }
 
-  void TearDown() { StorageManager::reset(); }
-
   std::shared_ptr<Table> table_a;
   std::shared_ptr<PQPColumnExpression> a_a, a_b;
   PQPSelectExpression::Parameters parameters_a;

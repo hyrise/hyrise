@@ -88,8 +88,6 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _nodes[0]->set_left_input(_nodes[1]);
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   std::shared_ptr<Table> table_int_int;
   std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
   LQPColumnReference a1, b1;

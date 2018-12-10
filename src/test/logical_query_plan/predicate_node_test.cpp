@@ -25,8 +25,6 @@ class PredicateNodeTest : public ::testing::Test {
     _predicate_node = PredicateNode::make(equals_(_i, 5), _table_node);
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   std::shared_ptr<StoredTableNode> _table_node;
   LQPColumnReference _i, _f;
   std::shared_ptr<PredicateNode> _predicate_node;

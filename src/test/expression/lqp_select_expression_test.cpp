@@ -44,8 +44,6 @@ class LQPSelectExpressionTest : public ::testing::Test {
     select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a));
   }
 
-  void TearDown() { StorageManager::reset(); }
-
   std::shared_ptr<StoredTableNode> int_float_node_a;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
   std::shared_ptr<ParameterExpression> parameter_c;

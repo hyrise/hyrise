@@ -90,8 +90,6 @@ class LQPTranslatorTest : public ::testing::Test {
     int_float5_d = int_float5_node->get_column("d");
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
     return index_scan->_included_chunk_ids;
   }

@@ -71,8 +71,6 @@ class SQLTranslatorTest : public ::testing::Test {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
                                                           const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;

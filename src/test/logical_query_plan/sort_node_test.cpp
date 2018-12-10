@@ -28,8 +28,6 @@ class SortNodeTest : public ::testing::Test {
     _sort_node = SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   std::shared_ptr<StoredTableNode> _table_node;
   std::shared_ptr<SortNode> _sort_node;
   LQPColumnReference _a_i, _a_f, _a_d;
