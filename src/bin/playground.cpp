@@ -1,6 +1,8 @@
 #include <iostream>
 #include <bitset>
 
+#include <boost/functional/hash.hpp>
+
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 
 #include "types.hpp"
@@ -10,9 +12,11 @@ using namespace opossum;  // NOLINT
 template <typename T>
 void hashish(T value) {
 	size_t hash = std::hash<T>{}(value);
-	size_t fibo = (std::hash<T>{}(value) * 11400714819323198485llu);
-	size_t fibo2 = CountingQuotientFilter<T>::get_hash_bits(static_cast<T>(value), 64);
-	std::cout << value << " >>\n\t\t" << std::bitset<64>(hash) << "\n\t\t" << std::bitset<64>(fibo) << "\n\t\t" << std::bitset<64>(fibo2) << std::endl << std::endl;
+	// size_t fibo = (std::hash<T>{}(value) * 11400714819323198485llu);
+	// size_t fibo2 = CountingQuotientFilter<T>::get_hash_bits(static_cast<T>(value), 64);
+	// std::cout << value << " >>\n\t\t" << std::bitset<64>(hash) << "\n\t\t" << std::bitset<64>(fibo) << "\n\t\t" << std::bitset<64>(fibo2) << std::endl << std::endl;
+	std::cout << value << " >>\t" << std::bitset<64>(hash) << " and boost: " << std::bitset<64>(boost::hash_value(value)) << std::endl;
+
 }
 
 int main() {
