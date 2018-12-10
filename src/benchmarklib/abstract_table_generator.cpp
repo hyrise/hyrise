@@ -18,7 +18,7 @@ void AbstractTableGenerator::generate_and_store() {
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
     table_info.re_encoded = BenchmarkTableEncoder::encode(table_name, table_info.table,
-                                                           _benchmark_config->encoding_config, _benchmark_config->out);
+                                                          _benchmark_config->encoding_config, _benchmark_config->out);
   }
 
   /**
