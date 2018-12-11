@@ -19,6 +19,9 @@
 
 namespace opossum {
 
+/*
+ * Benchmark routine by Fabian Engel
+ */
 BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_MVCC)(benchmark::State& state) {
   _clear_cache();
 
