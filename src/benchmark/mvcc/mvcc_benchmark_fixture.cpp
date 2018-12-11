@@ -1,4 +1,4 @@
-#include "mvcc_benchmark_fixture.h"
+#include "mvcc_benchmark_fixture.hpp"
 
 #include <expression/expression_functional.hpp>
 #include <memory>
@@ -29,6 +29,7 @@ constexpr auto CHUNK_SIZE = opossum::ChunkID{500};
 namespace opossum {
 
 void MVCC_Benchmark_Fixture::_incrementAllValuesByOne() {
+  std::cout << "Incrementing all values by one";
   // Prepare Update Operator
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
@@ -40,15 +41,18 @@ void MVCC_Benchmark_Fixture::_incrementAllValuesByOne() {
 
   auto update_expressions = expression_vector(add_(column_a, 1));
   auto updated_values_projection = std::make_shared<Projection>(validate_table, update_expressions);
+  updated_values_projection->execute();
 
   // Apply Update, increment each value by 1
   auto update_table = std::make_shared<Update>(_table_name, validate_table, updated_values_projection);
+  update_table->set_transaction_context(transaction_context);
   update_table->execute();
 
   transaction_context->commit();
 }
 
 void MVCC_Benchmark_Fixture::_invalidateRecords(int invalidatedRecordsCount) {
+  std::cout << "Incrementing all values by one";
   // With each UPDATE, 10 records are updated resp. invalidated.
   int requiredUpdatesCount = invalidatedRecordsCount / 10;
 
@@ -58,6 +62,7 @@ void MVCC_Benchmark_Fixture::_invalidateRecords(int invalidatedRecordsCount) {
 }
 
 void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
+  std::cout << "Set up MVCC benchmark";
   column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
 
   // Create a table with dummy data
@@ -65,8 +70,13 @@ void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
   auto intTable = load_table("src/benchmark/mvcc/mvcc_benchmark_table.tbl", CHUNK_SIZE);
   StorageManager::get().add_table(_table_name, intTable);
 
+  std::cout << "MVCC-BM: Table created\n";
+
   // Invalidate rows
-  _invalidateRecords(static_cast<int>(state.range(0)));
+  int invalidationCount = static_cast<int>(state.range());
+
+  std::cout << "Invalidating " << invalidationCount << " rows\n";
+  _invalidateRecords(invalidationCount);
 }
 
 void MVCC_Benchmark_Fixture::TearDown(::benchmark::State&) { StorageManager::reset(); }
