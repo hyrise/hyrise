@@ -61,9 +61,11 @@ def plot_performance(flipped_results, n_rows_cols, numa_borders, max_cores):
                 if label_single not in legend:
                     legend[label_single] = singlethreaded_plot
 
+        # The throuput can be from 0 queries/s to an arbitrarily large number, so no upper limit for the y-axis
         ax.set_ylim(ymin=0)
         ax.set_xlim(xmin=0, xmax=max_cores)
 
+    # Create one legend for the whole plot
     plt.figlegend((line_type for line_type in legend.values()), (label for label in legend.keys()), 'lower right')
 
     # This should prevent axes from different plots to overlap etc
@@ -95,21 +97,20 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
 
         for label, one_result in multiple_results.items():
             ips, cores = one_result['items_per_second'], one_result['cores']
+            # Throughput dy/dx
             pitches = list(np.diff(ips)/np.diff(cores))
+            # Throughput dy/dx relative to single-threaded performance (the scale factor)
             scaleup = [pitch/one_result['singlethreaded'] for pitch in pitches]
             multithreaded_plot = ax.plot(cores[1:], scaleup, label=label, marker='.')
             if label not in legend:
                 legend[label] = multithreaded_plot[0]
 
-            avg = sum(scaleup)/len(scaleup)
-            label_avg = label + ' (average)'
-            avg_plot = ax.axhline(avg, color=multithreaded_plot[0].get_color(), linestyle='dashed', linewidth=1.0, label=label_avg)
-            if label_avg not in legend:
-                legend[label_avg] = avg_plot
-
+        # A scale factor >1.0 would be superlinear, so we should be safe with 1.0 as max.
+        # -0.25 as min is chosen arbitrarily, but suffices for most cases. Adjust as needed.
         ax.set_ylim(ymin=-0.25, ymax=1.0)
         ax.set_xlim(xmin=0, xmax=max_cores)
 
+    # Create one legend for the whole plot
     plt.figlegend((line_type for line_type in legend.values()), (label for label in legend.keys()), 'lower right')
 
     # This should prevent axes from different plots to overlap etc
@@ -119,7 +120,7 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
     axis_description = fig.add_subplot(111, frameon=False)
     plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     axis_description.set_xlabel('Utilized cores', labelpad=10)
-    axis_description.set_ylabel('Scale-up factor', labelpad=20)
+    axis_description.set_ylabel('Scale factor\n(Throughput change relative to sinlge-threaded)', labelpad=20)
 
     result_plot_file = os.path.join(os.getcwd(), 'benchmark_comparison_scaleup.' + args.format)
     plt.savefig(result_plot_file, bbox_inches='tight')
@@ -130,6 +131,7 @@ def plot(args):
     results = {}
 
     for result_dir in args.results:
+        # The label that will appear in the plot. It consists of the --result-name that was passed to benchmark_multithreaded.py
         label = result_dir.rstrip('/').split('/')[-1]
         results[label] = {}
         one_result = results[label]
@@ -147,7 +149,6 @@ def plot(args):
                     utilized_cores_per_numa_node = json_data['context']['utilized_cores_per_numa_node']
                 for benchmark in json_data['benchmarks']:
                     name = benchmark['name']
-                    if int(name.split(' ')[-1]) not in [1,2,6,8,13,14,16]: continue
                     items_per_second = benchmark['items_per_second']
                     if name not in one_result:
                         one_result[name] = {'cores': [], 'items_per_second': []}
@@ -159,6 +160,7 @@ def plot(args):
 
     numa_borders = [sum(utilized_cores_per_numa_node[:x]) for x in range(1, len(utilized_cores_per_numa_node))]
 
+    # Transform the results for plotting, since we create one subplot per TPC-H query
     flipped_results = {}
     for label, one_result in results.items():
         for tpch, data in one_result.items():
