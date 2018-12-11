@@ -93,7 +93,7 @@ inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementTyp
    * https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-
    * that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
    */
-  return static_cast<uint64_t>((std::hash<ElementType>{}(value)*11400714819323198485llu) >> (64 - bit_count));                // BLOCK
+  return static_cast<uint64_t>((std::hash<ElementType>{}(value)*11400714819323198485llu) >> (64 - bit_count));
 }
 
 template <typename ElementType>
