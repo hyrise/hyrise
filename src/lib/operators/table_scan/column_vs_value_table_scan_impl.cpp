@@ -55,7 +55,12 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseSegment& segment, const
           return predicate_comparator(iterator_value.value(), typed_value);
         };
         segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+          if (typed_segment.sort_order()) {
+            _scan_with_sorted_iterators<true>(comparator, it, end, chunk_id, matches,
+                                              typed_segment.sort_order().value(), _predicate_condition);
+          } else {
+            _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+          }
         });
       });
     }

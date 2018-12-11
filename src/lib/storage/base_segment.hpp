@@ -35,7 +35,7 @@ class BaseSegment : private Noncopyable {
   // Might be inaccurate, especially if the segment contains non-primitive data,
   // such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
-  
+
   const std::optional<OrderByMode> sort_order() const;
   void set_sort_order(OrderByMode sort_order);
 
