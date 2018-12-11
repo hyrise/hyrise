@@ -21,7 +21,7 @@ BENCHMARK_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)(benchmark::State& state) {
   _incrementAllValuesByOne();
 }
 
-// Run benchmark with using a table with up to 80000 invalidated lines
+// Run benchmark with a table of up to 80000 invalidated lines
 BENCHMARK_REGISTER_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)->RangeMultiplier(2)->Range(1, 80000);
 
 }  // namespace opossum

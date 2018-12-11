@@ -38,7 +38,7 @@ void MVCC_Benchmark_Fixture::_incrementAllValuesByOne() {
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
 
-  auto update_expressions = {expression_vector(add_(column_a, 1))};
+  auto update_expressions = expression_vector(add_(column_a, 1));
   auto updated_values_projection = std::make_shared<Projection>(validate_table, update_expressions);
 
   // Apply Update, increment each value by 1
@@ -62,7 +62,7 @@ void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
 
   // Create a table with dummy data
   _table_name = "mvcc_table";
-  auto intTable = load_table("src/test/tables/10_ints.tbl", CHUNK_SIZE);
+  auto intTable = load_table("src/benchmark/mvcc/mvcc_benchmark_table.tbl", CHUNK_SIZE);
   StorageManager::get().add_table(_table_name, intTable);
 
   // Invalidate rows

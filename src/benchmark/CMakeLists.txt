@@ -16,9 +16,9 @@ add_executable(
 #    operators/union_all_benchmark.cpp
 #    operators/update_benchmark.cpp
 #    operators/mvcc_benchmark.cpp # Fabian's benchmark
-    mvcc-benchmark/mvcc_benchmark_fixture.h # Julian's benchmark
-    mvcc-benchmark/mvcc_benchmark_fixture.cpp
-    mvcc-benchmark/mvcc_benchmark_update.cpp
+        mvcc/mvcc_benchmark_fixture.h # Julian's benchmark
+        mvcc/mvcc_benchmark_fixture.cpp
+        mvcc/mvcc_benchmark_update.cpp
     statistics/generate_table_statistics_benchmark.cpp
     tpch_db_generator_benchmark.cpp
 )
