@@ -1,6 +1,6 @@
 #include <regex>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -18,7 +18,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class PQPSelectExpressionTest : public ::testing::Test {
+class PQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
     table_a = load_table("src/test/tables/int_float.tbl");
@@ -42,8 +42,6 @@ class PQPSelectExpressionTest : public ::testing::Test {
     pqp_table = table_scan_b;
     select_table = std::make_shared<PQPSelectExpression>(pqp_table);
   }
-
-  void TearDown() { StorageManager::reset(); }
 
   std::shared_ptr<Table> table_a;
   std::shared_ptr<PQPColumnExpression> a_a, a_b;

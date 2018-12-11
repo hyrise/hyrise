@@ -1,7 +1,6 @@
 #include <regex>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -20,7 +19,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LogicalQueryPlanTest : public ::testing::Test {
+class LogicalQueryPlanTest : public BaseTest {
  public:
   void SetUp() override {
     StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl"));
@@ -87,8 +86,6 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _nodes[1]->set_left_input(_nodes[2]);
     _nodes[0]->set_left_input(_nodes[1]);
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<Table> table_int_int;
   std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;

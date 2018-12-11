@@ -39,8 +39,6 @@ class JitAwareLQPTranslatorTest : public BaseTest {
     a_c = stored_table_node_a->get_column("c");
   }
 
-  void TearDown() override { StorageManager::get().reset(); }
-
   // Creates an (unoptimized) LQP from a given SQL query string and passes the LQP to the jit-aware translator.
   // This allows for creating different LQPs for testing with little code. The result of the translation
   // (which could be any AbstractOperator) is dynamically cast to a JitOperatorWrapper pointer. Thus, a simple nullptr

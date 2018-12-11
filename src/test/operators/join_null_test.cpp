@@ -57,7 +57,7 @@ class JoinNullTest : public JoinTest {
 };
 
 using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop, JoinMPSM>;
-TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
+TYPED_TEST_CASE(JoinNullTest, JoinNullTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
   this->template test_join_output<TypeParam>(
