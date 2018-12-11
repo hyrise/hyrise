@@ -5,7 +5,8 @@
 namespace opossum {
 
 /**
- * Represents a placeholder (SELECT a + ? ...).
+ * Represents a placeholder (SELECT a + ? ...) in a PreparedPlan. Will replaced by a different expression by
+ * PreparedPlan::instantiate()
  */
 class PlaceholderExpression : public AbstractParameterExpression {
  public:
