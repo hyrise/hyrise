@@ -24,6 +24,10 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
   Assert(quotient_size > 0, "Quotient size can not be zero.");
   Assert(_hash_bits <= 64u, "Hash length can not exceed 64 bits.");
 
+  // Floating point types are unsupported because equality checks for floating
+  // point values are cumbersome and thus is hashing them even more so.
+  Assert(!std::is_floating_point<ElementType>::value, "Quotient filters do not support floating point types.");
+
   if (remainder_size == 2) {
     _quotient_filter = gqf2::quotient_filter{};
   } else if (remainder_size == 4) {
