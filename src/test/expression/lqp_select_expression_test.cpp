@@ -46,7 +46,7 @@ class LQPSelectExpressionTest : public BaseTest {
 
   std::shared_ptr<StoredTableNode> int_float_node_a;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
-  std::shared_ptr<ParameterExpression> parameter_c;
+  std::shared_ptr<CorrelatedParameterExpression> parameter_c;
   std::shared_ptr<LQPSelectExpression> select_a, select_c;
   LQPColumnReference a, b;
 };

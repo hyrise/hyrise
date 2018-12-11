@@ -60,7 +60,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _subselect = lqp_select_(_subselect_lqp, std::make_pair(ParameterID{0}, _a_a));
   }
 
-  std::shared_ptr<ParameterExpression> _parameter_a_a;
+  std::shared_ptr<CorrelatedParameterExpression> _parameter_a_a;
   std::shared_ptr<AbstractLQPNode> _subselect_lqp;
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;

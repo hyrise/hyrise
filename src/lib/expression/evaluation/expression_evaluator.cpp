@@ -159,7 +159,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::PQPColumn:
       return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
 
-    // ValueExpression and ParameterExpression both need to unpack an AllTypeVariant, so one functions handles both
+    // ValueExpression and CorrelatedParameterExpression both need to unpack an AllTypeVariant, so one functions handles
+    // both
     case ExpressionType::Parameter:
     case ExpressionType::Value:
       return _evaluate_value_or_parameter_expression<Result>(expression);
@@ -705,9 +706,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     const auto& value_expression = static_cast<const ValueExpression&>(expression);
     value = value_expression.value;
   } else {
-    const auto& correlated_parameter_expression = static_cast<const ParameterExpression&>(expression);
-    Assert(parameter_expression.value().has_value(), "ParameterExpression: Parameter not set, cannot evaluate");
-    value = *parameter_expression.value();
+    const auto& correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
+    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression")
+        Assert(correlated_parameter_expression->value().has_value(),
+               "CorrelatedParameterExpression: Value not set, cannot evaluate");
+    value = *correlated_parameter_expression->value();
   }
 
   if (value.type() == typeid(NullValue)) {

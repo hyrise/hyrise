@@ -10,20 +10,19 @@
 
 namespace opossum {
 
+CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
+                                                             const AbstractExpression& referenced_expression)
+    : AbstractParameterExpression(ParameterExpressionType::Correlated, parameter_id),
+      _referenced_expression_info(referenced_expression.data_type(), referenced_expression.is_nullable(),
+                                  referenced_expression.as_column_name()) {}
 
 CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
-                                                         const AbstractExpression& referenced_expression)
-: AbstractParameterExpression(ParameterExpressionType::Correlated, parameter_id),
-  _referenced_expression_info(referenced_expression.data_type(), referenced_expression.is_nullable(),
-                              referenced_expression.as_column_name()) {}
-
-CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
-                                                         const ReferencedExpressionInfo& referenced_expression_info)
-: AbstractParameterExpression(ParameterExpressionType::Correlated, parameter_id),
-  _referenced_expression_info(referenced_expression_info) {}
+                                                             const ReferencedExpressionInfo& referenced_expression_info)
+    : AbstractParameterExpression(ParameterExpressionType::Correlated, parameter_id),
+      _referenced_expression_info(referenced_expression_info) {}
 
 std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() const {
-    return std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
+  return std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
 }
 
 std::string CorrelatedParameterExpression::as_column_name() const {
@@ -36,19 +35,23 @@ std::string CorrelatedParameterExpression::as_column_name() const {
   return stream.str();
 }
 
-DataType CorrelatedParameterExpression::data_type() const {
-    return _referenced_expression_info.data_type;
-}
+DataType CorrelatedParameterExpression::data_type() const { return _referenced_expression_info.data_type; }
 
-bool CorrelatedParameterExpression::is_nullable() const {
-    return _referenced_expression_info.nullable;
+bool CorrelatedParameterExpression::is_nullable() const { return _referenced_expression_info.nullable; }
+
+const std::optional<AllTypeVariant>& CorrelatedParameterExpression::value() const { return _value; }
+
+void CorrelatedParameterExpression::set_value(const std::optional<AllTypeVariant>& value) {
+  Assert(!value || data_type_from_all_type_variant(*value) == _referenced_expression_info.data_type ||
+             variant_is_null(*value),
+         "Invalid value assigned to CorrelatedParameterExpression");
+  _value = value;
 }
 
 bool CorrelatedParameterExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* parameter_expression_rhs = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
 
-  return parameter_expression_rhs &&
-  parameter_id == parameter_expression_rhs->parameter_id &&
+  return parameter_expression_rhs && parameter_id == parameter_expression_rhs->parameter_id &&
          _referenced_expression_info == parameter_expression_rhs->_referenced_expression_info;
 }
 
@@ -62,9 +65,10 @@ size_t CorrelatedParameterExpression::_on_hash() const {
   return hash;
 }
 
-CorrelatedParameterExpression::ReferencedExpressionInfo::ReferencedExpressionInfo(const DataType data_type, const bool nullable,
-                                                                                const std::string& column_name)
-: data_type(data_type), nullable(nullable), column_name(column_name) {}
+CorrelatedParameterExpression::ReferencedExpressionInfo::ReferencedExpressionInfo(const DataType data_type,
+                                                                                  const bool nullable,
+                                                                                  const std::string& column_name)
+    : data_type(data_type), nullable(nullable), column_name(column_name) {}
 
 bool CorrelatedParameterExpression::ReferencedExpressionInfo::operator==(const ReferencedExpressionInfo& rhs) const {
   return data_type == rhs.data_type && nullable == rhs.nullable && column_name == rhs.column_name;

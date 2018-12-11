@@ -14,7 +14,6 @@ namespace opossum {
  */
 class CorrelatedParameterExpression : public AbstractParameterExpression {
  public:
-  // If this ParameterExpression is
   struct ReferencedExpressionInfo {
     ReferencedExpressionInfo(const DataType data_type, const bool nullable, const std::string& column_name);
 
@@ -26,7 +25,11 @@ class CorrelatedParameterExpression : public AbstractParameterExpression {
   };
 
   CorrelatedParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression);
-  CorrelatedParameterExpression(const ParameterID parameter_id, const ReferencedExpressionInfo& referenced_expression_info);
+  CorrelatedParameterExpression(const ParameterID parameter_id,
+                                const ReferencedExpressionInfo& referenced_expression_info);
+
+  const std::optional<AllTypeVariant>& value() const;
+  void set_value(const std::optional<AllTypeVariant>& value);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
@@ -39,6 +42,9 @@ class CorrelatedParameterExpression : public AbstractParameterExpression {
 
  private:
   const ReferencedExpressionInfo _referenced_expression_info;
+
+  // Get's set in AbstractOperator::set_parameter during expression execution
+  std::optional<AllTypeVariant> _value;
 };
 
 }  // namespace opossum

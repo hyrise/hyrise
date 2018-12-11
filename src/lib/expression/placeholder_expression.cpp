@@ -11,8 +11,7 @@
 namespace opossum {
 
 PlaceholderExpression::PlaceholderExpression(const ParameterID parameter_id)
-: AbstractParameterExpression(ParameterExpressionType::Placeholder, parameter_id) {}
-
+    : AbstractParameterExpression(ParameterExpressionType::Placeholder, parameter_id) {}
 
 std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
   return std::make_shared<PlaceholderExpression>(parameter_id);
@@ -24,9 +23,7 @@ std::string PlaceholderExpression::as_column_name() const {
   return stream.str();
 }
 
-DataType PlaceholderExpression::data_type() const {
-  Fail("Cannot obtain DataType of placeholder");
-}
+DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
 bool PlaceholderExpression::is_nullable() const {
   // Assuming it's nullable is safe
@@ -46,6 +43,5 @@ size_t PlaceholderExpression::_on_hash() const {
 
   return hash;
 }
-
 
 }  // namespace opossum

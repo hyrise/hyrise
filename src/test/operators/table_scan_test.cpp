@@ -650,14 +650,13 @@ TEST_P(OperatorsTableScanTest, SetParameters) {
   EXPECT_EQ(*scan_a->predicate(), *greater_than_equals_(column, 4));
 
   const auto parameter_expression_with_value = placeholder_(ParameterID{2});
-  parameter_expression_with_value->set_value(6);
-  const auto scan_b = std::make_shared<TableScan>(
-      _int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{2})));
+  const auto scan_b =
+      std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{2})));
   scan_b->set_parameters(parameters);
   EXPECT_EQ(*scan_b->predicate(), *greater_than_equals_(column, parameter_expression_with_value));
 
-  const auto scan_c = std::make_shared<TableScan>(
-      _int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{4})));
+  const auto scan_c =
+      std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{4})));
   scan_c->set_parameters(parameters);
   EXPECT_EQ(*scan_c->predicate(), *greater_than_equals_(column, placeholder_(ParameterID{4})));
 }

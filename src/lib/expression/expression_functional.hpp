@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "abstract_expression.hpp"
+#include "abstract_parameter_expression.hpp"
 #include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "between_expression.hpp"
@@ -19,7 +20,6 @@
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
-#include "abstract_parameter_expression.hpp"
 #include "placeholder_expression.hpp"
 #include "pqp_column_expression.hpp"
 #include "pqp_select_expression.hpp"
@@ -218,7 +218,7 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
 
 template <typename ReferencedExpression>
 std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const ParameterID parameter_id,
-                                                           const ReferencedExpression& referenced) {
+                                                                     const ReferencedExpression& referenced) {
   return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
