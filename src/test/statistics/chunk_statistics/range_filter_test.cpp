@@ -168,9 +168,9 @@ TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, NULL_VALUE));
 
   // For the default filter, the following value is prunable.
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, {this->_value_in_gap}));
   // But malformed predicates are skipped intentially and are thus not prunable
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_in_between}, NULL_VALUE));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, {this->_value_in_gap}, NULL_VALUE));
 }
 
 // this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
