@@ -12,20 +12,29 @@
 
 namespace opossum {
 
-    std::shared_ptr<const Table> pre_aggregate() {
-      opossum::TpchDbGenerator(0.1f).generate_and_store();
-  auto sql = "SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, l_quantity FROM customer, orders, lineitem WHERE o_orderkey in (SELECT l_orderkey FROM lineitem GROUP BY l_orderkey having SUM(l_quantity) > 300) AND c_custkey = o_custkey AND o_orderkey = l_orderkey";
+std::shared_ptr<const Table> pre_aggregate2() {
+  const float scale_factor = 1.f;
+  std::cout << "Starting to generate TCPH tables with scale factor " << scale_factor << "... ";
+  opossum::TpchDbGenerator(scale_factor).generate_and_store();
+  std::cout << " done" << std::endl;
+  std::cout << "Starting to compute join query part for TPCH-18 (modified)..." << std::endl;
+  auto sql = "SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, l_quantity FROM customer, orders, lineitem WHERE o_orderkey in (SELECT l_orderkey FROM lineitem GROUP BY l_orderkey having SUM(l_quantity) > 200) AND c_custkey = o_custkey AND o_orderkey = l_orderkey";
   auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();
   auto sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
-  return sql_pipeline->get_result_table();
+  auto result = sql_pipeline->get_result_table();
+  std::cout << "Finished to compute join query part for TPCH-18 (modified)" << std::endl;
+  std::cout << "created table size is " << result->row_count() << std::endl;
+  return result;
+}
+
+const auto pre_aggregate() {
+    static std::shared_ptr<const Table> ptr;
+    if (ptr == nullptr) ptr = pre_aggregate2();
+    return ptr;
 }
 
 void bm_aggregate_impl(benchmark::State& state, std::vector<ColumnID>& groupby) {
   std::vector<AggregateColumnDefinition> aggregates = {{ColumnID{5} /* "l_quantity" */, AggregateFunction::Sum}};
-  // auto tables = opossum::TpchDbGenerator(0.1f).generate();
-  // auto line_item_table = tables.at(TpchTable::LineItem);
-  // auto order_table = tables.at(TpchTable::Orders);
-
 
   const auto pre_result = std::make_shared<TableWrapper>(pre_aggregate());
   pre_result->execute();
@@ -40,13 +49,19 @@ void bm_aggregate_impl(benchmark::State& state, std::vector<ColumnID>& groupby) 
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate_1_Column)(benchmark::State& state) {
   _clear_cache();
-  std::vector<ColumnID> groupby = {ColumnID{0}};
+  std::vector<ColumnID> groupby = {ColumnID{1}};
   bm_aggregate_impl(state, groupby);
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate_2_Columns)(benchmark::State& state) {
   _clear_cache();
-  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{1}};
+  std::vector<ColumnID> groupby = {ColumnID{1}, ColumnID{2}};
+  bm_aggregate_impl(state, groupby);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate_2_Columns_Independent)(benchmark::State& state) {
+  _clear_cache();
+  std::vector<ColumnID> groupby = {ColumnID{0}, ColumnID{3}};
   bm_aggregate_impl(state, groupby);
 }
 
