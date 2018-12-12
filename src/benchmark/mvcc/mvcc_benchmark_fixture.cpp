@@ -1,10 +1,10 @@
 #include "mvcc_benchmark_fixture.hpp"
 
-#include <expression/expression_functional.hpp>
 #include <memory>
 #include <vector>
 
 #include "benchmark/benchmark.h"
+
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
@@ -16,7 +16,6 @@
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
-#include "table_generator.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
@@ -29,7 +28,6 @@ constexpr auto CHUNK_SIZE = opossum::ChunkID{500};
 namespace opossum {
 
 void MVCC_Benchmark_Fixture::_incrementAllValuesByOne() {
-  std::cout << "Incrementing all values by one";
   // Prepare Update Operator
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
@@ -52,7 +50,7 @@ void MVCC_Benchmark_Fixture::_incrementAllValuesByOne() {
 }
 
 void MVCC_Benchmark_Fixture::_invalidateRecords(int invalidatedRecordsCount) {
-  std::cout << "Incrementing all values by one";
+
   // With each UPDATE, 10 records are updated resp. invalidated.
   int requiredUpdatesCount = invalidatedRecordsCount / 10;
 
@@ -62,7 +60,6 @@ void MVCC_Benchmark_Fixture::_invalidateRecords(int invalidatedRecordsCount) {
 }
 
 void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
-  std::cout << "Set up MVCC benchmark";
   column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
 
   // Create a table with dummy data
@@ -70,24 +67,16 @@ void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
   auto intTable = load_table("src/benchmark/mvcc/mvcc_benchmark_table.tbl", CHUNK_SIZE);
   StorageManager::get().add_table(_table_name, intTable);
 
-  std::cout << "MVCC-BM: Table created\n";
-
   // Invalidate rows
   int invalidationCount = static_cast<int>(state.range());
-
-  std::cout << "Invalidating " << invalidationCount << " rows\n";
+  std::cout << "MVCC-BM: Table created, invalidating " << invalidationCount << " records\n";
   _invalidateRecords(invalidationCount);
 }
 
 void MVCC_Benchmark_Fixture::TearDown(::benchmark::State&) { StorageManager::reset(); }
 
 void MVCC_Benchmark_Fixture::_clear_cache() {
-  std::vector<int> clear = std::vector<int>();
-  clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
-    clear[i] += 1;
-  }
-  clear.resize(0);
+
 }
 
 }  // namespace opossum
