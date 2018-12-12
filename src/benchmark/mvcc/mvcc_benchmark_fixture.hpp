@@ -16,12 +16,12 @@ class MVCC_Benchmark_Fixture : public benchmark::Fixture {
 
  protected:
   void _clear_cache();
-  void _invalidateRecords(int invalidatedRecordsCount);
+  void _invalidateRecords(int recordsCount);
   void _incrementAllValuesByOne();
 
  protected:
   std::string _table_name;
-  std::shared_ptr<AbstractExpression> column_a;
+  std::shared_ptr<AbstractExpression> _column_a;
 };
 
 }  // namespace opossum

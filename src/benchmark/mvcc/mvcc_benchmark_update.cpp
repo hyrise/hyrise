@@ -19,29 +19,36 @@
 namespace opossum {
 
 
-BENCHMARK_DEFINE_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)(benchmark::State& state) {
-  std::cout << "BM_MVCC_UPDATE" << "\n";
-  //_incrementAllValuesByOne();
-
-  int cnt = 0;
+BENCHMARK_DEFINE_F(MVCC_Benchmark_Fixture, BM_MVCC_VALIDATE)(benchmark::State& state) {
 
   for(auto _ : state) {
-    cnt++;
     _clear_cache();
+
     auto get_table = std::make_shared<GetTable>(_table_name);
     get_table->execute();
 
     auto transaction_context = TransactionManager::get().new_transaction_context();
     auto validate_table = std::make_shared<Validate>(get_table);
     validate_table->set_transaction_context(transaction_context);
-    validate_table->execute();
 
+    validate_table->execute();
   }
 
-  std::cout << "Finished run -> cnt = " << cnt << "\n";
 }
 
-// Run benchmark with a table of up to 100.000 invalidated lines
-BENCHMARK_REGISTER_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)->RangeMultiplier(10)->Range(1, 100000); // ->Range(1, 80000);
+BENCHMARK_DEFINE_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)(benchmark::State& state) {
+
+  for(auto _ : state) {
+    _clear_cache();
+
+    _incrementAllValuesByOne();
+  }
+
+}
+
+
+// Run benchmark with a table of up to 99.990 invalidated lines
+BENCHMARK_REGISTER_F(MVCC_Benchmark_Fixture, BM_MVCC_VALIDATE)->RangeMultiplier(2)->Range(1, 99990);
+BENCHMARK_REGISTER_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)->RangeMultiplier(2)->Range(1, 99990);
 
 }  // namespace opossum

@@ -6,16 +6,15 @@ add_executable(
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
     operators/aggregate_benchmark.cpp
-#    operators/difference_benchmark.cpp
-#    operators/join_benchmark.cpp
-#    operators/projection_benchmark.cpp
-#    operators/union_positions_benchmark.cpp
-#    operators/sort_benchmark.cpp
-#    operators/sql_benchmark.cpp
-#    operators/table_scan_benchmark.cpp
-#    operators/union_all_benchmark.cpp
-#    operators/update_benchmark.cpp
-#    operators/mvcc_benchmark.cpp # Fabian's benchmark
+    operators/difference_benchmark.cpp
+    operators/join_benchmark.cpp
+    operators/projection_benchmark.cpp
+    operators/union_positions_benchmark.cpp
+    operators/sort_benchmark.cpp
+    operators/sql_benchmark.cpp
+    operators/table_scan_benchmark.cpp
+    operators/union_all_benchmark.cpp
+    #operators/mvcc_benchmark.cpp # Fabian's benchmark
     mvcc/mvcc_benchmark_fixture.hpp # Julian's benchmark
     mvcc/mvcc_benchmark_fixture.cpp
     mvcc/mvcc_benchmark_update.cpp
