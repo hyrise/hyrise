@@ -97,17 +97,13 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
 
         for label, one_result in multiple_results.items():
             ips, cores = one_result['items_per_second'], one_result['cores']
-            # Throughput dy/dx
-            pitches = list(np.diff(ips)/np.diff(cores))
-            # Throughput dy/dx relative to single-threaded performance (the scale factor)
-            scaleup = [pitch/one_result['singlethreaded'] for pitch in pitches]
-            multithreaded_plot = ax.plot(cores[1:], scaleup, label=label, marker='.')
+            # Throughput per number of cores, relative to single-threaded performance
+            scaleup = [y/(x*one_result['singlethreaded']) for y,x in zip(ips, cores)]
+            multithreaded_plot = ax.plot(cores, scaleup, label=label, marker='.')
             if label not in legend:
                 legend[label] = multithreaded_plot[0]
 
-        # A scale factor >1.0 would be superlinear, so we should be safe with 1.0 as max.
-        # -0.25 as min is chosen arbitrarily, but suffices for most cases. Adjust as needed.
-        ax.set_ylim(ymin=-0.25, ymax=1.0)
+        ax.set_ylim(ymin=0.0, ymax=1.0)
         ax.set_xlim(xmin=0, xmax=max_cores)
 
     # Create one legend for the whole plot
@@ -120,7 +116,7 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
     axis_description = fig.add_subplot(111, frameon=False)
     plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     axis_description.set_xlabel('Utilized cores', labelpad=10)
-    axis_description.set_ylabel('Scale factor\n(Throughput change relative to sinlge-threaded)', labelpad=20)
+    axis_description.set_ylabel('Throughput per core,\nrelative to single-threaded', labelpad=20)
 
     result_plot_file = os.path.join(os.getcwd(), 'benchmark_comparison_scaleup.' + args.format)
     plt.savefig(result_plot_file, bbox_inches='tight')
