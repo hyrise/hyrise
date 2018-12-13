@@ -7,8 +7,8 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "statistics/cardinality_estimator.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 
 namespace opossum {
@@ -51,10 +51,12 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
   if (!uncorrelated_predicates.empty()) {
     // Find the largest vertex
     auto largest_vertex_idx = size_t{0};
-    auto largest_vertex_cardinality = cost_estimator.cardinality_estimator->estimate_cardinality(join_graph.vertices.front(), context);
+    auto largest_vertex_cardinality =
+        cost_estimator.cardinality_estimator->estimate_cardinality(join_graph.vertices.front(), context);
 
     for (size_t vertex_idx = 1; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
-      const auto vertex_cardinality = cost_estimator.cardinality_estimator->estimate_cardinality(join_graph.vertices[vertex_idx], context);
+      const auto vertex_cardinality =
+          cost_estimator.cardinality_estimator->estimate_cardinality(join_graph.vertices[vertex_idx], context);
       if (vertex_cardinality > largest_vertex_cardinality) {
         largest_vertex_idx = vertex_idx;
         largest_vertex_cardinality = vertex_cardinality;

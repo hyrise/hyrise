@@ -27,18 +27,15 @@ class GreedyOperatorOrderingTest : public BaseTest {
     const auto single_bin_histogram_c = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 200, 100);
     const auto single_bin_histogram_d = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 500, 100);
 
-    node_a = create_mock_node_with_statistics(
-      MockNode::ColumnDefinitions{{DataType::Int, "a_a"}, {DataType::Int, "a_b"}},
-      5'000, {single_bin_histogram_a, single_bin_histogram_a});
-    node_b = create_mock_node_with_statistics(
-      MockNode::ColumnDefinitions{{DataType::Int, "b_a"}},
-      1'000, {single_bin_histogram_b});
-    node_c = create_mock_node_with_statistics(
-      MockNode::ColumnDefinitions{{DataType::Int, "c_a"}},
-      200, {single_bin_histogram_c});
-    node_d = create_mock_node_with_statistics(
-      MockNode::ColumnDefinitions{{DataType::Int, "d_a"}},
-      500, {single_bin_histogram_d});
+    node_a =
+        create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a_a"}, {DataType::Int, "a_b"}},
+                                         5'000, {single_bin_histogram_a, single_bin_histogram_a});
+    node_b = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "b_a"}}, 1'000,
+                                              {single_bin_histogram_b});
+    node_c = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "c_a"}}, 200,
+                                              {single_bin_histogram_c});
+    node_d = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "d_a"}}, 500,
+                                              {single_bin_histogram_d});
 
     a_a = node_a->get_column("a_a");
     a_b = node_a->get_column("a_b");

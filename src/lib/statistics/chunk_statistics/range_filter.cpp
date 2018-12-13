@@ -228,6 +228,9 @@ bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, 
       Assert(variant_value2.has_value(), "Between operator needs two values.");
       const auto value2 = type_cast_variant<T>(*variant_value2);
 
+      // a BETWEEN 5 AND 4 will always be empty
+      if (value2 < value) return true;
+
       // Smaller than the segment's minimum.
       if (_does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {
         return true;
@@ -246,9 +249,9 @@ bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, 
       const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
 
       const bool start_in_value_range =
-      (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
+          (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
       const bool end_in_value_range =
-      (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+          (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
 
       // Check if both bounds are within the same gap.
       if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {

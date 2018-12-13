@@ -96,18 +96,20 @@ CardinalityEstimator::estimate_histogram_of_column_to_column_equi_scan_with_bin_
 
     const auto min_distinct_count = std::min(left_distinct_count, right_distinct_count);
 
-    if (min_distinct_count == 0) continue;
+    if (min_distinct_count > 0.0f) {
 
-    const auto eyssen_zimmermannsche_unschaerfe = std::min(
-        (static_cast<float>(min_distinct_count) / left_distinct_count) * left_histogram->bin_height(left_idx),
-        (static_cast<float>(min_distinct_count) / right_distinct_count) * right_histogram->bin_height(right_idx));
+      const auto eyssen_zimmermannsche_unschaerfe = std::min(
+      (static_cast<float>(min_distinct_count) / left_distinct_count) * left_histogram->bin_height(left_idx),
+      (static_cast<float>(min_distinct_count) / right_distinct_count) * right_histogram->bin_height(right_idx));
 
-    if (eyssen_zimmermannsche_unschaerfe == 0.0f) continue;
+      if (eyssen_zimmermannsche_unschaerfe > 0.0f) {
 
-    bin_minima.emplace_back(left_min);
-    bin_maxima.emplace_back(left_histogram->bin_maximum(left_idx));
-    bin_heights.emplace_back(std::ceil(eyssen_zimmermannsche_unschaerfe));
-    bin_distinct_counts.emplace_back(min_distinct_count);
+        bin_minima.emplace_back(left_min);
+        bin_maxima.emplace_back(left_histogram->bin_maximum(left_idx));
+        bin_heights.emplace_back(std::ceil(eyssen_zimmermannsche_unschaerfe));
+        bin_distinct_counts.emplace_back(min_distinct_count);
+      }
+    }
 
     ++left_idx;
     ++right_idx;

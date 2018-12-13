@@ -55,7 +55,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
     std::string name() const override { return "Mock"; }
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator,
-      const std::shared_ptr<OptimizationContext>& context) const override {
+                  const std::shared_ptr<OptimizationContext>& context) const override {
       nodes.emplace(root);
       _apply_to_inputs(root, cost_estimator, context);
     }
@@ -132,7 +132,9 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     std::string name() const override { return "Mock"; }
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator,
-                  const std::shared_ptr<OptimizationContext>& context = {}) const override { ++counter; }
+                  const std::shared_ptr<OptimizationContext>& context = {}) const override {
+      ++counter;
+    }
 
     mutable size_t counter{0};
   };

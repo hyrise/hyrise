@@ -109,6 +109,11 @@ class AbstractHistogram : public AbstractStatisticsObject {
   T maximum() const;
 
   /**
+   * Print debugging info
+   */
+  void print(std::ostream& stream = std::cout) const;
+
+  /**
    * Returns the number of bins actually present in the histogram.
    * This number can be smaller than the number of bins requested when creating a histogram.
    * See implementations of this method in specific histograms for details.

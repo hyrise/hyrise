@@ -10,8 +10,8 @@
 namespace opossum {
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_to_plan(
-const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
-const AbstractCostEstimator& cost_estimator, const std::shared_ptr<OptimizationContext>& context) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
+    const AbstractCostEstimator& cost_estimator, const std::shared_ptr<OptimizationContext>& context) const {
   /**
    * Add a number of predicates on top of a plan; try to bring them into an efficient order
    *
@@ -39,15 +39,15 @@ const AbstractCostEstimator& cost_estimator, const std::shared_ptr<OptimizationC
   for (auto predicate_node_idx = size_t{1}; predicate_node_idx < predicate_nodes_and_cost.size();
        ++predicate_node_idx) {
     predicate_nodes_and_cost[predicate_node_idx].first->set_left_input(
-    predicate_nodes_and_cost[predicate_node_idx - 1].first);
+        predicate_nodes_and_cost[predicate_node_idx - 1].first);
   }
 
   return predicate_nodes_and_cost.back().first;
 }
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
-const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const AbstractCostEstimator& cost_estimator,
-const std::shared_ptr<OptimizationContext>& context) const {
+    const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
+    std::vector<std::shared_ptr<AbstractExpression>> join_predicates, const AbstractCostEstimator& cost_estimator,
+    const std::shared_ptr<OptimizationContext>& context) const {
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *
@@ -86,7 +86,7 @@ const std::shared_ptr<OptimizationContext>& context) const {
        ++predicate_iter) {
     // If a predicate can be converted into an OperatorJoinPredicate, it can be used as a primary predicate
     const auto operator_join_predicate =
-    OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
+        OperatorJoinPredicate::from_expression(*predicate_iter->first, *left_lqp, *right_lqp);
     if (operator_join_predicate) {
       primary_join_predicate = predicate_iter->first;
       join_predicates_and_cost.erase(predicate_iter);
@@ -108,6 +108,5 @@ const std::shared_ptr<OptimizationContext>& context) const {
 
   return lqp;
 }
-
 
 }  // namespace opossum

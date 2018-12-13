@@ -92,6 +92,16 @@ T AbstractHistogram<T>::maximum() const {
   return bin_maximum(bin_count() - 1u);
 }
 
+template <typename T>
+void AbstractHistogram<T>::print(std::ostream& stream) const {
+  stream << histogram_name() << std::endl;
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+    stream << "[" << bin_minimum(bin_id) << " -> " << bin_maximum(bin_id) << "] Height: " << bin_height(bin_id)
+           << "; DistinctCount: " << bin_distinct_count(bin_id) << "\n";
+  }
+  stream << std::endl;
+}
+
 template <>
 uint64_t AbstractHistogram<std::string>::_convert_string_to_number_representation(const std::string& value) const {
   return convert_string_to_number_representation(value, _supported_characters, _string_prefix_length);
@@ -1036,11 +1046,19 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
       continue;
     }
 
+    const auto height = estimate.cardinality;
+    auto distinct_count = estimate_distinct_count(PredicateCondition::Between, bin_min, bin_max);
+
+    // HACK to account for the fact that estimate_distinct_count() might return a slightly higher value
+    //      than estimate_cardinality() due to float arithmetics.
+    if (distinct_count > height && distinct_count - height < 0.001f) {
+      distinct_count = height;
+    }
+
     bin_minima.emplace_back(bin_min);
     bin_maxima.emplace_back(bin_max);
-    bin_heights.emplace_back(static_cast<HistogramCountType>(std::ceil(estimate.cardinality)));
-    bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(
-        std::ceil(estimate_distinct_count(PredicateCondition::Between, bin_min, bin_max))));
+    bin_heights.emplace_back(static_cast<HistogramCountType>(height));
+    bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
   }
 
   return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),

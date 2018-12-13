@@ -120,12 +120,18 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::GreaterThan, {this->_after_range}).type,
             EstimateType::MatchesNone);
 
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, NULL_VALUE).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_in_between}).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_min_value}, {this->_in_between}).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, NULL_VALUE).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {this->_in_between}).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {this->_min_value}, {this->_in_between}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, NULL_VALUE).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_in_between}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_min_value}, {this->_in_between}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, NULL_VALUE).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {this->_in_between}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {this->_min_value}, {this->_in_between}).type,
+            EstimateType::MatchesApproximately);
 
   // as null values are not comparable, we never prune them
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {this->_in_between}).type,

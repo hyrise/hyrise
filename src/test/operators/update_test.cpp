@@ -59,15 +59,6 @@ class OperatorsUpdateTest : public BaseTest {
     validate->execute();
 
     EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), load_table(expected_result_path));
-
-    // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
-    // Approximation should be exact here because we do not have to deal with parallelism issues in tests.
-    auto updated_table = std::make_shared<GetTable>(table_to_update_name);
-    updated_table->execute();
-    ASSERT_NE(updated_table->get_output()->table_statistics2(), nullptr);
-    EXPECT_EQ(updated_table->get_output()->table_statistics2()->row_count(), 3u);
-    ASSERT_EQ(updated_table->get_output()->table_statistics2()->chunk_statistics.size(), 1u);
-    EXPECT_EQ(updated_table->get_output()->table_statistics2()->chunk_statistics.at(0)->approx_invalid_row_count, 3u);
   }
 
   std::string table_to_update_name{"updateTestTable"};

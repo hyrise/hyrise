@@ -401,6 +401,9 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
+  expected_lqp->print();
+  actual_lqp->print();
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 

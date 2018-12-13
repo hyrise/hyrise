@@ -1,19 +1,20 @@
 #include "greedy_operator_ordering.hpp"
 
+#include <cost_model/abstract_cost_estimator.hpp>
 #include <numeric>
 #include <unordered_map>
 #include <unordered_set>
 
+#include "cost_model/abstract_cost_estimator.hpp"
 #include "join_graph.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
-std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGraph& join_graph, const AbstractCostEstimator& cost_estimator,
-                                                                    const std::shared_ptr<OptimizationContext>& context) {
+std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
+    const JoinGraph& join_graph, const AbstractCostEstimator& cost_estimator,
+    const std::shared_ptr<OptimizationContext>& context) {
   DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex");
 
   /**
@@ -108,7 +109,8 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
     for (const auto& remaining_edge_idx : remaining_edge_indices) {
       const auto& remaining_edge = join_graph.edges[remaining_edge_idx];
       if ((remaining_edge.vertex_set & joined_vertex_set).any()) {
-        plan_by_edge[remaining_edge_idx] = _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator, context);
+        plan_by_edge[remaining_edge_idx] =
+            _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator, context);
       }
     }
   }
@@ -123,9 +125,8 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
 }
 
 GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_for_edge(
-    const JoinGraphEdge& edge,
-    const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters, const AbstractCostEstimator& cost_estimator,
-    const std::shared_ptr<OptimizationContext>& context) const {
+    const JoinGraphEdge& edge, const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
+    const AbstractCostEstimator& cost_estimator, const std::shared_ptr<OptimizationContext>& context) const {
   auto joined_clusters = std::vector<JoinGraphVertexSet>{};
 
   for (auto& vertex_cluster : vertex_clusters) {
@@ -142,7 +143,7 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
     const auto plan = _add_join_to_plan(vertex_clusters.at(joined_clusters[0]), vertex_clusters.at(joined_clusters[1]),
                                         edge.predicates, cost_estimator, context);
 
-    return {plan, plan->get_statistics()->row_count()};
+    return {plan, cost_estimator.cardinality_estimator->estimate_cardinality(plan)};
 
   } else {
     // Local edges and hyperedges
@@ -153,7 +154,7 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
     }
 
     plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator, context);
-    return {plan, plan->get_statistics()->row_count()};
+    return {plan, cost_estimator.cardinality_estimator->estimate_cardinality(plan)};
   }
 }
 

@@ -41,7 +41,7 @@ class RangeFilterTest : public ::testing::Test {
     // RangeFilter constructor takes range count, not gap count
     auto filter = RangeFilter<T>::build_filter(values, static_cast<uint32_t>(gap_count + 1));
 
-    for (const auto& value : _values) {
+    for (const auto& value : values) {
       EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value}).type,
                 EstimateType::MatchesApproximately);
     }
@@ -123,7 +123,9 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // Having only one range means the filter cannot prune 0 right in the largest gap.
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesApproximately);
   // Nonetheless, the filter should prune values outside the single range.
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, std::numeric_limits<TypeParam>::lowest() * 0.95).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(
+      filter->estimate_cardinality(PredicateCondition::Equals, std::numeric_limits<TypeParam>::lowest() * 0.95).type,
+      EstimateType::MatchesNone);
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
@@ -168,7 +170,8 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
 
     // _in_between should always prune if   we have more than one range
     if (gap_count > 1) {
-      EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, this->_in_between).type, EstimateType::MatchesNone);
+      EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, this->_in_between).type,
+                EstimateType::MatchesNone);
     }
   }
 }
@@ -206,13 +209,17 @@ TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::NotIn, {17}).type, EstimateType::MatchesApproximately);
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {17}).type, EstimateType::MatchesApproximately);
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {17}).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, NULL_VALUE).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, NULL_VALUE).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, NULL_VALUE).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, NULL_VALUE).type,
+            EstimateType::MatchesApproximately);
 
   // For the default filter, the following value is prunable.
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}).type,
+            EstimateType::MatchesNone);
   // But malformed predicates are skipped intentially and are thus not prunable
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}, NULL_VALUE).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}, NULL_VALUE).type,
+            EstimateType::MatchesApproximately);
 }
 
 // this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
@@ -281,7 +288,6 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
             EstimateType::MatchesNone);
 }
 
-
 // Test larger value ranges.
 TYPED_TEST(RangeFilterTest, LargeValueRange) {
   std::random_device rd;
@@ -319,9 +325,11 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
 
     // Additionally, test for further values in between the large random value ranges.
     for (auto i = size_t{0}; i < 20; ++i) {
-      EXPECT_EQ(
-          filter->estimate_cardinality(PredicateCondition::Equals, {get_random_number<TypeParam>(rng, middle_gap_distribution)}).type,
-          EstimateType::MatchesNone);
+      EXPECT_EQ(filter
+                    ->estimate_cardinality(PredicateCondition::Equals,
+                                           {get_random_number<TypeParam>(rng, middle_gap_distribution)})
+                    .type,
+                EstimateType::MatchesNone);
     }
   }
 }
@@ -356,19 +364,27 @@ TYPED_TEST(RangeFilterTest, Between2) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   // This one has bounds in gaps, but cannot prune.
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {this->_max_value - 1}, {this->_after_range}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(
+      filter->estimate_cardinality(PredicateCondition::Between, {this->_max_value - 1}, {this->_after_range}).type,
+      EstimateType::MatchesApproximately);
 
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-3000}, {-2000}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-3000}, {-2000}).type,
+            EstimateType::MatchesNone);
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-999}, {1}).type, EstimateType::MatchesNone);
   EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {104}, {1004}).type, EstimateType::MatchesNone);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {10'000'000}, {20'000'000}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {10'000'000}, {20'000'000}).type,
+            EstimateType::MatchesNone);
 
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-3000}, {-500}).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {101}, {103}).type, EstimateType::MatchesApproximately);
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {102}, {1004}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-3000}, {-500}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {101}, {103}).type,
+            EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {102}, {1004}).type,
+            EstimateType::MatchesApproximately);
 
   // SQL's between is inclusive
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {103}, {123456}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {103}, {123456}).type,
+            EstimateType::MatchesApproximately);
 }
 
 TYPED_TEST(RangeFilterTest, SliceWithPredicate) {

@@ -97,7 +97,7 @@ void populate_context(const std::shared_ptr<AbstractLQPNode>& plan,
       context->predicate_indices.emplace(predicate_node->predicate(), context->predicate_indices.size());
     }
 
-      for (const auto& node_expression : node->node_expressions) {
+    for (const auto& node_expression : node->node_expressions) {
       visit_expression(node_expression, [&](const auto& sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
           populate_context(select_expression->lqp, context);
@@ -135,7 +135,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_shared<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
- // optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
+  // optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
   optimizer->add_rule(std::make_shared<IndexScanRule>());
 
   return optimizer;
@@ -150,8 +150,7 @@ std::shared_ptr<OptimizationContext> Optimizer::create_optimization_context(
   return context;
 }
 
-Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
-    : _cost_estimator(cost_estimator) {}
+Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
 
 void Optimizer::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
 
