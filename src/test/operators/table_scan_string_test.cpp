@@ -11,7 +11,6 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/table_scan/like_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "storage/chunk_encoder.hpp"

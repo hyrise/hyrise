@@ -567,7 +567,7 @@ TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
   const auto table = load_table("src/test/tables/float3.tbl");
   const auto hist =
       EqualWidthHistogram<float>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 5'000u);
-  EXPECT_FALSE(hist->can_prune(PredicateCondition::Equals, value));
+  EXPECT_EQ(hist->estimate_cardinality(PredicateCondition::Equals, value).type, EstimateType::MatchesApproximately);
 }
 
 TEST_F(EqualWidthHistogramTest, StringLessThan) {

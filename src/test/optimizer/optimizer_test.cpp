@@ -57,7 +57,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root, const AbstractCostEstimator& cost_estimator,
       const std::shared_ptr<OptimizationContext>& context) const override {
       nodes.emplace(root);
-      _apply_to_inputs(root);
+      _apply_to_inputs(root, cost_estimator, context);
     }
 
     mutable std::unordered_set<std::shared_ptr<AbstractLQPNode>> nodes;

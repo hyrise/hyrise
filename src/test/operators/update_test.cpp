@@ -60,9 +60,6 @@ class OperatorsUpdateTest : public BaseTest {
 
     EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), load_table(expected_result_path));
 
-    // The new validated table should have the same number of (valid) rows as before.
-    EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
-
     // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
     // Approximation should be exact here because we do not have to deal with parallelism issues in tests.
     auto updated_table = std::make_shared<GetTable>(table_to_update_name);

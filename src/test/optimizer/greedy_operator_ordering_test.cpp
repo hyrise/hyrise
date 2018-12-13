@@ -7,6 +7,8 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "statistics/chunk_statistics/histograms/single_bin_histogram.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
@@ -17,34 +19,26 @@ namespace opossum {
 class GreedyOperatorOrderingTest : public BaseTest {
  public:
   void SetUp() override {
-    cost_estimator = std::make_shared<CostModelLogical>();
-
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a_a"}, {DataType::Int, "a_b"}}, "a");
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b_a"}}, "b");
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "c_a"}}, "c");
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "d_a"}}, "d");
+    cost_estimator = std::make_shared<CostModelLogical>(std::make_shared<CardinalityEstimator>());
 
     // All columns have the same statistics, only Table row counts differ
-    const auto column_statistics = std::static_pointer_cast<const BaseColumnStatistics>(
-        std::make_shared<ColumnStatistics<int32_t>>(0.0f, 100, 0, 100));
+    const auto single_bin_histogram_a = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 5'000, 100);
+    const auto single_bin_histogram_b = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 1'000, 100);
+    const auto single_bin_histogram_c = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 200, 100);
+    const auto single_bin_histogram_d = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 500, 100);
 
-    const auto table_statistics_a = std::make_shared<TableStatistics>(
-        TableType::Data, 5'000,
-        std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics, column_statistics});
-
-    const auto table_statistics_b = std::make_shared<TableStatistics>(
-        TableType::Data, 1'000, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
-
-    const auto table_statistics_c = std::make_shared<TableStatistics>(
-        TableType::Data, 200, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
-
-    const auto table_statistics_d = std::make_shared<TableStatistics>(
-        TableType::Data, 500, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
-
-    node_a->set_statistics(table_statistics_a);
-    node_b->set_statistics(table_statistics_b);
-    node_c->set_statistics(table_statistics_c);
-    node_d->set_statistics(table_statistics_d);
+    node_a = create_mock_node_with_statistics(
+      MockNode::ColumnDefinitions{{DataType::Int, "a_a"}, {DataType::Int, "a_b"}},
+      5'000, {single_bin_histogram_a, single_bin_histogram_a});
+    node_b = create_mock_node_with_statistics(
+      MockNode::ColumnDefinitions{{DataType::Int, "b_a"}},
+      1'000, {single_bin_histogram_b});
+    node_c = create_mock_node_with_statistics(
+      MockNode::ColumnDefinitions{{DataType::Int, "c_a"}},
+      200, {single_bin_histogram_c});
+    node_d = create_mock_node_with_statistics(
+      MockNode::ColumnDefinitions{{DataType::Int, "d_a"}},
+      500, {single_bin_histogram_d});
 
     a_a = node_a->get_column("a_a");
     a_b = node_a->get_column("a_b");
@@ -64,7 +58,7 @@ TEST_F(GreedyOperatorOrderingTest, NoEdges) {
   const auto join_graph =
       JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a}, std::vector<JoinGraphEdge>{}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
   const auto expected_lqp = node_a;
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -81,7 +75,7 @@ TEST_F(GreedyOperatorOrderingTest, ChainQuery) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_a, edge_ab, edge_bc, edge_cd}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -106,7 +100,7 @@ TEST_F(GreedyOperatorOrderingTest, StarQuery) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_ab, edge_ac, edge_ad}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -136,7 +130,7 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b, node_c, node_d},
                                     std::vector<JoinGraphEdge>{edge_bc, edge_cd, edge_acd, edge_bcd, edge_abcd}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -165,7 +159,7 @@ TEST_F(GreedyOperatorOrderingTest, UncorrelatedPredicate) {
   const auto join_graph = JoinGraph{std::vector<std::shared_ptr<AbstractLQPNode>>{node_a, node_b},
                                     std::vector<JoinGraphEdge>{edge_uncorrelated, edge_ab}};
 
-  const auto actual_lqp = GreedyOperatorOrdering{cost_estimator}(join_graph);  // NOLINT
+  const auto actual_lqp = GreedyOperatorOrdering{}(join_graph, *cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =

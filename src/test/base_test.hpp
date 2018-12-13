@@ -14,6 +14,11 @@
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "statistics/abstract_statistics_object.hpp"
+#include "statistics/chunk_statistics2.hpp"
+#include "statistics/segment_statistics2.hpp"
+#include "statistics/table_statistics2.hpp"
+#include "statistics/cardinality.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
@@ -138,8 +143,7 @@ class BaseTestWithParam
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
 
-        const auto segment_statistics = std::make_shared<SegmentStatistics2 < ColumnDataType>>
-        ();
+        const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
         segment_statistics->set_statistics_object(statistics_objects[column_id]);
         chunk_statistics->segment_statistics.emplace_back(segment_statistics);
       });
