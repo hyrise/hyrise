@@ -116,7 +116,7 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
     axis_description = fig.add_subplot(111, frameon=False)
     plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     axis_description.set_xlabel('Utilized cores', labelpad=10)
-    axis_description.set_ylabel('Throughput per core,\nrelative to single-threaded', labelpad=20)
+    axis_description.set_ylabel('Throughput (queries / s) per core\n(relative to single-threaded without scheduler)', labelpad=20)
 
     result_plot_file = os.path.join(os.getcwd(), 'benchmark_comparison_scaleup.' + args.format)
     plt.savefig(result_plot_file, bbox_inches='tight')
