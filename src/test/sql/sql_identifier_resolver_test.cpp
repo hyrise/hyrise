@@ -2,7 +2,6 @@
 
 #include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/abstract_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"

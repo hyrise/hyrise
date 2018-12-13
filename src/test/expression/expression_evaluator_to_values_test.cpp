@@ -586,7 +586,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
   //  2      (3, 6, 9, 12)
   //  3      (4, 8, 12, 16)
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
-  const auto mul_a = mul_(placeholder_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "a"));
+  const auto mul_a = mul_(correlated_parameter_(ParameterID{0}, a), PQPColumnExpression::from_table(*table_a, "a"));
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
   const auto select_a = pqp_select_(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
@@ -611,7 +611,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSelectCorrelated) {
   //  2      (36, NULL, 37, NULL)
   //  3      (37, NULL, 38, NULL)
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
-  const auto add_b = add_(placeholder_(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "c"));
+  const auto add_b = add_(correlated_parameter_(ParameterID{0}, a), PQPColumnExpression::from_table(*table_a, "c"));
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
   const auto select_b = pqp_select_(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
 
@@ -677,7 +677,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
    *    table_a;
    */
   const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
-  const auto parameter_a = placeholder_(ParameterID{0});
+  const auto parameter_a = correlated_parameter_(ParameterID{0}, x);
   const auto a_plus_x_projection =
       std::make_shared<Projection>(table_wrapper, expression_vector(add_(parameter_a, x), x));
   const auto a_plus_x_column = pqp_column_(ColumnID{0}, DataType::Int, false, "");

@@ -6,7 +6,6 @@
 #include <string>
 
 #include "constant_mappings.hpp"
-#include "expression/abstract_parameter_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"

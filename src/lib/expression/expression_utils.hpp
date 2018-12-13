@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "abstract_expression.hpp"
-#include "abstract_parameter_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {

@@ -161,9 +161,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
 
     // ValueExpression and CorrelatedParameterExpression both need to unpack an AllTypeVariant, so one functions handles
     // both
-    case ExpressionType::Parameter:
+    case ExpressionType::CorrelatedParameter:
     case ExpressionType::Value:
-      return _evaluate_value_or_parameter_expression<Result>(expression);
+      return _evaluate_value_or_correlated_parameter_expression<Result>(expression);
 
     case ExpressionType::Function:
       return _evaluate_function_expression<Result>(static_cast<const FunctionExpression&>(expression));
@@ -192,6 +192,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::LQPColumn:
     case ExpressionType::LQPSelect:
       Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
+
+    case ExpressionType::Placeholder:
+      Fail(
+          "Can't evaluate an expressions still containing placeholders. Are you trying to execute a PreparedPlan "
+          "without instantiating it first?");
   }
   Fail("GCC thinks this is reachable");
 }
@@ -698,7 +703,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_exists_
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_or_parameter_expression(
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_or_correlated_parameter_expression(
     const AbstractExpression& expression) {
   AllTypeVariant value;
 

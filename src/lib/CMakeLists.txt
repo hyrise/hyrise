@@ -31,8 +31,6 @@ set(
     cost_model/cost_model_logical.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
-    expression/abstract_parameter_expression.cpp
-    expression/abstract_parameter_expression.hpp
     expression/abstract_predicate_expression.cpp
     expression/abstract_predicate_expression.hpp
     expression/aggregate_expression.cpp

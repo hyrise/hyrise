@@ -11,7 +11,7 @@
 namespace opossum {
 
 PlaceholderExpression::PlaceholderExpression(const ParameterID parameter_id)
-    : AbstractParameterExpression(ParameterExpressionType::Placeholder, parameter_id) {}
+    : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(parameter_id) {}
 
 std::shared_ptr<AbstractExpression> PlaceholderExpression::deep_copy() const {
   return std::make_shared<PlaceholderExpression>(parameter_id);
@@ -22,6 +22,8 @@ std::string PlaceholderExpression::as_column_name() const {
   stream << "Placeholder[id=" << std::to_string(parameter_id) << "]";
   return stream.str();
 }
+
+bool PlaceholderExpression::requires_computation() const { return false; }
 
 DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
@@ -36,12 +38,6 @@ bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression
   return parameter_expression_rhs && parameter_id == parameter_expression_rhs->parameter_id;
 }
 
-size_t PlaceholderExpression::_on_hash() const {
-  auto hash = boost::hash_value(parameter_id.t);
-
-  boost::hash_combine(hash, static_cast<std::underlying_type_t<ParameterExpressionType>>(parameter_expression_type));
-
-  return hash;
-}
+size_t PlaceholderExpression::_on_hash() const { return boost::hash_value(parameter_id.t); }
 
 }  // namespace opossum

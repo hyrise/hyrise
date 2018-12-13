@@ -49,7 +49,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   visit_lqp(subselect_expression->lqp, [&](const auto& deeper_node) {
     for (const auto& expression : deeper_node->node_expressions) {
       visit_expression(expression, [&](const auto& sub_expression) {
-        const auto parameter_expression = std::dynamic_pointer_cast<AbstractParameterExpression>(sub_expression);
+        const auto parameter_expression = std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression);
         if (parameter_expression && parameter_expression->parameter_id == correlated_parameter_id) {
           ++correlated_parameter_usage_count;
         }
@@ -106,13 +106,13 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     auto parameter_expression = std::shared_ptr<CorrelatedParameterExpression>();
 
     if (subselect_predicate_expression->arguments[0]->type == ExpressionType::LQPColumn &&
-        subselect_predicate_expression->arguments[1]->type == ExpressionType::Parameter) {
+        subselect_predicate_expression->arguments[1]->type == ExpressionType::CorrelatedParameter) {
       // Column left, parameter right
       inner_column_expression =
           std::static_pointer_cast<LQPColumnExpression>(subselect_predicate_expression->arguments[0]);
       parameter_expression =
           std::static_pointer_cast<CorrelatedParameterExpression>(subselect_predicate_expression->arguments[1]);
-    } else if (subselect_predicate_expression->arguments[0]->type == ExpressionType::Parameter &&
+    } else if (subselect_predicate_expression->arguments[0]->type == ExpressionType::CorrelatedParameter &&
                subselect_predicate_expression->arguments[1]->type == ExpressionType::LQPColumn) {
       // Column right, parameter left
       parameter_expression =

@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "abstract_expression.hpp"
-#include "abstract_parameter_expression.hpp"
 #include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "between_expression.hpp"

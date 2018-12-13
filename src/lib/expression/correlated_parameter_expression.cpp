@@ -12,13 +12,15 @@ namespace opossum {
 
 CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
                                                              const AbstractExpression& referenced_expression)
-    : AbstractParameterExpression(ParameterExpressionType::Correlated, parameter_id),
+    : AbstractExpression(ExpressionType::CorrelatedParameter, {}),
+      parameter_id(parameter_id),
       _referenced_expression_info(referenced_expression.data_type(), referenced_expression.is_nullable(),
                                   referenced_expression.as_column_name()) {}
 
 CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID parameter_id,
                                                              const ReferencedExpressionInfo& referenced_expression_info)
-    : AbstractParameterExpression(ParameterExpressionType::Correlated, parameter_id),
+    : AbstractExpression(ExpressionType::CorrelatedParameter, {}),
+      parameter_id(parameter_id),
       _referenced_expression_info(referenced_expression_info) {}
 
 std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() const {
@@ -34,6 +36,8 @@ std::string CorrelatedParameterExpression::as_column_name() const {
 
   return stream.str();
 }
+
+bool CorrelatedParameterExpression::requires_computation() const { return false; }
 
 DataType CorrelatedParameterExpression::data_type() const { return _referenced_expression_info.data_type; }
 
@@ -58,7 +62,6 @@ bool CorrelatedParameterExpression::_shallow_equals(const AbstractExpression& ex
 size_t CorrelatedParameterExpression::_on_hash() const {
   auto hash = boost::hash_value(parameter_id.t);
 
-  boost::hash_combine(hash, static_cast<std::underlying_type_t<ParameterExpressionType>>(parameter_expression_type));
   boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info.data_type));
   boost::hash_combine(hash, _referenced_expression_info.nullable);
   boost::hash_combine(hash, _referenced_expression_info.column_name);

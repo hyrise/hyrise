@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "expression/abstract_parameter_expression.hpp"
+#include "expression/abstract_expression.hpp"
 
 namespace opossum {
 

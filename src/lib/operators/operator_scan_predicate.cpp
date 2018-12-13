@@ -1,7 +1,6 @@
 #include "operator_scan_predicate.hpp"
 
 #include "constant_mappings.hpp"
-#include "expression/abstract_parameter_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/value_expression.hpp"
@@ -22,7 +21,7 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
     value = value_expression->value;
   } else if (const auto column_id = node.find_column_id(expression)) {
     value = *column_id;
-  } else if (const auto parameter_expression = dynamic_cast<const AbstractParameterExpression*>(&expression)) {
+  } else if (const auto parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
   } else {
     return std::nullopt;
