@@ -60,7 +60,7 @@ bool CorrelatedParameterExpression::_shallow_equals(const AbstractExpression& ex
 }
 
 size_t CorrelatedParameterExpression::_on_hash() const {
-  auto hash = boost::hash_value(parameter_id.t);
+  auto hash = boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
 
   boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info.data_type));
   boost::hash_combine(hash, _referenced_expression_info.nullable);
