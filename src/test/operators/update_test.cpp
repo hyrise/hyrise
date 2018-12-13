@@ -34,8 +34,6 @@ class OperatorsUpdateTest : public BaseTest {
     StorageManager::get().add_table(table_to_update_name, table);
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
   void helper(const std::shared_ptr<AbstractExpression>& where_predicate,
               const std::vector<std::shared_ptr<AbstractExpression>>& update_expressions,
               const std::string& expected_result_path) {

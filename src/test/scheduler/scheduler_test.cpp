@@ -214,6 +214,12 @@ TEST_F(SchedulerTest, MultipleOperators) {
 }
 
 TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
+  if (std::thread::hardware_concurrency() < 4) {
+    // If the machine has less than 4 cores, the calls to use_non_numa_topology()
+    // below will implicitly reduce the worker count to the number of cores,
+    // therefore failing the assertions.
+    GTEST_SKIP();
+  }
   Topology::use_non_numa_topology(4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
