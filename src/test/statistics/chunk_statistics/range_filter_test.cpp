@@ -236,6 +236,12 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * std::numeric_limits<TypeParam>::lowest()));
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * std::numeric_limits<TypeParam>::max()));
 
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values.front(), values[4]));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values[5], values.back()));
+
+  // As SQL-between is inclusive, this range cannot be pruned.
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values[4], values[5]));
+
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * std::numeric_limits<TypeParam>::lowest()));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * std::numeric_limits<TypeParam>::max()));
 
