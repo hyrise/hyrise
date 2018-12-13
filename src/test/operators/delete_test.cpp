@@ -241,7 +241,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
 
 // This test uses the transaction context after its already been committed on behalf of every
 // read/write operator and the read only operator Validate
-TEST_F(RWOperatorsAndValidateTest, UseTransactionContextAfterCommit) {
+TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = TransactionManager::get().new_transaction_context();
 
   auto validate1 = std::make_shared<Validate>(_gt);
