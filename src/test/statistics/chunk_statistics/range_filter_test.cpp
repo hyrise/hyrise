@@ -221,13 +221,13 @@ TYPED_TEST(RangeFilterTest, Between) {
 // Test larger value ranges.
 TYPED_TEST(RangeFilterTest, LargeValueRange) {
   const pmr_vector<TypeParam> values{static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::lowest()),
-                                         static_cast<TypeParam>(0.38 * std::numeric_limits<TypeParam>::lowest()),
-                                         static_cast<TypeParam>(0.36 * std::numeric_limits<TypeParam>::lowest()),
-                                         static_cast<TypeParam>(0.30 * std::numeric_limits<TypeParam>::lowest()),
-                                         static_cast<TypeParam>(0.28 * std::numeric_limits<TypeParam>::lowest()),
-                                         static_cast<TypeParam>(0.36 * std::numeric_limits<TypeParam>::max()),
-                                         static_cast<TypeParam>(0.38 * std::numeric_limits<TypeParam>::max()),
-                                         static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::max())};
+                                     static_cast<TypeParam>(0.38 * std::numeric_limits<TypeParam>::lowest()),
+                                     static_cast<TypeParam>(0.36 * std::numeric_limits<TypeParam>::lowest()),
+                                     static_cast<TypeParam>(0.30 * std::numeric_limits<TypeParam>::lowest()),
+                                     static_cast<TypeParam>(0.28 * std::numeric_limits<TypeParam>::lowest()),
+                                     static_cast<TypeParam>(0.36 * std::numeric_limits<TypeParam>::max()),
+                                     static_cast<TypeParam>(0.38 * std::numeric_limits<TypeParam>::max()),
+                                     static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::max())};
 
   // A filter with 3 ranges, has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
