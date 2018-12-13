@@ -23,9 +23,6 @@ enum class BenchmarkMode { IndividualQueries, PermutedQuerySet };
 using Duration = std::chrono::high_resolution_clock::duration;
 using TimePoint = std::chrono::high_resolution_clock::time_point;
 
-using NamedQuery = std::pair<std::string, std::string>;
-using NamedQueries = std::vector<NamedQuery>;
-
 using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec>;
 
 // Map<TABLE_NAME, Map<column_name, SegmentEncoding>>
@@ -37,15 +34,21 @@ using TableSegmentEncodingMapping =
  */
 std::ostream& get_out_stream(const bool verbose);
 
-struct QueryBenchmarkResult {
+struct QueryBenchmarkResult : public Noncopyable {
   QueryBenchmarkResult() { iteration_durations.reserve(1'000'000); }
+
+  QueryBenchmarkResult(QueryBenchmarkResult&& other) noexcept {
+    num_iterations.store(other.num_iterations);
+    duration = std::move(other.duration);
+    iteration_durations = std::move(other.iteration_durations);
+  }
+
+  QueryBenchmarkResult& operator=(QueryBenchmarkResult&&) = default;
+
   std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
   tbb::concurrent_vector<Duration> iteration_durations;
 };
-
-using QueryID = size_t;
-using BenchmarkResults = std::unordered_map<std::string, QueryBenchmarkResult>;
 
 /**
  * Loosely copying the functionality of benchmark::State
@@ -90,11 +93,6 @@ struct EncodingConfig {
   static const char* description;
 };
 
-class BenchmarkTableEncoder {
- public:
-  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table, const EncodingConfig& config);
-};
-
 // View BenchmarkConfig::description to see format of the JSON-version
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
@@ -124,6 +122,13 @@ struct BenchmarkConfig {
 
  private:
   BenchmarkConfig() : out(std::cout) {}
+};
+
+class BenchmarkTableEncoder {
+ public:
+  // @param out   stream for logging info
+  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table,
+                     const EncodingConfig& encoding_config, std::ostream& out);
 };
 
 class CLIConfigParser {

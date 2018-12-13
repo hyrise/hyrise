@@ -53,4 +53,13 @@ TEST_F(ProjectionNodeTest, Equals) {
 
 TEST_F(ProjectionNodeTest, Copy) { EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node); }
 
+TEST_F(ProjectionNodeTest, NodeExpressions) {
+  ASSERT_EQ(_projection_node->node_expressions.size(), 5u);
+  EXPECT_EQ(*_projection_node->node_expressions.at(0), *lqp_column_(_c));
+  EXPECT_EQ(*_projection_node->node_expressions.at(1), *lqp_column_(_a));
+  EXPECT_EQ(*_projection_node->node_expressions.at(2), *lqp_column_(_b));
+  EXPECT_EQ(*_projection_node->node_expressions.at(3), *add_(_b, _c));
+  EXPECT_EQ(*_projection_node->node_expressions.at(4), *add_(_a, _c));
+}
+
 }  // namespace opossum

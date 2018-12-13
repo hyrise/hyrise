@@ -59,27 +59,27 @@ TEST_F(AllParameterVariantTest, GetCurrentValue) {
   }
   {
     AllParameterVariant parameter("string");
-    auto value = type_cast<std::string>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<std::string>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, "string");
   }
   {
     AllParameterVariant parameter(static_cast<int32_t>(123));
-    auto value = type_cast<int32_t>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<int32_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int32_t>(123));
   }
   {
     AllParameterVariant parameter(static_cast<int64_t>(123456789l));
-    auto value = type_cast<int64_t>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<int64_t>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, static_cast<int64_t>(123456789l));
   }
   {
     AllParameterVariant parameter(123.4f);
-    auto value = type_cast<float>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<float>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, 123.4f);
   }
   {
     AllParameterVariant parameter(123.4);
-    auto value = type_cast<double>(boost::get<AllTypeVariant>(parameter));
+    auto value = type_cast_variant<double>(boost::get<AllTypeVariant>(parameter));
     EXPECT_EQ(value, 123.4);
   }
 }
@@ -92,18 +92,6 @@ TEST_F(AllParameterVariantTest, ToString) {
   {
     const AllParameterVariant parameter(ColumnID{17});
     EXPECT_EQ(to_string(parameter), "Column #17");
-  }
-  {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
-    const std::shared_ptr<StoredTableNode> int_float = StoredTableNode::make("int_float");
-    const LQPColumnReference column_a = {int_float, ColumnID{0}};
-    const LQPColumnReference column_b = {int_float, ColumnID{1}};
-
-    const AllParameterVariant parameter_column_a(column_a);
-    EXPECT_EQ(to_string(parameter_column_a), "a");
-
-    const AllParameterVariant parameter_column_b(column_b);
-    EXPECT_EQ(to_string(parameter_column_b), "b");
   }
   {
     const AllParameterVariant parameter("string");

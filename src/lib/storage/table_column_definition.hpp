@@ -1,6 +1,7 @@
 #pragma once
 
 #include "all_type_variant.hpp"
+#include "constant_mappings.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -15,6 +16,14 @@ struct TableColumnDefinition final {
   DataType data_type{DataType::Int};
   bool nullable{false};
 };
+
+// So that google test, e.g., prints readable error messages
+inline std::ostream& operator<<(std::ostream& stream, const TableColumnDefinition& definition) {
+  stream << definition.name << " ";
+  stream << data_type_to_string.left.at(definition.data_type) << " ";
+  stream << (definition.nullable ? "nullable" : "not nullable");
+  return stream;
+}
 
 using TableColumnDefinitions = std::vector<TableColumnDefinition>;
 

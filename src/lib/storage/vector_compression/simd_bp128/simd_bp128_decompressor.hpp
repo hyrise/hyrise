@@ -93,7 +93,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
 
   uint32_t _get_within_cached_meta_block(size_t index) {
     const auto block_index = _index_relative_to_cached_meta_block(index) / Packing::block_size;
-    _unpack_block(block_index);
+    _unpack_block(static_cast<uint8_t>(block_index));
 
     return (*_cached_block)[_index_within_cached_block(index)];
   }

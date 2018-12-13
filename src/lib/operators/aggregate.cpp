@@ -262,7 +262,7 @@ void Aggregate::_aggregate() {
 
   auto input_table = input_table_left();
 
-  for ([[maybe_unused]] const auto groupby_column_id : _groupby_column_ids) {
+  for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
     DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
   }
 
@@ -544,7 +544,7 @@ void Aggregate::_aggregate() {
   }
 
   // add group by columns
-  for (const auto column_id : _groupby_column_ids) {
+  for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
                                             input_table->column_data_type(column_id));
 
@@ -730,7 +730,7 @@ void Aggregate::_write_groupby_output(PosList& pos_list) {
       base_segments.push_back(chunk->get_segment(_groupby_column_ids[group_column_index]));
     }
     _groupby_segments[group_column_index]->reserve(pos_list.size());
-    for (const auto row_id : pos_list) {
+    for (const auto& row_id : pos_list) {
       _groupby_segments[group_column_index]->append((*base_segments[row_id.chunk_id])[row_id.chunk_offset]);
     }
   }

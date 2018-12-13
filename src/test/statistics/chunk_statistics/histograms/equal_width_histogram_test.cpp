@@ -540,6 +540,36 @@ TEST_F(EqualWidthHistogramTest, FloatLessThan) {
                   4.f + 7.f + 3.f);
 }
 
+TEST_F(EqualWidthHistogramTest, FloatBinForValueLargeValues) {
+  // The calculation to find out which bin a value belongs to can return a BinID that is equal to or larger than
+  // the number of bins there are in the histogram.
+  // See EqualWidthHistogram::_bin_for_value() for details.
+  // Values are adapted from an actual error that existed previously.
+  const auto min = 1'023.79f;
+  const auto max = 694'486.f;
+  const auto bin_count = 10'000u;
+  const auto hist = EqualWidthHistogram<float>(min, max, std::vector<HistogramCountType>(bin_count, 1u),
+                                               std::vector<HistogramCountType>(bin_count, 1u), 0u);
+  EXPECT_NO_THROW(hist.estimate_cardinality(PredicateCondition::GreaterThanEquals, max));
+}
+
+TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
+  // The calculation for the bin edges needs to be the same in every location in the code.
+  // Previously, during creation of the histogram, we added the bin_width to the bin_minimum to
+  // calculate the bin boundaries in a loop, while we divided by the bin_width to calculate the
+  // boundaries for a given bin in _bin_for_value().
+  // Adding the bin_width (a float for float histograms) in a loop introduces an error
+  // that increases in every iteration due to floating point arithmetic.
+  // In cases where there are many bins, this can result in significantly different bin boundaries,
+  // such that values are put into a different bin than they were retrieved from.
+  // This test checks that this is not the case.
+  const auto value = 501'506.55f;
+  const auto table = load_table("src/test/tables/float3.tbl");
+  const auto hist =
+      EqualWidthHistogram<float>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 5'000u);
+  EXPECT_FALSE(hist->can_prune(PredicateCondition::Equals, value));
+}
+
 TEST_F(EqualWidthHistogramTest, StringLessThan) {
   auto hist = EqualWidthHistogram<std::string>::from_segment(_string3->get_chunk(ChunkID{0})->get_segment(ColumnID{0}),
                                                              4u, "abcdefghijklmnopqrstuvwxyz", 4u);

@@ -127,7 +127,7 @@ T AbstractHistogram<T>::_get_next_value(const T value) const {
 }
 
 template <typename T>
-float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
+double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -159,7 +159,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<float>(value - bin_minimum(bin_id)) / _bin_width(bin_id);
+    return static_cast<double>(value - bin_minimum(bin_id)) / _bin_width(bin_id);
   } else {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
@@ -171,7 +171,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
     const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
     const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
     const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-    const auto bin_share = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    const auto bin_share = static_cast<double>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
     // bin_share == 1.0f can only happen due to floating point arithmetic inaccuracies
     if (bin_share == 1.0f) {
@@ -186,7 +186,7 @@ template <typename T>
 bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_type,
                                                      const AllTypeVariant& variant_value,
                                                      const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -211,7 +211,7 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
         return true;
       }
 
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
       if (_does_not_contain(PredicateCondition::LessThanEquals, value2) || value2 < value) {
         return true;
       }
@@ -260,7 +260,7 @@ template <>
 bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition predicate_type,
                                                        const AllTypeVariant& variant_value,
                                                        const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<std::string>(variant_value);
+  const auto value = type_cast_variant<std::string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.
@@ -403,7 +403,7 @@ CardinalityEstimate AbstractHistogram<T>::_estimate_cardinality(
     return {Cardinality{0}, EstimateType::MatchesNone};
   }
 
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -440,7 +440,7 @@ CardinalityEstimate AbstractHistogram<T>::_estimate_cardinality(
         // we do not have to add anything of that bin and know the cardinality exactly.
         estimate_type = EstimateType::MatchesExactly;
       } else {
-        cardinality += _share_of_bin_less_than_value(index, value) * bin_height(index);
+        cardinality += static_cast<float>(_share_of_bin_less_than_value(index, value)) * bin_height(index);
       }
 
       DebugAssert(index != INVALID_BIN_ID, "Should have been caught by _does_not_contain().");
@@ -473,7 +473,7 @@ CardinalityEstimate AbstractHistogram<T>::_estimate_cardinality(
       return invert_estimate(estimate_cardinality(PredicateCondition::LessThanEquals, variant_value));
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
 
       if (value2 < value) {
         return {Cardinality{0}, EstimateType::MatchesNone};
@@ -532,7 +532,7 @@ template <>
 CardinalityEstimate AbstractHistogram<std::string>::estimate_cardinality(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<std::string>(variant_value);
+  const auto value = type_cast_variant<std::string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.
@@ -666,7 +666,7 @@ float AbstractHistogram<T>::estimate_distinct_count(const PredicateCondition pre
     return 0.f;
   }
 
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -709,7 +709,7 @@ float AbstractHistogram<T>::estimate_distinct_count(const PredicateCondition pre
       return total_distinct_count() - estimate_distinct_count(PredicateCondition::LessThanEquals, value);
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
 
       if (value2 < value) {
         return 0.f;
@@ -750,7 +750,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
     return std::make_shared<EmptyStatisticsObject>();
   }
 
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   std::vector<T> bin_minima;
   std::vector<T> bin_maxima;

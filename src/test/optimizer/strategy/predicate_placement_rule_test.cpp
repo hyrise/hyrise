@@ -24,17 +24,17 @@ namespace opossum {
 class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl"));
     _table_a = std::make_shared<StoredTableNode>("a");
     _a_a = LQPColumnReference(_table_a, ColumnID{0});
     _a_b = LQPColumnReference(_table_a, ColumnID{1});
 
-    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl"));
     _table_b = std::make_shared<StoredTableNode>("b");
     _b_a = LQPColumnReference(_table_b, ColumnID{0});
     _b_b = LQPColumnReference(_table_b, ColumnID{1});
 
-    StorageManager::get().add_table("c", load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("c", load_table("src/test/tables/int_float3.tbl"));
     _table_c = std::make_shared<StoredTableNode>("c");
     _c_a = LQPColumnReference(_table_c, ColumnID{0});
     _c_b = LQPColumnReference(_table_c, ColumnID{1});
@@ -373,6 +373,30 @@ TEST_F(PredicatePlacementRuleTest, PushDownAndPullUp) {
          PredicateNode::make(greater_than_(_a_a, _a_b),
            _table_a))),
      _table_b));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
+  // For now, the PredicatePlacementRule doesn't touch uncorrelated (think 6 > (SELECT...)) predicates
+
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(5, 3),
+    PredicateNode::make(equals_(_a_a, 3),
+      JoinNode::make(JoinMode::Cross,
+      _table_a,
+      _table_b)));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(5, 3),
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(equals_(_a_a, 3),
+        _table_a),
+      _table_b));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

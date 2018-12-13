@@ -85,6 +85,8 @@ class AbstractVisualizer {
     _add_property("dir", &VizEdgeInfo::dir);
   }
 
+  virtual ~AbstractVisualizer() = default;
+
   void visualize(const GraphBase& graph_base, const std::string& graph_filename, const std::string& img_filename) {
     _build_graph(graph_base);
     std::ofstream file(graph_filename);

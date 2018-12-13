@@ -3,7 +3,9 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -11,12 +13,13 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "base_test.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPUtilsTest : public ::testing::Test {
+class LQPUtilsTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
@@ -36,9 +39,9 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
   // clang-format off
   const auto lqp =
   PredicateNode::make(greater_than_(a_a, 5),
-      ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
-        PredicateNode::make(less_than_(a_b, 4),
-          SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending}, node_a))));
+    ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
+      PredicateNode::make(less_than_(a_b, 4),
+        SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending}, node_a))));
   // clang-format on
 
   const auto actual_expression = lqp_subplan_to_boolean_expression(lqp);
@@ -90,9 +93,11 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_C) {
 }
 
 TEST_F(LQPUtilsTest, VisitLQP) {
+  // clang-format off
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{
-      PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
-      PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4)), node_a};
+    PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
+    PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4)), node_a};
+  // clang-format on
 
   expected_nodes[0]->set_left_input(expected_nodes[1]);
   expected_nodes[1]->set_left_input(expected_nodes[2]);
@@ -142,6 +147,36 @@ TEST_F(LQPUtilsTest, LQPFindSubplanRoots) {
   EXPECT_EQ(roots[0], lqp);
   EXPECT_EQ(roots[1], subselect_b_lqp);
   EXPECT_EQ(roots[2], subselect_a_lqp);
+}
+
+TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
+  // clang-format off
+  const auto read_only_lqp =
+  PredicateNode::make(greater_than_(a_a, 5),
+    ProjectionNode::make(expression_vector(add_(a_a, a_b), a_a),
+      PredicateNode::make(less_than_(a_b, 4),
+        SortNode::make(expression_vector(a_b), std::vector<OrderByMode>{OrderByMode::Ascending},
+          node_a))));
+  // clang-format on
+
+  EXPECT_EQ(lqp_find_modified_tables(read_only_lqp).size(), 0);
+
+  // clang-format off
+  const auto insert_lqp =
+  InsertNode::make("insert_table_name",
+    PredicateNode::make(greater_than_(a_a, 5),
+      node_a));
+  // clang-format on
+  const auto insert_tables = lqp_find_modified_tables(insert_lqp);
+
+  EXPECT_EQ(insert_tables.size(), 1);
+  EXPECT_NE(insert_tables.find("insert_table_name"), insert_tables.end());
+
+  const auto delete_lqp = DeleteNode::make("delete_table_name", node_a);
+  const auto delete_tables = lqp_find_modified_tables(delete_lqp);
+
+  EXPECT_EQ(delete_tables.size(), 1);
+  EXPECT_NE(delete_tables.find("delete_table_name"), delete_tables.end());
 }
 
 }  // namespace opossum

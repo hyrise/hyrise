@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "cache/cache.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
@@ -12,11 +13,8 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/sql_query_cache.hpp"
-#include "sql/sql_query_plan.hpp"
-#include "statistics/chunk_statistics2.hpp"
-#include "statistics/segment_statistics2.hpp"
-#include "statistics/table_statistics2.hpp"
+#include "sql/sql_plan_cache.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -28,9 +26,9 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
-
 namespace opossum {
+
+using namespace expression_functional;  // NOLINT
 
 class AbstractLQPNode;
 class Table;
@@ -70,6 +68,11 @@ class BaseTestWithParam
 #endif
   }
 
+  /**
+   * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
+   * safely without preventing the BaseTest-cleanup from happening.
+   * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
+   */
   ~BaseTestWithParam() {
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
@@ -84,7 +87,9 @@ class BaseTestWithParam
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+
+    SQLPhysicalPlanCache::get().clear();
+    SQLLogicalPlanCache::get().clear();
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,
@@ -133,7 +138,8 @@ class BaseTestWithParam
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
 
-        const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        const auto segment_statistics = std::make_shared<SegmentStatistics2 < ColumnDataType>>
+        ();
         segment_statistics->set_statistics_object(statistics_objects[column_id]);
         chunk_statistics->segment_statistics.emplace_back(segment_statistics);
       });
@@ -143,6 +149,18 @@ class BaseTestWithParam
     mock_node->set_table_statistics2(table_statistics);
 
     return mock_node;
+  }
+  static ChunkEncodingSpec create_compatible_chunk_encoding_spec(const Table& table,
+                                                                 const SegmentEncodingSpec& desired_segment_encoding) {
+    auto chunk_encoding_spec = ChunkEncodingSpec{table.column_count(), EncodingType::Unencoded};
+
+    for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
+      if (encoding_supports_data_type(desired_segment_encoding.encoding_type, table.column_data_type(column_id))) {
+        chunk_encoding_spec[column_id] = desired_segment_encoding;
+      }
+    }
+
+    return chunk_encoding_spec;
   }
 };
 

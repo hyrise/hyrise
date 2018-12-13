@@ -1,7 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -15,7 +14,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class JoinGraphBuilderTest : public ::testing::Test {
+class JoinGraphBuilderTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
@@ -231,6 +230,46 @@ TEST_F(JoinGraphBuilderTest, MultipleComponents) {
   ASSERT_EQ(join_graph->edges.size(), 1u);
   EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(2, 0b11));
   EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 0u);
+}
+
+TEST_F(JoinGraphBuilderTest, MultipleComponentsWithHyperEdge) {
+  // Test that components in the join graph get merged with a cross join, even if they are connected by a hyperedge
+  // DPccp needs the JoinGraph to be connected without relying on the hyperedges
+
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(equals_(add_(a_a, b_a), c_a),
+    JoinNode::make(JoinMode::Cross,
+      JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+         node_a,
+         node_b),
+      node_c));
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+  ASSERT_TRUE(join_graph);
+
+  ASSERT_EQ(join_graph->vertices.size(), 3u);
+  EXPECT_EQ(join_graph->vertices.at(0), node_a);
+  EXPECT_EQ(join_graph->vertices.at(1), node_b);
+  EXPECT_EQ(join_graph->vertices.at(2), node_c);
+
+  ASSERT_EQ(join_graph->edges.size(), 3u);
+
+  EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(3, 0b111));
+  ASSERT_EQ(join_graph->edges.at(0).predicates.size(), 1u);
+  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0), *equals_(add_(a_a, b_a), c_a));
+
+  EXPECT_EQ(join_graph->edges.at(1).vertex_set, JoinGraphVertexSet(3, 0b011));
+  ASSERT_EQ(join_graph->edges.at(1).predicates.size(), 1u);
+  EXPECT_EQ(*join_graph->edges.at(1).predicates.at(0), *equals_(a_a, b_a));
+
+  // The edge connecting the components of the JoinGraph can either be AC or BC. Depending on the hash function used
+  // by the stdlib, either could happen
+  const auto cross_edge = join_graph->edges.at(2);
+  EXPECT_TRUE(cross_edge.vertex_set == JoinGraphVertexSet(3, 0b101) ||
+              cross_edge.vertex_set == JoinGraphVertexSet(3, 0b110));
+  ASSERT_EQ(join_graph->edges.at(2).predicates.size(), 0u);
 }
 
 TEST_F(JoinGraphBuilderTest, NonJoinGraphJoin) {

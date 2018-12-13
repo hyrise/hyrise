@@ -29,8 +29,6 @@ class Update : public AbstractReadWriteOperator {
   explicit Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                   const std::shared_ptr<AbstractOperator>& update_values_op);
 
-  ~Update();
-
   const std::string name() const override;
 
  protected:
@@ -39,7 +37,6 @@ class Update : public AbstractReadWriteOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-  bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
 
   // Commit happens in Insert and Delete operators
   void _on_commit_records(const CommitID cid) override {}

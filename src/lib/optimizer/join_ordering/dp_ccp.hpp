@@ -1,13 +1,10 @@
 #pragma once
 
-#include <memory>
-#include <vector>
+#include "abstract_join_ordering_algorithm.hpp"
 
 namespace opossum {
 
-class AbstractExpression;
 class AbstractCostEstimator;
-class AbstractLQPNode;
 class JoinGraph;
 class OptimizationContext;
 
@@ -22,7 +19,7 @@ class OptimizationContext;
  *
  * Local predicates are pushed down and sorted by increasing cost.
  */
-class DpCcp final {
+class DpCcp final : public AbstractJoinOrderingAlgorithm {
  public:
   /**
    * @param join_graph      A JoinGraph for a part of an LQP with further subplans as vertices. DpCcp is only applied
@@ -33,17 +30,6 @@ class DpCcp final {
    */
   std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph, const AbstractCostEstimator& cost_estimator,
                                               const std::shared_ptr<OptimizationContext>& context = {});
-
- private:
-  std::shared_ptr<AbstractLQPNode> _add_predicates_to_plan(
-      const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
-      const AbstractCostEstimator& cost_estimator, const std::shared_ptr<OptimizationContext>& context) const;
-
-  std::shared_ptr<AbstractLQPNode> _add_join_to_plan(const std::shared_ptr<AbstractLQPNode>& left_lqp,
-                                                     const std::shared_ptr<AbstractLQPNode>& right_lqp,
-                                                     std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
-                                                     const AbstractCostEstimator& cost_estimator,
-                                                     const std::shared_ptr<OptimizationContext>& context) const;
 };
 
 }  // namespace opossum

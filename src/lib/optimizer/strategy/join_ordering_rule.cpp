@@ -3,6 +3,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
+#include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "utils/assert.hpp"
 
@@ -10,7 +11,7 @@ namespace opossum {
 
 std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
-bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
+void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
                                 const AbstractCostEstimator& cost_estimator,
                                 const std::shared_ptr<OptimizationContext>& context) const {
   /**
@@ -30,10 +31,6 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
   }
 
   root->set_left_input(result_lqp);
-
-  // Figuring out whether the JoinOrderingRule changed the LQP is hard (and the rule should be applied only once,
-  // anyway). So, return false.
-  return false;
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
@@ -53,9 +50,14 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
     return lqp;
   }
 
-  // Currently, we apply DpCcp to any JoinGraph we encounter.
-  // TODO(anybody) in the future we should use, e.g., a different algorithm for very complex JoinGraphs
-  auto result_lqp = DpCcp{}(*join_graph, cost_estimator, context);  // NOLINT - doesn't like `{}()`
+  // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
+  // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
+  auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
+  if (join_graph->vertices.size() < 9) {
+    result_lqp = DpCcp{}(*join_graph, cost_estimator, context);  // NOLINT - doesn't like `{}()`
+  } else {
+    result_lqp = GreedyOperatorOrdering{}(*join_graph, cost_estimator, context);  // NOLINT - doesn't like `{}()`
+  }
 
   for (const auto& vertex : join_graph->vertices) {
     _recurse_to_inputs(vertex, cost_estimator, context);

@@ -9,6 +9,13 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
+    cache/abstract_cache_impl.hpp
+    cache/gdfs_cache.hpp
+    cache/gds_cache.hpp
+    cache/lru_cache.hpp
+    cache/lru_k_cache.hpp
+    cache/random_cache.hpp
+    cache/cache.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -126,6 +133,8 @@ set(
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
+    logical_query_plan/create_prepared_plan_node.cpp
+    logical_query_plan/create_prepared_plan_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
     logical_query_plan/show_columns_node.cpp
@@ -200,6 +209,8 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
+    operators/maintenance/create_prepared_plan.cpp
+    operators/maintenance/create_prepared_plan.hpp
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
@@ -221,22 +232,21 @@ set(
     operators/sort.hpp
     operators/table_scan.cpp
     operators/table_scan.hpp
+    operators/table_scan/abstract_single_column_table_scan_impl.cpp
+    operators/table_scan/abstract_single_column_table_scan_impl.hpp
     operators/table_scan/abstract_table_scan_impl.hpp
-    operators/table_scan/base_single_column_table_scan_impl.cpp
-    operators/table_scan/base_single_column_table_scan_impl.hpp
-    operators/table_scan/base_table_scan_impl.hpp
-    operators/table_scan/between_table_scan_impl.cpp
-    operators/table_scan/between_table_scan_impl.hpp
-    operators/table_scan/column_comparison_table_scan_impl.cpp
-    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan/column_between_table_scan_impl.cpp
+    operators/table_scan/column_between_table_scan_impl.hpp
+    operators/table_scan/column_is_null_table_scan_impl.cpp
+    operators/table_scan/column_is_null_table_scan_impl.hpp
+    operators/table_scan/column_like_table_scan_impl.cpp
+    operators/table_scan/column_like_table_scan_impl.hpp
+    operators/table_scan/column_vs_column_table_scan_impl.cpp
+    operators/table_scan/column_vs_column_table_scan_impl.hpp
+    operators/table_scan/column_vs_value_table_scan_impl.cpp
+    operators/table_scan/column_vs_value_table_scan_impl.hpp
     operators/table_scan/expression_evaluator_table_scan_impl.cpp
     operators/table_scan/expression_evaluator_table_scan_impl.hpp
-    operators/table_scan/is_null_table_scan_impl.cpp
-    operators/table_scan/is_null_table_scan_impl.hpp
-    operators/table_scan/like_table_scan_impl.cpp
-    operators/table_scan/like_table_scan_impl.hpp
-    operators/table_scan/single_column_table_scan_impl.cpp
-    operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
     operators/union_all.cpp
@@ -247,10 +257,14 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    optimizer/join_ordering/abstract_join_ordering_algorithm.cpp
+    optimizer/join_ordering/abstract_join_ordering_algorithm.hpp
     optimizer/join_ordering/dp_ccp.cpp
     optimizer/join_ordering/dp_ccp.hpp
     optimizer/join_ordering/enumerate_ccp.cpp
     optimizer/join_ordering/enumerate_ccp.hpp
+    optimizer/join_ordering/greedy_operator_ordering.cpp
+    optimizer/join_ordering/greedy_operator_ordering.hpp
     optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_graph_builder.cpp
@@ -283,8 +297,6 @@ set(
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
-    optimizer/strategy/rule_batch.cpp
-    optimizer/strategy/rule_batch.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -318,16 +330,11 @@ set(
     server/types.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    sql/abstract_cache.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
-    sql/gdfs_cache.hpp
-    sql/gds_cache.hpp
-    sql/lru_cache.hpp
-    sql/lru_k_cache.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
-    sql/random_cache.hpp
+    sql/sql_plan_cache.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_resolver.cpp
@@ -340,9 +347,6 @@ set(
     sql/sql_pipeline_builder.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
-    sql/sql_query_cache.hpp
-    sql/sql_query_plan.cpp
-    sql/sql_query_plan.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     statistics/abstract_cardinality_estimator.hpp
@@ -461,6 +465,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
     storage/index/segment_index_type.hpp
+    storage/prepared_plan.cpp
+    storage/prepared_plan.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/materialize.hpp
@@ -543,14 +549,14 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
+    tasks/server/parse_server_prepared_statement_task.cpp
+    tasks/server/parse_server_prepared_statement_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
-    utils/are_args_cxxopts_compatible.cpp
-    utils/are_args_cxxopts_compatible.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
@@ -564,6 +570,7 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/make_bimap.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp
@@ -586,8 +593,8 @@ set(
     visualization/lqp_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
-    visualization/sql_query_plan_visualizer.cpp
-    visualization/sql_query_plan_visualizer.hpp
+    visualization/pqp_visualizer.cpp
+    visualization/pqp_visualizer.hpp
     visualization/viz_record_layout.cpp
     visualization/viz_record_layout.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
@@ -610,6 +617,8 @@ if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
+        operators/validate.cpp
+        operators/validate.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
         operators/jit_operator/jit_operations.cpp
@@ -626,14 +635,18 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_filter.hpp
         operators/jit_operator/operators/jit_read_tuples.cpp
         operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_validate.cpp
+        operators/jit_operator/operators/jit_validate.hpp
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE jit_llvm_bundle ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
-        operators/jit_operator/jit_aware_lqp_translator.cpp
-        operators/jit_operator/jit_aware_lqp_translator.hpp
+        logical_query_plan/jit_aware_lqp_translator.cpp
+        logical_query_plan/jit_aware_lqp_translator.hpp
+        operators/jit_operator/jit_constant_mappings.cpp
+        operators/jit_operator/jit_constant_mappings.hpp
         operators/jit_operator/specialization/jit_compiler.cpp
         operators/jit_operator/specialization/jit_compiler.hpp
         operators/jit_operator/specialization/jit_code_specializer.cpp
@@ -652,7 +665,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE})
+        ${LLVM_BUNDLE_FILE}
+    )
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
@@ -670,7 +684,7 @@ add_custom_command (
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
-set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
+set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
@@ -681,3 +695,9 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+if (${ENABLE_JIT_SUPPORT})
+    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
+    # This silences some compiler warnings (uses -isystem instead of -I).
+    # target_include_directories(hyrise SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
+endif()

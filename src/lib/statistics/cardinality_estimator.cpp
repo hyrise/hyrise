@@ -49,7 +49,7 @@ void populate_cache_bitmask(const std::shared_ptr<AbstractLQPNode>& plan,
       Assert(leaf_iter->second < bitmask->size(), "");
       bitmask->set(leaf_iter->second);
     } else if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(node)) {
-      const auto predicate_index_iter = context->predicate_indices.find(join_node->join_predicate);
+      const auto predicate_index_iter = context->predicate_indices.find(join_node->join_predicate());
       if (predicate_index_iter == context->predicate_indices.end()) {
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
@@ -58,7 +58,7 @@ void populate_cache_bitmask(const std::shared_ptr<AbstractLQPNode>& plan,
       Assert(predicate_index_iter->second + context->plan_leaf_indices.size() < bitmask->size(), "");
       bitmask->set(predicate_index_iter->second + context->plan_leaf_indices.size());
     } else if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node)) {
-      const auto predicate_index_iter = context->predicate_indices.find(predicate_node->predicate);
+      const auto predicate_index_iter = context->predicate_indices.find(predicate_node->predicate());
       if (predicate_index_iter == context->predicate_indices.end()) {
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
@@ -73,7 +73,7 @@ void populate_cache_bitmask(const std::shared_ptr<AbstractLQPNode>& plan,
       return LQPVisitation::DoNotVisitInputs;
     }
 
-    for (const auto& node_expression : node->node_expressions()) {
+    for (const auto& node_expression : node->node_expressions) {
       visit_expression(node_expression, [&](const auto& sub_expression) {
         if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression)) {
           populate_cache_bitmask(select_expression->lqp, context, bitmask);
@@ -277,7 +277,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     output_table_statistics = std::make_shared<TableStatistics2>();
 
     const auto operator_scan_predicates =
-        OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+        OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
 
     // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded
     //               That implies estimating a selectivity of 1 for such predicates
@@ -541,10 +541,10 @@ std::shared_ptr<ChunkStatistics2> CardinalityEstimator::estimate_scan_predicates
         /**
          * Write out the SegmentStatistics
          */
-        const auto segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
-        segment_statistics->set_statistics_object(column_to_column_histogram);
-        predicate_output_chunk_statistics->segment_statistics[left_column_id] = segment_statistics;
-        predicate_output_chunk_statistics->segment_statistics[*right_column_id] = segment_statistics;
+        const auto output_segment_statistics = std::make_shared<SegmentStatistics2<ColumnDataType>>();
+        output_segment_statistics->set_statistics_object(column_to_column_histogram);
+        predicate_output_chunk_statistics->segment_statistics[left_column_id] = output_segment_statistics;
+        predicate_output_chunk_statistics->segment_statistics[*right_column_id] = output_segment_statistics;
 
       } else if (operator_scan_predicate.value.type() == typeid(ParameterID)) {
         predicate_output_chunk_statistics = predicate_input_chunk_statistics;

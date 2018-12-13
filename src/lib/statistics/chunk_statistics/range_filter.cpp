@@ -38,7 +38,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
   }
 
   std::vector<std::pair<T, T>> ranges;
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   // If value is on range edge, we do not take the opportunity to slightly improve the new object.
   // The impact should be small.
@@ -85,7 +85,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
     } break;
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
       return slice_with_predicate(PredicateCondition::GreaterThanEquals, value)
           ->slice_with_predicate(PredicateCondition::LessThanEquals, value2);
     }
@@ -106,6 +106,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
                                                              uint32_t max_ranges_count) {
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
   DebugAssert(!dictionary.empty(), "The dictionary should not be empty.");
+  DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.size() == 1) {
     std::vector<std::pair<T, T>> ranges;
@@ -113,10 +114,24 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
     return std::make_unique<RangeFilter<T>>(std::move(ranges));
   }
 
+  /*
+  * In case more than one value is present, first the elements are checked for potential overflows (e.g., when calculating
+  * the distince between INT::MIN() and INT::MAX(), the resulting distance might be to large for signed types).
+  * While being rather unlikely for doubles, it's more likely to happen when Opossum includes tinyint etc.
+  * std::make_unsigned<T>::type would be possible to use for signed int types, but not for floating types.
+  * Approach: take the min and max values and simply check if the distance between both might overflow. In this case,
+  * fall back to a single range filter.
+  */
+  const auto min_max = std::minmax_element(dictionary.cbegin(), dictionary.cend());
+  if ((*min_max.first < 0) &&
+      (*min_max.second > std::numeric_limits<T>::max() + *min_max.first)) {  // min_value is negative
+    return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{{*min_max.first, *min_max.second}});
+  }
+
   // calculate distances by taking the difference between two neighbouring elements
   // vector stores <distance to next element, dictionary index>
   std::vector<std::pair<T, size_t>> distances;
-  distances.reserve(dictionary.size());
+  distances.reserve(dictionary.size() - 1);
   for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
     auto dict_it_next = dict_it + 1;
     distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it));
@@ -158,7 +173,18 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 template <typename T>
 bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                        const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<T>(variant_value);
+  /*
+      * Early exit for NULL-checking predicates and NULL variants. Predicates with one or
+      * more variant parameter being NULL are not prunable. Malformed predicates such as
+      * can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not pruned either,
+      * the caller is expected to call the function correctly.
+      */
+  if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
+      predicate_type == PredicateCondition::IsNull || predicate_type == PredicateCondition::IsNotNull) {
+    return false;
+  }
+
+  const auto value = type_cast_variant<T>(variant_value);
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
   // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
@@ -193,36 +219,43 @@ bool RangeFilter<T>::_does_not_contain(const PredicateCondition predicate_type, 
       return _ranges.size() == 1 && _ranges.front().first == value && _ranges.front().second == value;
     }
     case PredicateCondition::Between: {
-      Assert(variant_value2, "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      /* There are two scenarios where a between predicate can be pruned:
+       *    - both bounds are "outside" (not spanning) the segment's value range (i.e., either both are smaller than
+       *      the minimum or both are larger than the maximum
+       *    - both bounds are within the same gap
+       */
 
-      if (value > value2) {
+      Assert(variant_value2.has_value(), "Between operator needs two values.");
+      const auto value2 = type_cast_variant<T>(*variant_value2);
+
+      // Smaller than the segment's minimum.
+      if (_does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {
         return true;
       }
 
-      if (_does_not_contain(PredicateCondition::GreaterThanEquals, variant_value) ||
-          _does_not_contain(PredicateCondition::LessThanEquals, *variant_value2)) {
+      // Larger than the segment's maximum.
+      if (_does_not_contain(PredicateCondition::GreaterThanEquals, std::min(value, value2))) {
         return true;
       }
 
-      const auto lower_bound_value_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value,
-                                                         [](const auto& a, const auto& b) { return a.second < b; });
+      const auto range_comp = [](std::pair<T, T> range, T compare_value) -> bool {
+        return range.second < compare_value;
+      };
+      // Get value range or next larger value range if searched value is in a gap.
+      const auto start_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value, range_comp);
+      const auto end_lower = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2, range_comp);
 
-      // If value belongs to a non-gap, we do not know whether the value is in the data or not.
-      if (value >= (*lower_bound_value_it).first) {
-        return false;
+      const bool start_in_value_range =
+      (start_lower != _ranges.cend()) && (*start_lower).first <= value && value <= (*start_lower).second;
+      const bool end_in_value_range =
+      (end_lower != _ranges.cend()) && (*end_lower).first <= value2 && value2 <= (*end_lower).second;
+
+      // Check if both bounds are within the same gap.
+      if (!start_in_value_range && !end_in_value_range && start_lower == end_lower) {
+        return true;
       }
 
-      const auto lower_bound_value2_it = std::lower_bound(_ranges.cbegin(), _ranges.cend(), value2,
-                                                          [](const auto& a, const auto& b) { return a.second < b; });
-
-      // If value2 belongs to a non-gap, we do not know whether the value is in the data or not.
-      if (value2 >= (*lower_bound_value2_it).first) {
-        return false;
-      }
-
-      // If both values fall into the same gap, the data does not contain any of the values between value and value2.
-      return lower_bound_value_it == lower_bound_value2_it;
+      return false;
     }
     default:
       return false;

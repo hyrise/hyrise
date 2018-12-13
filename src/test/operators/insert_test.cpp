@@ -28,7 +28,7 @@ class OperatorsInsertTest : public BaseTest {
 
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
-  auto t = load_table("src/test/tables/float_int.tbl", Chunk::MAX_SIZE);
+  auto t = load_table("src/test/tables/float_int.tbl");
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   StorageManager::get().add_table(table_name, t);
 
@@ -37,6 +37,7 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
 
   auto ins = std::make_shared<Insert>(table_name, gt);
   auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
   ins->set_transaction_context(context);
 
   ins->execute();
@@ -63,7 +64,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);
+  auto t2 = load_table("src/test/tables/10_ints.tbl");
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -116,7 +117,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   opossum::ChunkEncoder::encode_all_chunks(t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", Chunk::MAX_SIZE);
+  auto t2 = load_table("src/test/tables/10_ints.tbl");
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -264,7 +265,8 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, false);
 
-  const auto target_table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE, UseMvcc::Yes);
+  const auto target_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   StorageManager::get().add_table("target_table", target_table);
 
   const auto table_int_float = load_table("src/test/tables/int_float.tbl");

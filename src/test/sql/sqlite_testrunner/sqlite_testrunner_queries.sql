@@ -6,11 +6,11 @@ SELECT * FROM mixed_null;
 SELECT 1;
 SELECT -1;
 SELECT (1 + 3.0) * 13.0 as some_arithmetics;
-SELECT 22 / 5;
+SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
-SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
+-- SELECT * FROM mixed WHERE a = 'a' AND c < 65.31; -- #1306
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
 SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
@@ -30,6 +30,12 @@ SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
 SELECT * FROM mixed_null WHERE NOT (b = 12);
 SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
+
+-- Scans with predicates that do not reference columns
+SELECT * FROM mixed_null WHERE 4 > 3;
+SELECT * FROM mixed_null WHERE (4 > 3 AND 2 < 1) OR 4 < 5;
+SELECT * FROM mixed_null WHERE 50 IN (51, 52, 50);
+SELECT * FROM mixed_null WHERE 50 IN (SELECT id FROM mixed);
 
 -- Projection
 SELECT a FROM mixed;
@@ -92,6 +98,9 @@ SELECT t1.id, t1.a, t2.b, t3.b, t4.c_name FROM mixed AS t1 INNER JOIN mixed_null
 
 -- Join three tables and perform a scan
 SELECT * FROM mixed AS t1 INNER JOIN mixed_null AS t2 ON t1.b = t2.b INNER JOIN id_int_int_int_100 AS t3 ON t1.b = t3.a WHERE t1.c > 23.0 AND t2.a = 'c';
+
+-- Join three, complex join predicate,
+SELECT t1.b FROM mixed AS t1, mixed_null AS t2, id_int_int_int_100 AS t3 WHERE t1.id + t2.b = t3.a - 5 AND (5 > 3 OR 3 > 2) AND t1.b = 19 AND t1.b + 40 = t3.b;
 
 -- (not) exists to semi(/anti) join reformulation
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT * FROM int_date WHERE id_int_int_int_100.id = int_date.a)
@@ -159,10 +168,17 @@ DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 
 DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a = 5 OR b = 6 OR (a > 2 AND b > 80) OR (a = (SELECT MIN(a) FROM id_int_int_int_100)); SELECT * FROM id_int_int_int_100;
 
 -- Update
 UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = a + 1; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = b + c + 3 WHERE id > 10 * 5; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = b + c + 3 WHERE id > 1000 * 1000; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET id = 0 WHERE id > 20; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET id = a, a = b, b = c, c = id WHERE id > 20; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET id = a - 1, a = b, b = c, c = id + 1 WHERE id > 20; SELECT * FROM id_int_int_int_100;
 
 -- INSERT
 INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
@@ -215,6 +231,13 @@ SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+
+-- Subqueries in FROM statement
+SELECT * FROM (SELECT t1.id FROM id_int_int_int_100 t1 JOIN id_int_int_int_100 t2 ON t1.id + 1 = t2.id) AS s1, id_int_int_int_100 t3 WHERE s1.id + 5 = t3.id;
+SELECT * FROM id_int_int_int_100 t1 WHERE id < 9 AND (SELECT MIN(t2.id + 10) FROM (SELECT * FROM id_int_int_int_100 t3 WHERE t3.id > t1.id + 90) AS s1, id_int_int_int_100 t2 WHERE t2.id = t1.id + 90) > 5;
+
+-- Correlated parameter (t2.id) in FROM clause of subselect
+SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_int_int_100 t2 WHERE t2.id = t1.id) > 20;
 
 -- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;

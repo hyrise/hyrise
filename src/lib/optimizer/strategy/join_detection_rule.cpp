@@ -20,7 +20,7 @@ namespace opossum {
 
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
-bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+void JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
                                  const AbstractCostEstimator& cost_estimator,
                                  const std::shared_ptr<OptimizationContext>& context) const {
   if (node->type == LQPNodeType::Join) {
@@ -33,20 +33,18 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
        */
       const auto predicate_node = _find_predicate_for_cross_join(cross_join_node);
       if (predicate_node) {
-        const auto new_join_node = JoinNode::make(JoinMode::Inner, predicate_node->predicate);
+        const auto new_join_node = JoinNode::make(JoinMode::Inner, predicate_node->predicate());
 
         /**
          * Place the conditional join where the cross join was and remove the predicate node
          */
         lqp_replace_node(cross_join_node, new_join_node);
         lqp_remove_node(predicate_node);
-
-        return true;
       }
     }
   }
 
-  return _apply_to_inputs(node, cost_estimator, context);
+  _apply_to_inputs(node, cost_estimator, context);
 }
 
 std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join(
@@ -82,7 +80,7 @@ std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join
 
     if (node->type == LQPNodeType::Predicate) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-      const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate);
+      const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
 
       if (!binary_predicate) continue;
 

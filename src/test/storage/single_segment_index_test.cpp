@@ -49,7 +49,7 @@ class SingleSegmentIndexTest : public BaseTest {
 // List of indices to test
 typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
     DerivedIndices;
-TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices);
+TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
@@ -172,7 +172,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 

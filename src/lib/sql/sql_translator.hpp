@@ -31,21 +31,14 @@ class LQPSelectExpression;
 class SQLTranslator final {
  public:
   /**
-   * @param use_mvcc                                Whether ValidateNodes should be compiled into the plan
-   * @param external_sql_identifier_resolver_proxy  Set during recursive invocations to resolve external identifiers
-   *                                                in correlated subqueries
-   * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
-   *                                                for each encountered parameter
+   * @param use_mvcc  Whether ValidateNodes should be compiled into the plan
    */
-  explicit SQLTranslator(
-      const UseMvcc use_mvcc = UseMvcc::No,
-      const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy = {},
-      const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator = std::make_shared<ParameterIDAllocator>());
+  explicit SQLTranslator(const UseMvcc use_mvcc);
 
   /**
    * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
    */
-  const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders() const;
+  std::vector<ParameterID> parameter_ids_of_value_placeholders() const;
 
   /**
    * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
@@ -56,7 +49,7 @@ class SQLTranslator final {
    * Translate an Expression AST into a Hyrise-expression. No columns can be referenced in expressions translated by
    * this call.
    */
-  static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr);
+  static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
  private:
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
@@ -90,6 +83,18 @@ class SQLTranslator final {
     std::optional<std::string> table_name;
   };
 
+  /**
+   * Internal constructor to create an SQLTranslator used for Subselects
+   * @param use_mvcc                                Whether ValidateNodes should be compiled into the plan
+   * @param external_sql_identifier_resolver_proxy  Set during recursive invocations to resolve external identifiers
+   *                                                in correlated subqueries
+   * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
+   *                                                for each encountered parameter
+   */
+  SQLTranslator(const UseMvcc use_mvcc,
+                const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
+                const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator);
+
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
 
@@ -115,6 +120,9 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_create_table(const hsql::CreateStatement& create_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& drop_statement);
+
+  std::shared_ptr<AbstractLQPNode> _translate_prepare(const hsql::PrepareStatement& prepare_statement);
+  std::shared_ptr<AbstractLQPNode> _translate_execute(const hsql::ExecuteStatement& execute_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
       const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const;

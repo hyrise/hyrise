@@ -26,8 +26,8 @@ class CurrentScheduler {
   static bool is_set();
 
   /**
-   * If there is an active Scheduler, block execution until all @tasks have finished
-   * If there is no active Scheduler, returns immediately since all @tasks have executed when they were scheduled
+   * If there is an active Scheduler, block execution until all @param tasks have finished
+   * If there is no active Scheduler, returns immediately since all @param tasks have executed when they were scheduled
    */
   template <typename TaskType>
   static void wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks);

@@ -35,7 +35,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
   }
 
   T min, max;
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   // If value is either _min or _max, we do not take the opportunity to slightly improve the new object.
   // We do not know the actual previous/next value, and for strings it's not that simple.
@@ -57,7 +57,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
       break;
     case PredicateCondition::Between: {
       DebugAssert(variant_value2, "BETWEEN needs a second value.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
       return slice_with_predicate(PredicateCondition::GreaterThanEquals, value)
           ->slice_with_predicate(PredicateCondition::LessThanEquals, value2);
     }
@@ -81,7 +81,13 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::scale_with_selectivit
 template <typename T>
 bool MinMaxFilter<T>::_does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                         const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<T>(variant_value);
+  // Early exit for NULL variants.
+  if (variant_is_null(variant_value)) {
+    return false;
+  }
+
+  const auto value = type_cast_variant<T>(variant_value);
+
   // Operators work as follows: value_from_table <operator> value
   // e.g. OpGreaterThan: value_from_table > value
   // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value
@@ -100,7 +106,7 @@ bool MinMaxFilter<T>::_does_not_contain(const PredicateCondition predicate_type,
       return value == _min && value == _max;
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
       return value > _max || value2 < _min;
     }
     default:

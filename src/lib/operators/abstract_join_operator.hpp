@@ -42,6 +42,8 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
+  std::shared_ptr<Table> _initialize_output_table() const;
+
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is
   // found in join_hash.hpp.

@@ -18,7 +18,7 @@ namespace opossum {
 class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
+    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl");
     auto table_statistics1 = generate_table_statistics(*_table_with_different_column_types);
     _column_statistics_int = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[0]));
@@ -29,7 +29,7 @@ class ColumnStatisticsTest : public BaseTest {
     _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[3]));
 
-    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
+    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl");
     auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
     _column_statistics_uniform_columns = table_statistics2.column_statistics();
   }
@@ -394,9 +394,9 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
   auto stats_2 =
       std::const_pointer_cast<BaseColumnStatistics>(_column_statistics_uniform_columns[2]);  // values from 1 to 2
 
-  stats_0->set_null_value_ratio(0.1);   // non-null value ratio: 0.9
-  stats_1->set_null_value_ratio(0.2);   // non-null value ratio: 0.8
-  stats_2->set_null_value_ratio(0.15);  // non-null value ratio: 0.85
+  stats_0->set_null_value_ratio(0.1f);   // non-null value ratio: 0.9
+  stats_1->set_null_value_ratio(0.2f);   // non-null value ratio: 0.8
+  stats_2->set_null_value_ratio(0.15f);  // non-null value ratio: 0.85
 
   auto predicate_condition = PredicateCondition::Equals;
   auto result = stats_0->estimate_predicate_with_column(predicate_condition, *stats_1);

@@ -20,12 +20,13 @@ namespace opossum {
 
 std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
-bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
                                 const AbstractCostEstimator& cost_estimator,
                                 const std::shared_ptr<OptimizationContext>& context) const {
   // we only want to follow chains of predicates
   if (node->type != LQPNodeType::Predicate) {
-    return _apply_to_inputs(node, cost_estimator, context);
+    _apply_to_inputs(node, cost_estimator, context);
+    return;
   }
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
@@ -38,7 +39,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
     current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
     if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
-      return _apply_to_inputs(node, cost_estimator, context);
+      _apply_to_inputs(node, cost_estimator, context);
+      return;
     }
   }
 
@@ -48,7 +50,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   if (current_node->type != LQPNodeType::StoredTable) {
-    return _apply_to_inputs(node, cost_estimator, context);
+    _apply_to_inputs(node, cost_estimator, context);
+    return;
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
@@ -77,15 +80,13 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
   } else {
     stored_table->set_excluded_chunk_ids(std::vector<ChunkID>(excluded_chunk_ids.begin(), excluded_chunk_ids.end()));
   }
-
-  // always returns false as we never modify the LQP
-  return false;
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::vector<std::shared_ptr<ChunkStatistics2>>& statistics,
     const std::shared_ptr<PredicateNode>& predicate_node) const {
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+  const auto operator_predicates =
+      OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;
@@ -98,7 +99,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     std::optional<AllTypeVariant> value2;
     if (static_cast<bool>(operator_predicate.value2)) value2 = boost::get<AllTypeVariant>(*operator_predicate.value2);
     auto condition = operator_predicate.predicate_condition;
-    for (size_t chunk_id = 0; chunk_id < statistics.size(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < statistics.size(); ++chunk_id) {
       // statistics[chunk_id] can be a shared_ptr initialized with a nullptr
       if (!statistics[chunk_id]) continue;
 

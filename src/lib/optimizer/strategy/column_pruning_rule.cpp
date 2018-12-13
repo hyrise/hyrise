@@ -20,7 +20,7 @@ namespace opossum {
 
 std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 
-bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp,
+void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp,
                                  const AbstractCostEstimator& cost_estimator,
                                  const std::shared_ptr<OptimizationContext>& context) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
@@ -35,7 +35,8 @@ bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp,
   _prune_columns_in_projections(lqp, actually_used_columns);
 
   // Search the plan for leaf nodes and prune all columns from them that are not referenced
-  return _prune_columns_from_leaves(lqp, actually_used_columns);
+  _prune_columns_from_leaves(lqp, actually_used_columns);
+  return;
 }
 
 ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
@@ -51,12 +52,12 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
-  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions(), i.e. columns that are necessary for
+  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions, i.e. columns that are necessary for
   // the "functioning" of the LQP.
   // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
   // prune) by only searching the arguments of expression.
   visit_lqp(lqp, [&](const auto& node) {
-    for (const auto& expression : node->node_expressions()) {
+    for (const auto& expression : node->node_expressions) {
       if (node->type == LQPNodeType::Projection) {
         for (const auto& argument : expression->arguments) {
           collect_consumed_columns_from_expression(argument);
@@ -71,9 +72,8 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
   return consumed_columns;
 }
 
-bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
+void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                    const ExpressionUnorderedSet& referenced_columns) {
-  auto lqp_changed = false;
 
   // Collect all parents of leaves and on which input side their leave is
   // (if a node has two leaves as inputs, it will be collected twice)
@@ -110,10 +110,7 @@ bool ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
     // If a leaf outputs columns that are never used, prune those columns by inserting a ProjectionNode that only
     // contains the used columns
     lqp_insert_node(parent, leaf_input_side, ProjectionNode::make(referenced_leaf_columns));
-    lqp_changed = true;
   }
-
-  return lqp_changed;
 }
 
 void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
@@ -134,7 +131,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
   // Replace ProjectionNodes with pruned ProjectionNodes if necessary
   for (const auto& projection_node : projection_nodes) {
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto& expression : projection_node->node_expressions()) {
+    for (const auto& expression : projection_node->node_expressions) {
       // We keep all non-column expressions
       if (expression->type != ExpressionType::LQPColumn) {
         referenced_projection_expressions.emplace_back(expression);
@@ -143,7 +140,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
       }
     }
 
-    if (projection_node->node_expressions().size() == referenced_projection_expressions.size()) {
+    if (projection_node->node_expressions.size() == referenced_projection_expressions.size()) {
       // No columns to prune
       continue;
     }
@@ -152,7 +149,7 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
     if (referenced_projection_expressions.empty()) {
       lqp_remove_node(projection_node);
     } else {
-      projection_node->expressions = referenced_projection_expressions;
+      projection_node->node_expressions = referenced_projection_expressions;
     }
   }
 }

@@ -53,7 +53,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
  public:
   AbstractHistogram();
   AbstractHistogram(const std::string& supported_characters, const size_t string_prefix_length);
-  virtual ~AbstractHistogram() = default;
+  ~AbstractHistogram() override = default;
 
   // Non-copyable
   AbstractHistogram(AbstractHistogram&&) = default;
@@ -201,7 +201,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Returns the share of values in a bin that are smaller than `value`.
    * This method is specialized for strings.
    */
-  float _share_of_bin_less_than_value(const BinID bin_id, const T value) const;
+  double _share_of_bin_less_than_value(const BinID bin_id, const T value) const;
 
   /**
    * Returns the width of a bin.

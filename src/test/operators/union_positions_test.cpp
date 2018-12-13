@@ -71,8 +71,7 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/10_ints_exclusive_ranges.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("src/test/tables/10_ints_exclusive_ranges.tbl"));
 }
 
 TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
@@ -106,8 +105,7 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("src/test/tables/int_float2.tbl"));
   EXPECT_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
 }
 
@@ -124,8 +122,7 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("src/test/tables/int_float2.tbl"));
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
 }
 
@@ -145,7 +142,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float4_overlapping_ranges.tbl", Chunk::MAX_SIZE));
+                            load_table("src/test/tables/int_float4_overlapping_ranges.tbl"));
 }
 
 TEST_F(UnionPositionsTest, MultipleReferencedTables) {
@@ -198,7 +195,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                 table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float4_int_int_union_positions.tbl", Chunk::MAX_SIZE));
+                            load_table("src/test/tables/int_float4_int_int_union_positions.tbl"));
 
   /**
    * Additionally check that segment 0 and 1 have the same pos list and that segment 2 and 3 have the same pos list to
@@ -286,12 +283,12 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   column_definitions.emplace_back("a", DataType::Int);
   column_definitions.emplace_back("b", DataType::Float);
   column_definitions.emplace_back("c", DataType::Int);
-  auto table_left = std::make_shared<Table>(column_definitions, TableType::References, 3);
+  auto table_left = std::make_shared<Table>(column_definitions, TableType::References);
 
   table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));
   table_left->append_chunk(Segments({segment_left_1_0, segment_left_1_1, segment_left_1_2}));
 
-  auto table_right = std::make_shared<Table>(column_definitions, TableType::References, 4);
+  auto table_right = std::make_shared<Table>(column_definitions, TableType::References);
 
   table_right->append_chunk(Segments({segment_right_0_0, segment_right_0_1, segment_right_0_2}));
   table_right->append_chunk(Segments({segment_right_1_0, segment_right_1_1, segment_right_1_2}));
@@ -302,9 +299,8 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(
-      set_union_op->get_output(),
-      load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(set_union_op->get_output(),
+                            load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl"));
 }
 
 }  // namespace opossum

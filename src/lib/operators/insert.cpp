@@ -25,8 +25,8 @@ class AbstractTypedSegmentProcessor : public Noncopyable {
   AbstractTypedSegmentProcessor& operator=(AbstractTypedSegmentProcessor&&) = default;
   virtual ~AbstractTypedSegmentProcessor() = default;
   virtual void resize_vector(std::shared_ptr<BaseSegment> segment, size_t new_size) = 0;
-  virtual void copy_data(std::shared_ptr<const BaseSegment> source, size_t source_start_index,
-                         std::shared_ptr<BaseSegment> target, size_t target_start_index, size_t length) = 0;
+  virtual void copy_data(std::shared_ptr<const BaseSegment> source, ChunkOffset source_start_index,
+                         std::shared_ptr<BaseSegment> target, ChunkOffset target_start_index, ChunkOffset length) = 0;
 };
 
 template <typename T>
@@ -45,8 +45,8 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
   }
 
   // this copies
-  void copy_data(std::shared_ptr<const BaseSegment> source, size_t source_start_index,
-                 std::shared_ptr<BaseSegment> target, size_t target_start_index, size_t length) override {
+  void copy_data(std::shared_ptr<const BaseSegment> source, ChunkOffset source_start_index,
+                 std::shared_ptr<BaseSegment> target, ChunkOffset target_start_index, ChunkOffset length) override {
     auto casted_target = std::dynamic_pointer_cast<ValueSegment<T>>(target);
     DebugAssert(casted_target, "Cannot insert into non-ValueColumns");
     auto& values = casted_target->values();
@@ -90,14 +90,14 @@ class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
           values[target_start_index + i] = T{};
           casted_target->null_values()[target_start_index + i] = true;
         } else {
-          values[target_start_index + i] = type_cast<T>(ref_value);
+          values[target_start_index + i] = type_cast_variant<T>(ref_value);
         }
       }
     }
   }
 };
 
-Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
+Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }

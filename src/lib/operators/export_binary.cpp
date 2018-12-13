@@ -142,8 +142,8 @@ void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
-  export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
-  export_value(ofstream, static_cast<ColumnID>(table->column_count()));
+  export_value(ofstream, static_cast<ChunkID::base_type>(table->chunk_count()));
+  export_value(ofstream, static_cast<ColumnID::base_type>(table->column_count()));
 
   std::vector<std::string> column_types(table->column_count());
   std::vector<std::string> column_names(table->column_count());
@@ -204,7 +204,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
   // Unfortunately, we have to iterate over all values of the reference segment
   // to materialize its contents. Then we can write them to the file
   for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    export_value(context->ofstream, type_cast<T>(ref_segment[row]));
+    export_value(context->ofstream, type_cast_variant<T>(ref_segment[row]));
   }
 }
 
@@ -226,7 +226,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    value = type_cast<std::string>(ref_segment[row]);
+    value = type_cast_variant<std::string>(ref_segment[row]);
     string_lengths[row] = value.length();
     values << value;
   }
@@ -277,13 +277,13 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
     const auto& segment = static_cast<const FixedStringDictionarySegment<std::string>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
     export_values(context->ofstream, *segment.dictionary());
   } else {
     const auto& segment = static_cast<const DictionarySegment<T>&>(base_segment);
 
     // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID>(segment.dictionary()->size()));
+    export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
     export_values(context->ofstream, *segment.dictionary());
   }
 

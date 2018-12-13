@@ -36,9 +36,10 @@ class RangeFilterTest : public ::testing::Test {
     _after_range = _max_value + 1;   // value larger than the maximum
   }
 
-  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(size_t gap_count, pmr_vector<T> value) {
+  // values ought to be sorted!
+  std::shared_ptr<RangeFilter<T>> test_varying_range_filter_size(const size_t gap_count, const pmr_vector<T>& values) {
     // RangeFilter constructor takes range count, not gap count
-    auto filter = RangeFilter<T>::build_filter(_values, gap_count + 1);
+    auto filter = RangeFilter<T>::build_filter(values, static_cast<uint32_t>(gap_count + 1));
 
     for (const auto& value : _values) {
       EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value}).type,
@@ -46,35 +47,40 @@ class RangeFilterTest : public ::testing::Test {
     }
 
     // Find `gap_count` largest gaps. We use an std::{{set}} to discard repeated
-    // values and directly iterate over an sorted order.
-    auto value_set = std::set<T>(_values.begin(), _values.end(), std::less<T>());
-    std::vector<std::pair<T, T>> begin_length_pairs;
+    // values and directly iterate over them in sorted order.
+    const auto value_set = std::set<T>(values.cbegin(), values.cend(), std::less<T>());
+    std::vector<std::pair<std::pair<T, T>, T>> interval_length_pairs;
 
     for (auto it = value_set.begin(); it != std::prev(value_set.end()); ++it) {
-      auto begin = *it;
-      auto end = *(std::next(it));
-      begin_length_pairs.push_back(std::make_pair(begin, end - begin));
+      const auto begin = *it;
+      const auto end = *(std::next(it));
+      interval_length_pairs.push_back({{begin, end}, abs(end - begin)});
     }
 
-    std::sort(begin_length_pairs.begin(), begin_length_pairs.end(),
+    std::sort(interval_length_pairs.begin(), interval_length_pairs.end(),
               [](auto& left, auto& right) { return left.second > right.second; });
 
-    for (auto gap_index = size_t{0}; gap_index < gap_count && gap_index < begin_length_pairs.size(); ++gap_index) {
-      auto gap = begin_length_pairs[gap_index];
-      auto begin = gap.first;
-      auto length = gap.second;
-      auto end = begin + length;
+    for (auto gap_index = size_t{0}; gap_index < gap_count && gap_index < interval_length_pairs.size(); ++gap_index) {
+      const auto gap = interval_length_pairs[gap_index];
+      const auto begin = gap.first.first;
+      const auto end = gap.first.second;
+      const auto length = gap.second;
+
+      // The self-calculated gaps are non-inclusive!
       EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {begin}).type,
                 EstimateType::MatchesApproximately);
       EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {end}).type,
                 EstimateType::MatchesApproximately);
+
       if constexpr (std::numeric_limits<T>::is_iec559) {
         auto value_in_gap = begin + 0.5 * length;
         EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value_in_gap}).type,
                   EstimateType::MatchesNone);
       } else if constexpr (std::is_integral_v<T>) {  // NOLINT
         if (length > 1) {
-          EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {++begin}).type,
+          EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {begin + 1}).type,
+                    EstimateType::MatchesNone);
+          EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {end - 1}).type,
                     EstimateType::MatchesNone);
         }
       }
@@ -84,7 +90,6 @@ class RangeFilterTest : public ::testing::Test {
     if (gap_count > 1) {
       EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, _in_between).type, EstimateType::MatchesNone);
     }
-
     return filter;
   }
 
@@ -93,22 +98,47 @@ class RangeFilterTest : public ::testing::Test {
 };
 
 template <typename T>
-T get_random_number(std::mt19937& rng, T min, T max) {
-  if constexpr (std::is_same_v<T, int>) {
-    std::uniform_int_distribution<T> uni(min, max);
-    return uni(rng);
-  } else {
-    std::uniform_real_distribution<T> uni(min, max);
-    return uni(rng);
-  }
+using distribution =
+    std::conditional_t<std::is_integral<T>::value, std::uniform_int_distribution<T>,
+                       std::conditional_t<std::is_floating_point<T>::value, std::uniform_real_distribution<T>, void>>;
+
+template <typename T>
+T get_random_number(std::mt19937& rng, distribution<T> distribution) {
+  return distribution(rng);
 }
 
 using FilterTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_CASE(RangeFilterTest, FilterTypes);
+TYPED_TEST_CASE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
+
+TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
+  // Create vector with a huge gap in the middle whose length exceeds the type's limits.
+  const pmr_vector<TypeParam> test_vector{static_cast<TypeParam>(0.9 * std::numeric_limits<TypeParam>::lowest()),
+                                          static_cast<TypeParam>(0.8 * std::numeric_limits<TypeParam>::lowest()),
+                                          static_cast<TypeParam>(0.8 * std::numeric_limits<TypeParam>::max()),
+                                          static_cast<TypeParam>(0.9 * std::numeric_limits<TypeParam>::max())};
+
+  // The filter will not create 5 ranges due to potential overflow problems when calculating
+  // distances. In this case, only a filter with a single range is built.
+  auto filter = RangeFilter<TypeParam>::build_filter(test_vector, 5);
+  // Having only one range means the filter cannot prune 0 right in the largest gap.
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, 0).type, EstimateType::MatchesApproximately);
+  // Nonetheless, the filter should prune values outside the single range.
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, std::numeric_limits<TypeParam>::lowest() * 0.95).type, EstimateType::MatchesApproximately);
+}
+
+TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
+                                          std::numeric_limits<TypeParam>::lowest()};
+
+  // Additional parantheses needed for template macro expansion.
+  EXPECT_THROW((RangeFilter<TypeParam>::build_filter(test_vector, 5)), std::logic_error);
+}
 
 // a single range is basically a min/max filter
 TYPED_TEST(RangeFilterTest, SingleRange) {
-  auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);
 
   for (const auto& value : this->_values) {
     EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value}).type,
@@ -134,13 +164,18 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
 // create range filters with varying number of ranges/gaps
 TYPED_TEST(RangeFilterTest, MultipleRanges) {
   for (auto gap_count = size_t{0}; gap_count < this->_values.size() * 2; ++gap_count) {
-    this->test_varying_range_filter_size(gap_count, this->_values);
+    const auto filter = this->test_varying_range_filter_size(gap_count, this->_values);
+
+    // _in_between should always prune if   we have more than one range
+    if (gap_count > 1) {
+      EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, this->_in_between).type, EstimateType::MatchesNone);
+    }
   }
 }
 
 // create more ranges than distinct values in the test data
 TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
-  auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 10'000);
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 10'000);
 
   for (const auto& value : this->_values) {
     EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value}).type,
@@ -160,10 +195,30 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
             EstimateType::MatchesNone);
 }
 
+// Test predicates which are not supported by the range filter
+TYPED_TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
+
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Like, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::NotLike, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::In, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::NotIn, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, {17}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNull, NULL_VALUE).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::IsNotNull, NULL_VALUE).type, EstimateType::MatchesApproximately);
+
+  // For the default filter, the following value is prunable.
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}).type, EstimateType::MatchesNone);
+  // But malformed predicates are skipped intentially and are thus not prunable
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {this->_in_between}, NULL_VALUE).type, EstimateType::MatchesApproximately);
+}
+
 // this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
 // for better understanding, see min_max_filter_test.cpp
 TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
-  auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   for (const auto& value : this->_values) {
     EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, {value}).type,
@@ -226,31 +281,65 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
             EstimateType::MatchesNone);
 }
 
-// test larger value ranges
-TYPED_TEST(RangeFilterTest, LargeValueDomain) {
+// Test larger value ranges.
+TYPED_TEST(RangeFilterTest, Between) {
+  const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
+
+  // This one has bounds in gaps, but cannot prune.
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {this->_max_value - 1}, {this->_after_range}).type, EstimateType::MatchesApproximately);
+
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-3000}, {-2000}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-999}, {1}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {104}, {1004}).type, EstimateType::MatchesNone);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {10'000'000}, {20'000'000}).type, EstimateType::MatchesNone);
+
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {-3000}, {-500}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {101}, {103}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {102}, {1004}).type, EstimateType::MatchesApproximately);
+
+  // SQL's between is inclusive
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Between, {103}, {123456}).type, EstimateType::MatchesApproximately);
+}
+
+// Test larger value ranges.
+TYPED_TEST(RangeFilterTest, LargeValueRange) {
   std::random_device rd;
   auto rng = std::mt19937(rd());
 
   // values on which is the range filter is later built on
   pmr_vector<TypeParam> values;
+  values.reserve(1'000);
 
-  // We randomly create values between min_value(TypeParam) to -1000 and 1000 to max(TypeParam).
-  // Any value in between should be prunable for values between -999 and 999
-  for (auto i = size_t{0}; i < 10'000; ++i) {
-    values.push_back(get_random_number<TypeParam>(rng, std::numeric_limits<TypeParam>::lowest(), -1000));
-    values.push_back(get_random_number<TypeParam>(rng, 1000, std::numeric_limits<TypeParam>::max()));
+  // Multiplying by 0.6 guarantees that the range filter will always yield a gap range
+  // right in the middle around value zero. Note, does not apply for unsigned values.
+  const TypeParam lower_bound_low_range = static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::lowest());
+  const TypeParam upper_bound_low_range = static_cast<TypeParam>(0.6 * lower_bound_low_range);
+  const TypeParam upper_bound_high_range = static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::max());
+  const TypeParam lower_bound_high_range = static_cast<TypeParam>(0.6 * upper_bound_high_range);
+
+  // We randomly create values between min_value(TypeParam) to 0.6*min_value(TypeParam) and
+  // 0.6*max(TypeParam) to max(TypeParam). Any value in between should be prunable.
+  distribution<TypeParam> lower_range_distribution(lower_bound_low_range, upper_bound_low_range);
+  distribution<TypeParam> high_range_distribution(lower_bound_high_range, upper_bound_high_range);
+  for (auto i = size_t{0}; i < 1'000; ++i) {
+    values.push_back(get_random_number<TypeParam>(rng, lower_range_distribution));
+    values.push_back(get_random_number<TypeParam>(rng, high_range_distribution));
   }
 
-  std::vector<size_t> gap_counts = {1, 2, 4, 8, 16, 32, 64, values.size() + 1};
+  std::sort(values.begin(), values.end());
+
+  // For developing reasons, it makes sense to further create range filters with a size of values.size() + 1
+  // but we found the runtime to be too long for hyriseTest.
+  const std::vector<size_t> gap_counts = {1, 2, 4, 8, 16, 32, 64};
+  distribution<TypeParam> middle_gap_distribution(upper_bound_low_range + 1, lower_bound_high_range - 1);
   for (auto gap_count : gap_counts) {
     // execute general tests and receive created range filter
     auto filter = this->test_varying_range_filter_size(gap_count, values);
 
-    // additionally, test for further values
-    for (auto i = size_t{0}; i < 100; ++i) {
+    // Additionally, test for further values in between the large random value ranges.
+    for (auto i = size_t{0}; i < 20; ++i) {
       EXPECT_EQ(
-          filter->estimate_cardinality(PredicateCondition::Equals, {get_random_number<TypeParam>(rng, 1000, 1000)})
-              .type,
+          filter->estimate_cardinality(PredicateCondition::Equals, {get_random_number<TypeParam>(rng, middle_gap_distribution)}).type,
           EstimateType::MatchesNone);
     }
   }

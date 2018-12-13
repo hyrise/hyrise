@@ -7,6 +7,7 @@
 #include <boost/hana/take_while.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/lexical_cast/try_lexical_convert.hpp>
+#include <boost/variant/apply_visitor.hpp>
 #include <string>
 
 #include "all_type_variant.hpp"
@@ -35,39 +36,55 @@ const T& get(const AllTypeVariant& value) {
 
 // cast methods - from one type to another
 
-// For convenience, allow `type_cast<T>(T bla);`, but it shouldn't do anything.
-// Conversions that don't require lexical_cast handling (e.g., float->double or float->int) are handled here as well.
-template <typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<std::decay<U>, std::decay<T>>>>
-inline __attribute__((always_inline)) auto&& type_cast(U&& value) {
-  return std::forward<T>(value);
+// Simple (i.e., constructible) conversions
+template <typename T, typename U,
+          typename = std::enable_if_t<std::is_constructible_v<std::decay_t<T>, std::decay_t<U>>>>
+inline __attribute__((always_inline)) T type_cast(U&& value) {
+  return static_cast<T>(std::forward<U>(value));
 }
 
-// If trivial conversion failed, continues here:
-// Template specialization for everything but integral types
-template <typename T, typename U>
-std::enable_if_t<!std::is_integral_v<T>, T> type_cast(const U& value) {
-  // For AllTypeVariants, check if it contains the type that we want. In that case, we don't need to convert anything.
-  if constexpr (std::is_same_v<U, AllTypeVariant>) {
-    if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
-  }
+// Simple (i.e., copy constructible) conversions
+template <typename T, typename U,
+          typename = std::enable_if_t<std::is_constructible_v<std::decay_t<T>, std::decay_t<U>>>>
+inline __attribute__((always_inline)) T type_cast(const U& value) {
+  return static_cast<T>(value);
+}
 
+// convert from string to T
+template <typename T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, std::string>>>
+inline __attribute__((always_inline)) T type_cast(const std::string& value) {
   return boost::lexical_cast<T>(value);
 }
 
-// Template specialization for integral types
-template <typename T, typename U>
-std::enable_if_t<std::is_integral_v<T>, T> type_cast(const U& value) {
-  if constexpr (std::is_same_v<U, AllTypeVariant>) {
-    if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
-  }
+// convert from T to string
+template <typename T, typename U,
+          typename = std::enable_if_t<std::is_same_v<std::decay_t<T>, std::string> &&
+                                      !std::is_same_v<std::decay_t<U>, std::string>>>
+inline __attribute__((always_inline)) std::string type_cast(const U& value) {
+  return std::to_string(value);
+}
 
-  T converted_value;
-
-  if (boost::conversion::try_lexical_convert(value, converted_value)) {
-    return converted_value;
+// convert from NullValue to T
+template <typename T>
+inline __attribute__((always_inline)) T type_cast(const opossum::NullValue&) {
+  if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
+    return "NULL";
   } else {
-    return boost::numeric_cast<T>(boost::lexical_cast<double>(value));
+    Fail("Cannot convert from NullValue to anything but string");
   }
+}
+
+// If trivial conversion failed, continue here:
+template <typename T>
+T type_cast_variant(const AllTypeVariant& value) {
+  // fast path if the type is the same
+  if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
+
+  // slow path with conversion
+  T converted_value;
+  const auto unpack = [&converted_value](const auto& typed_value) { converted_value = type_cast<T>(typed_value); };
+  boost::apply_visitor(unpack, value);
+  return converted_value;
 }
 
 }  // namespace opossum

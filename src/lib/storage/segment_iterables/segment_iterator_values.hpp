@@ -24,6 +24,10 @@ class AbstractSegmentIteratorValue {
   using Type = T;
 
  public:
+  AbstractSegmentIteratorValue() = default;
+  AbstractSegmentIteratorValue(const AbstractSegmentIteratorValue&) = default;
+  virtual ~AbstractSegmentIteratorValue() = default;
+
   virtual const T& value() const = 0;
   virtual bool is_null() const = 0;
 

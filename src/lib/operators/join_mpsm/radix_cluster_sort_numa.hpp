@@ -50,7 +50,7 @@ class RadixClusterSortNUMA {
  public:
   RadixClusterSortNUMA(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                        const std::pair<ColumnID, ColumnID>& column_ids, const bool materialize_null_left,
-                       const bool materialize_null_right, size_t cluster_count)
+                       const bool materialize_null_right, uint32_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
@@ -113,7 +113,7 @@ class RadixClusterSortNUMA {
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   // It is asserted to be a power of two in the constructor.
-  size_t _cluster_count;
+  uint32_t _cluster_count;
 
   bool _materialize_null_left;
   bool _materialize_null_right;

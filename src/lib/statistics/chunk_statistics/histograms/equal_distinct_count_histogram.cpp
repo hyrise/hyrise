@@ -219,7 +219,8 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_count() const {
 
 template <typename T>
 HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const {
-  return _bin_data.distinct_count_per_bin * bin_count() + _bin_data.bin_count_with_extra_value;
+  return static_cast<HistogramCountType>(_bin_data.distinct_count_per_bin * bin_count() +
+                                         _bin_data.bin_count_with_extra_value);
 }
 
 template <typename T>

@@ -38,6 +38,8 @@ class JoinMPSM : public AbstractJoinOperator {
 
   template <typename T>
   class JoinMPSMImpl;
+  template <typename T>
+  friend class JoinMPSMImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
 };

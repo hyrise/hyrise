@@ -34,7 +34,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     switch (encoding_spec.encoding_type) {
       case EncodingType::FrameOfReference:
         // fill three blocks and a bit more
-        return FrameOfReferenceSegment<int32_t>::block_size * (3.3);
+        return static_cast<size_t>(FrameOfReferenceSegment<int32_t>::block_size * (3.3));
       default:
         return default_row_count;
     }

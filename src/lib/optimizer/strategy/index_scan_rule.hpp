@@ -28,7 +28,7 @@ class PredicateNode;
 class IndexScanRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
                 const std::shared_ptr<OptimizationContext>& context) const override;
 
  protected:

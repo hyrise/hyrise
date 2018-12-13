@@ -35,6 +35,7 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -46,7 +47,7 @@
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
-#include "visualization/sql_query_plan_visualizer.hpp"
+#include "visualization/pqp_visualizer.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -137,8 +138,6 @@ Console::Console()
   for (const auto& generator : tpcc_generators) {
     _tpcc_commands.push_back(generator.first);
   }
-
-  _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
 }
 
 int Console::read() {
@@ -237,9 +236,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
-    auto builder = SQLPipelineBuilder{sql}
-                       .dont_cleanup_temporaries()  // keep tables for debugging and visualization
-                       .with_prepared_statement_cache(_prepared_statements);
+    auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context != nullptr) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
@@ -289,7 +286,7 @@ void Console::register_command(const std::string& name, const CommandFunction& f
 Console::RegisteredCommands Console::commands() { return _commands; }
 
 void Console::set_prompt(const std::string& prompt) {
-  if (IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
     _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
@@ -371,7 +368,7 @@ int Console::_help(const std::string&) {
   out("  visualize [options] [SQL]               - Visualize a SQL query\n");
   out("                                               Options\n");
   out("                                                - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                                 Default: noexec\n");
+  out("                                                                 Default: exec\n");
   out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
   out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                       Default: pqp\n");
@@ -433,7 +430,7 @@ int Console::_generate_tpch(const std::string& args) {
     args_valid = false;
   }
 
-  auto chunk_size = Chunk::MAX_SIZE;
+  auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
   }
@@ -441,7 +438,8 @@ int Console::_generate_tpch(const std::string& args) {
   if (!args_valid) {
     out("Usage: ");
     out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is unlimited by default. \n");
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
     return ReturnCode::Error;
   }
 
@@ -468,8 +466,15 @@ int Console::_load_table(const std::string& args) {
   const std::string& extension = file_parts.back();
 
   out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+
+  auto& storage_manager = StorageManager::get();
+  if (storage_manager.has_table(tablename)) {
+    storage_manager.drop_table(tablename);
+    out("Table " + tablename + " already existed. Replacing it.\n");
+  }
+
   if (extension == "csv") {
-    auto importer = std::make_shared<ImportCsv>(filepath, tablename);
+    auto importer = std::make_shared<ImportCsv>(filepath, Chunk::DEFAULT_SIZE, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
@@ -478,16 +483,8 @@ int Console::_load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      // We used this chunk size in order to be able to test chunk pruning
-      // on sizeable data sets. This should probably be made configurable
-      // at some point.
-      static constexpr auto DEFAULT_CHUNK_SIZE = 500'000u;
-      auto table = opossum::load_table(filepath, DEFAULT_CHUNK_SIZE);
-      auto& storage_manager = StorageManager::get();
-      if (storage_manager.has_table(tablename)) {
-        storage_manager.drop_table(tablename);
-        out("Table " + tablename + " already existed. Replaced it.\n");
-      }
+      auto table = opossum::load_table(filepath);
+
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
       out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
@@ -644,7 +641,6 @@ int Console::_visualize(const std::string& input) {
   const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
-  // Visualize the Logical Query Plan
   switch (plan_type) {
     case PlanType::LQP:
     case PlanType::UnoptLQP: {
@@ -667,27 +663,18 @@ int Console::_visualize(const std::string& input) {
     } break;
 
     case PlanType::PQP: {
-      // Visualize the Physical Query Plan
-      SQLQueryPlan query_plan{CleanupTemporaries::No};
-
       try {
         if (!no_execute) {
           _sql_pipeline->get_result_table();
         }
 
-        // Create plan with all roots
-        const auto& plans = _sql_pipeline->get_query_plans();
-        for (const auto& plan : plans) {
-          query_plan.append_plan(*plan);
-        }
+        PQPVisualizer visualizer;
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), graph_filename, img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
         _handle_rollback();
         return ReturnCode::Error;
       }
-
-      SQLQueryPlanVisualizer visualizer;
-      visualizer.visualize(query_plan, graph_filename, img_filename);
     } break;
 
     case PlanType::Joins: {
@@ -898,7 +885,7 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  SQLQueryCache<SQLQueryPlan>::get().clear();
+  SQLPhysicalPlanCache::get().clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
@@ -1035,7 +1022,7 @@ int main(int argc, char** argv) {
     console.out("Type 'help' for more information.\n\n");
 
     console.out("Hyrise is running a ");
-    if (IS_DEBUG) {
+    if (HYRISE_DEBUG) {
       console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
     } else {
       console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);

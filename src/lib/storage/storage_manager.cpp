@@ -56,7 +56,7 @@ std::vector<std::string> StorageManager::table_names() const {
 
 const std::map<std::string, std::shared_ptr<Table>>& StorageManager::tables() const { return _tables; }
 
-void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
+void StorageManager::add_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
@@ -64,7 +64,7 @@ void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr
   _views.emplace(name, view);
 }
 
-void StorageManager::drop_lqp_view(const std::string& name) {
+void StorageManager::drop_view(const std::string& name) {
   const auto num_deleted = _views.erase(name);
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
@@ -89,6 +89,31 @@ std::vector<std::string> StorageManager::view_names() const {
   return view_names;
 }
 
+void StorageManager::add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan) {
+  Assert(_prepared_plans.find(name) == _prepared_plans.end(),
+         "Cannot add prepared plan " + name + " - a prepared plan with the same name already exists");
+
+  _prepared_plans.emplace(name, prepared_plan);
+}
+
+std::shared_ptr<PreparedPlan> StorageManager::get_prepared_plan(const std::string& name) const {
+  const auto iter = _prepared_plans.find(name);
+  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
+
+  return iter->second;
+}
+
+bool StorageManager::has_prepared_plan(const std::string& name) const {
+  return _prepared_plans.find(name) != _prepared_plans.end();
+}
+
+void StorageManager::drop_prepared_plan(const std::string& name) {
+  const auto iter = _prepared_plans.find(name);
+  Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
+
+  _prepared_plans.erase(iter);
+}
+
 void StorageManager::print(std::ostream& out) const {
   out << "==================" << std::endl;
   out << "===== Tables =====" << std::endl << std::endl;
@@ -105,6 +130,14 @@ void StorageManager::print(std::ostream& out) const {
 
   for (auto const& view : _views) {
     out << "==== view >> " << view.first << " <<";
+    out << std::endl;
+  }
+
+  out << "==================" << std::endl;
+  out << "= PreparedPlans ==" << std::endl << std::endl;
+
+  for (auto const& prepared_plan : _prepared_plans) {
+    out << "==== prepared plan >> " << prepared_plan.first << " <<";
     out << std::endl;
   }
 }

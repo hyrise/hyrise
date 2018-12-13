@@ -16,7 +16,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 std::string LogicalReductionRule::name() const { return "Logical Expression Reducer Rule"; }
 
-bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
+void LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node,
                                     const AbstractCostEstimator& cost_estimator,
                                     const std::shared_ptr<OptimizationContext>& context) const {
   Assert(node->type == LQPNodeType::Root, "LogicalReductionRule needs root to hold onto");
@@ -32,7 +32,7 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
   visit_lqp(node, [&](const auto& sub_node) {
     // We only aim at PredicateNodes, since these are the nodes that primarily contain logical expressions.
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      const auto new_predicate = reduce_distributivity(predicate_node->predicate);
+      const auto new_predicate = reduce_distributivity(predicate_node->predicate());
       const auto flat_conjunction = flatten_logical_expressions(new_predicate, LogicalOperator::And);
 
       if (flat_conjunction.size() > 1) {
@@ -55,8 +55,6 @@ bool LogicalReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node
     }
     lqp_remove_node(predicate_node);
   }
-
-  return false;
 }
 
 std::shared_ptr<AbstractExpression> LogicalReductionRule::reduce_distributivity(

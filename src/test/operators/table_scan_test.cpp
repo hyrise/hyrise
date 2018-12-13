@@ -14,12 +14,12 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/table_scan/between_table_scan_impl.hpp"
-#include "operators/table_scan/column_comparison_table_scan_impl.hpp"
+#include "operators/table_scan/column_between_table_scan_impl.hpp"
+#include "operators/table_scan/column_is_null_table_scan_impl.hpp"
+#include "operators/table_scan/column_like_table_scan_impl.hpp"
+#include "operators/table_scan/column_vs_column_table_scan_impl.hpp"
+#include "operators/table_scan/column_vs_value_table_scan_impl.hpp"
 #include "operators/table_scan/expression_evaluator_table_scan_impl.hpp"
-#include "operators/table_scan/is_null_table_scan_impl.hpp"
-#include "operators/table_scan/like_table_scan_impl.hpp"
-#include "operators/table_scan/single_column_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -73,7 +73,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Int);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References, 5);
+    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References);
 
     const auto test_table_part_compressed = _int_int_partly_compressed->get_output();
 
@@ -673,11 +673,11 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
 
   // clang-format off
-  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<SingleColumnTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<ColumnComparisonTableScanImpl*>(TableScan{get_table_op(),
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_table_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_table_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnVsColumnTableScanImpl*>(TableScan{get_table_op(),
                                                                      equals_(column_b, column_a)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<LikeTableScanImpl*>(TableScan{get_int_string_table_op(),
+  EXPECT_TRUE(dynamic_cast<ColumnLikeTableScanImpl*>(TableScan{get_int_string_table_op(),
                                                          like_(column_s, "%s%")}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_int_string_table_op(),
                                                                         like_("hello", "%s%")}.create_impl().get()));  // NOLINT
@@ -688,8 +688,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(TableScan{get_table_op(), and_(greater_than_(column_a, 5),
                                                                                              less_than_(column_b,
                                                                                                         6))}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.create_impl().get()));  // NOLINT
-  EXPECT_TRUE(dynamic_cast<IsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_table_op_null(), is_null_(column_an)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnIsNullTableScanImpl*>(TableScan{get_table_op_null(), is_not_null_(column_an)}.create_impl().get()));  // NOLINT
   // clang-format on
 }
 

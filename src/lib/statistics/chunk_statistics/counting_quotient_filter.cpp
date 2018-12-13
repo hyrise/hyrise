@@ -38,7 +38,7 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
     Fail("Invalid remainder remainder_size");
   }
 
-  const auto number_of_slots = std::pow(2, quotient_size);
+  const auto number_of_slots = static_cast<size_t>(std::pow(2, quotient_size));
   boost::apply_visitor([&](auto& filter) { qf_init(&filter, number_of_slots, _hash_bits, 0); }, _quotient_filter);
 }
 
@@ -59,7 +59,7 @@ void CountingQuotientFilter<ElementType>::insert(ElementType value, size_t count
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::count(const AllTypeVariant& value) const {
   DebugAssert(value.type() == typeid(ElementType), "Value does not have the same type as the filter elements");
-  return count(type_cast<ElementType>(value));
+  return count(type_cast_variant<ElementType>(value));
 }
 
 template <typename ElementType>

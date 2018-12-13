@@ -32,7 +32,7 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
+void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node, const AbstractCostEstimator& cost_estimator,
                              const std::shared_ptr<OptimizationContext>& context) const {
   if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
@@ -51,7 +51,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node, const
     }
   }
 
-  return _apply_to_inputs(node, cost_estimator, context);
+  _apply_to_inputs(node, cost_estimator, context);
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
@@ -61,7 +61,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.type != SegmentIndexType::GroupKey) return false;
 
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates) return false;
   if (operator_predicates->size() != 1) return false;
 

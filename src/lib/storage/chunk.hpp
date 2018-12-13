@@ -43,6 +43,11 @@ class Chunk : private Noncopyable {
   // The last chunk offset is reserved for NULL as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
+  // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
+  // feel free to re-evaluate this. This is only relevant for chunks that contain data. Chunks that contain reference
+  // segments do not use the table's max_chunk_size at all.
+  static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
+
   Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
