@@ -28,8 +28,7 @@ bool PlaceholderExpression::requires_computation() const { return false; }
 DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
 bool PlaceholderExpression::is_nullable() const {
-  // Assuming it's nullable is safe
-  return true;
+  Fail("Cannot obtain nullability of placeholder");
 }
 
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
