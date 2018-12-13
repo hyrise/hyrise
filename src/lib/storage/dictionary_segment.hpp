@@ -58,6 +58,8 @@ class DictionarySegment : public BaseDictionarySegment {
   ValueID lower_bound(const AllTypeVariant& value) const final;
   ValueID upper_bound(const AllTypeVariant& value) const final;
 
+  AllTypeVariant value_of_value_id(const ValueID value_id) const final;
+
   ValueID::base_type unique_values_count() const final;
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
