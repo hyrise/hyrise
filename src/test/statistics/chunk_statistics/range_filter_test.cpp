@@ -40,11 +40,11 @@ using FilterTypes = ::testing::Types<int, float, double>;
 TYPED_TEST_CASE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
+  const auto lowest = std::numeric_limits<TypeParam>::lowest();
+  const auto max = std::numeric_limits<TypeParam>::max();
   // Create vector with a huge gap in the middle whose length exceeds the type's limits.
-  const pmr_vector<TypeParam> test_vector{static_cast<TypeParam>(0.9 * std::numeric_limits<TypeParam>::lowest()),
-                                          static_cast<TypeParam>(0.8 * std::numeric_limits<TypeParam>::lowest()),
-                                          static_cast<TypeParam>(0.8 * std::numeric_limits<TypeParam>::max()),
-                                          static_cast<TypeParam>(0.9 * std::numeric_limits<TypeParam>::max())};
+  const pmr_vector<TypeParam> test_vector{static_cast<TypeParam>(0.9 * lowest), static_cast<TypeParam>(0.8 * lowest),
+                                          static_cast<TypeParam>(0.8 * max), static_cast<TypeParam>(0.9 * max)};
 
   // The filter will not create 5 ranges due to potential overflow problems when calculating
   // distances. In this case, only a filter with a single range is built.
@@ -52,7 +52,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   // Having only one range means the filter cannot prune 0 right in the largest gap.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0));
   // Nonetheless, the filter should prune values outside the single range.
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, std::numeric_limits<TypeParam>::lowest() * 0.95));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, lowest * 0.95));
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
@@ -120,19 +120,17 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
 
     EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, third_gap_min, third_gap_max));
   }
-  {
-    // starting with 4 ranges, all tested gaps should be covered
-    for (uint32_t range_count : {4, 5, 100, 1'000}) {
-      {
-        const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, range_count);
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, this->_value_in_gap));
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, first_gap_min));
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, first_gap_min, first_gap_max));
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, second_gap_min));
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, second_gap_min, second_gap_max));
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, third_gap_min));
-        EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, third_gap_min, third_gap_max));
-      }
+  // starting with 4 ranges, all tested gaps should be covered
+  for (auto range_count : {4, 5, 100, 1'000}) {
+    {
+      const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, range_count);
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, this->_value_in_gap));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, first_gap_min));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, first_gap_min, first_gap_max));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, second_gap_min));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, second_gap_min, second_gap_max));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, third_gap_min));
+      EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, third_gap_min, third_gap_max));
     }
   }
 }
@@ -220,21 +218,23 @@ TYPED_TEST(RangeFilterTest, Between) {
 
 // Test larger value ranges.
 TYPED_TEST(RangeFilterTest, LargeValueRange) {
-  const pmr_vector<TypeParam> values{static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::lowest()),
-                                     static_cast<TypeParam>(0.38 * std::numeric_limits<TypeParam>::lowest()),
-                                     static_cast<TypeParam>(0.36 * std::numeric_limits<TypeParam>::lowest()),
-                                     static_cast<TypeParam>(0.30 * std::numeric_limits<TypeParam>::lowest()),
-                                     static_cast<TypeParam>(0.28 * std::numeric_limits<TypeParam>::lowest()),
-                                     static_cast<TypeParam>(0.36 * std::numeric_limits<TypeParam>::max()),
-                                     static_cast<TypeParam>(0.38 * std::numeric_limits<TypeParam>::max()),
-                                     static_cast<TypeParam>(0.4 * std::numeric_limits<TypeParam>::max())};
+  const auto lowest = std::numeric_limits<TypeParam>::lowest();
+  const auto max = std::numeric_limits<TypeParam>::max();
 
-  // A filter with 3 ranges, has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
+  const pmr_vector<TypeParam> values{static_cast<TypeParam>(0.4 * lowest),  static_cast<TypeParam>(0.38 * lowest),
+                                     static_cast<TypeParam>(0.36 * lowest), static_cast<TypeParam>(0.30 * lowest),
+                                     static_cast<TypeParam>(0.28 * lowest), static_cast<TypeParam>(0.36 * max),
+                                     static_cast<TypeParam>(0.38 * max),    static_cast<TypeParam>(0.4 * max)};
+
   const auto filter = RangeFilter<TypeParam>::build_filter(values, 3);
 
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, TypeParam{0}));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * std::numeric_limits<TypeParam>::lowest()));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * std::numeric_limits<TypeParam>::max()));
+  // A filter with 3 ranges, has two gaps: (i) 0.28*lowest-0.36*max and (ii) 0.36*lowest-0.30*lowest
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, 0.27 * lowest, 0.35 * max));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, 0.35 * lowest, 0.31 * lowest));
+
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, TypeParam{0}));  // in gap
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * lowest));
+  EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 0.5 * max));
 
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values.front(), values[4]));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values[5], values.back()));
@@ -242,18 +242,11 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
   // As SQL-between is inclusive, this range cannot be pruned.
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, values[4], values[5]));
 
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * std::numeric_limits<TypeParam>::lowest()));
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * std::numeric_limits<TypeParam>::max()));
-
-  // Check both expected gaps.
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, 0.20 * std::numeric_limits<TypeParam>::lowest(),
-                                0.3 * std::numeric_limits<TypeParam>::max()));
-  EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, 0.35 * std::numeric_limits<TypeParam>::lowest(),
-                                0.31 * std::numeric_limits<TypeParam>::lowest()));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * lowest));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 0.4 * max));
 
   // With two gaps, the following should not exist.
-  EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, 0.4 * std::numeric_limits<TypeParam>::lowest(),
-                                 0.38 * std::numeric_limits<TypeParam>::lowest()));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::Between, 0.4 * lowest, 0.38 * lowest));
 }
 
 // Test predicates which are not supported by the range filter
@@ -273,7 +266,7 @@ TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
 
   // For the default filter, the following value is prunable.
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, 1));
-  // But malformed predicates are skipped intentially and are thus not prunable
+  // But malformed predicates are skipped intentionally and are thus not prunable
   EXPECT_FALSE(filter->can_prune(PredicateCondition::Equals, 1, NULL_VALUE));
 }
 
