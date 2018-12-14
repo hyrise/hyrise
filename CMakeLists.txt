@@ -57,6 +57,10 @@ if (${ENABLE_THREAD_SANITIZATION})
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
+# Limit the supported encodings to `Dictionary`. This reduces the compile time as fewer templates have to be instantiated.
+option(LIMITED_ENCODINGS "Set to ON to build `Dictionary` as the only encoding type. Default: OFF" OFF)
+
+
 # Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")

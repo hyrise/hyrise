@@ -56,6 +56,9 @@ Simply call `make -j*`, where `*` denotes the number of threads to use.
 Usually debug binaries are created.
 To configure a build directory for a release build make sure it is empty and call CMake like `cmake -DCMAKE_BUILD_TYPE=Release`
 
+### Speeding up the build process
+Many developers do not focus on the different encoding options that Hyrise provides and are happy with just the dictionary encoding. By setting `-DLIMITED_ENCODINGS=On`, only the dictionary encoding will be fully built. Note that this is intended only to speed up the build process. While tests using different encodings will be skipped, binaries will not be aware that some template instantiations are missing. For example, it is still possible to pass the `-e RunLengthEncoding` option to the benchmark. If done, an unhandled exception will be thrown.
+
 ### Lint
 `./scripts/lint.sh` (Google's cpplint is used which needs python 2.7)
 

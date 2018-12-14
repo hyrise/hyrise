@@ -16,6 +16,7 @@
 #include "storage/encoding_type.hpp"
 
 #include "utils/enum_constant.hpp"
+#include "utils/skip_test.hpp"
 #include "utils/template_type.hpp"
 
 namespace opossum {
@@ -52,20 +53,24 @@ void resolve_encoded_segment_type(const BaseEncodedSegment& segment, const Funct
 
     // If the segment's encoding type matches that of the pair, we have found the segment's type
     if (!match_found && (encoding_type == segment.encoding_type())) {
-      // Check if ColumnDataType is supported by encoding
-      const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
+      // In limited mode, only build dictionary encoding
+      if constexpr (HYRISE_LIMITED_ENCODINGS && encoding_type != EncodingType::Dictionary) {
+        try {
+          skip_test();
+        } catch (std::runtime_error) {
+          Fail("Hyrise was built with limited encoding support. The requested encoding is not available");
+        }
+      } else {
+        // Check if ColumnDataType is supported by encoding
+        const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
 
-      // clang-format off
-
-      // Compile only if ColumnDataType is supported
-      if constexpr(hana::value(data_type_supported)) {
-        using SegmentTemplateType = typename decltype(segment_template_c)::type;
-        using SegmentType = typename SegmentTemplateType::template _template<ColumnDataType>;
-        functor(static_cast<const SegmentType&>(segment));
+        // Compile only if ColumnDataType is supported
+        if constexpr(hana::value(data_type_supported)) {
+          using SegmentTemplateType = typename decltype(segment_template_c)::type;
+          using SegmentType = typename SegmentTemplateType::template _template<ColumnDataType>;
+          functor(static_cast<const SegmentType&>(segment));
+        }
       }
-
-      // clang-format on
-
       return true;
     }
 

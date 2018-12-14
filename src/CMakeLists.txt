@@ -4,6 +4,13 @@ else()
     add_definitions(-DHYRISE_DEBUG=0)
 endif()
 
+if (${LIMITED_ENCODINGS})
+    MESSAGE(STATUS "Building limited number of encodings")
+    add_definitions(-DHYRISE_LIMITED_ENCODINGS=1)
+else()
+    add_definitions(-DHYRISE_LIMITED_ENCODINGS=0)
+endif()
+
 # Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang
 # ENABLE_JIT_SUPPORT is OFF on MacOS by default as JIT does not work with -O2 and -O3 on MacOS
 CMAKE_DEPENDENT_OPTION(ENABLE_JIT_SUPPORT "Build with JIT support" OFF APPLE ON)
