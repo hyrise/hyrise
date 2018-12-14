@@ -57,10 +57,10 @@ std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
       // if we have a generic segment we create the dictionary ourselves
       auto iterable = create_iterable_from_segment<DataTypeT>(typed_segment);
       std::unordered_set<DataTypeT> values;
-      iterable.for_each([&](const auto& value) {
+      iterable.for_each([&](const auto& position) {
         // we are only interested in non-null values
-        if (!value.is_null()) {
-          values.insert(value.value());
+        if (!position.is_null()) {
+          values.insert(position.value());
         }
       });
       pmr_vector<DataTypeT> dictionary{values.cbegin(), values.cend()};

@@ -216,11 +216,11 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
       auto base_segment = chunk->get_segment(_column_id);
 
-      segment_iterate<SortColumnType>(*base_segment, [&](const auto& value) {
-        if (value.is_null()) {
-          null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
+      segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+        if (position.is_null()) {
+          null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
         } else {
-          row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
+          row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
         }
       });
     }

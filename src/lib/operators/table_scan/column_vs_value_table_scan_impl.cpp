@@ -51,8 +51,8 @@ void ColumnVsValueTableScanImpl::_scan_non_dictionary_segment(
     auto typed_value = type_cast_variant<ColumnDataType>(_value);
 
     with_comparator(_predicate_condition, [&](auto predicate_comparator) {
-      auto comparator = [predicate_comparator, typed_value](const auto& iterator_value) {
-        return predicate_comparator(iterator_value.value(), typed_value);
+      auto comparator = [predicate_comparator, typed_value](const auto& position) {
+        return predicate_comparator(position.value(), typed_value);
       };
       _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
     });
@@ -61,7 +61,7 @@ void ColumnVsValueTableScanImpl::_scan_non_dictionary_segment(
 
 void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
-                                                          const std::shared_ptr<const PosList>& position_filter) const {onst PosList>& position_filter) const {
+                                                          const std::shared_ptr<const PosList>& position_filter) const {
   /**
    * ValueID search_vid;              // left value id
    * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
@@ -108,8 +108,8 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   }
 
   _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
-    auto comparator = [predicate_comparator, search_value_id](const auto& iterator_value) {
-      return predicate_comparator(iterator_value.value(), search_value_id);
+    auto comparator = [predicate_comparator, search_value_id](const auto& position) {
+      return predicate_comparator(position.value(), search_value_id);
     };
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       if (_predicate_condition == PredicateCondition::GreaterThan ||

@@ -13,7 +13,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
                                                                               const ColumnID column_id) {
   std::unordered_set<std::string> distinct_set;
   // It would be nice to use string_view here, but the iterables hold copies of the values, not references themselves.
-  // SegmentIteratorValue would have to be changed to `T& _value` and this brings a whole bunch of problems in iterators
+  // SegmentPosition would have to be changed to `T& _value` and this brings a whole bunch of problems in iterators
   // that create stack copies of the accessed values (e.g., for ReferenceSegments)
 
   auto null_value_count = size_t{0};
@@ -24,18 +24,18 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
 
-    segment_iterate<std::string>(*base_segment, [&](const auto& value) {
-      if (value.is_null()) {
+    segment_iterate<std::string>(*base_segment, [&](const auto& position) {
+      if (position.is_null()) {
         ++null_value_count;
       } else {
         if (distinct_set.empty()) {
-          min = value.value();
-          max = value.value();
+          min = position.value();
+          max = position.value();
         } else {
-          min = std::min(min, value.value());
-          max = std::max(max, value.value());
+          min = std::min(min, position.value());
+          max = std::max(max, position.value());
         }
-        distinct_set.insert(value.value());
+        distinct_set.insert(position.value());
       }
     });
   }

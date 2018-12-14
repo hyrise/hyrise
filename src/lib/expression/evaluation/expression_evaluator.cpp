@@ -1325,11 +1325,11 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
       std::vector<bool> nulls;
       nulls.resize(segment.size());
 
-      segment_iterate<ColumnDataType>(segment, [&](const auto& value) {
-        if (value.is_null()) {
+      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        if (position.is_null()) {
           nulls[chunk_offset] = true;
         } else {
-          values[chunk_offset] = value.value();
+          values[chunk_offset] = position.value();
         }
         ++chunk_offset;
       });
@@ -1338,8 +1338,8 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
           std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
 
     } else {
-      segment_iterate<ColumnDataType>(segment, [&](const auto& value) {
-        values[chunk_offset] = value.value();
+      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        values[chunk_offset] = position.value();
         ++chunk_offset;
       });
 
@@ -1506,11 +1506,11 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-        segment_iterate<Result>(result_segment, [&](const auto& value) {
-          if (value.is_null()) {
+        segment_iterate<Result>(result_segment, [&](const auto& position) {
+          if (position.is_null()) {
             result_nulls[chunk_offset] = true;
           } else {
-            result_values[chunk_offset] = value.value();
+            result_values[chunk_offset] = position.value();
           }
           ++chunk_offset;
         });
@@ -1518,8 +1518,8 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     } else {
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-        segment_iterate<Result>(result_segment, [&](const auto& value) {
-          result_values[chunk_offset] = value.value();
+        segment_iterate<Result>(result_segment, [&](const auto& position) {
+          result_values[chunk_offset] = position.value();
           ++chunk_offset;
         });
       }

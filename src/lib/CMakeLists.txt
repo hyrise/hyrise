@@ -466,8 +466,8 @@ set(
     storage/segment_iterables/any_segment_iterator.hpp
     storage/segment_iterables/base_segment_iterators.hpp
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
-    storage/segment_iterables/segment_iterator_values.hpp
-storage/segment_iterate.hpp
+storage/segment_iterables/segment_positions.hpp
+    storage/segment_iterate.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp

@@ -54,8 +54,8 @@ void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(
 
     auto typed_left_value = type_cast_variant<ColumnDataType>(_left_value);
     auto typed_right_value = type_cast_variant<ColumnDataType>(_right_value);
-    auto comparator = [typed_left_value, typed_right_value](const auto& iterator_value) {
-      return iterator_value.value() >= typed_left_value && iterator_value.value() <= typed_right_value;
+    auto comparator = [typed_left_value, typed_right_value](const auto& position) {
+      return position.value() >= typed_left_value && position.value() <= typed_right_value;
     };
 
     _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
@@ -87,10 +87,10 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   }
 
   const auto value_id_diff = right_value_id - left_value_id;
-  const auto comparator = [left_value_id, value_id_diff](const auto& iterator_value) {
+  const auto comparator = [left_value_id, value_id_diff](const auto& position) {
     // Using < here because the right value id is the upper_bound. Also, because the value ids are integers, we can do
     // a little hack here: (x >= a && x < b) === ((x - a) < (b - a)); cf. https://stackoverflow.com/a/17095534/2204581
-    return (iterator_value.value() - left_value_id) < value_id_diff;
+    return (position.value() - left_value_id) < value_id_diff;
   };
 
   column_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {

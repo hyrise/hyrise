@@ -142,14 +142,14 @@ class ColumnMaterializerNUMA {
     auto output = std::make_shared<MaterializedSegment<T>>(partition._alloc);
     output->reserve(segment.size());
 
-    segment_iterate<T>(segment, [&](const auto& value) {
-      const auto row_id = RowID{chunk_id, value.chunk_offset()};
-      if (value.is_null()) {
+    segment_iterate<T>(segment, [&](const auto& position) {
+      const auto row_id = RowID{chunk_id, position.chunk_offset()};
+      if (position.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output->emplace_back(row_id, value.value());
+        output->emplace_back(row_id, position.value());
       }
     });
 
@@ -169,14 +169,14 @@ class ColumnMaterializerNUMA {
     auto dict = segment.dictionary();
 
     auto iterable = create_iterable_from_segment(segment);
-    iterable.for_each([&](const auto& segment_value) {
-      const auto row_id = RowID{chunk_id, segment_value.chunk_offset()};
-      if (segment_value.is_null()) {
+    iterable.for_each([&](const auto& position) {
+      const auto row_id = RowID{chunk_id, position.chunk_offset()};
+      if (position.is_null()) {
         if (_materialize_null) {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output->emplace_back(row_id, segment_value.value());
+        output->emplace_back(row_id, position.value());
       }
     });
 

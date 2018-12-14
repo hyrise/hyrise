@@ -62,7 +62,7 @@ TEST_P(AnySegmentIterableTest, Int) {
   auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
   auto values = std::vector<int32_t>{};
-  any_segment_iterable_int.for_each([&](const auto& value) { values.emplace_back(value.value()); });
+  any_segment_iterable_int.for_each([&](const auto& position) { values.emplace_back(position.value()); });
 
   EXPECT_EQ(values, int_values);
 }
@@ -71,8 +71,8 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   auto any_segment_iterable_int = create_any_segment_iterable<int32_t>(*int_segment);
 
   auto index = size_t{0};
-  any_segment_iterable_int.for_each(position_filter, [&](const auto& value) {
-    EXPECT_EQ(value.value(), int_values[(*position_filter)[index].chunk_offset]);
+  any_segment_iterable_int.for_each(position_filter, [&](const auto& position) {
+    EXPECT_EQ(position.value(), int_values[(*position_filter)[index].chunk_offset]);
     ++index;
   });
 

@@ -215,16 +215,16 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
   ChunkOffset chunk_offset{0};
-  segment_iterate<ColumnDataType>(base_segment, [&](const auto& value) {
+  segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
     auto& hash_entry = results[hash_keys[chunk_offset]];
     hash_entry.row_id = RowID(chunk_id, chunk_offset);
 
     /**
     * If the value is NULL, the current aggregate value does not change.
     */
-    if (!value.is_null()) {
+    if (!position.is_null()) {
       // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(value.value(), hash_entry.current_aggregate);
+      aggregator(position.value(), hash_entry.current_aggregate);
 
       // increase value counter
       ++hash_entry.aggregate_count;
@@ -232,7 +232,7 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
       if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
         // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
         // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-        hash_entry.distinct_values.insert(value.value());
+        hash_entry.distinct_values.insert(position.value());
       }
     }
 
@@ -351,15 +351,15 @@ void Aggregate::_aggregate() {
           const auto base_segment = chunk_in->get_segment(column_id);
 
           ChunkOffset chunk_offset{0};
-          segment_iterate<ColumnDataType>(*base_segment, [&](const auto& value) {
-            if (value.is_null()) {
+          segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+            if (position.is_null()) {
               if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                 keys_per_chunk[chunk_id][chunk_offset] = 0u;
               } else {
                 keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
               }
             } else {
-              auto inserted = id_map.try_emplace(value.value(), id_counter);
+              auto inserted = id_map.try_emplace(position.value(), id_counter);
               // store either the current id_counter or the existing ID of the value
               if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
                 keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;

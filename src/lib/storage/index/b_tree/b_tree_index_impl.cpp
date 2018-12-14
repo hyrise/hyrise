@@ -64,9 +64,9 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   std::vector<std::pair<ChunkOffset, DataType>> values;
 
   // Materialize
-  segment_iterate<DataType>(*segment, [&](const auto& value) {
-    if (value.is_null()) return;
-    values.push_back(std::make_pair(value.chunk_offset(), value.value()));
+  segment_iterate<DataType>(*segment, [&](const auto& position) {
+    if (position.is_null()) return;
+    values.push_back(std::make_pair(position.chunk_offset(), position.value()));
   });
 
   // Sort

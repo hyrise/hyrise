@@ -25,13 +25,13 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
 
-    segment_iterate<ColumnDataType>(*base_segment, [&](const auto& value) {
-      if (value.is_null()) {
+    segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+      if (position.is_null()) {
         ++null_value_count;
       } else {
-        distinct_set.insert(value.value());
-        min = std::min(min, value.value());
-        max = std::max(max, value.value());
+        distinct_set.insert(position.value());
+        min = std::min(min, position.value());
+        max = std::max(max, position.value());
       }
     });
   }

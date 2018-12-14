@@ -51,7 +51,7 @@ void ColumnLikeTableScanImpl::_scan_non_dictionary_segment(
       Fail("Can only handle strings");
     } else {
       _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
-        const auto functor = [&](const auto& iterator_value) { return resolved_matcher(iterator_value.value()); };
+        const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
         _scan_with_iterators<true>(functor, it, end, chunk_id, matches);
       });
     }
@@ -91,8 +91,8 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return;
   }
 
-  const auto dictionary_lookup = [&dictionary_matches](const auto& iterator_value) {
-    return dictionary_matches[iterator_value.value()];
+  const auto dictionary_lookup = [&dictionary_matches](const auto& position) {
+    return dictionary_matches[position.value()];
   };
 
   attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {

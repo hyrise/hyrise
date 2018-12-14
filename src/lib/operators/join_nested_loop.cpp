@@ -197,8 +197,8 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
 
-      segment_iterate(*segment_right, [&](const auto& value) {
-        const auto row_id = RowID{chunk_id_right, value.chunk_offset()};
+      segment_iterate(*segment_right, [&](const auto& position) {
+        const auto row_id = RowID{chunk_id_right, position.chunk_offset()};
         if (!_right_matches[chunk_id_right][row_id.chunk_offset]) {
           _pos_list_left->emplace_back(NULL_ROW_ID);
           _pos_list_right->emplace_back(row_id);

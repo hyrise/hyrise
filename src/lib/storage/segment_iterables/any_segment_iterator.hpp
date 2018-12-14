@@ -20,7 +20,7 @@ class AnySegmentIteratorWrapperBase {
 
   virtual void increment() = 0;
   virtual bool equal(const AnySegmentIteratorWrapperBase<T>* other) const = 0;
-  virtual SegmentIteratorValue<T> dereference() const = 0;
+  virtual SegmentPosition<T> dereference() const = 0;
 
   /**
    * Segment iterators need to be copyable so we need a way
@@ -51,7 +51,7 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
     return _iterator == casted_other->_iterator;
   }
 
-  SegmentIteratorValue<T> dereference() const final {
+  SegmentPosition<T> dereference() const final {
     const auto value = *_iterator;
     return {value.value(), value.is_null(), value.chunk_offset()};
   }
@@ -86,7 +86,7 @@ class AnySegmentIterable;
  * For another example for type erasure see: https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Type_Erasure
  */
 template <typename T>
-class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, SegmentIteratorValue<T>> {
+class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, SegmentPosition<T>> {
  public:
   using ValueType = T;
   using IterableType = AnySegmentIterable<T>;
@@ -113,7 +113,7 @@ class AnySegmentIterator : public BaseSegmentIterator<AnySegmentIterator<T>, Seg
 
   void increment() { _wrapper->increment(); }
   bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
-  SegmentIteratorValue<T> dereference() const { return _wrapper->dereference(); }
+  SegmentPosition<T> dereference() const { return _wrapper->dereference(); }
 
  private:
   std::unique_ptr<opossum::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
