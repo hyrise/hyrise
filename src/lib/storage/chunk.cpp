@@ -208,4 +208,8 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
   _statistics = chunk_statistics;
 }
 
+void Chunk::increase_invalid_row_count(const uint64_t count) {
+  _invalid_row_count += count;
+}
+
 }  // namespace opossum

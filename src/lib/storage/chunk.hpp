@@ -147,6 +147,10 @@ class Chunk : private Noncopyable {
    */
   size_t estimate_memory_usage() const;
 
+  void increase_invalid_row_count(uint64_t count);
+
+  uint64_t invalid_row_count() const { return _invalid_row_count; }
+
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
 
@@ -158,6 +162,7 @@ class Chunk : private Noncopyable {
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
+  uint64_t _invalid_row_count;
 };
 
 }  // namespace opossum
