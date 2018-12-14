@@ -49,36 +49,44 @@ class JoinHashMultiplePredicatesTest : public BaseTest {
   inline static std::shared_ptr<Table> _table_2;
   inline static std::shared_ptr<TableWrapper> _table_1_wrapper;
   inline static std::shared_ptr<TableWrapper> _table_2_wrapper;
+
+  void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>& left,
+                                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                                    const std::vector<JoinPredicate>& join_predicates) {
+    // execute join for the first join predicate
+    std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
+        left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition);
+    latest_operator->execute();
+
+    // execute table scans for the following predicates (ColumnVsColumnTableScan)
+    for (size_t index = 1; index < join_predicates.size(); ++index) {
+      const auto left_column_expr =
+          PQPColumnExpression::from_table(*left->get_output(), join_predicates[index].column_id_pair.first);
+      const auto right_column_expr =
+          PQPColumnExpression::from_table(*right->get_output(), join_predicates[index].column_id_pair.second);
+      const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicateCondition,
+                                                                         left_column_expr, right_column_expr);
+      latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
+      latest_operator->execute();
+    }
+  }
 };
 
-TEST_F(JoinHashMultiplePredicatesTest, ChronoTest) {
-  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-
-  std::cout << "printing out 1000 stars...\n";
-  for (int i = 0; i < 1000; ++i) std::cout << "*";
-  std::cout << std::endl;
-
-  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-
-  std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-
-  std::cout << "It took me " << time_span.count() << " seconds.";
-  std::cout << std::endl;
-}
-
 TEST_F(JoinHashMultiplePredicatesTest, MultiPredicateOperatorChain) {
-  auto join = std::make_shared<JoinHash>(_table_1_wrapper, _table_2_wrapper, JoinMode::Inner,
-                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals});
 
-  join->execute();
-  // preparation for table scan
-  const auto equals = PredicateCondition::Equals;
-  // build column expression based on result table of the hash join
-  const auto left_operand = get_column_expression(join, ColumnID{0});
-  const auto right_operand = PQPColumnExpression::from_table(*_table_2, ColumnID{1});
-  const auto predicate = std::make_shared<BinaryPredicateExpression>(equals, left_operand, right_operand);
+  std::chrono::high_resolution_clock::time_point time_point_1 = std::chrono::high_resolution_clock::now();
+  // When the implementation of the multi predicate hash join is finished, the following line has to be
+  // replaces by the execution of the multi predicate hash join
+  execute_multi_predicate_join(_table_1_wrapper, _table_2_wrapper, JoinMode::Inner, join_predicates);
+  std::chrono::high_resolution_clock::time_point time_point_2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> time_span =
+      std::chrono::duration_cast<std::chrono::duration<double>>(time_point_2 - time_point_1);
 
-  auto table_scan = std::make_shared<TableScan>(join->get_output(), predicate);
+  std::cout << "It took me " << time_span.count() << " seconds." << std::endl;
+  // TODO(anyone) write the time somewhere
 }
 
 }  // namespace opossum

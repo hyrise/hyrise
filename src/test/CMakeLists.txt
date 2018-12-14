@@ -73,6 +73,7 @@ set(
     operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
+    operators/join_hash_multi_predicates_test.cpp
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
@@ -271,8 +272,7 @@ if (${ENABLE_JIT_SUPPORT})
 
     set(SYSTEM_TEST_SOURCES
         ${SYSTEM_TEST_SOURCES}
-        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp
-    )
+        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp)
 endif()
 
 # Both hyriseTest and hyriseSystemTest link against these
