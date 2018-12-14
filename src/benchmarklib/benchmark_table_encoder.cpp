@@ -13,13 +13,13 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-SegmentEncodingSpec _generate_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
+SegmentEncodingSpec generate_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
 
-SegmentEncodingSpec _generate_segment_encoding_spec(const ReferenceSegment&) {
+SegmentEncodingSpec generate_segment_encoding_spec(const ReferenceSegment&) {
   Fail("Did not expect a ReferenceSegment in base table");
 }
 
-SegmentEncodingSpec _generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
+SegmentEncodingSpec generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
   auto vector_compression_type = std::optional<VectorCompressionType>{};
 
   switch (base_encoded_segment.compressed_vector_type()) {
@@ -43,21 +43,21 @@ SegmentEncodingSpec _generate_segment_encoding_spec(const BaseEncodedSegment& ba
   }
 }
 
-ChunkEncodingSpec _generate_chunk_encoding_spec(const Chunk& chunk) {
+ChunkEncodingSpec generate_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
 
   for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
     const auto& base_segment = *chunk.get_segment(column_id);
 
     resolve_data_and_segment_type(base_segment, [&](const auto /* data_type_t */, const auto& segment) {
-      chunk_encoding_spec[column_id] = _generate_segment_encoding_spec(segment);
+      chunk_encoding_spec[column_id] = generate_segment_encoding_spec(segment);
     });
   }
 
   return chunk_encoding_spec;
 }
 
-bool _is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec,
+bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec,
                                        const ChunkEncodingSpec& actual_chunk_encoding_spec) {
   if (expected_chunk_encoding_spec.size() != actual_chunk_encoding_spec.size()) return false;
 
@@ -138,7 +138,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   const auto column_data_types = table->column_data_types();
 
   for (const auto& chunk : table->chunks()) {
-    if (!_is_chunk_encoding_spec_satisfied(chunk_encoding_spec, _generate_chunk_encoding_spec(*chunk))) {
+    if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, generate_chunk_encoding_spec(*chunk))) {
       ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
       encoding_performed = true;
     }

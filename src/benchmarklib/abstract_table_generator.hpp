@@ -36,7 +36,7 @@ class AbstractTableGenerator {
    * table generation.
    * This helper function creates a BenchmarkConfig with the fields that affect table generation
    */
-  static std::shared_ptr<BenchmarkConfig> create_minimal_benchmark_config(uint32_t chunk_size);
+  static std::shared_ptr<BenchmarkConfig> _create_minimal_benchmark_config(uint32_t chunk_size);
 
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };

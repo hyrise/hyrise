@@ -10,15 +10,15 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path) {
+FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_file_path) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
-  filesystem::path path{query_path};
-  Assert(filesystem::exists(path), "No such file or directory '" + query_path + "'");
+  filesystem::path path{query_file_path};
+  Assert(filesystem::exists(path), "No such file or directory '" + query_file_path + "'");
 
   if (filesystem::is_regular_file(path)) {
-    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
-    _parse_query_file(query_path);
+    Assert(is_sql_file(query_file_path), "Specified file '" + query_file_path + "' is not an .sql file");
+    _parse_query_file(query_file_path);
   } else {
     // Recursively walk through the specified directory and add all files on the way
     for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
@@ -33,9 +33,9 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::string& query_path) {
-  std::ifstream file(query_path);
-  const auto filename = filesystem::path{query_path}.stem().string();
+void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_path) {
+  std::ifstream file(query_file_path);
+  const auto filename = filesystem::path{query_file_path}.stem().string();
 
   std::string content{std::istreambuf_iterator<char>(file), {}};
 
@@ -55,7 +55,7 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_path) {
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
     _query_names.emplace_back(query_name);
-    _queries.emplace_back(std::move(statement_string));
+    _queries.emplace_back(statement_string);
   }
 
   // More convenient names if there is only one query per file

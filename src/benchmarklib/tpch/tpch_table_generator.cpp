@@ -201,7 +201,7 @@ std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
 TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
-    : AbstractTableGenerator(create_minimal_benchmark_config(chunk_size)), _scale_factor(scale_factor) {}
+    : AbstractTableGenerator(_create_minimal_benchmark_config(chunk_size)), _scale_factor(scale_factor) {}
 
 TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}

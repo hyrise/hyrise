@@ -51,7 +51,7 @@ void AbstractTableGenerator::generate_and_store() {
   }
 }
 
-std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_minimal_benchmark_config(uint32_t chunk_size) {
+std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::_create_minimal_benchmark_config(uint32_t chunk_size) {
   return std::make_shared<BenchmarkConfig>(BenchmarkMode::IndividualQueries, true, chunk_size, EncodingConfig{}, 0,
                                            Duration{}, Duration{}, UseMvcc::No, std::nullopt, false, 1, 1, false, false,
                                            std::cout);
