@@ -21,11 +21,12 @@ namespace opossum {
 
 std::string ExistsReformulationRule::name() const { return "(Non)Exists to Join Reformulation Rule"; }
 
-bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Find a PredicateNode with an EXISTS(...) predicate
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
   if (!predicate_node || predicate_node->predicate()->type != ExpressionType::Exists) {
-    return _apply_to_inputs(node);
+    _apply_to_inputs(node);
+    return;
   }
 
   // Get the subselect that we work on
@@ -34,7 +35,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   // We don't care about uncorrelated subselects, nor subselects with more than one parameter
   if (subselect_expression->arguments.size() != 1) {
-    return _apply_to_inputs(node);
+    _apply_to_inputs(node);
+    return;
   }
 
   const auto correlated_parameter_id = subselect_expression->parameter_ids[0];
@@ -63,7 +65,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   });
 
   if (correlated_parameter_usage_count != 1) {
-    return _apply_to_inputs(node);
+    _apply_to_inputs(node);
+    return;
   }
 
   // Second pass over the subselect LQP
@@ -136,7 +139,8 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
   if (!join_predicate) {
     // We failed to identify the join predicate or there is more than one predicate
-    return _apply_to_inputs(node);
+    _apply_to_inputs(node);
+    return;
   }
 
   // Remove the predicate from the subselect (because it is now handled by the join) - if it is the top level node,
@@ -153,8 +157,6 @@ bool ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   const auto join_node = JoinNode::make(join_mode, join_predicate);
   lqp_replace_node(predicate_node, join_node);
   join_node->set_right_input(subselect_expression->lqp);
-
-  return true;
 }
 
 }  // namespace opossum

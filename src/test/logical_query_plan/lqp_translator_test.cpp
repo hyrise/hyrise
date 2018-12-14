@@ -4,8 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -54,7 +53,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPTranslatorTest : public ::testing::Test {
+class LQPTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
     table_int_float = load_table("src/test/tables/int_float.tbl");
@@ -89,8 +88,6 @@ class LQPTranslatorTest : public ::testing::Test {
     int_float5_a = int_float5_node->get_column("a");
     int_float5_d = int_float5_node->get_column("d");
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
     return index_scan->_included_chunk_ids;
@@ -510,7 +507,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
-  if (!HYRISE_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
 
   /**
    * Build LQP and translate to PQP

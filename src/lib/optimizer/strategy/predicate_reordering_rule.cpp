@@ -17,9 +17,7 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  auto reordered = false;
-
+void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Validate can be seen as a Predicate on the MVCC column
   if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
@@ -42,18 +40,16 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
      * Continue rule in deepest input
      */
     if (predicate_nodes.size() > 1) {
-      reordered = _reorder_predicates(predicate_nodes);
-      reordered |= _apply_to_inputs(predicate_nodes.back());
-      return reordered;
+      _reorder_predicates(predicate_nodes);
+      _apply_to_inputs(predicate_nodes.back());
+      return;
     }
   }
 
-  reordered |= _apply_to_inputs(node);
-
-  return reordered;
+  _apply_to_inputs(node);
 }
 
-bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
+void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
@@ -64,7 +60,7 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   };
 
   if (std::is_sorted(predicates.begin(), predicates.end(), sort_predicate)) {
-    return false;
+    return;
   }
 
   // Untie predicates from LQP, so we can freely retie them
@@ -85,8 +81,6 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
     predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
   }
-
-  return true;
 }
 
 }  // namespace opossum

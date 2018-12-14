@@ -33,10 +33,10 @@ class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
 using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM>;
-TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
+TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
-  if (!HYRISE_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   EXPECT_THROW(std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan),
                std::logic_error);
