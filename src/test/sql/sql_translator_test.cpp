@@ -1,3 +1,4 @@
+#include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -35,7 +36,6 @@
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
-#include "base_test.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;            // NOLINT

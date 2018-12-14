@@ -52,10 +52,10 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   // Run the preparation queries
   {
-    _config.out << "- Preparing queries..." << std::endl;
     const auto& sql = _query_generator->get_preparation_queries();
 
     if (!sql.empty()) {
+      _config.out << "- Preparing queries..." << std::endl;
       auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
       // Execute the query, we don't care about the results
       pipeline.get_result_table();
@@ -441,7 +441,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
   std::stringstream compiler;
-  // clang-format off
+// clang-format off
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

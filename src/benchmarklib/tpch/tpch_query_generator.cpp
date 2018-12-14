@@ -1,5 +1,6 @@
 #include "tpch_query_generator.hpp"
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <numeric>
 #include <sstream>
@@ -9,13 +10,15 @@
 
 namespace opossum {
 
-TPCHQueryGenerator::TPCHQueryGenerator() {
+TPCHQueryGenerator::TPCHQueryGenerator(bool use_prepared_statements)
+    : _use_prepared_statements(use_prepared_statements) {
   _generate_names();
   _selected_queries.resize(22);
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
-TPCHQueryGenerator::TPCHQueryGenerator(const std::vector<QueryID>& selected_queries) {
+TPCHQueryGenerator::TPCHQueryGenerator(bool use_prepared_statements, const std::vector<QueryID>& selected_queries)
+    : _use_prepared_statements(use_prepared_statements) {
   _generate_names();
   _selected_queries = selected_queries;
 }
@@ -28,6 +31,8 @@ void TPCHQueryGenerator::_generate_names() {
 }
 
 std::string TPCHQueryGenerator::get_preparation_queries() const {
+  if (!_use_prepared_statements) return "";
+
   std::stringstream sql;
   for (auto query_id = QueryID{0}; query_id < 22; ++query_id) {
     if (query_id + 1 == 15) {
@@ -35,7 +40,13 @@ std::string TPCHQueryGenerator::get_preparation_queries() const {
       // to manually build this query once we start randomizing the parameters.
       continue;
     }
-    sql << tpch_queries.find(query_id + 1)->second;
+
+    auto query_template = std::string{tpch_queries.find(query_id + 1)->second};
+
+    // Escape single quotes
+    boost::replace_all(query_template, "'", "''");
+
+    sql << "PREPARE TPCH" << (query_id + 1) << " FROM '" << query_template << "';\n";
   }
   return sql.str();
 }
@@ -49,37 +60,54 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
     static auto view_id = 0;
     boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(view_id++));
-    // TODO(anyone): Set random parameters
     return query_15;
   }
 
-  static std::vector<std::string> execute_statements = {
-      "EXECUTE TPCH1  ('1998-09-02');",
-      "EXECUTE TPCH2  (15, '%BRASS', 'EUROPE', 'EUROPE');",
-      "EXECUTE TPCH3  ('BUILDING', '1995-03-15', '1995-03-15');",
-      "EXECUTE TPCH4  ('1993-07-01', '1993-10-01');",
-      "EXECUTE TPCH5  ('ASIA', '1994-01-01', '1995-01-01');",
-      "EXECUTE TPCH6  ('1994-01-01', '1995-01-01', .06, .06, 24);",
-      "EXECUTE TPCH7  ('FRANCE', 'GERMANY', 'GERMANY', 'FRANCE');",
-      "EXECUTE TPCH8  ('BRAZIL', 'AMERICA', 'ECONOMY ANODIZED STEEL');",
-      "EXECUTE TPCH9  ('%green%');",
-      "EXECUTE TPCH10 ('1993-10-01', '1994-01-01');",
-      "EXECUTE TPCH11 ('GERMANY', 0.0001, 'GERMANY');",
-      "EXECUTE TPCH12 ('MAIL', 'SHIP', '1994-01-01', '1995-01-01');",
-      "EXECUTE TPCH13 ('%special%requests%');",
-      "EXECUTE TPCH14 ('1995-09-01', '1995-10-01');",
-      "",  // see comment in _generate_preparation_queries.
-      "EXECUTE TPCH16 ('Brand#45', 'MEDIUM POLISHED%', 49, 14, 23, 45, 19, 3, 36, 9);",
-      "EXECUTE TPCH17 ('Brand#23', 'MED BOX');",
-      "EXECUTE TPCH18 (300);",
-      "EXECUTE TPCH19 ('Brand#12', 1, 1, 'Brand#23', 10, 10, 'Brand#34', 20, 20);",
-      "EXECUTE TPCH20 ('forest%', '1994-01-01', '1995-01-01', 'CANADA');",
-      "EXECUTE TPCH21 ('SAUDI ARABIA');",
-      "EXECUTE TPCH22 ('13', '31', '23', '29', '30', '18', '17', '13', '31', '23', '29', '30', '18', '17');"};
+  // Stores how the parameters (the ? in the query) should be replaced
+  static std::vector<std::vector<std::string>> parameter_values = {
+      {"'1998-09-02'"},
+      {"15", "'%BRASS'", "'EUROPE'", "'EUROPE'"},
+      {"'BUILDING'", "'1995-03-15'", "'1995-03-15'"},
+      {"'1993-07-01'", "'1993-10-01'"},
+      {"'ASIA'", "'1994-01-01'", "'1995-01-01'"},
+      {"'1994-01-01'", "'1995-01-01'", ".06", ".06", "24"},
+      {"'FRANCE'", "'GERMANY'", "'GERMANY'", "'FRANCE'"},
+      {"'BRAZIL'", "'AMERICA'", "'ECONOMY ANODIZED STEEL'"},
+      {"'%green%'"},
+      {"'1993-10-01'", "'1994-01-01'"},
+      {"'GERMANY'", "0.0001", "'GERMANY'"},
+      {"'MAIL'", "'SHIP'", "'1994-01-01'", "'1995-01-01'"},
+      {"'%special%requests%'"},
+      {"'1995-09-01'", "'1995-10-01'"},
+      {},
+      {"'Brand#45'", "'MEDIUM POLISHED%'", "49", "14", "23", "45", "19", "3", "36", "9"},
+      {"'Brand#23'", "'MED BOX'"},
+      {"300"},
+      {"'Brand#12'", "1", "1", "'Brand#23'", "10", "10", "'Brand#34'", "20", "20"},
+      {"'forest%'", "'1994-01-01'", "'1995-01-01'", "'CANADA'"},
+      {"'SAUDI ARABIA'"},
+      {"'13'", "'31'", "'23'", "'29'", "'30'", "'18'", "'17'", "'13'", "'31'", "'23'", "'29'", "'30'", "'18'", "'17'"}};
 
-  if (!execute_statements[query_id].empty()) return execute_statements[query_id];
+  return _build_query_with_placeholders(query_id, parameter_values[query_id]);
+}
 
-  return tpch_queries.find(query_id + 1)->second;
+std::string TPCHQueryGenerator::_build_query_with_placeholders(const QueryID query_id,
+                                                               const std::vector<std::string>& parameter_values) {
+  if (_use_prepared_statements) {
+    // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
+    std::stringstream sql;
+    sql << "EXECUTE TPCH" << (query_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
+    return sql.str();
+  } else {
+    // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
+    auto query_template = std::string{tpch_queries.find(query_id + 1)->second};
+
+    for (const auto& parameter_value : parameter_values) {
+      boost::replace_first(query_template, "?", parameter_value);
+    }
+
+    return query_template;
+  }
 }
 
 }  // namespace opossum
