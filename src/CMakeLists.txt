@@ -27,11 +27,6 @@ if (NOT ${NUMA_FOUND})
     set(ENABLE_NUMA_SUPPORT OFF)
 endif()
 
-# custom
-set(ENABLE_JIT_SUPPORT OFF)
-set(ENABLE_NUMA_SUPPORT OFF)
-set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
-
 if (${ENABLE_NUMA_SUPPORT})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
     MESSAGE(STATUS "Building with NUMA support")
