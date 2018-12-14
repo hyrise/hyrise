@@ -98,10 +98,6 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
   const auto third_gap_max = TypeParam{99};
 
   {
-    // Throw when range filter shall include 0 range values.
-    EXPECT_THROW((RangeFilter<TypeParam>::build_filter(this->_values, 0)), std::logic_error);
-  }
-  {
     const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 2);
     EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, this->_value_in_gap));
     EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, first_gap_min));
@@ -132,6 +128,12 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
       EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, third_gap_min));
       EXPECT_TRUE(filter->can_prune(PredicateCondition::Between, third_gap_min, third_gap_max));
     }
+  }
+  {
+    if (!HYRISE_DEBUG) GTEST_SKIP();
+
+    // Throw when range filter shall include 0 range values.
+    EXPECT_THROW((RangeFilter<TypeParam>::build_filter(this->_values, 0)), std::logic_error);
   }
 }
 
