@@ -28,7 +28,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
 
-  if (IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     auto first_size = segments_to_index.front()->size();
     [[maybe_unused]] auto all_segments_have_same_size =
         std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),

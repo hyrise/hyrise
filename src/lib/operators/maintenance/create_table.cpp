@@ -42,7 +42,7 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
 
 std::shared_ptr<const Table> CreateTable::_on_execute() {
   // TODO(anybody) chunk size and mvcc not yet specifiable
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE, UseMvcc::Yes);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
 
   StorageManager::get().add_table(table_name, table);
 

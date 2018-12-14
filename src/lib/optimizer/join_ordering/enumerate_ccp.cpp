@@ -22,7 +22,7 @@ EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size
   // DPccp should not be used for queries with a table count on the scale of 64 because of complexity reasons
   Assert(num_vertices < sizeof(unsigned long) * 8, "Too many vertices, EnumerateCcp relies on to_ulong()");  // NOLINT
 
-#if IS_DEBUG
+#if HYRISE_DEBUG
   // Test the input data for validity, i.e. whether all mentioned vertex indices in the edges are smaller than
   // _num_vertices
   for (const auto& edge : _edges) {
@@ -61,7 +61,7 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
     }
   }
 
-#if IS_DEBUG
+#if HYRISE_DEBUG
   // Assert that the algorithm didn't create duplicates and that all created ccps contain only previously enumerated
   // subsets, i.e., that the enumeration order is correct
 

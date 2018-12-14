@@ -1,7 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -16,7 +15,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class SQLIdentifierResolverTest : public ::testing::Test {
+class SQLIdentifierResolverTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{

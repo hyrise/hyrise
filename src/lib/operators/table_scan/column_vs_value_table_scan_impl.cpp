@@ -65,19 +65,20 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseSegment& segment, const
 void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                PosList& matches,
                                                const std::shared_ptr<const PosList>& position_filter) const {
-  /*
-   * ValueID value_id; // left value id
-   * Variant value; // right value
+  /**
+   * ValueID search_vid;              // left value id
+   * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
+   * Variant _value;                  // right value
    *
    * A ValueID value_id from the attribute vector is included in the result iff
    *
-   * Operator           |  Condition
-   * value_id == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id == dict.lower_bound(value)
-   * value_id != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id != dict.lower_bound(value)
-   * value_id <  value  |  value_id < dict.lower_bound(value)
-   * value_id <= value  |  value_id < dict.upper_bound(value)
-   * value_id >  value  |  value_id >= dict.upper_bound(value)
-   * value_id >= value  |  value_id >= dict.lower_bound(value)
+   * Operator          |  Condition
+   * column == _value  |  dict.value_by_value_id(dict.lower_bound(_value)) == _value && value_id == dict.lower_bound(_value)
+   * column != _value  |  dict.value_by_value_id(dict.lower_bound(value)) != _value || value_id != dict.lower_bound(_value)
+   * column <  _value  |  value_id < dict.lower_bound(_value)
+   * column <= _value  |  value_id < dict.upper_bound(_value)
+   * column >  _value  |  value_id >= dict.upper_bound(_value)
+   * column >= _value  |  value_id >= dict.lower_bound(_value)
    */
 
   const auto search_value_id = _get_search_value_id(segment);
@@ -85,13 +86,13 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   /**
    * Early Outs
    *
-   * Operator          | All                                   | None
-   * value_id == value | !None && unique_values_count == 1     | search_vid == dict.upper_bound(value)
-   * value_id != value | search_vid == dict.upper_bound(value) | !All && unique_values_count == 1
-   * value_id <  value | search_vid == INVALID_VALUE_ID        | search_vid == 0
-   * value_id <= value | search_vid == INVALID_VALUE_ID        | search_vid == 0
-   * value_id >  value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
-   * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
+   * Operator         | All rows match if:                                      | No rows match if:
+   * column == _value | search_vid_value == _value && unique_values_count == 1  | search_vid_value != _value
+   * column != _value | search_vid_value != _value                              | search_vid_value == _value && unique_values_count == 1
+   * column <  _value | search_vid == INVALID_VALUE_ID                          | search_vid == 0
+   * column <= _value | search_vid == INVALID_VALUE_ID                          | search_vid == 0
+   * column >  _value | search_vid == 0                                         | search_vid == INVALID_VALUE_ID
+   * column >= _value | search_vid == 0                                         | search_vid == INVALID_VALUE_ID
    */
 
   auto iterable = create_iterable_from_attribute_vector(segment);
@@ -148,10 +149,11 @@ bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment&
                                                     const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
-      return search_value_id != segment.upper_bound(_value) && segment.unique_values_count() == size_t{1u};
+      return search_value_id != INVALID_VALUE_ID && segment.value_of_value_id(search_value_id) == _value &&
+             segment.unique_values_count() == size_t{1u};
 
     case PredicateCondition::NotEquals:
-      return search_value_id == segment.upper_bound(_value);
+      return search_value_id == INVALID_VALUE_ID || segment.value_of_value_id(search_value_id) != _value;
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
@@ -170,10 +172,11 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
                                                      const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
-      return search_value_id == segment.upper_bound(_value);
+      return search_value_id == INVALID_VALUE_ID || _value != segment.value_of_value_id(search_value_id);
 
     case PredicateCondition::NotEquals:
-      return search_value_id == segment.upper_bound(_value) && segment.unique_values_count() == size_t{1u};
+      return search_value_id != INVALID_VALUE_ID && _value == segment.value_of_value_id(search_value_id) &&
+             segment.unique_values_count() == size_t{1u};
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:

@@ -34,7 +34,7 @@ namespace opossum {
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    const auto table = load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE);
+    const auto table = load_table("src/test/tables/int_int_int.tbl");
     StorageManager::get().add_table("a", table);
     _rule = std::make_shared<PredicateReorderingRule>();
 

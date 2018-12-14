@@ -5,7 +5,6 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
         bash-completion \
-        build-essential \
         bc \
         ccache \
         clang-6.0 \
@@ -14,7 +13,8 @@ RUN apt-get update \
         cmake \
         curl \
         gcovr \
-        gcc-7 \
+        gcc-8 \
+        g++-8 \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
         libclang-6.0-dev \

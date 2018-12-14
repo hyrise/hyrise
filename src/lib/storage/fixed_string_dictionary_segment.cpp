@@ -107,6 +107,12 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
 }
 
 template <typename T>
+AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
+  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  return _dictionary->get_string_at(value_id);
+}
+
+template <typename T>
 ValueID::base_type FixedStringDictionarySegment<T>::unique_values_count() const {
   return static_cast<ValueID::base_type>(_dictionary->size());
 }
