@@ -5,7 +5,9 @@
 #include <utility>
 
 #include "abstract_cache.hpp"
+#include "boost/function.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
+#include "boost/iterator/transform_iterator.hpp"
 
 namespace opossum {
 
@@ -28,6 +30,8 @@ class GDFSCache : public AbstractCache<Key, Value> {
   };
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
+
+  using CacheMap = typename std::unordered_map<Key, Handle>;
 
   explicit GDFSCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
@@ -98,12 +102,31 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return (*it->second).priority;
   }
 
+  static const std::pair<Key, Value> get_value(std::pair<Key, Handle> const& p)  {
+    const Handle handle = p.second;
+    const GDFSCacheEntry& entry = (*handle);
+    return std::make_pair(p.first, entry.value);
+  }
+
+  using CacheIterator = typename std::unordered_map<Key, Handle>::const_iterator;
+
+  typedef boost::function<const std::pair<Key, Value> (const std::pair<Key, Handle>&)> F;
+  typedef boost::transform_iterator<F, CacheIterator> transform_iterator;
+
+  transform_iterator begin() {
+    return boost::make_transform_iterator(_map.begin(), &get_value);
+  }
+
+  transform_iterator end() {
+    return boost::make_transform_iterator(_map.end(), &get_value);
+  }
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;
 
   // Map to point towards element in the list.
-  std::unordered_map<Key, Handle> _map;
+  CacheMap _map;
 
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;

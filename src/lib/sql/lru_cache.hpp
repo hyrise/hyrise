@@ -62,6 +62,16 @@ class LRUCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
+  using CacheIterator = typename std::list<KeyValuePair>::const_iterator;
+
+  CacheIterator begin() {
+    return _list.begin();
+  }
+
+  CacheIterator end() {
+    return _list.end();
+  }
+
  protected:
   // Doubly-linked list to hold all elements.
   std::list<KeyValuePair> _list;

@@ -116,6 +116,19 @@ class LRUKCache : public AbstractCache<Key, Value> {
 
   const boost::heap::fibonacci_heap<entry_t>& queue() const { return _queue; }
 
+  using CacheIterator = typename std::unordered_map<Key, handle_t>::const_iterator;
+
+  typedef boost::function<const std::pair<Key, Value> (const std::pair<Key, handle_t>&)> F;
+  typedef boost::transform_iterator<F, CacheIterator> transform_iterator;
+
+  transform_iterator begin() {
+    return boost::make_transform_iterator(_map.begin(), &_get_value);
+  }
+
+  transform_iterator end() {
+    return boost::make_transform_iterator(_map.end(), &_get_value);
+  }
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<entry_t> _queue;
@@ -130,6 +143,12 @@ class LRUKCache : public AbstractCache<Key, Value> {
     auto top = _queue.top();
     _map.erase(top.key);
     _queue.pop();
+  }
+
+  static const std::pair<Key, Value> _get_value(std::pair<Key, handle_t> const& p)  {
+    const handle_t handle = p.second;
+    const entry_t& entry = (*handle);
+    return std::make_pair(p.first, entry.value);
   }
 };
 

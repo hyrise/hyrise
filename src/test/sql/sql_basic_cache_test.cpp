@@ -9,12 +9,11 @@
 
 namespace opossum {
 
-// Test for the different cache implementations in lib/sql.
+// The "SQLBasicCacheTest" case tests the different cache implementations in lib/sql.
 // Not using SQL types in this test, only testing cache eviction.
-class SQLBasicCacheTest : public BaseTest {};
 
 // LRU Strategy
-TEST_F(SQLBasicCacheTest, LRUCacheTest) {
+TEST(SQLBasicCacheTest, LRUCacheTest) {
   LRUCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -50,7 +49,7 @@ TEST_F(SQLBasicCacheTest, LRUCacheTest) {
 }
 
 // LRU-K (K = 2)
-TEST_F(SQLBasicCacheTest, LRU2CacheTest) {
+TEST(SQLBasicCacheTest, LRU2CacheTest) {
   LRUKCache<2, int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -86,7 +85,7 @@ TEST_F(SQLBasicCacheTest, LRU2CacheTest) {
 }
 
 // GDS Strategy
-TEST_F(SQLBasicCacheTest, GDSCacheTest) {
+TEST(SQLBasicCacheTest, GDSCacheTest) {
   GDSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -137,7 +136,7 @@ TEST_F(SQLBasicCacheTest, GDSCacheTest) {
 }
 
 // GDFS Strategy
-TEST_F(SQLBasicCacheTest, GDFSCacheTest) {
+TEST(SQLBasicCacheTest, GDFSCacheTest) {
   GDFSCache<int, int> cache(2);
 
   ASSERT_FALSE(cache.has(1));
@@ -188,7 +187,7 @@ TEST_F(SQLBasicCacheTest, GDFSCacheTest) {
 }
 
 // Random Replacement Strategy
-TEST_F(SQLBasicCacheTest, RandomCacheTest) {
+TEST(SQLBasicCacheTest, RandomCacheTest) {
   RandomCache<int, int> cache(3);
 
   ASSERT_FALSE(cache.has(1));
@@ -300,6 +299,25 @@ TYPED_TEST(CacheTest, ResizeShrink) {
   ASSERT_FALSE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
   ASSERT_EQ(cache.get(3), 6);
+}
+
+// Cache Iterator
+TYPED_TEST(CacheTest, CacheIterators) {
+  TypeParam cache(2);
+
+  cache.set(1, 100);
+  cache.set(2, 100);
+
+  auto element_count = size_t{0};
+  auto value_sum = size_t{0};
+
+  for (auto& [key, value] : cache) {
+    ++element_count;
+    value_sum += value;
+  }
+
+  ASSERT_EQ(element_count, 2);
+  ASSERT_EQ(value_sum, 200);
 }
 
 }  // namespace opossum

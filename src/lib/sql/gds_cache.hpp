@@ -95,6 +95,26 @@ class GDSCache : public AbstractCache<Key, Value> {
     return (*it->second).priority;
   }
 
+  static const std::pair<Key, Value> get_value(std::pair<Key, handle_t> const& p)  {
+    const handle_t handle = p.second;
+    const entry_t& entry = (*handle);
+    return std::make_pair(p.first, entry.value);
+  }
+
+  using CacheIterator = typename std::unordered_map<Key, handle_t>::const_iterator;
+
+  typedef boost::function<const std::pair<Key, Value> (const std::pair<Key, handle_t>&)> F;
+  typedef boost::transform_iterator<F, CacheIterator> transform_iterator;
+
+  transform_iterator begin() {
+    return boost::make_transform_iterator(_map.begin(), &get_value);
+  }
+
+  transform_iterator end() {
+    return boost::make_transform_iterator(_map.end(), &get_value);
+  }
+
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<entry_t> _queue;

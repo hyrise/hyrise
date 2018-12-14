@@ -69,6 +69,16 @@ class RandomCache : public AbstractCache<Key, Value> {
     _rand = std::uniform_int_distribution<>(0, capacity - 1);
   }
 
+  using CacheIterator = typename std::vector<KeyValuePair>::const_iterator;
+
+  CacheIterator begin() {
+    return _list.begin();
+  }
+
+  CacheIterator end() {
+    return _list.end();
+  }
+
  protected:
   // List to hold all elements.
   std::vector<KeyValuePair> _list;
