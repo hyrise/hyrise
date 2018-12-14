@@ -5,7 +5,7 @@
 
 #include "utils/assert.hpp"
 
-void skip() {
+[[noreturn]] void skip_test() {
   // The idea is to unwind the stack, search for the googletest method that called the test and reset the instruction
   // pointer to that stack frame.
   // cf. https://stackoverflow.com/questions/53765909/googletest-how-to-skip-test-from-an-inner-method/53777804#53777804
