@@ -77,10 +77,8 @@ void SQLiteTestRunner::SetUp() {
   auto& table_cache = table_cache_iter->second;
 
   /**
-   * Reset the StorageManager and populate it with mint Tables with the correct encoding from the cache
+   * Populate the StorageManager with mint Tables with the correct encoding from the cache
    */
-  StorageManager::reset();
-
   for (auto const& [table_name, table_cache_entry] : table_cache) {
     /*
       Opossum:

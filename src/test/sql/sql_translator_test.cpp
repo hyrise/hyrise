@@ -1,5 +1,3 @@
-#include "gtest/gtest.h"
-
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -37,13 +35,14 @@
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
+#include "base_test.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;            // NOLINT
 
 namespace opossum {
 
-class SQLTranslatorTest : public ::testing::Test {
+class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
@@ -70,8 +69,6 @@ class SQLTranslatorTest : public ::testing::Test {
     int_int_int_b = stored_table_node_int_int_int->get_column("b");
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
                                                           const UseMvcc use_mvcc = UseMvcc::No) {

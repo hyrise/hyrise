@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -23,7 +22,7 @@ namespace opossum {
  * test file.
  */
 
-class ExpressionTest : public ::testing::Test {
+class ExpressionTest : public BaseTest {
  public:
   void SetUp() {
     table_int_float = load_table("src/test/tables/int_float.tbl");
@@ -39,8 +38,6 @@ class ExpressionTest : public ::testing::Test {
     a_nullable = {int_float_node_nullable, ColumnID{0}};
     b_nullable = {int_float_node_nullable, ColumnID{1}};
   }
-
-  void TearDown() { StorageManager::reset(); }
 
   LQPColumnReference a, b;
   LQPColumnReference a_nullable, b_nullable;
