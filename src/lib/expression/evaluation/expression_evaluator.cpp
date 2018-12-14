@@ -1316,14 +1316,12 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-    std::vector<ColumnDataType> values;
-    values.resize(segment.size());
+    std::vector<ColumnDataType> values(segment.size());
 
     auto chunk_offset = ChunkOffset{0};
 
     if (_table->column_is_nullable(column_id)) {
-      std::vector<bool> nulls;
-      nulls.resize(segment.size());
+      std::vector<bool> nulls(segment.size());
 
       segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
         if (position.is_null()) {
@@ -1496,8 +1494,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
            "Expected different DataType from SubSelect");
 
     std::vector<bool> result_nulls;
-    std::vector<Result> result_values;
-    result_values.resize(table->row_count());
+    std::vector<Result> result_values(table->row_count());
 
     auto chunk_offset = ChunkOffset{0};
 

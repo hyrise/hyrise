@@ -53,7 +53,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
     IsNullSegmentPosition dereference() const {
       return IsNullSegmentPosition{*_null_value_it,
-                                      static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
+                                   static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
    private:
@@ -70,9 +70,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     explicit PointAccessIterator(const NullValueVector& null_values,
                                  const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(
-                                                                                            position_filter_begin),
-                                                                                        std::move(position_filter_it)},
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
+                                                                                     std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:
@@ -82,7 +81,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
       const auto& chunk_offsets = this->chunk_offsets();
 
       return IsNullSegmentPosition{_null_values[chunk_offsets.offset_in_referenced_chunk],
-                                      chunk_offsets.offset_in_poslist};
+                                   chunk_offsets.offset_in_poslist};
     }
 
    private:

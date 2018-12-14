@@ -75,7 +75,7 @@ class ColumnMaterializer {
       if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
         (*output)[chunk_id] = _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output);
       } else {
-        (*output)[chunk_id] = _generic_materialize_segment(*segment, chunk_id, null_rows_output);
+        (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output);
       }
     });
   }
@@ -83,7 +83,7 @@ class ColumnMaterializer {
   /**
    * Materialization works of all types of segments
    */
-  std::shared_ptr<MaterializedSegment<T>> _generic_materialize_segment(const BaseSegment& segment, ChunkID chunk_id,
+  std::shared_ptr<MaterializedSegment<T>> _materialize_generic_segment(const BaseSegment& segment, ChunkID chunk_id,
                                                                        std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedSegment<T>{};
     output.reserve(segment.size());

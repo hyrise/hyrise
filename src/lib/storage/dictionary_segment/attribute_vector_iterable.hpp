@@ -84,7 +84,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
                                          SegmentPosition<ValueID>>{std::move(position_filter_begin),
-                                                                        std::move(position_filter_it)},
+                                                                   std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor} {}
 

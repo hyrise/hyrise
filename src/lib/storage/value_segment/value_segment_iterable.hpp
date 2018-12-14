@@ -68,9 +68,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
     bool equal(const NonNullIterator& other) const { return _value_it == other._value_it; }
 
-    NonNullSegmentPosition<T> dereference() const {
-      return NonNullSegmentPosition<T>{*_value_it, _chunk_offset};
-    }
+    NonNullSegmentPosition<T> dereference() const { return NonNullSegmentPosition<T>{*_value_it, _chunk_offset}; }
 
    private:
     ValueIterator _value_it;
@@ -102,9 +100,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     bool equal(const Iterator& other) const { return _value_it == other._value_it; }
 
-    SegmentPosition<T> dereference() const {
-      return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset};
-    }
+    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_value_it, *_null_value_it, _chunk_offset}; }
 
    private:
     ValueIterator _value_it;
@@ -122,9 +118,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     explicit NonNullPointAccessIterator(const ValueVector& values, const PosList::const_iterator position_filter_begin,
                                         PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<NonNullPointAccessIterator,
-                                         SegmentPosition<T>>{std::move(position_filter_begin),
-                                                                  std::move(position_filter_it)},
+        : BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>>{std::move(
+                                                                                             position_filter_begin),
+                                                                                         std::move(position_filter_it)},
           _values{values} {}
 
    private:
@@ -134,7 +130,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       const auto& chunk_offsets = this->chunk_offsets();
 
       return SegmentPosition<T>{_values[chunk_offsets.offset_in_referenced_chunk], false,
-                                     chunk_offsets.offset_in_poslist};
+                                chunk_offsets.offset_in_poslist};
     }
 
    private:
@@ -153,7 +149,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                  const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
-                                                                                       std::move(position_filter_it)},
+                                                                                  std::move(position_filter_it)},
           _values{values},
           _null_values{null_values} {}
 
@@ -164,8 +160,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       const auto& chunk_offsets = this->chunk_offsets();
 
       return SegmentPosition<T>{_values[chunk_offsets.offset_in_referenced_chunk],
-                                     _null_values[chunk_offsets.offset_in_referenced_chunk],
-                                     chunk_offsets.offset_in_poslist};
+                                _null_values[chunk_offsets.offset_in_referenced_chunk],
+                                chunk_offsets.offset_in_poslist};
     }
 
    private:

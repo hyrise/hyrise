@@ -73,7 +73,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
         const auto left_end_copy = left_end;
         const auto right_it_copy = right_it;
         const auto chunk_id_copy = chunk_id;
-        const auto& matches_out_copy = matches_out;
+        const auto& matches_out_ref = matches_out;
         const auto condition = _predicate_condition;
 
         with_comparator(condition, [&](auto predicate_comparator) {
@@ -81,7 +81,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
             return predicate_comparator(left.value(), right.value());
           };
           AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it_copy, left_end_copy, chunk_id_copy,
-                                                            *matches_out_copy, right_it_copy);
+                                                            *matches_out_ref, right_it_copy);
         });
       } else {
         Fail("Invalid segment combination detected!");  // NOLINT - cpplint.py does not know about constexpr

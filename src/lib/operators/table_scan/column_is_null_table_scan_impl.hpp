@@ -25,8 +25,8 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
  protected:
-  void _scan_non_value_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                               const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                             const std::shared_ptr<const PosList>& position_filter) const;
 
   // Optimized scan on ValueSegments
   void _scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,

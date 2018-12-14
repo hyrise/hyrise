@@ -16,7 +16,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
-#include "utils/consume_unused_variable.hpp"
+#include "utils/ignore_unused_variable.hpp"
 
 namespace opossum {
 
@@ -36,18 +36,18 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& seg
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
-    _scan_non_dictionary_segment(segment, chunk_id, matches, position_filter);
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
   }
 }
 
-void ColumnLikeTableScanImpl::_scan_non_dictionary_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-    const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                    PosList& matches,
+                                                    const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using Type = typename decltype(it)::ValueType;
     if constexpr (!std::is_same_v<Type, std::string>) {
       // gcc complains without this
-      consume_unused_variable(end);
+      ignore_unused_variable(end);
       Fail("Can only handle strings");
     } else {
       _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {

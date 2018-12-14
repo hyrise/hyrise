@@ -10,7 +10,7 @@ namespace opossum {
  *
  * template<typename T> void foo(const T& value) {
  *      if constexpr (std::is_same_v<T, std::string) {
- *          consume_unused_variable(value);
+ *          ignore_unused_variable(value);
  *          Fail("String not supported");
  *      } else {
  *          // Do something with value
@@ -18,7 +18,7 @@ namespace opossum {
  * }
  */
 template <typename T>
-void consume_unused_variable(const T& value) {
+void ignore_unused_variable(const T& value) {
   do {
     (void)(value);
   } while (false);

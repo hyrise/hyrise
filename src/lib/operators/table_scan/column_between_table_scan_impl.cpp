@@ -42,13 +42,13 @@ void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
   if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
-    _scan_non_dictionary_segment(segment, chunk_id, matches, position_filter);
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
   }
 }
 
-void ColumnBetweenTableScanImpl::_scan_non_dictionary_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-    const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     using ColumnDataType = typename decltype(it)::ValueType;
 

@@ -107,7 +107,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
                                  const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator, SegmentPosition<T>>{std::move(position_filter_begin),
-                                                                                       std::move(position_filter_it)},
+                                                                                  std::move(position_filter_it)},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
