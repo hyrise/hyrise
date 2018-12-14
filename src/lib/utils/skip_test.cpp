@@ -1,9 +1,11 @@
 #define UNW_LOCAL_ONLY
-#include <libunwind.h>
 #include <cxxabi.h>
 #include <gtest/gtest.h>
+#include <libunwind.h>
 
 #include "utils/assert.hpp"
+
+namespace opossum {
 
 [[noreturn]] void skip_test() {
   // The idea is to unwind the stack, search for the googletest method that called the test and reset the instruction
@@ -28,7 +30,8 @@
     }
 
     if (std::string(name) == "testing::Test::Run()") {
-      ::testing::internal::AssertHelper(::testing::TestPartResult::kSkip, __FILE__, __LINE__, "skipped") = ::testing::Message();
+      ::testing::internal::AssertHelper(::testing::TestPartResult::kSkip, __FILE__, __LINE__, "skipped") =
+          ::testing::Message();
       unw_resume(&cursor);
     }
 
@@ -37,3 +40,5 @@
 
   Fail("Did not find test method on the stack, could not skip test");
 }
+
+}  // namespace opossum

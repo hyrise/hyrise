@@ -65,7 +65,7 @@ void resolve_encoded_segment_type(const BaseEncodedSegment& segment, const Funct
         const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
 
         // Compile only if ColumnDataType is supported
-        if constexpr(hana::value(data_type_supported)) {
+        if constexpr (hana::value(data_type_supported)) {
           using SegmentTemplateType = typename decltype(segment_template_c)::type;
           using SegmentType = typename SegmentTemplateType::template _template<ColumnDataType>;
           functor(static_cast<const SegmentType&>(segment));
