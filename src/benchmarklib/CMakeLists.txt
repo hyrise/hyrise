@@ -30,6 +30,9 @@ set(
     benchmark_runner.hpp
     benchmark_utils.cpp
     benchmark_utils.hpp
+
+    column_generator.cpp
+    column_generator.hpp
 )
 
 
