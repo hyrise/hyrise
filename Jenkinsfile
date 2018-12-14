@@ -154,8 +154,8 @@ node {
         stage("clang-release:addr-ub-sanitizers w/o NUMA") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
-            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest clang-release-addr-ub-sanitizers-no-numa"
+            sh "LSAN_OPTIONS=suppressions=artifacts/ci/.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
+            sh "LSAN_OPTIONS=suppressions=artifacts/ci/.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest clang-release-addr-ub-sanitizers-no-numa"
           } else {
             Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
           }
