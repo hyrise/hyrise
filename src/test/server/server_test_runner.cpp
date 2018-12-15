@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-class DISABLED_ServerTestRunner : public BaseTest {
+class /* #1357 */ DISABLED_ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
@@ -69,7 +69,7 @@ class DISABLED_ServerTestRunner : public BaseTest {
   std::shared_ptr<Table> _table_a;
 };
 
-TEST_F(DISABLED_ServerTestRunner, TestSimpleSelect) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
 
   // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
@@ -79,7 +79,7 @@ TEST_F(DISABLED_ServerTestRunner, TestSimpleSelect) {
   EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
-TEST_F(DISABLED_ServerTestRunner, TestMultipleConnections) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestMultipleConnections) {
   pqxx::connection connection1{_connection_string};
   pqxx::connection connection2{_connection_string};
   pqxx::connection connection3{_connection_string};
@@ -101,7 +101,7 @@ TEST_F(DISABLED_ServerTestRunner, TestMultipleConnections) {
   EXPECT_EQ(result3.size(), expected_num_rows);
 }
 
-TEST_F(DISABLED_ServerTestRunner, TestSimpleInsertSelect) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestSimpleInsertSelect) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
@@ -111,7 +111,7 @@ TEST_F(DISABLED_ServerTestRunner, TestSimpleInsertSelect) {
   EXPECT_EQ(result.size(), expected_num_rows);
 }
 
-TEST_F(DISABLED_ServerTestRunner, TestPreparedStatement) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestPreparedStatement) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
@@ -127,7 +127,7 @@ TEST_F(DISABLED_ServerTestRunner, TestPreparedStatement) {
   EXPECT_EQ(result2.size(), 2u);
 }
 
-TEST_F(DISABLED_ServerTestRunner, TestParallelConnections) {
+TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestParallelConnections) {
   // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with
   // multiple concurrent connections to detect a randomly (but often) occurring bug. This test will/can only fail if a
   // bug is present but it should not fail if no bug is present. It just sends 100 parallel connections and if that
