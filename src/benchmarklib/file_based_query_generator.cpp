@@ -10,15 +10,15 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_file_path) {
+FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
-  filesystem::path path{query_file_path};
-  Assert(filesystem::exists(path), "No such file or directory '" + query_file_path + "'");
+  filesystem::path path{query_path};
+  Assert(filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
   if (filesystem::is_regular_file(path)) {
-    Assert(is_sql_file(query_file_path), "Specified file '" + query_file_path + "' is not an .sql file");
-    _parse_query_file(query_file_path);
+    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
+    _parse_query_file(query_path);
   } else {
     // Recursively walk through the specified directory and add all files on the way
     for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
