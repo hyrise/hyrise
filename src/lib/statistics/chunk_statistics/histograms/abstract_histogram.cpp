@@ -1046,7 +1046,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
       continue;
     }
 
-    const auto height = estimate.cardinality;
+    auto height = estimate.cardinality;
     auto distinct_count = estimate_distinct_count(PredicateCondition::Between, bin_min, bin_max);
 
     // HACK to account for the fact that estimate_distinct_count() might return a slightly higher value
@@ -1055,14 +1055,24 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_edges(
       distinct_count = height;
     }
 
+    height = std::ceil(height);
+    distinct_count = std::ceil(distinct_count);
+
+    // Not creating empty bins
+    if (height == 0) continue;
+
     bin_minima.emplace_back(bin_min);
     bin_maxima.emplace_back(bin_max);
     bin_heights.emplace_back(static_cast<HistogramCountType>(height));
     bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
   }
 
-  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-                                               std::move(bin_distinct_counts));
+  if (bin_maxima.empty()) {
+    return std::make_shared<SingleBinHistogram<T>>(T{}, T{}, 0, 0);
+  } else {
+    return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                                 std::move(bin_distinct_counts));
+  }
 }
 
 template <typename T>
