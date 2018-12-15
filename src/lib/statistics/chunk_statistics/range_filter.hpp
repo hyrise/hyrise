@@ -129,6 +129,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
                                                              const uint32_t max_ranges_count) {
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
   DebugAssert(!dictionary.empty(), "The dictionary should not be empty.");
+  DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
   DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.size() == 1) {
