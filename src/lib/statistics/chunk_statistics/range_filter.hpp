@@ -47,4 +47,5 @@ class RangeFilter : public AbstractStatisticsObject {
  protected:
   std::vector<std::pair<T, T>> _ranges;
 };
+
 }  // namespace opossum
