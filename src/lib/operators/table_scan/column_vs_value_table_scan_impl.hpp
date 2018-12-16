@@ -37,6 +37,9 @@ class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
   void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                      const std::shared_ptr<const PosList>& position_filter) const;
 
+  void _scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                            const std::shared_ptr<const PosList>& position_filter) const;
+
   /**
    * @defgroup Methods used for handling dictionary segments
    * @{

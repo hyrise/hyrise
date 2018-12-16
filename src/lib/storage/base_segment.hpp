@@ -39,8 +39,13 @@ class BaseSegment : private Noncopyable {
   const std::optional<OrderByMode> sort_order() const;
   void set_sort_order(OrderByMode sort_order);
 
+  virtual ChunkOffset sorted_lower_bound(const AllTypeVariant& search_value) const /*= 0*/;
+  virtual ChunkOffset sorted_upper_bound(const AllTypeVariant& search_value) const /*= 0*/;
+
+ protected:
+  std::optional<OrderByMode> _sort_order;
+
  private:
   const DataType _data_type;
-  std::optional<OrderByMode> _sort_order;
 };
 }  // namespace opossum

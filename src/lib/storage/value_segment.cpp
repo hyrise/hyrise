@@ -155,6 +155,26 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
   return sizeof(*this) + _values.size() * sizeof(T) + (_null_values ? _null_values->size() * sizeof(bool) : 0u);
 }
 
+template <typename T>
+ChunkOffset ValueSegment<T>::sorted_lower_bound(const AllTypeVariant& search_value) const {
+  Assert(_sort_order, "The segment needs to be sorted to calculate the lower bound.");
+  const auto result = std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
+  if (result == _values.cend()) {
+    return INVALID_CHUNK_OFFSET;
+  }
+  return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
+}
+
+template <typename T>
+ChunkOffset ValueSegment<T>::sorted_upper_bound(const AllTypeVariant& search_value) const {
+  Assert(_sort_order, "The segment needs to be sorted to calculate the upper bound.");
+  const auto result = std::upper_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
+  if (result == _values.cend()) {
+    return INVALID_CHUNK_OFFSET;
+  }
+  return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
 
 }  // namespace opossum

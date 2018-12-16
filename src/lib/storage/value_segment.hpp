@@ -69,6 +69,9 @@ class ValueSegment : public BaseValueSegment {
 
   size_t estimate_memory_usage() const override;
 
+  ChunkOffset sorted_lower_bound(const AllTypeVariant& search_value) const override;
+  ChunkOffset sorted_upper_bound(const AllTypeVariant& search_value) const override;
+
  protected:
   pmr_concurrent_vector<T> _values;
 
