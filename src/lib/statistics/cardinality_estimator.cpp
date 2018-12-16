@@ -362,9 +362,6 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
                         CardinalityEstimator::get_best_available_histogram(*right_input_segment_statistics);
                     Assert(left_histogram && right_histogram, "NYI");
 
-                    left_histogram->print();
-                    right_histogram->print();
-
                     const auto unified_left_histogram =
                         left_histogram->split_at_bin_edges(right_histogram->bin_edges());
                     const auto unified_right_histogram =

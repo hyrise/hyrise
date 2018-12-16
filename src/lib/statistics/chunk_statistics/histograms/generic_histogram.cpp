@@ -17,7 +17,6 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
     : AbstractHistogram<T>(),
       _bin_data(
           {std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), std::move(bin_distinct_counts)}) {
-  Assert(!_bin_data.bin_minima.empty(), "Cannot have histogram without any bins.");
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
          "Must have the same number of lower as upper bin edges.");
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_heights.size(),
@@ -151,27 +150,6 @@ template <typename T>
 HistogramCountType GenericHistogram<T>::total_distinct_count() const {
   return std::accumulate(_bin_data.bin_distinct_counts.cbegin(), _bin_data.bin_distinct_counts.cend(),
                          HistogramCountType{0});
-}
-
-template <typename T>
-std::shared_ptr<AbstractStatisticsObject> GenericHistogram<T>::scale_with_selectivity(
-    const Selectivity selectivity) const {
-  auto bin_minima = _bin_data.bin_minima;
-  auto bin_maxima = _bin_data.bin_maxima;
-
-  // Scale the number of values in the bin with the given selectivity.
-  // Round up the numbers such that we tend to over- rather than underestimate.
-  // Also, we avoid 0 as a height.
-  auto bin_heights = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
-  auto bin_distinct_counts = std::vector<HistogramCountType>(_bin_data.bin_heights.size());
-  for (auto bin_id = BinID{0}; bin_id < _bin_data.bin_heights.size(); bin_id++) {
-    bin_heights[bin_id] = static_cast<HistogramCountType>(std::ceil(_bin_data.bin_heights[bin_id] * selectivity));
-    bin_distinct_counts[bin_id] = static_cast<HistogramCountType>(std::ceil(
-        scale_distinct_count(selectivity, _bin_data.bin_heights[bin_id], _bin_data.bin_distinct_counts[bin_id])));
-  }
-
-  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-                                               std::move(bin_distinct_counts));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogram);

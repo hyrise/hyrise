@@ -19,6 +19,7 @@
 #include "single_bin_histogram.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/empty_statistics_object.hpp"
+#include "statistics/statistics_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
 #include "resolve_type.hpp"
@@ -56,8 +57,8 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
   if (include_bin_info) {
     stream << "  edges / counts " << std::endl;
     for (BinID bin = 0u; bin < bin_count(); bin++) {
-      stream << "              [" << bin_minimum(bin) << ", " << bin_maximum(bin) << "]: ";
-      stream << bin_height(bin) << std::endl;
+      stream << "              [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
+      stream << "Height: " << bin_height(bin) << "; DistinctCount: " << bin_distinct_count(bin) << std::endl;
     }
   }
 
@@ -90,16 +91,6 @@ T AbstractHistogram<T>::minimum() const {
 template <typename T>
 T AbstractHistogram<T>::maximum() const {
   return bin_maximum(bin_count() - 1u);
-}
-
-template <typename T>
-void AbstractHistogram<T>::print(std::ostream& stream) const {
-  stream << histogram_name() << std::endl;
-  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-    stream << "[" << bin_minimum(bin_id) << " -> " << bin_maximum(bin_id) << "] Height: " << bin_height(bin_id)
-           << "; DistinctCount: " << bin_distinct_count(bin_id) << "\n";
-  }
-  stream << std::endl;
 }
 
 template <>
@@ -954,6 +945,38 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
       Fail("PredicateCondition not supported by Histograms");
+  }
+
+  return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+                                               std::move(bin_distinct_counts));
+}
+
+template <typename T>
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scale_with_selectivity(
+const Selectivity selectivity) const {
+  auto bin_minima = std::vector<T>{};
+  auto bin_maxima = std::vector<T>{};
+  auto bin_heights = std::vector<HistogramCountType>();
+  auto bin_distinct_counts = std::vector<HistogramCountType>();
+
+  bin_minima.reserve(bin_count());
+  bin_maxima.reserve(bin_count());
+  bin_heights.reserve(bin_count());
+  bin_distinct_counts.reserve(bin_count());
+
+  // Scale the number of values in the bin with the given selectivity.
+  // Round up the numbers such that we tend to over- rather than underestimate.
+  // Also, we avoid 0 as a height.
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
+    const auto height = std::ceil(bin_height(bin_id) * selectivity);
+    const auto distinct_count = std::ceil(scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
+
+    if (height == 0 || distinct_count == 0) continue;
+
+    bin_minima.emplace_back(bin_minimum(bin_id));
+    bin_maxima.emplace_back(bin_maximum(bin_id));
+    bin_heights.emplace_back(static_cast<HistogramCountType>(height));
+    bin_distinct_counts.emplace_back(static_cast<HistogramCountType>(distinct_count));
   }
 
   return std::make_shared<GenericHistogram<T>>(std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
