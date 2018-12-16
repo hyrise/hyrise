@@ -6,11 +6,6 @@
 
 namespace opossum {
 
-struct JoinPredicate {
-  const ColumnIDPair& column_id_pair;
-  const PredicateCondition& predicateCondition;
-};
-
 /**
  * This operator joins two tables using one column of each table.
  * The output is a new table with referenced columns for all columns of the two inputs and filtered pos_lists.
