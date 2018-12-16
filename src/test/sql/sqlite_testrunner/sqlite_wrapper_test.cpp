@@ -16,7 +16,7 @@ class SQLiteWrapperTest : public ::testing::Test {
 };
 
 TEST_F(SQLiteWrapperTest, CreateTable) {
-  const auto expected_table = load_table("artifacts/test_data/tbl/tpch/sf-0.001/orders.tbl");
+  const auto expected_table = load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl");
 
   sqlite_wrapper->create_table(*expected_table, "t");
 
@@ -28,7 +28,7 @@ TEST_F(SQLiteWrapperTest, CreateTable) {
 
 TEST_F(SQLiteWrapperTest, CreateTableWithNull) {
   const auto expected_mixed_types_null_100_table =
-      load_table("artifacts/test_data/tbl/sqlite/mixed_types_null_100.tbl");
+      load_table("resources/test_data/tbl/sqlite/mixed_types_null_100.tbl");
 
   sqlite_wrapper->create_table(*expected_mixed_types_null_100_table, "mixed_types_null_100");
 
@@ -39,7 +39,7 @@ TEST_F(SQLiteWrapperTest, CreateTableWithNull) {
 }
 
 TEST_F(SQLiteWrapperTest, ReloadTable) {
-  const auto expected_table = load_table("artifacts/test_data/tbl/int_float.tbl");
+  const auto expected_table = load_table("resources/test_data/tbl/int_float.tbl");
 
   sqlite_wrapper->create_table(*expected_table, "table_to_copy_from");
 

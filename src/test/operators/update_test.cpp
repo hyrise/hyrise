@@ -29,7 +29,7 @@ class OperatorsUpdateTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto table = load_table("artifacts/test_data/tbl/int_float2.tbl", 2);
+    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     // Update operator works on the StorageManager
     StorageManager::get().add_table(table_to_update_name, table);
   }
@@ -65,21 +65,21 @@ class OperatorsUpdateTest : public BaseTest {
 };
 
 TEST_F(OperatorsUpdateTest, SelfOverride) {
-  helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "artifacts/test_data/tbl/int_float2.tbl");
+  helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "resources/test_data/tbl/int_float2.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateWithLiteral) {
   helper(greater_than_(column_a, 100), expression_vector(column_a, 7.5f),
-         "artifacts/test_data/tbl/int_float2_updated_0.tbl");
+         "resources/test_data/tbl/int_float2_updated_0.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateWithExpression) {
   helper(greater_than_(column_a, 1000), expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)),
-         "artifacts/test_data/tbl/int_float2_updated_1.tbl");
+         "resources/test_data/tbl/int_float2_updated_1.tbl");
 }
 
 TEST_F(OperatorsUpdateTest, UpdateNone) {
-  helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "artifacts/test_data/tbl/int_float2.tbl");
+  helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "resources/test_data/tbl/int_float2.tbl");
 }
 
 }  // namespace opossum

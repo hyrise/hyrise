@@ -26,8 +26,8 @@ void remove_test_data_directory() {
 }
 
 int main(int argc, char** argv) {
-  Assert(filesystem::exists("artifacts/test_data/tbl"),
-         "Cannot find artifacts/test_data/tbl. Are you running the test suite from the main folder of the Hyrise "
+  Assert(filesystem::exists("resources/test_data/tbl"),
+         "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise "
          "repository?");
 
   opossum::PerformanceWarningDisabler pwd;

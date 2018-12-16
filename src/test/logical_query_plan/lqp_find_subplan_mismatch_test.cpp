@@ -55,7 +55,7 @@ class LQPFindSubplanMismatchTest : public BaseTest {
   };
 
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("artifacts/test_data/tbl/int_int.tbl", 2));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);

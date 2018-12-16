@@ -22,8 +22,8 @@ namespace opossum {
 class LogicalQueryPlanTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_int", load_table("artifacts/test_data/tbl/int_int.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("artifacts/test_data/tbl/int_int_int.tbl"));
+    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     node_int_int = StoredTableNode::make("int_int");
     a1 = node_int_int->get_column("a");

@@ -24,8 +24,8 @@ namespace opossum {
 class JitAwareLQPTranslatorTest : public BaseTest {
  protected:
   void SetUp() override {
-    const auto int_int_int_table = load_table("artifacts/test_data/tbl/int_int_int.tbl");
-    const auto int_float_null_table = load_table("artifacts/test_data/tbl/int_float_null_sorted_asc.tbl");
+    const auto int_int_int_table = load_table("resources/test_data/tbl/int_int_int.tbl");
+    const auto int_float_null_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl");
 
     StorageManager::get().add_table("table_a", int_int_int_table);
     StorageManager::get().add_table("table_b", int_float_null_table);

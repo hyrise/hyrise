@@ -35,7 +35,7 @@ class ExpressionEvaluatorToValuesTest : public ::testing::Test {
  public:
   void SetUp() override {
     // Load table_a
-    table_a = load_table("artifacts/test_data/tbl/expression_evaluator/input_a.tbl");
+    table_a = load_table("resources/test_data/tbl/expression_evaluator/input_a.tbl");
     a = PQPColumnExpression::from_table(*table_a, "a");
     b = PQPColumnExpression::from_table(*table_a, "b");
     c = PQPColumnExpression::from_table(*table_a, "c");
@@ -55,11 +55,11 @@ class ExpressionEvaluatorToValuesTest : public ::testing::Test {
     a_lt_c = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, c);
 
     // Load table_b
-    table_b = load_table("artifacts/test_data/tbl/expression_evaluator/input_b.tbl");
+    table_b = load_table("resources/test_data/tbl/expression_evaluator/input_b.tbl");
     x = PQPColumnExpression::from_table(*table_b, "x");
 
     // Load table_bools
-    table_bools = load_table("artifacts/test_data/tbl/expression_evaluator/input_bools.tbl");
+    table_bools = load_table("resources/test_data/tbl/expression_evaluator/input_bools.tbl");
     bool_a = PQPColumnExpression::from_table(*table_bools, "a");
     bool_b = PQPColumnExpression::from_table(*table_bools, "b");
     bool_c = PQPColumnExpression::from_table(*table_bools, "c");

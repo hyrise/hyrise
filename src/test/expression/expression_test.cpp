@@ -25,8 +25,8 @@ namespace opossum {
 class ExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    table_int_float = load_table("artifacts/test_data/tbl/int_float.tbl");
-    table_int_float_with_null = load_table("artifacts/test_data/tbl/int_float_with_null.tbl");
+    table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
+    table_int_float_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
     StorageManager::get().add_table("int_float", table_int_float);
     StorageManager::get().add_table("int_float_with_null", table_int_float_with_null);
 

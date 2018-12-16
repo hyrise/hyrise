@@ -14,8 +14,8 @@ namespace opossum {
 class ShowColumnsTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto t1 = load_table("artifacts/test_data/tbl/int_float_double_string.tbl", 2);
-    auto t2 = load_table("artifacts/test_data/tbl/int_float_with_null.tbl", 2);
+    auto t1 = load_table("resources/test_data/tbl/int_float_double_string.tbl", 2);
+    auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 2);
 
     StorageManager::get().add_table("int_float_double_string", t1);
     StorageManager::get().add_table("int_float_with_null", t2);
@@ -41,7 +41,7 @@ TEST_F(ShowColumnsTest, CanShowColumns) {
   sc->execute();
 
   std::shared_ptr<Table> expected_result =
-      load_table("artifacts/test_data/tbl/show_columns/int_float_double_string.tbl", 3);
+      load_table("resources/test_data/tbl/show_columns/int_float_double_string.tbl", 3);
   EXPECT_TABLE_EQ_ORDERED(sc->get_output(), expected_result);
 }
 
@@ -50,7 +50,7 @@ TEST_F(ShowColumnsTest, CanShowColumnsWithNull) {
   sc->execute();
 
   std::shared_ptr<Table> expected_result =
-      load_table("artifacts/test_data/tbl/show_columns/int_float_with_null.tbl", 3);
+      load_table("resources/test_data/tbl/show_columns/int_float_with_null.tbl", 3);
   EXPECT_TABLE_EQ_ORDERED(sc->get_output(), expected_result);
 }
 

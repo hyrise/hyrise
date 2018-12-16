@@ -29,9 +29,9 @@ namespace opossum {
 class OperatorsProjectionTest : public BaseTest {
  public:
   void SetUp() override {
-    table_wrapper_a = std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
     table_wrapper_a->execute();
-    table_wrapper_b = std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
     table_wrapper_b->execute();
 
     a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
@@ -51,7 +51,7 @@ TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(add_(a_a, a_b)));
   projection->execute();
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(),
-                            load_table("artifacts/test_data/tbl/projection/int_float_add.tbl"));
+                            load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {

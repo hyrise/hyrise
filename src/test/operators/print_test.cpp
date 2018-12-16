@@ -253,7 +253,7 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   // Per default, MVCC data is created when loading tables.
   // This test passes the flag for printing MVCC information, which is not printed by default.
   std::shared_ptr<TableWrapper> table =
-      std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_float.tbl", 2));
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
   table->execute();
 
   Print::print(table, 2, output);

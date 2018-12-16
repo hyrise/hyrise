@@ -26,9 +26,9 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();
-    storage_manager.add_table("customer", load_table("artifacts/test_data/tbl/tpch/minimal/customer.tbl"));
-    storage_manager.add_table("lineitem", load_table("artifacts/test_data/tbl/tpch/minimal/lineitem.tbl"));
-    storage_manager.add_table("orders", load_table("artifacts/test_data/tbl/tpch/minimal/orders.tbl"));
+    storage_manager.add_table("customer", load_table("resources/test_data/tbl/tpch/minimal/customer.tbl"));
+    storage_manager.add_table("lineitem", load_table("resources/test_data/tbl/tpch/minimal/lineitem.tbl"));
+    storage_manager.add_table("orders", load_table("resources/test_data/tbl/tpch/minimal/orders.tbl"));
   }
 
   // Run a benchmark that compiles the given SQL query.

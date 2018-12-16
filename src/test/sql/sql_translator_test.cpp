@@ -45,11 +45,11 @@ namespace opossum {
 class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_float", load_table("artifacts/test_data/tbl/int_float.tbl"));
-    StorageManager::get().add_table("int_string", load_table("artifacts/test_data/tbl/int_string.tbl"));
-    StorageManager::get().add_table("int_float2", load_table("artifacts/test_data/tbl/int_float2.tbl"));
-    StorageManager::get().add_table("int_float5", load_table("artifacts/test_data/tbl/int_float5.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("artifacts/test_data/tbl/int_int_int.tbl"));
+    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
+    StorageManager::get().add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
+    StorageManager::get().add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");

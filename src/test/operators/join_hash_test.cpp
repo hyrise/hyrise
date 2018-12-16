@@ -14,19 +14,19 @@ class JoinHashTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
     _table_wrapper_small =
-        std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/joinoperators/anti_int4.tbl", 2));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
 
     _table_tpch_orders =
-        std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/tpch/sf-0.001/orders.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", 10));
     _table_tpch_orders->execute();
 
     _table_tpch_lineitems =
-        std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/tpch/sf-0.001/lineitem.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl", 10));
     _table_tpch_lineitems->execute();
 
     _table_with_nulls =
-        std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_int4_with_null.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", 10));
     _table_with_nulls->execute();
 
     // filters retain all rows
@@ -73,7 +73,7 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   join->execute();
 
   std::shared_ptr<Table> expected_result =
-      load_table("artifacts/test_data/tbl/joinoperators/int_with_null_and_zero.tbl", 1);
+      load_table("resources/test_data/tbl/joinoperators/int_with_null_and_zero.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 }
 

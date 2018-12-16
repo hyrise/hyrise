@@ -13,7 +13,7 @@ namespace opossum {
 class PredicateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("artifacts/test_data/tbl/int_float_double_string.tbl", 2));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
     _i = {_table_node, ColumnID{0}};

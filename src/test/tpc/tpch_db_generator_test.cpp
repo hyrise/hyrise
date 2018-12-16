@@ -33,19 +33,19 @@ TEST(TpchDbGeneratorTest, TableContents) {
   const auto tables = TpchDbGenerator(scale_factor, chunk_size).generate();
 
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/part.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Supplier),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/supplier.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/supplier.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::PartSupp),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/partsupp.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/partsupp.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Customer),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/customer.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/customer.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Orders),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/orders.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Nation),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/nation.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/nation.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Region),
-                          load_table("artifacts/test_data/tbl/tpch/sf-0.001/region.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/region.tbl", chunk_size));
 }
 
 TEST(TpchDbGeneratorTest, GenerateAndStore) {

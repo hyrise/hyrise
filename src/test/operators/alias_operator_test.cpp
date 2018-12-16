@@ -11,7 +11,7 @@ class AliasOperatorTest : public ::testing::Test {
  public:
   void SetUp() override {
     const auto table_wrapper =
-        std::make_shared<TableWrapper>(load_table("artifacts/test_data/tbl/int_int_float.tbl", 1));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_float.tbl", 1));
     table_wrapper->execute();
 
     auto column_ids = std::vector<ColumnID>({ColumnID{2}, ColumnID{0}, ColumnID{1}});
@@ -32,7 +32,7 @@ TEST_F(AliasOperatorTest, Name) {
 TEST_F(AliasOperatorTest, OutputColumnNames) {
   alias_operator->execute();
   EXPECT_TABLE_EQ_ORDERED(alias_operator->get_output(),
-                          load_table("artifacts/test_data/tbl/int_int_float_aliased.tbl"));
+                          load_table("resources/test_data/tbl/int_int_float_aliased.tbl"));
 }
 
 }  // namespace opossum
