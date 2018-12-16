@@ -106,6 +106,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   auto chunk_offsets = std::vector<size_t>(in_table->chunk_count());
 
+  // TODO: replace with determine_chunk_offsets? Code duplication.
   // fill work queue
   {
     size_t output_offset = 0;

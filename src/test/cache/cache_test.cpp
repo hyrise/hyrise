@@ -237,7 +237,7 @@ class CacheTest : public BaseTest {};
 // here we define all Join types
 using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
                                     RandomCache<int, int>>;
-TYPED_TEST_CASE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_CASE(CacheTest, CacheTypes);  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CacheTest, Size) {
   TypeParam cache(3);
