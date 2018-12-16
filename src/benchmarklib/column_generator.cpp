@@ -25,10 +25,19 @@ ColumnGenerator::ColumnGenerator() : _probability_dist(0.0, 1.0) {
   _pseudorandom_engine.seed(rd());
 }
 
+/**
+ * Generates a value vector of type int according to the given column_data distribution. The values are selected
+ * randomly.
+ * @tparam VectorType Type of vector. Could be std::vector<int> or tbb::concurrent_vector<int>
+ * @param column_data_distribution Distribution of values.
+ * @param row_count Number of rows to calculate
+ * @param allow_value Function which checks, if the random value may be added to the returned vector.
+ * @return A vector with row_count randomly selected integers for which allow_value returned true.
+ */
 // Todo: Refactor TableGenerator::generate_table to uses this function
 template<typename VectorType>
 VectorType ColumnGenerator::generate_value_vector(const ColumnDataDistribution& column_data_distribution,
-    size_t row_count, const std::function<bool(size_t)>& allow_value) {
+    size_t row_count, const std::function<bool(int)>& allow_value) {
 
   VectorType result(row_count);
 
@@ -78,19 +87,20 @@ VectorType ColumnGenerator::generate_value_vector(const ColumnDataDistribution& 
 }
 
 /**
- * Generates a vector which contains selectivity * row_count values included in unique_ids.
- * The idea is to generate a column where selectivity * row_count entries will find a join partner
- * given by unique_ids.
- * @param unique_values
- * @param row_count
- * @param selectivity
- * @param get_value_with_no_join_partner
- * @return
+ * Generates a vector to act as a join partner. The generated vector will contain selectivity * row_count many values
+ * which will find a join partner in the vector join_partner. Values, which must not find a join partner will be
+ * selected using get_value_with_no_join_partner.
+ * @param join_partner Column which will act as a join partner for the generated vector
+ * @param row_count Number of rows to generate
+ * @param selectivity Value in closed interval [0, 1] to indicate how many generated values will find a join partner in
+ * join_partner.
+ * @param get_value_with_no_join_partner Function to compute a value which is not found in join_partner
+ * @return Vector with selectivit * row_count many join partners to join_partner
  */
-std::vector<size_t> ColumnGenerator::generate_join_partner(const std::vector<size_t>& join_partner, size_t row_count,
-    float selectivity, const std::function<size_t(double)>& get_value_with_no_join_partner) {
+std::vector<int> ColumnGenerator::generate_join_partner(const std::vector<int>& join_partner, size_t row_count,
+    double selectivity, const std::function<int(double)>& get_value_with_no_join_partner) {
 
-  std::vector<size_t> result(row_count);
+  std::vector<int> result(row_count);
   auto required_join_partners = static_cast<size_t>(selectivity * row_count);
   auto required_no_join_partners = row_count - required_join_partners;
   const auto select_join_partner_threshold = required_join_partners / row_count;
@@ -113,9 +123,25 @@ std::vector<size_t> ColumnGenerator::generate_join_partner(const std::vector<siz
   return result;
 }
 
+/**
+ * Generates a pair of two tables. The tables are generated in a way, that the columns of table 1 can be joined
+ * with the columns of table 2 with a given selectivity.
+ * @param selectivities Join selectivity in the closed interval [0, 1]. The index i of the selectivity entry will be
+ * used to calculate how many entries of column i in table 2 will find a join partner in column i of table 1.
+ * @param chunk_size Chunk size of tables
+ * @param row_count_table1 Number of rows to be calculated for table 1
+ * @param row_count_table2 Number of rows to be calculated for table 2
+ * @param min_value Minimum value to be calculated
+ * @param max_value Maximum value to be calculated
+ * @param allow_value Function to determine if a calculted value can be added to table 1.
+ * @param get_value_with_no_join_partner Function to compute a value for table 2 which is not present in the
+ * corresponding column of table 1.
+ * @return
+ */
 std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
-    ColumnGenerator::generate_join_pair(std::vector<double>& selectivities, size_t chunk_size,
-        size_t row_count_table1, size_t row_count_table2) {
+    ColumnGenerator::generate_joinable_table_pair(std::vector<double>& selectivities, size_t chunk_size,
+        size_t row_count_table1, size_t row_count_table2, uint32_t min_value, uint32_t max_value,
+        const std::function<bool(int)>& allow_value, const std::function<int(double)>& get_value_without_join_partner) {
 
   const auto column_count = selectivities.size();
 
@@ -125,22 +151,18 @@ std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
     column_definitions.emplace_back(column_name, DataType::Int);
   }
 
-  auto table1 = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
-  auto table2 = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  const auto value_distribution = ColumnDataDistribution::make_uniform_config(min_value, max_value);
 
-
-  const auto value_distribution = ColumnDataDistribution::make_uniform_config(0.0, 1.0);
-
-  std::vector<std::vector<size_t>> cols_table1;
-  std::vector<std::vector<size_t>> cols_table2;
+  std::vector<std::vector<int>> cols_table1;
+  std::vector<std::vector<int>> cols_table2;
   cols_table1.resize(column_count);
   cols_table2.resize(column_count);
 
-  const auto allow_value = [](size_t value) { return value % 10 != 0; };
-  const auto get_value_without_join_partner = [](double value) { return static_cast<size_t>(value * 10); };
+  //const auto allow_value = [](size_t value) { return value % 10 != 0; };
+  //const auto get_value_without_join_partner = [&max_value](double value) { return static_cast<int>(value * max_value / 10) * 10; };
 
   for (size_t col_idx = 0; col_idx < column_count; ++col_idx) {
-    const auto values_table1 = generate_value_vector<std::vector<size_t>>(value_distribution, row_count_table1,
+    const auto values_table1 = generate_value_vector<std::vector<int>>(value_distribution, row_count_table1,
         allow_value);
     cols_table1[col_idx] = std::move(values_table1);
 
@@ -150,9 +172,33 @@ std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
   }
 
 
+  const auto table1 = create_table(column_definitions, chunk_size, cols_table1);
+  const auto table2 = create_table(column_definitions, chunk_size, cols_table2);
 
+  return std::make_unique<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>(
+      std::make_pair(std::move(table1), std::move(table2)));
+}
 
-  return std::make_unique<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>(std::make_pair(table1, table2));
+/**
+ * Creates a table given the column definitions and table_data.
+ * @param column_definitions
+ * @param chunk_size
+ * @param table_data
+ * @return
+ */
+std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinitions& column_definitions,
+    size_t chunk_size, const std::vector<std::vector<int>>& table_data) {
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  const auto row_count = table_data.front().size();
+  const auto col_count = table_data.size();
+  for (size_t row_index = 0; row_index < row_count; ++row_index) {
+    auto row = std::vector<AllTypeVariant>(col_count);
+    for (size_t col_index = 0; col_index < col_count; ++col_index) {
+      row[col_index] = table_data[row_index][col_index];
+    }
+    table->append(row);
+  }
+  return table;
 }
 
 } // namespace opossum
