@@ -13,6 +13,7 @@
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/exists_reformulation_rule.hpp"
+#include "strategy/in_reformulation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
@@ -95,6 +96,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   final_batch.add_rule(std::make_shared<ColumnPruningRule>());
 
   final_batch.add_rule(std::make_shared<ExistsReformulationRule>());
+
+  final_batch.add_rule(std::make_shared<InReformulationRule>());
 
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
 
