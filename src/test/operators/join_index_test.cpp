@@ -26,24 +26,24 @@ class JoinIndexTest : public BaseTest {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
     // load and create the indexed tables
-    _table_wrapper_a = load_table_with_index("src/test/tables/int_float.tbl", 2);
-    _table_wrapper_a_no_index = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-    _table_wrapper_b = load_table_with_index("src/test/tables/int_float2.tbl", 2);
-    _table_wrapper_b_no_index = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
-    _table_wrapper_c = load_table_with_index("src/test/tables/int_string.tbl", 4);
-    _table_wrapper_d = load_table_with_index("src/test/tables/string_int.tbl", 3);
-    _table_wrapper_e = load_table_with_index("src/test/tables/int_int.tbl", 4);
-    _table_wrapper_f = load_table_with_index("src/test/tables/int_int2.tbl", 4);
-    _table_wrapper_g = load_table_with_index("src/test/tables/int_int3.tbl", 4);
-    _table_wrapper_h = load_table_with_index("src/test/tables/int_int4.tbl", 4);
-    _table_wrapper_i = load_table_with_index("src/test/tables/int5.tbl", 1);
-    _table_wrapper_j = load_table_with_index("src/test/tables/int3.tbl", 1);
-    _table_wrapper_k = load_table_with_index("src/test/tables/int4.tbl", 1);
-    _table_wrapper_l = load_table_with_index("src/test/tables/int.tbl", 1);
+    _table_wrapper_a = load_table_with_index("resources/test_data/tbl/int_float.tbl", 2);
+    _table_wrapper_a_no_index = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    _table_wrapper_b = load_table_with_index("resources/test_data/tbl/int_float2.tbl", 2);
+    _table_wrapper_b_no_index = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
+    _table_wrapper_c = load_table_with_index("resources/test_data/tbl/int_string.tbl", 4);
+    _table_wrapper_d = load_table_with_index("resources/test_data/tbl/string_int.tbl", 3);
+    _table_wrapper_e = load_table_with_index("resources/test_data/tbl/int_int.tbl", 4);
+    _table_wrapper_f = load_table_with_index("resources/test_data/tbl/int_int2.tbl", 4);
+    _table_wrapper_g = load_table_with_index("resources/test_data/tbl/int_int3.tbl", 4);
+    _table_wrapper_h = load_table_with_index("resources/test_data/tbl/int_int4.tbl", 4);
+    _table_wrapper_i = load_table_with_index("resources/test_data/tbl/int5.tbl", 1);
+    _table_wrapper_j = load_table_with_index("resources/test_data/tbl/int3.tbl", 1);
+    _table_wrapper_k = load_table_with_index("resources/test_data/tbl/int4.tbl", 1);
+    _table_wrapper_l = load_table_with_index("resources/test_data/tbl/int.tbl", 1);
     _table_wrapper_m =
-        load_table_with_index("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
+        load_table_with_index("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
     _table_wrapper_n =
-        load_table_with_index("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+        load_table_with_index("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
@@ -126,49 +126,49 @@ TYPED_TEST_CASE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1, false);
+                         JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1, false);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoinOnString) {
   this->test_join_output(this->_table_wrapper_c, this->_table_wrapper_d,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Left, "src/test/tables/joinoperators/string_left_join.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/joinoperators/string_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
+                         JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1, false);
+                         JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1, false);
 }
 
 TYPED_TEST(JoinIndexTest, InnerJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerJoinOnString) {
   this->test_join_output(this->_table_wrapper_c, this->_table_wrapper_d,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/string_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerJoinSingleChunk) {
   this->test_join_output(this->_table_wrapper_e, this->_table_wrapper_f,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join_single_chunk.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join_single_chunk.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoin) {
@@ -180,7 +180,7 @@ TYPED_TEST(JoinIndexTest, InnerRefJoin) {
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
@@ -191,13 +191,13 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFiltered) {
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerDictJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
@@ -209,7 +209,7 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
@@ -220,13 +220,13 @@ TYPED_TEST(JoinIndexTest, InnerRefDictJoinFiltered) {
 
   this->test_join_output(scan_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerJoinBig) {
   this->test_join_output(this->_table_wrapper_c, this->_table_wrapper_d,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
@@ -237,190 +237,190 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
 
   this->test_join_output(scan_c, scan_d, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{1}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, OuterJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join.tbl", 1);
 }
 
 /* currently disabled because it breaks with AdaptiveRadixTreeIndex */
 TYPED_TEST(JoinIndexTest, DISABLED_OuterJoinWithNull /* #670 */) {
   this->test_join_output(this->_table_wrapper_m, this->_table_wrapper_n,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join_null.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join_null.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, OuterJoinDict) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_smaller_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::LessThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_smaller_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::LessThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_smaller_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerOuterJoin) {
   this->test_join_output(this->_table_wrapper_k, this->_table_wrapper_l,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_smaller_outer_join.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_smaller_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_smallerequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_smallerequal_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::LessThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_smallerequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_smallerequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerEqualOuterJoin) {
   this->test_join_output(this->_table_wrapper_k, this->_table_wrapper_l,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThanEquals,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_smallerequal_outer_join.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_smallerequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_greater_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::GreaterThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_greater_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_greater_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::GreaterThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_greater_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join_2.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_greater_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterOuterJoin) {
   this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_greater_outer_join.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_greater_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_greaterequal_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_greaterequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_greaterequal_inner_join.tbl", 1);
 
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_greaterequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualOuterJoin) {
   this->test_join_output(this->_table_wrapper_l, this->_table_wrapper_k,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Outer, "src/test/tables/joinoperators/int_greaterequal_outer_join.tbl", 1);
+                         JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_greaterequal_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin2) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, NotEqualInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::NotEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_notequal_inner_join.tbl", 1);
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::NotEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, NotEqualInnerJoinDict) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::NotEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_notequal_inner_join.tbl", 1);
   // Joining two Float Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{1}, ColumnID{1}), PredicateCondition::NotEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, JoinLessThanOnDictAndDict) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThanEquals,
-                         JoinMode::Inner, "src/test/tables/joinoperators/int_float_leq_dict.tbl", 1);
+                         JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_float_leq_dict.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
@@ -430,7 +430,7 @@ TYPED_TEST(JoinIndexTest, JoinOnReferenceSegmentAndDict) {
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
@@ -440,7 +440,7 @@ TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
 
   this->test_join_output(this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::NotEquals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_join_neq.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_join_neq.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
@@ -459,7 +459,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
 
   this->test_join_output(join, scan_c, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
@@ -478,7 +478,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
 
   this->test_join_output(scan_c, join, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
@@ -497,7 +497,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
 
   this->test_join_output(join, scan_c, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
@@ -508,7 +508,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
 
   this->test_join_output(join, this->_table_wrapper_h, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Inner,
-                         "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
@@ -518,7 +518,7 @@ TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Right,
-                         "src/test/tables/joinoperators/int_right_join.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
@@ -527,8 +527,8 @@ TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                         PredicateCondition::Equals, JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl",
-                         1);
+                         PredicateCondition::Equals, JoinMode::Left,
+                         "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
@@ -538,7 +538,7 @@ TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
 
   this->test_join_output(scan_a, this->_table_wrapper_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Right,
-                         "src/test/tables/joinoperators/int_join_empty.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_join_empty.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefSegment) {
@@ -548,7 +548,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefSegment) {
 
   this->test_join_output(this->_table_wrapper_b, scan_b, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
                          PredicateCondition::Equals, JoinMode::Left,
-                         "src/test/tables/joinoperators/int_join_empty_left.tbl", 1);
+                         "resources/test_data/tbl/joinoperators/int_join_empty_left.tbl", 1);
 }
 
 }  // namespace opossum

@@ -28,7 +28,7 @@ class TableStatisticsTest : public BaseTest {
   };
 
   void SetUp() override {
-    auto table = load_table("src/test/tables/int_float_double_string.tbl");
+    auto table = load_table("resources/test_data/tbl/int_float_double_string.tbl");
     _table_a_with_statistics.statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
     table->set_table_statistics(_table_a_with_statistics.statistics);
     _table_a_with_statistics.table = table;
@@ -251,7 +251,7 @@ TEST_F(TableStatisticsTest, TableType) {
 }
 
 TEST_F(TableStatisticsTest, TwoColumnScan) {
-  const auto int_int_float = load_table("src/test/tables/int_int_float.tbl");
+  const auto int_int_float = load_table("resources/test_data/tbl/int_int_float.tbl");
   const auto int_int_float_statistics = generate_table_statistics(*int_int_float);
 
   // Make sure that the distinct counts are as expected, mainly that they are different. We compare them later.

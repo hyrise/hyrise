@@ -18,7 +18,7 @@ class /* #1357 */ DISABLED_ServerTestRunner : public BaseTest {
     StorageManager::get().reset();
     SQLPhysicalPlanCache::get().clear();
 
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.

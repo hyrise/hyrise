@@ -26,8 +26,9 @@ void remove_test_data_directory() {
 }
 
 int main(int argc, char** argv) {
-  Assert(filesystem::exists("src/test/tables"),
-         "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
+  Assert(filesystem::exists("resources/test_data/tbl"),
+         "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise "
+         "repository?");
 
   opossum::PerformanceWarningDisabler pwd;
   ::testing::InitGoogleTest(&argc, argv);

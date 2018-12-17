@@ -82,7 +82,7 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   write_tuples->add_output_column("b", b_value);
 
   // Initialize operators with actual input table
-  auto input_table = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
+  auto input_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl", 2);
   auto output_table = write_tuples->create_output_table(2);
   read_tuples->before_query(*input_table, context);
   write_tuples->before_query(*output_table, context);

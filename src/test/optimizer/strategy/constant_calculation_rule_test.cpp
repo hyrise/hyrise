@@ -27,7 +27,7 @@ namespace opossum {
 class ConstantCalculationRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_float.tbl"));
     rule = std::make_shared<ConstantCalculationRule>();
 
     stored_table_node = StoredTableNode::make("table_a");

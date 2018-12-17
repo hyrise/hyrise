@@ -33,17 +33,17 @@ namespace opossum {
 class OperatorDeepCopyTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
-    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float3.tbl", 2));
-    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 2));
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
+    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
+    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", 2));
 
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
 
-    _test_table = load_table("src/test/tables/int_float.tbl", 2);
+    _test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("aNiceTestTable", _test_table);
   }
 
@@ -59,7 +59,7 @@ using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, Join
 TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_left_join.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
   // build and execute join
@@ -81,7 +81,7 @@ TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyDifference) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 2);
 
   // build and execute difference
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_c);
@@ -114,7 +114,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyGetTable) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_int3_limit_1.tbl", 1);
 
   // build and execute limit
   auto limit = std::make_shared<Limit>(_table_wrapper_d, to_expression(int64_t{1}));
@@ -132,7 +132,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopySort) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 1);
 
   // build and execute sort
   auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
@@ -150,7 +150,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
   // build and execute table scan
   auto scan = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
@@ -183,7 +183,7 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 TEST_F(OperatorDeepCopyTest, Subselect) {
   // Due to the nested structure of the subselect, it makes sense to keep this more high level than the other tests in
   // this suite. The test is very confusing and error-prone with explicit operators as above.
-  const auto table = load_table("src/test/tables/int_int_int.tbl", 2);
+  const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
   StorageManager::get().add_table("table_3int", table);
 
   const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";

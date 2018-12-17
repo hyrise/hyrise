@@ -21,7 +21,7 @@ namespace opossum {
 class PQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    table_a = load_table("src/test/tables/int_float.tbl");
+    table_a = load_table("resources/test_data/tbl/int_float.tbl");
     StorageManager::get().add_table("int_float", table_a);
     a_a = PQPColumnExpression::from_table(*table_a, "a");
     a_b = PQPColumnExpression::from_table(*table_a, "b");

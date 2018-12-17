@@ -28,7 +28,7 @@ class OperatorsInsertTest : public BaseTest {
 
 TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
-  auto t = load_table("src/test/tables/float_int.tbl");
+  auto t = load_table("resources/test_data/tbl/float_int.tbl");
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   StorageManager::get().add_table(table_name, t);
 
@@ -60,11 +60,11 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto t_name2 = "test2";
 
   // 3 Rows, chunk_size = 4
-  auto t = load_table("src/test/tables/int.tbl", 4u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
   StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl");
+  auto t2 = load_table("resources/test_data/tbl/10_ints.tbl");
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -86,11 +86,11 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   auto t_name2 = "test2";
 
   // 3 Rows
-  auto t = load_table("src/test/tables/int.tbl", 2u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", 2u);
   StorageManager::get().add_table(t_name, t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl", 3u);
+  auto t2 = load_table("resources/test_data/tbl/10_ints.tbl", 3u);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -112,12 +112,12 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   auto t_name2 = "test2";
 
   // 3 Rows
-  auto t = load_table("src/test/tables/int.tbl", 2u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", 2u);
   StorageManager::get().add_table(t_name, t);
   opossum::ChunkEncoder::encode_all_chunks(t);
 
   // 10 Rows
-  auto t2 = load_table("src/test/tables/10_ints.tbl");
+  auto t2 = load_table("resources/test_data/tbl/10_ints.tbl");
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -137,7 +137,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
 TEST_F(OperatorsInsertTest, Rollback) {
   auto t_name = "test3";
 
-  auto t = load_table("src/test/tables/int.tbl", 4u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
   StorageManager::get().add_table(t_name, t);
 
   auto gt1 = std::make_shared<GetTable>(t_name);
@@ -163,10 +163,10 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   auto t_name = "test1";
   auto t_name2 = "test2";
 
-  auto t = load_table("src/test/tables/string_with_null.tbl", 4u);
+  auto t = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
   StorageManager::get().add_table(t_name, t);
 
-  auto t2 = load_table("src/test/tables/string_with_null.tbl", 4u);
+  auto t2 = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -189,10 +189,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   auto t_name = "test1";
   auto t_name2 = "test2";
 
-  auto t = load_table("src/test/tables/int_float_with_null.tbl", 3u);
+  auto t = load_table("resources/test_data/tbl/int_float_with_null.tbl", 3u);
   StorageManager::get().add_table(t_name, t);
 
-  auto t2 = load_table("src/test/tables/int_float_with_null.tbl", 4u);
+  auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -218,10 +218,10 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   auto t_name = "test1";
   auto t_name2 = "test2";
 
-  auto t = load_table("src/test/tables/int_float.tbl", 3u);
+  auto t = load_table("resources/test_data/tbl/int_float.tbl", 3u);
   StorageManager::get().add_table(t_name, t);
 
-  auto t2 = load_table("src/test/tables/int_float_with_null.tbl", 4u);
+  auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
   StorageManager::get().add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
@@ -237,7 +237,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto t_name = "test1";
 
-  auto t = load_table("src/test/tables/float_with_null.tbl", 4u);
+  auto t = load_table("resources/test_data/tbl/float_with_null.tbl", 4u);
   StorageManager::get().add_table(t_name, t);
 
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
@@ -269,7 +269,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
       std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   StorageManager::get().add_table("target_table", target_table);
 
-  const auto table_int_float = load_table("src/test/tables/int_float.tbl");
+  const auto table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table_int_float);
   table_wrapper->execute();
