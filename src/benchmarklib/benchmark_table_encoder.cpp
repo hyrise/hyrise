@@ -29,6 +29,8 @@ SegmentEncodingSpec generate_segment_encoding_spec(const BaseEncodedSegment& bas
       case CompressedVectorType::SimdBp128:
         return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
     }
+
+    Fail("GCC thinks this is reachable");
   } else {
     return {base_encoded_segment.encoding_type()};
   }
