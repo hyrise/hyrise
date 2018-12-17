@@ -17,11 +17,11 @@ class JoinHashMultiplePredicatesTest : public BaseTest {
     _table_1 = std::make_shared<Table>(column_definitions, TableType::Data, _table_1_size);
     _table_2 = std::make_shared<Table>(column_definitions, TableType::Data, _table_2_size);
 
-    for (auto index = size_t{0}; index < _table_1_size; ++index) {
-      _table_1->append({static_cast<int>(index % 2), static_cast<int>(index % 8)});
+    for (auto index = int{0}; index < _table_1_size; ++index) {
+      _table_1->append({index % 2, index % 8});
     }
-    for (auto index = size_t{0}; index < _table_1_size; ++index) {
-      _table_2->append({static_cast<int>(index % 4), static_cast<int>(index % 16)});
+    for (auto index = int{0}; index < _table_2_size; ++index) {
+      _table_2->append({index % 4, index % 16});
     }
 
     _table_1_wrapper = std::make_shared<TableWrapper>(_table_1);
@@ -43,8 +43,8 @@ class JoinHashMultiplePredicatesTest : public BaseTest {
     return row_count;
   }
 
-  inline static size_t _table_1_size = 0;
-  inline static size_t _table_2_size = 0;
+  inline static int _table_1_size = 0;
+  inline static int _table_2_size = 0;
   inline static std::shared_ptr<Table> _table_1;
   inline static std::shared_ptr<Table> _table_2;
   inline static std::shared_ptr<TableWrapper> _table_1_wrapper;
