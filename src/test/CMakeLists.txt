@@ -175,6 +175,7 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
+    tasks/load_server_file_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
@@ -255,7 +256,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/resolve_condition_test.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
-    )
+            tasks/load_server_file_task_test.cpp)
 endif()
 
 set (
