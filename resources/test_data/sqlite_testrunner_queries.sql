@@ -28,6 +28,9 @@ SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
 SELECT * FROM mixed_null WHERE NOT (b = 12);
 SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
+SELECT * FROM mixed_null WHERE EXISTS(SELECT 0) OR b = 42;
+SELECT * FROM mixed_null WHERE EXISTS(SELECT 1);
+SELECT * FROM mixed_null WHERE NOT EXISTS(SELECT * FROM mixed WHERE b > 1000);
 
 -- Scans with predicates that do not reference columns
 SELECT * FROM mixed_null WHERE 4 > 3;
