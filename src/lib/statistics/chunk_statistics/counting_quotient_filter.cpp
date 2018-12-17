@@ -20,7 +20,7 @@ namespace opossum {
 
 template <typename ElementType>
 CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotient_size, const size_t remainder_size)
-    : _hash_bits(quotient_size + remainder_size) {
+    : AbstractStatisticsObject(data_type_from_type<ElementType>()), _hash_bits(quotient_size + remainder_size) {
   Assert(quotient_size > 0, "Quotient size can not be zero.");
   Assert(_hash_bits <= 64u, "Hash length can not exceed 64 bits.");
 

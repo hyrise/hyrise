@@ -14,19 +14,14 @@ using namespace opossum;  // NOLINT
 using namespace opossum::expression_functional;
 
 int main() {
-  const auto histogram = GenericHistogram<int32_t>{
-    {0},
-    {29},
-    {5},
-    {5}
-  };
+  const auto histogram = GenericHistogram<int32_t>{{0}, {29}, {5}, {5}};
 
   std::cout.precision(std::numeric_limits<float>::max_digits10);
 
-////  std::cout << histogram.estimate_cardinality(PredicateCondition::Between, 10, 15).cardinality << std::endl;
-//  std::cout << histogram.estimate_distinct_count(PredicateCondition::Between, 10, 15) << std::endl;
+  ////  std::cout << histogram.estimate_cardinality(PredicateCondition::Between, 10, 15).cardinality << std::endl;
+  //  std::cout << histogram.estimate_distinct_count(PredicateCondition::Between, 10, 15) << std::endl;
   std::cout << histogram.estimate_distinct_count(PredicateCondition::LessThan, 16) << std::endl;
-//  std::cout << histogram.estimate_distinct_count(PredicateCondition::LessThan, 10) << std::endl;
+  //  std::cout << histogram.estimate_distinct_count(PredicateCondition::LessThan, 10) << std::endl;
 
   return 0;
 }

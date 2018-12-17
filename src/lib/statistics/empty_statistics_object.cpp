@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+EmptyStatisticsObject::EmptyStatisticsObject(const DataType data_type) : AbstractStatisticsObject(data_type) {}
+
 CardinalityEstimate EmptyStatisticsObject::estimate_cardinality(
     const PredicateCondition /*predicate_type*/, const AllTypeVariant& /*variant_value*/,
     const std::optional<AllTypeVariant>& /*variant_value2*/) const {
@@ -19,12 +21,12 @@ CardinalityEstimate EmptyStatisticsObject::estimate_cardinality(
 std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::slice_with_predicate(
     const PredicateCondition /*predicate_type*/, const AllTypeVariant& /*variant_value*/,
     const std::optional<AllTypeVariant>& /*variant_value2*/) const {
-  return std::make_shared<EmptyStatisticsObject>();
+  return std::make_shared<EmptyStatisticsObject>(data_type);
 }
 
 std::shared_ptr<AbstractStatisticsObject> EmptyStatisticsObject::scale_with_selectivity(
     const float /*selectivity*/) const {
-  return std::make_shared<EmptyStatisticsObject>();
+  return std::make_shared<EmptyStatisticsObject>(data_type);
 }
 
 }  // namespace opossum

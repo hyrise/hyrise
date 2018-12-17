@@ -14,7 +14,7 @@ namespace opossum {
 
 class EmptyStatisticsObject : public AbstractStatisticsObject {
  public:
-  EmptyStatisticsObject() = default;
+  explicit EmptyStatisticsObject(const DataType data_type);
 
   CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,

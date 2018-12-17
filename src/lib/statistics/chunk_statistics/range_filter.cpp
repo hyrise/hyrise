@@ -16,7 +16,8 @@
 namespace opossum {
 
 template <typename T>
-RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)) {}
+RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
+    : AbstractStatisticsObject(data_type_from_type<T>()), _ranges(std::move(ranges)) {}
 
 template <typename T>
 CardinalityEstimate RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
@@ -34,7 +35,7 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return std::make_shared<EmptyStatisticsObject>();
+    return std::make_shared<EmptyStatisticsObject>(data_type);
   }
 
   std::vector<std::pair<T, T>> ranges;

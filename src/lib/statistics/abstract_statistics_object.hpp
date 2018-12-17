@@ -24,37 +24,47 @@ struct CardinalityEstimate {
 
 class AbstractStatisticsObject {
  public:
+  explicit AbstractStatisticsObject(const DataType data_type);
   virtual ~AbstractStatisticsObject() = default;
 
-  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
-                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
-
   /**
-   * Estimate how many values match the predicate.
-   * Returns the estimated cardinality and a bool indicating whether the statistics object is absolutely certain about
-   * that cardinality or not.
+   * @brief Estimate how many values match the predicate.
+   * @returns the estimated cardinality and a bool indicating whether the statistics object is absolutely certain about
+   *          that cardinality or not.
    */
   virtual CardinalityEstimate estimate_cardinality(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
   /**
-   * Return a statistics object that represents the data after the predicate has been applied.
+   * @return Whether the predicate will return no result, based on the statistics object.
+   */
+  bool does_not_contain(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
+                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  /**
+   * @return a statistics object that represents the data after the predicate has been applied.
    */
   virtual std::shared_ptr<AbstractStatisticsObject> slice_with_predicate(
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
   /**
-   * Return a statistics object that represents the data after a filter with the given selectivity has been applied.
+   * @return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
   virtual std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const = 0;
 
   /**
-   * Return a SingleBinHistogram that represents the minimal statistics.
+   * @return this statistics object aggregated into a SingleBinHistogram (which is the most "minimal" conceivable
+   *         statistics object that is still useful for, e.g. cardinality estimations).
    */
   template <typename T>
   std::shared_ptr<SingleBinHistogram<T>> reduce_to_single_bin_histogram() const;
+
+  /**
+   * DataType of the data that this statistics object represents
+   */
+  const DataType data_type;
 
   /**
    * Flag indicating that this statistics object is derived from an immutable, unsampled chunk.

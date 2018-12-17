@@ -91,8 +91,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
-  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(
-  const Selectivity selectivity) const override;
+  std::shared_ptr<AbstractStatisticsObject> scale_with_selectivity(const Selectivity selectivity) const override;
 
   std::vector<std::pair<T, T>> bin_edges() const;
 

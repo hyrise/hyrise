@@ -29,10 +29,11 @@ namespace opossum {
 using namespace opossum::histogram;  // NOLINT
 
 template <typename T>
-AbstractHistogram<T>::AbstractHistogram() : _supported_characters(""), _string_prefix_length(0ul) {}
+AbstractHistogram<T>::AbstractHistogram()
+    : AbstractStatisticsObject(data_type_from_type<T>()), _supported_characters(""), _string_prefix_length(0ul) {}
 
 template <>
-AbstractHistogram<std::string>::AbstractHistogram() {
+AbstractHistogram<std::string>::AbstractHistogram() : AbstractStatisticsObject(DataType::String) {
   const auto pair = get_default_or_check_string_histogram_prefix_settings();
   _supported_characters = pair.first;
   _string_prefix_length = pair.second;
@@ -41,7 +42,9 @@ AbstractHistogram<std::string>::AbstractHistogram() {
 template <>
 AbstractHistogram<std::string>::AbstractHistogram(const std::string& supported_characters,
                                                   const size_t string_prefix_length)
-    : _supported_characters(supported_characters), _string_prefix_length(string_prefix_length) {
+    : AbstractStatisticsObject(DataType::String),
+      _supported_characters(supported_characters),
+      _string_prefix_length(string_prefix_length) {
   Assert(check_prefix_settings(_supported_characters, _string_prefix_length), "Invalid prefix settings.");
 }
 
@@ -748,7 +751,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return std::make_shared<EmptyStatisticsObject>();
+    return std::make_shared<EmptyStatisticsObject>(data_type);
   }
 
   const auto value = type_cast_variant<T>(variant_value);
@@ -953,7 +956,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::slice_with_predi
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scale_with_selectivity(
-const Selectivity selectivity) const {
+    const Selectivity selectivity) const {
   auto bin_minima = std::vector<T>{};
   auto bin_maxima = std::vector<T>{};
   auto bin_heights = std::vector<HistogramCountType>();
@@ -969,7 +972,8 @@ const Selectivity selectivity) const {
   // Also, we avoid 0 as a height.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
     const auto height = std::ceil(bin_height(bin_id) * selectivity);
-    const auto distinct_count = std::ceil(scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
+    const auto distinct_count =
+        std::ceil(scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
 
     if (height == 0 || distinct_count == 0) continue;
 

@@ -41,18 +41,9 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
       const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
 
-  static std::shared_ptr<ChunkStatistics2> estimate_scan_predicates_on_chunk(
-      const std::shared_ptr<PredicateNode>& predicate_node,
-      const std::shared_ptr<ChunkStatistics2>& input_chunk_statistics,
-      const std::vector<OperatorScanPredicate>& operator_scan_predicates);
-
   static std::shared_ptr<TableStatistics2> estimate_cross_join(
       const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
       const std::shared_ptr<TableStatistics2>& right_input_table_statistics);
-
-  template <typename T>
-  static std::shared_ptr<AbstractHistogram<T>> get_best_available_histogram(
-      const SegmentStatistics2<T>& segment_statistics);
 };
 
 }  // namespace opossum

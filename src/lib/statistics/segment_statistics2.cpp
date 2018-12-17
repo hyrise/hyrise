@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "resolve_type.hpp"
 #include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
@@ -12,6 +13,9 @@
 #include "statistics/empty_statistics_object.hpp"
 
 namespace opossum {
+
+template <typename T>
+SegmentStatistics2<T>::SegmentStatistics2() : BaseSegmentStatistics2(data_type_from_type<T>()) {}
 
 template <typename T>
 void SegmentStatistics2<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
@@ -138,6 +142,21 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predic
   }
 
   return segment_statistics;
+}
+
+template <typename T>
+std::shared_ptr<AbstractHistogram<T>> SegmentStatistics2::get_best_available_histogram() {
+  if (equal_distinct_count_histogram) {
+    return equal_distinct_count_histogram;
+  } else if (equal_width_histogram) {
+    return equal_width_histogram;
+  } else if (generic_histogram) {
+    return generic_histogram;
+  } else if (single_bin_histogram) {
+    return single_bin_histogram;
+  } else {
+    return nullptr;
+  }
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(SegmentStatistics2);

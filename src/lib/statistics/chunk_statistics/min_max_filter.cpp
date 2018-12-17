@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
+#include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "type_cast.hpp"
@@ -13,7 +14,8 @@
 namespace opossum {
 
 template <typename T>
-MinMaxFilter<T>::MinMaxFilter(T min, T max) : _min(min), _max(max) {}
+MinMaxFilter<T>::MinMaxFilter(T min, T max)
+    : AbstractStatisticsObject(data_type_from_type<T>()), _min(min), _max(max) {}
 
 template <typename T>
 CardinalityEstimate MinMaxFilter<T>::estimate_cardinality(const PredicateCondition predicate_type,
@@ -31,7 +33,7 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   if (_does_not_contain(predicate_type, variant_value, variant_value2)) {
-    return std::make_shared<EmptyStatisticsObject>();
+    return std::make_shared<EmptyStatisticsObject>(data_type);
   }
 
   T min, max;

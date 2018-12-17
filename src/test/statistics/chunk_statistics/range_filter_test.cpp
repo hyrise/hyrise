@@ -54,7 +54,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   auto filter = RangeFilter<TypeParam>::build_filter(test_vector, 5);
   // Having only one range means the filter cannot prune 0 right in the largest gap.
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 0));
-  
+
   // Nonetheless, the filter should prune values outside the single range.
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, lowest * 0.95));
 }
@@ -82,7 +82,8 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_min_value}));
 
   // cannot prune values in between, even though non-existent
-  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, TypeParam{this->_value_in_gap}).type, EstimateType::MatchesApproximately);
+  EXPECT_EQ(filter->estimate_cardinality(PredicateCondition::Equals, TypeParam{this->_value_in_gap}).type,
+            EstimateType::MatchesApproximately);
 
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-2000}));
 
@@ -202,8 +203,8 @@ TYPED_TEST(RangeFilterTest, Between) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   // This one has bounds in gaps, but cannot prune.
-  EXPECT_FALSE(
-      filter->does_not_contain(PredicateCondition::Between, {this->_max_value - 1}, {this->_value_larger_than_maximum}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Between, {this->_max_value - 1},
+                                        {this->_value_larger_than_maximum}));
 
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-3000}, TypeParam{-2000}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Between, TypeParam{-999}, TypeParam{1}));
