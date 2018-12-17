@@ -1104,7 +1104,6 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           }
         }
       }
-
     } break;
 
     // Boolean literals
