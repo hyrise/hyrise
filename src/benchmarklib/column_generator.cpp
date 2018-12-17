@@ -17,7 +17,6 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 
-
 namespace opossum {
 
 ColumnGenerator::ColumnGenerator() : _probability_dist(0.0, 1.0) {
@@ -35,10 +34,9 @@ ColumnGenerator::ColumnGenerator() : _probability_dist(0.0, 1.0) {
  * @return A vector with row_count randomly selected integers for which allow_value returned true.
  */
 // Todo: Refactor TableGenerator::generate_table to uses this function
-template<typename VectorType>
+template <typename VectorType>
 VectorType ColumnGenerator::generate_value_vector(const ColumnDataDistribution& column_data_distribution,
-    size_t row_count, const std::function<bool(int)>& allow_value) {
-
+                                                  size_t row_count, const std::function<bool(int)>& allow_value) {
   VectorType result(row_count);
 
   auto generate_value_by_distribution_type = std::function<int(void)>{};
@@ -97,9 +95,9 @@ VectorType ColumnGenerator::generate_value_vector(const ColumnDataDistribution& 
  * @param get_value_with_no_join_partner Function to compute a value which is not found in join_partner
  * @return Vector with selectivit * row_count many join partners to join_partner
  */
-std::vector<int> ColumnGenerator::generate_join_partner(const std::vector<int>& join_partner, size_t row_count,
-    double selectivity, const std::function<int(double)>& get_value_with_no_join_partner) {
-
+std::vector<int> ColumnGenerator::generate_join_partner(
+    const std::vector<int>& join_partner, size_t row_count, double selectivity,
+    const std::function<int(double)>& get_value_with_no_join_partner) {
   std::vector<int> result(row_count);
   auto required_join_partners = static_cast<size_t>(selectivity * row_count);
   auto required_no_join_partners = row_count - required_join_partners;
@@ -109,11 +107,10 @@ std::vector<int> ColumnGenerator::generate_join_partner(const std::vector<int>& 
   while (selected_rows < row_count) {
     auto rnd = _probability_dist(_pseudorandom_engine);
     if ((required_join_partners > 0 && rnd < select_join_partner_threshold) || required_no_join_partners == 0) {
-      const auto rnd_join_index = static_cast<size_t >(_probability_dist(_pseudorandom_engine) * join_partner.size());
+      const auto rnd_join_index = static_cast<size_t>(_probability_dist(_pseudorandom_engine) * join_partner.size());
       result[selected_rows] = join_partner[rnd_join_index];
       --required_join_partners;
-    }
-    else {
+    } else {
       result[selected_rows] = get_value_with_no_join_partner(_probability_dist(_pseudorandom_engine));
       --required_no_join_partners;
     }
@@ -139,10 +136,10 @@ std::vector<int> ColumnGenerator::generate_join_partner(const std::vector<int>& 
  * @return
  */
 std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
-    ColumnGenerator::generate_joinable_table_pair(std::vector<double>& selectivities, size_t chunk_size,
-        size_t row_count_table1, size_t row_count_table2, uint32_t min_value, uint32_t max_value,
-        const std::function<bool(int)>& allow_value, const std::function<int(double)>& get_value_without_join_partner) {
-
+ColumnGenerator::generate_joinable_table_pair(std::vector<double>& selectivities, size_t chunk_size,
+                                              size_t row_count_table1, size_t row_count_table2, uint32_t min_value,
+                                              uint32_t max_value, const std::function<bool(int)>& allow_value,
+                                              const std::function<int(double)>& get_value_without_join_partner) {
   const auto column_count = selectivities.size();
 
   TableColumnDefinitions column_definitions;
@@ -158,19 +155,20 @@ std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
   cols_table1.resize(column_count);
   cols_table2.resize(column_count);
 
-  //const auto allow_value = [](size_t value) { return value % 10 != 0; };
-  //const auto get_value_without_join_partner = [&max_value](double value) { return static_cast<int>(value * max_value / 10) * 10; };
+  // TODO(anyone)
+  // const auto allow_value = [](size_t value) { return value % 10 != 0; };
+  // const auto get_value_without_join_partner = [&max_value](double value)
+  // { return static_cast<int>(value * max_value / 10) * 10; };
 
   for (size_t col_idx = 0; col_idx < column_count; ++col_idx) {
-    const auto values_table1 = generate_value_vector<std::vector<int>>(value_distribution, row_count_table1,
-        allow_value);
+    const auto values_table1 =
+        generate_value_vector<std::vector<int>>(value_distribution, row_count_table1, allow_value);
     cols_table1[col_idx] = std::move(values_table1);
 
     const auto values_table2 = generate_join_partner(cols_table1[col_idx], row_count_table2, selectivities[col_idx],
-        get_value_without_join_partner);
+                                                     get_value_without_join_partner);
     cols_table2[col_idx] = std::move(values_table2);
   }
-
 
   const auto table1 = create_table(column_definitions, chunk_size, cols_table1);
   const auto table2 = create_table(column_definitions, chunk_size, cols_table2);
@@ -187,7 +185,8 @@ std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
  * @return
  */
 std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinitions& column_definitions,
-    size_t chunk_size, const std::vector<std::vector<int>>& table_data) {
+                                                     size_t chunk_size,
+                                                     const std::vector<std::vector<int>>& table_data) {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
   const auto row_count = table_data.front().size();
   const auto col_count = table_data.size();
@@ -201,4 +200,4 @@ std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinition
   return table;
 }
 
-} // namespace opossum
+}  // namespace opossum

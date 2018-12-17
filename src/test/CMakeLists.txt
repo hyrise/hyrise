@@ -272,7 +272,8 @@ if (${ENABLE_JIT_SUPPORT})
 
     set(SYSTEM_TEST_SOURCES
         ${SYSTEM_TEST_SOURCES}
-        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp)
+        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp
+    )
 endif()
 
 # Both hyriseTest and hyriseSystemTest link against these

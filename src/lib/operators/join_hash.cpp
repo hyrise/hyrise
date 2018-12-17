@@ -29,7 +29,8 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::optional<size_t>& radix_bits,
                    const std::optional<std::vector<JoinPredicate>>& additional_join_predicates)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
-      _radix_bits(radix_bits), _additional_join_predicates(additional_join_predicates) {
+      _radix_bits(radix_bits),
+      _additional_join_predicates(additional_join_predicates) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
