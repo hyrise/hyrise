@@ -20,8 +20,8 @@ SegmentEncodingSpec generate_segment_encoding_spec(const ReferenceSegment&) {
 }
 
 SegmentEncodingSpec generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
-  if (*base_encoded_segment.compressed_vector_type()) {
-    switch (base_encoded_segment.compressed_vector_type()) {
+  if (base_encoded_segment.compressed_vector_type()) {
+    switch (*base_encoded_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize1ByteAligned:
       case CompressedVectorType::FixedSize2ByteAligned:
       case CompressedVectorType::FixedSize4ByteAligned:

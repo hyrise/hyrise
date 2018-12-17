@@ -43,9 +43,9 @@ TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
@@ -54,21 +54,21 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
   }
 
   // int with float
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_o,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_float_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_o, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_float_inner.tbl", 1);
 
   // float with int
-  this->template test_join_output<TypeParam>(this->_table_wrapper_o, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/float_int_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_o, this->_table_wrapper_a, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_int_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
   if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     // float with int
     // radix bits = 0
-    std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/float_int_inner.tbl", 1);
+    std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/joinoperators/float_int_inner.tbl", 1);
     auto join = std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
                                            ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 0);
     join->execute();
@@ -90,14 +90,14 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
   }
 
   // int with double
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_p,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_double_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_p, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_double_inner.tbl", 1);
 
   // double with int
-  this->template test_join_output<TypeParam>(this->_table_wrapper_p, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/double_int_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_p, this->_table_wrapper_a, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/double_int_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
@@ -105,42 +105,42 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
     return;
   }
 
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_q,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_q, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_string_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinOnString) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
-                                             ColumnIDPair(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Left, "src/test/tables/joinoperators/string_left_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{1}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/string_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, OuterJoin) {
   if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     return;
   }
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinOnString) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
-                                             ColumnIDPair(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/string_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{1}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefJoin) {
@@ -152,19 +152,19 @@ TYPED_TEST(JoinEquiTest, InnerRefJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerValueDictJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b_dict,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictValueJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_dict, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerValueDictRefJoin) {
@@ -177,7 +177,7 @@ TYPED_TEST(JoinEquiTest, InnerValueDictRefJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictValueRefJoin) {
@@ -190,7 +190,7 @@ TYPED_TEST(JoinEquiTest, InnerDictValueRefJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefJoinFiltered) {
@@ -201,13 +201,13 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFiltered) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefDictJoin) {
@@ -221,7 +221,7 @@ TYPED_TEST(JoinEquiTest, InnerRefDictJoin) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefDictJoinFiltered) {
@@ -234,13 +234,14 @@ TYPED_TEST(JoinEquiTest, InnerRefDictJoinFiltered) {
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinBig) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{0}, ColumnID{1}),
-      PredicateCondition::Equals, JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals,
+                                             JoinMode::Inner,
+                                             "resources/test_data/tbl/joinoperators/int_string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
@@ -249,15 +250,15 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
   auto scan_d = this->create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
   scan_d->execute();
 
-  this->template test_join_output<TypeParam>(scan_c, scan_d, ColumnIDPair(ColumnID{0}, ColumnID{1}),
-                                             PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      scan_c, scan_d, ColumnIDPair(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals, JoinMode::Inner,
+      "resources/test_data/tbl/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionarySegments) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_c_dict, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceSegments) {
@@ -267,7 +268,7 @@ TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceSegments) {
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeft) {
@@ -285,7 +286,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeft) {
 
   this->template test_join_output<TypeParam>(
       join, scan_c, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
@@ -303,7 +304,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
 
   this->template test_join_output<TypeParam>(
       scan_c, join, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
@@ -321,7 +322,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
 
   this->template test_join_output<TypeParam>(
       join, scan_c, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
@@ -331,7 +332,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
 
   this->template test_join_output<TypeParam>(
       join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_left.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_val_val_val_left.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
@@ -341,7 +342,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
 
   this->template test_join_output<TypeParam>(
       join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
@@ -349,9 +350,9 @@ TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
 
-  this->template test_join_output<TypeParam>(join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                             PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
@@ -359,9 +360,9 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
 
-  this->template test_join_output<TypeParam>(join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                             PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoinRefSegment) {
@@ -371,7 +372,7 @@ TYPED_TEST(JoinEquiTest, RightJoinRefSegment) {
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Right,
-                                             "src/test/tables/joinoperators/int_right_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinRefSegment) {
@@ -381,7 +382,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinRefSegment) {
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Left,
-                                             "src/test/tables/joinoperators/int_left_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoinEmptyRefSegment) {
@@ -391,7 +392,7 @@ TYPED_TEST(JoinEquiTest, RightJoinEmptyRefSegment) {
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Right,
-                                             "src/test/tables/joinoperators/int_join_empty.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_join_empty.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefSegment) {
@@ -401,7 +402,7 @@ TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefSegment) {
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_b, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Left,
-                                             "src/test/tables/joinoperators/int_join_empty_left.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_join_empty_left.tbl", 1);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
@@ -428,7 +429,7 @@ TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
 
   this->template test_join_output<TypeParam>(union_left, union_right, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/expected_join_result_1.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/expected_join_result_1.tbl", 1);
 }
 
 }  // namespace opossum

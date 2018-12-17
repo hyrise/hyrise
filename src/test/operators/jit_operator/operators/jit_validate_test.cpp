@@ -41,7 +41,7 @@ class MockSource : public AbstractJittable {
 class JitValidateTest : public BaseTest {
  public:
   JitValidateTest() {
-    _test_table = load_table("src/test/tables/10_ints.tbl", 3u);
+    _test_table = load_table("resources/test_data/tbl/10_ints.tbl", 3u);
 
     _transaction_context = std::make_shared<TransactionContext>(5u, 3u);
 

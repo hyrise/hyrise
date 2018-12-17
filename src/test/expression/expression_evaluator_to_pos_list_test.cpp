@@ -30,8 +30,8 @@ namespace opossum {
 class ExpressionEvaluatorToPosListTest : public ::testing::Test {
  public:
   void SetUp() override {
-    table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl", 4);
-    table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl", 4);
+    table_a = load_table("resources/test_data/tbl/expression_evaluator/input_a.tbl", 4);
+    table_b = load_table("resources/test_data/tbl/expression_evaluator/input_b.tbl", 4);
     c = PQPColumnExpression::from_table(*table_a, "c");
     d = PQPColumnExpression::from_table(*table_a, "d");
     s1 = PQPColumnExpression::from_table(*table_a, "s1");
@@ -138,7 +138,7 @@ TEST_F(ExpressionEvaluatorToPosListTest, LogicalWithNulls) {
 TEST_F(ExpressionEvaluatorToPosListTest, Exists) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
   const auto table_scan =
-      std::make_shared<TableScan>(table_wrapper, equals_(d, uncorrelated_parameter_(ParameterID{0})));
+      std::make_shared<TableScan>(table_wrapper, equals_(d, correlated_parameter_(ParameterID{0}, x)));
   const auto select = pqp_select_(table_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(select), {}));

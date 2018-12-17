@@ -17,7 +17,7 @@ class JitOperatorWrapperTest : public BaseTest {
     _empty_table = Table::create_dummy_table({{"a", DataType::Int}});
     _empty_table_wrapper = std::make_shared<TableWrapper>(_empty_table);
     _empty_table_wrapper->execute();
-    _int_table = load_table("src/test/tables/10_ints.tbl", 5);
+    _int_table = load_table("resources/test_data/tbl/10_ints.tbl", 5);
     _int_table_wrapper = std::make_shared<TableWrapper>(_int_table);
     _int_table_wrapper->execute();
   }
@@ -127,7 +127,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
   // First the compute function call with the object "expression" is inlined,
   // then the two function calls with the two time referenced object "column_expression" are inlined.
 
-  // Specialize SQL query: SELECT a+a FROM src/test/tables/10_ints.tbl;
+  // Specialize SQL query: SELECT a+a FROM resources/test_data/tbl/10_ints.tbl;
 
   // read column a into jit tuple at index 0
   auto read_operator = std::make_shared<JitReadTuples>();

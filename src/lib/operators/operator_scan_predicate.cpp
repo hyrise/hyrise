@@ -3,7 +3,6 @@
 #include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
@@ -22,7 +21,7 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
     value = value_expression->value;
   } else if (const auto column_id = node.find_column_id(expression)) {
     value = *column_id;
-  } else if (const auto parameter_expression = dynamic_cast<const ParameterExpression*>(&expression)) {
+  } else if (const auto parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
   } else {
     return std::nullopt;

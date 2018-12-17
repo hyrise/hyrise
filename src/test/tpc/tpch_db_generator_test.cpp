@@ -33,19 +33,19 @@ TEST(TpchDbGeneratorTest, TableContents) {
   const auto table_info_by_name = TpchTableGenerator(scale_factor, chunk_size).generate();
 
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table,
-                          load_table("src/test/tables/tpch/sf-0.001/part.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("supplier").table,
-                          load_table("src/test/tables/tpch/sf-0.001/supplier.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/supplier.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("partsupp").table,
-                          load_table("src/test/tables/tpch/sf-0.001/partsupp.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/partsupp.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("customer").table,
-                          load_table("src/test/tables/tpch/sf-0.001/customer.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/customer.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("orders").table,
-                          load_table("src/test/tables/tpch/sf-0.001/orders.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("nation").table,
-                          load_table("src/test/tables/tpch/sf-0.001/nation.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/nation.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table,
-                          load_table("src/test/tables/tpch/sf-0.001/region.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/region.tbl", chunk_size));
 }
 
 TEST(TpchDbGeneratorTest, GenerateAndStore) {
