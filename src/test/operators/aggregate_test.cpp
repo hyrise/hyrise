@@ -12,6 +12,7 @@
 
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate.hpp"
+#include "operators/aggregate_sort.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"
@@ -134,7 +135,7 @@ public:
       _table_wrapper_2_o_b, _table_wrapper_int_int;
 };
 
-using AggregateTypes = ::testing::Types<Aggregate>;
+using AggregateTypes = ::testing::Types<Aggregate, AggregateSort>;
 TYPED_TEST_CASE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
