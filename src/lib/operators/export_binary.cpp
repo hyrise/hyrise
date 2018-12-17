@@ -10,6 +10,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
@@ -241,25 +242,17 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
                                                           std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
-  const auto is_fixed_size_byte_aligned = [&]() {
-    switch (base_segment.compressed_vector_type()) {
-      case CompressedVectorType::FixedSize4ByteAligned:
-      case CompressedVectorType::FixedSize2ByteAligned:
-      case CompressedVectorType::FixedSize1ByteAligned:
-        return true;
-      default:
-        return false;
-    }
-  }();
-
-  if (!is_fixed_size_byte_aligned) {
-    Fail("Does only support fixed-size byte-aligned compressed attribute vectors.");
-  }
+  Assert(base_segment.compressed_vector_type(),
+         "Expected DictionarySegment to use vector compression for attribute vector");
+  Assert(is_fixed_size_byte_aligned(*base_segment.compressed_vector_type()),
+         "Does only support fixed-size byte-aligned compressed attribute vectors.");
 
   export_value(context->ofstream, BinarySegmentType::dictionary_segment);
 
   const auto attribute_vector_width = [&]() {
-    switch (base_segment.compressed_vector_type()) {
+    Assert(base_segment.compressed_vector_type(),
+           "Expected DictionarySegment to use vector compression for attribute vector");
+    switch (*base_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
         return 4u;
       case CompressedVectorType::FixedSize2ByteAligned:
@@ -289,7 +282,9 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
   }
 
   // Write attribute vector
-  _export_attribute_vector(context->ofstream, base_segment.compressed_vector_type(), *base_segment.attribute_vector());
+  Assert(base_segment.compressed_vector_type(),
+         "Expected DictionarySegment to use vector compression for attribute vector");
+  _export_attribute_vector(context->ofstream, *base_segment.compressed_vector_type(), *base_segment.attribute_vector());
 }
 
 template <typename T>

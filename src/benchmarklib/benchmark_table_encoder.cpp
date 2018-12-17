@@ -20,24 +20,15 @@ SegmentEncodingSpec generate_segment_encoding_spec(const ReferenceSegment&) {
 }
 
 SegmentEncodingSpec generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
-  auto vector_compression_type = std::optional<VectorCompressionType>{};
-
-  switch (base_encoded_segment.compressed_vector_type()) {
-    case CompressedVectorType::Invalid:
-      vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
-      break;
-    case CompressedVectorType::FixedSize1ByteAligned:
-    case CompressedVectorType::FixedSize2ByteAligned:
-    case CompressedVectorType::FixedSize4ByteAligned:
-      vector_compression_type = VectorCompressionType::FixedSizeByteAligned;
-      break;
-    case CompressedVectorType::SimdBp128:
-      vector_compression_type = VectorCompressionType::SimdBp128;
-      break;
-  }
-
-  if (vector_compression_type) {
-    return {base_encoded_segment.encoding_type(), *vector_compression_type};
+  if (*base_encoded_segment.compressed_vector_type()) {
+    switch (base_encoded_segment.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize1ByteAligned:
+      case CompressedVectorType::FixedSize2ByteAligned:
+      case CompressedVectorType::FixedSize4ByteAligned:
+        return {base_encoded_segment.encoding_type(), VectorCompressionType::FixedSizeByteAligned};
+      case CompressedVectorType::SimdBp128:
+        return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
+    }
   } else {
     return {base_encoded_segment.encoding_type()};
   }
@@ -58,7 +49,7 @@ ChunkEncodingSpec generate_chunk_encoding_spec(const Chunk& chunk) {
 }
 
 bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec,
-                                       const ChunkEncodingSpec& actual_chunk_encoding_spec) {
+                                      const ChunkEncodingSpec& actual_chunk_encoding_spec) {
   if (expected_chunk_encoding_spec.size() != actual_chunk_encoding_spec.size()) return false;
 
   for (auto column_id = ColumnID{0}; column_id < actual_chunk_encoding_spec.size(); ++column_id) {

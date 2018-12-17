@@ -11,11 +11,20 @@ namespace opossum {
 class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
+  std::shared_ptr<Table> table;
+
+  // Set if the table has a binary/textual file path associated with it. E.g., if the table was loaded from such a file
+  // or if it should be exported to it as part of binary caching.
   std::optional<std::filesystem::path> binary_file_path;
   std::optional<std::filesystem::path> text_file_path;
+
   bool loaded_from_binary{false};
+
+  // True, if the encoding of the table needed to be changed after loading it in order to satisfy the benchmark's
+  // encoding configuration. False, if the benchmark was loaded in the requested encoding. Note that binary table files
+  // support encodings, so it is possible that the benchmark is run with, e.g. Dictionary encoding, and the tables are
+  // available as binary files with that encoding.
   bool re_encoded{false};
-  std::shared_ptr<Table> table;
 };
 
 class AbstractTableGenerator {

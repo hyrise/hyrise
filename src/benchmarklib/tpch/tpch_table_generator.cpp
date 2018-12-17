@@ -24,6 +24,8 @@ extern seed_t seed[];
 
 namespace {
 
+using namespace opossum;  // NOLINT
+
 // clang-format off
 const auto customer_column_types = boost::hana::tuple      <int32_t,    std::string, std::string, int32_t,       std::string, float,       std::string,    std::string>();  // NOLINT
 const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
@@ -191,6 +193,12 @@ void dbgen_cleanup() {
   asc_date = nullptr;
 }
 
+std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size) {
+  auto config = BenchmarkConfig::get_default_config();
+  config.chunk_size = chunk_size;
+  return std::make_shared<BenchmarkConfig>(config);
+}
+
 }  // namespace
 
 namespace opossum {
@@ -201,7 +209,7 @@ std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
 TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
-    : AbstractTableGenerator(_create_minimal_benchmark_config(chunk_size)), _scale_factor(scale_factor) {}
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
 
 TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}

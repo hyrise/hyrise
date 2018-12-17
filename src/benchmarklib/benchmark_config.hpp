@@ -27,20 +27,20 @@ class BenchmarkConfig {
 
   static BenchmarkConfig get_default_config();
 
-  const BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
-  const bool verbose = false;
-  const ChunkOffset chunk_size = 100'000;
-  const EncodingConfig encoding_config = EncodingConfig{};
-  const size_t max_num_query_runs = 1000;
-  const Duration max_duration = std::chrono::seconds(60);
-  const Duration warmup_duration = std::chrono::seconds(0);
-  const UseMvcc use_mvcc = UseMvcc::No;
-  const std::optional<std::string> output_file_path = std::nullopt;
-  const bool enable_scheduler = false;
-  const uint32_t cores = 0;
-  const uint32_t clients = 1;
-  const bool enable_visualization = false;
-  const bool cache_binary_tables = true;
+  BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
+  bool verbose = false;
+  ChunkOffset chunk_size = 100'000;
+  EncodingConfig encoding_config = EncodingConfig{};
+  size_t max_num_query_runs = 1000;
+  Duration max_duration = std::chrono::seconds(60);
+  Duration warmup_duration = std::chrono::seconds(0);
+  UseMvcc use_mvcc = UseMvcc::No;
+  std::optional<std::string> output_file_path = std::nullopt;
+  bool enable_scheduler = false;
+  uint32_t cores = 0;
+  uint32_t clients = 1;
+  bool enable_visualization = false;
+  bool cache_binary_tables = true;
   std::ostream& out;
 
   static const char* description;
