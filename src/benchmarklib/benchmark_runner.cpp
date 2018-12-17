@@ -52,8 +52,9 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   // Run the preparation queries
   {
-    const auto& sql = _query_generator->get_preparation_queries();
+    auto sql = _query_generator->get_preparation_queries();
 
+    // Some benchmarks might not need preparation
     if (!sql.empty()) {
       _config.out << "- Preparing queries..." << std::endl;
       auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
@@ -294,7 +295,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
@@ -317,7 +318,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
 }
 
 void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();

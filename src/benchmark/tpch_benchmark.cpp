@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("no_prepared_statements", "Do not use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("use_prepared_statements", "Do not use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("true")); // NOLINT
   // clang-format on
 
   std::unique_ptr<opossum::BenchmarkConfig> config;
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     config = std::make_unique<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
-    use_prepared_statements = !json_config.value("no_prepared_statements", false);
+    use_prepared_statements = json_config.value("use_prepared_statements", false);
   } else {
     // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
     config =
         std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
 
-    use_prepared_statements = !cli_parse_result["no_prepared_statements"].as<bool>();
+    use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   }
 
   std::vector<opossum::QueryID> query_ids;

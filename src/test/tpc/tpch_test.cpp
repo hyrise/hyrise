@@ -65,11 +65,11 @@ TEST_P(TPCHTest, Test) {
     // Run the preparation queries
     const auto& sql = query_generator.get_preparation_queries();
 
-    if (!sql.empty()) {
-      auto pipeline = SQLPipelineBuilder{sql}.disable_mvcc().create_pipeline();
-      // Execute the query, we don't care about the results
-      pipeline.get_result_table();
-    }
+    Assert(!sql.empty(), "If using prepared statements, the preparation queries should not be empty");
+
+    auto pipeline = SQLPipelineBuilder{sql}.disable_mvcc().create_pipeline();
+    // Execute the query, we don't care about the results
+    pipeline.get_result_table();
   }
 
   const auto query = query_generator.build_query(query_idx);
@@ -105,7 +105,8 @@ TEST_P(TPCHTest, Test) {
   }
 
   /**
-   * Test the results
+   * Test the results. These files are previous results of a known-to-be-good (i.e., validated with SQLite) execution
+   * of the tests.
    */
 
   auto expected_table =

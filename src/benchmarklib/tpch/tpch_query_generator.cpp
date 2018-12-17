@@ -54,16 +54,20 @@ std::string TPCHQueryGenerator::get_preparation_queries() const {
 std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
 
-  if (query_id == 14) {
+  if (query_id + 1 == 15) {
     // Generating TPC-H Query 15 by hand
     auto query_15 = std::string{tpch_queries.find(15)->second};
 
+    // TPC-H query 15 uses "stream ids" to name the views. While not supported right now, we might want to execute
+    // multiple instances of Q15 simultaneously and will need unique view names for that.
     static auto view_id = 0;
     boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(view_id++));
     return query_15;
   }
 
-  // Stores how the parameters (the ? in the query) should be replaced
+  // Stores how the parameters (the ? in the query) should be replaced. These values are examples for the queries. Most
+  // of them use the validation parameters given in the TPC-H specification for the respective query. A few are
+  // modified so that we get results even for a small scale factor.
   static std::vector<std::vector<std::string>> parameter_values = {
       {"'1998-09-02'"},
       {"15", "'%BRASS'", "'EUROPE'", "'EUROPE'"},
