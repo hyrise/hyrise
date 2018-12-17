@@ -114,6 +114,7 @@ set(
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/exists_reformulation_rule_test.cpp
+    optimizer/strategy/in_reformulation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/join_detection_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
