@@ -118,7 +118,7 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_cast_expression(const CastExpression& cast_expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_value_or_parameter_expression(
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_value_or_correlated_parameter_expression(
       const AbstractExpression& expression);
 
   template <typename Result>

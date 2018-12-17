@@ -29,8 +29,8 @@ class LQPSelectExpressionTest : public BaseTest {
 
     // clang-format off
     lqp_a =
-    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, uncorrelated_parameter_(ParameterID{0})))),
-      ProjectionNode::make(expression_vector(add_(a, uncorrelated_parameter_(ParameterID{0}))),
+    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, placeholder_(ParameterID{0})))),
+      ProjectionNode::make(expression_vector(add_(a, placeholder_(ParameterID{0}))),
         int_float_node_a));
 
     parameter_c = correlated_parameter_(ParameterID{0}, a);
@@ -46,7 +46,7 @@ class LQPSelectExpressionTest : public BaseTest {
 
   std::shared_ptr<StoredTableNode> int_float_node_a;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
-  std::shared_ptr<ParameterExpression> parameter_c;
+  std::shared_ptr<CorrelatedParameterExpression> parameter_c;
   std::shared_ptr<LQPSelectExpression> select_a, select_c;
   LQPColumnReference a, b;
 };
@@ -58,8 +58,8 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
 
   // clang-format off
   const auto lqp_b =
-  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, uncorrelated_parameter_(ParameterID{0})))),
-    ProjectionNode::make(expression_vector(add_(a, uncorrelated_parameter_(ParameterID{0}))),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, placeholder_(ParameterID{0})))),
+    ProjectionNode::make(expression_vector(add_(a, placeholder_(ParameterID{0}))),
       int_float_node_a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");

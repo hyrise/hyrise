@@ -45,6 +45,8 @@ set(
     expression/case_expression.hpp
     expression/cast_expression.cpp
     expression/cast_expression.hpp
+    expression/correlated_parameter_expression.cpp
+    expression/correlated_parameter_expression.hpp
     expression/evaluation/expression_evaluator.cpp
     expression/evaluation/expression_evaluator.hpp
     expression/evaluation/expression_functors.hpp
@@ -75,8 +77,8 @@ set(
     expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
-    expression/parameter_expression.cpp
-    expression/parameter_expression.hpp
+    expression/placeholder_expression.cpp
+    expression/placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
     expression/pqp_select_expression.cpp
