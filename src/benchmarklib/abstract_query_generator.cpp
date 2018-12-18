@@ -12,4 +12,6 @@ size_t AbstractQueryGenerator::selected_query_count() const { return _selected_q
 
 const std::vector<QueryID>& AbstractQueryGenerator::selected_queries() const { return _selected_queries; }
 
+std::string AbstractQueryGenerator::build_deterministic_query(const QueryID query_id) { return build_query(query_id); }
+
 }  // namespace opossum

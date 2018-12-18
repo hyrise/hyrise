@@ -72,7 +72,7 @@ TEST_P(TPCHTest, Test) {
     pipeline.get_result_table();
   }
 
-  const auto query = query_generator.build_query(query_idx);
+  const auto query = query_generator.build_deterministic_query(query_idx);
 
   /**
    * Pick a LQPTranslator, depending on whether we use JIT or not

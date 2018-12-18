@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/date_time/gregorian/gregorian.hpp>
+
 #include "abstract_query_generator.hpp"
 
 namespace opossum {
@@ -9,11 +11,12 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
   // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
   // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
   // with their random values before returning the SQL query.
-  explicit TPCHQueryGenerator(bool use_prepared_statements);
-  explicit TPCHQueryGenerator(bool use_prepared_statements, const std::vector<QueryID>& selected_queries);
+  TPCHQueryGenerator(bool use_prepared_statements, float scale_factor);
+  TPCHQueryGenerator(bool use_prepared_statements, float scale_factor, const std::vector<QueryID>& selected_queries);
 
   std::string get_preparation_queries() const override;
   std::string build_query(const QueryID query_id) override;
+  std::string build_deterministic_query(const QueryID query_id) override;
 
  protected:
   // Generates the names of the queries (e.g., TPCH1)
@@ -27,6 +30,8 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
 
   // Should we use prepared statements or generate "regular" SQL queries?
   const bool _use_prepared_statements;
+
+  float _scale_factor;
 };
 
 }  // namespace opossum
