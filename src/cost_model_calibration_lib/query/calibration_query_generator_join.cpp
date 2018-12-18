@@ -31,7 +31,7 @@ namespace opossum {
         }
       }
 
-      std::cout << "Generated " << output.size() << " Permutations for Predicates" << std::endl;
+      std::cout << "Generated " << output.size() << " Permutations for Joins" << std::endl;
       return output;
     }
 
@@ -46,8 +46,13 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 
   const auto join_predicate = join_predicate_generator(configuration, left_table, right_table, column_definitions);
 
+  if (!join_predicate) {
+    std::cout << "Could not generate join predicate for configuration" << std::endl;
+  }
+
   for (const auto& join_type : join_types) {
-    const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, join_type);
+    const auto join_predicate_copy = join_predicate;
+    const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate_copy, join_type);
     permutated_join_nodes.push_back(join_node);
   }
 
