@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "encoding_config.hpp"
+#include "utils/null_streambuf.hpp"
 
 namespace opossum {
 
@@ -46,7 +47,7 @@ class BenchmarkConfig {
   static const char* description;
 
  private:
-  BenchmarkConfig() : out(std::cout) {}
+  BenchmarkConfig() : out(get_null_streambuf()) {}
 };
 
 }  // namespace opossum
