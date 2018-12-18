@@ -4,6 +4,8 @@
 #include <set>
 #include <utility>
 #include <vector>
+#include <stdexcept>
+
 
 #include "boost/math/distributions/pareto.hpp"
 #include "boost/math/distributions/skew_normal.hpp"
@@ -193,11 +195,55 @@ std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinition
   for (size_t row_index = 0; row_index < row_count; ++row_index) {
     auto row = std::vector<AllTypeVariant>(col_count);
     for (size_t col_index = 0; col_index < col_count; ++col_index) {
-      row[col_index] = table_data[row_index][col_index];
+      row[col_index] = table_data[col_index][row_index];
     }
     table->append(row);
   }
   return table;
 }
+
+
+std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
+    ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fact_table_size, size_t fact_factor,
+      double probing_factor) {
+  DebugAssert(fact_table_size % fact_factor == 0, "fact factor must be a factor of fact_table_size.")
+
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("t1_a", DataType::Int);
+  column_definitions.emplace_back("t1_b", DataType::Int);
+  auto fact_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+
+  column_definitions.clear();
+  column_definitions.emplace_back("t2_a", DataType::Int);
+  column_definitions.emplace_back("t2_b", DataType::Int);
+  auto probe_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+
+  const int fact_value_upper_bound = (fact_table_size - 1)  / fact_factor;
+
+  int col_b_value_tbl1 = 0;
+  int col_b_value_tbl2 = 0;
+  const size_t idk = static_cast<size_t>(fact_factor * probing_factor);
+
+  for (int fact_value = 0; fact_value <= fact_value_upper_bound; ++fact_value) {
+
+    for (size_t row_cnt = 0; row_cnt < fact_factor; ++row_cnt) {
+      col_b_value_tbl1 %= (fact_factor);
+      fact_table->append({fact_value, col_b_value_tbl1});
+      ++col_b_value_tbl1;
+    }
+
+    for (size_t row_cnt = 0; row_cnt < idk; ++row_cnt) {
+      col_b_value_tbl2 %= (fact_factor);
+      probe_table->append({fact_value, col_b_value_tbl2});
+      ++col_b_value_tbl2;
+    }
+  }
+
+  return std::make_unique<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>(
+      std::make_pair(std::move(fact_table), std::move(probe_table)));
+
+}
+
+
 
 }  // namespace opossum

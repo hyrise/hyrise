@@ -18,6 +18,7 @@ class ColumnGenerator {
  public:
   ColumnGenerator();
 
+
   template <typename VectorType>
   VectorType generate_value_vector(const ColumnDataDistribution& column_data_distribution, size_t row_count,
                                    const std::function<bool(int)>& allow_value);
@@ -32,6 +33,10 @@ class ColumnGenerator {
 
   static std::shared_ptr<Table> create_table(const TableColumnDefinitions& column_definitions, size_t chunk_size,
                                              const std::vector<std::vector<int>>& table_data);
+
+  std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
+    generate_two_predicate_join_tables(size_t chunk_size, size_t fact_table_size, size_t fact_factor,
+      double probing_factor);
 
  protected:
   // using mt19937 because std::default_random engine is not guaranteed to be a sensible default

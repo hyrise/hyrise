@@ -8,6 +8,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
@@ -32,21 +33,32 @@ namespace opossum {
 void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>& left,
                                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                   const std::vector<JoinPredicate>& join_predicates) {
+
+  //Print::print(left);
+  //Print::print(right);
+
   // execute join for the first join predicate
   std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
       left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition);
   latest_operator->execute();
+  //Print::print(latest_operator);
+
+
+
+
+  std::cout << "Row count after first join: " << latest_operator->get_output()->row_count() << std::endl;
 
   // execute table scans for the following predicates (ColumnVsColumnTableScan)
   for (size_t index = 1; index < join_predicates.size(); ++index) {
     const auto left_column_expr =
-        PQPColumnExpression::from_table(*left->get_output(), join_predicates[index].column_id_pair.first);
+        PQPColumnExpression::from_table(*latest_operator->get_output(), join_predicates[index].column_id_pair.first);
     const auto right_column_expr =
-        PQPColumnExpression::from_table(*right->get_output(), join_predicates[index].column_id_pair.second);
+        PQPColumnExpression::from_table(*latest_operator->get_output(),  static_cast<ColumnID>(left->get_output()->column_count() + join_predicates[index].column_id_pair.second));
     const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicateCondition,
                                                                        left_column_expr, right_column_expr);
     latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
     latest_operator->execute();
+    std::cout << "Row count after " << index + 1 << " predicate: " << latest_operator->get_output()->row_count() << std::endl;
   }
 }
 
@@ -64,29 +76,29 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
   opossum::StorageManager::get().reset();
 }
 
-BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_OneToFive)(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_OneTo5)(benchmark::State& state) {  // NOLINT 1,000 x 1,000
 
   const size_t chunk_size = 10'000;
-  const size_t row_count = 5;
-  const size_t max_value = 5;
 
   ColumnGenerator gen;
 
-
-  const auto allow_value = [](int value) { return value != 2; };
-  const auto get_value_without_join_partner = [](double rnd_real) { return 2; };
-
   const auto join_pair = gen
-      .generate_joinable_table_pair({1}, chunk_size, row_count, 5 * row_count, 0, max_value, allow_value,
-                                    get_value_without_join_partner);
+      .generate_two_predicate_join_tables(chunk_size, 6, 2, 2.5);
+
+  std::cout << join_pair->first->row_count() << std::endl;
+  std::cout << join_pair->second->row_count() << std::endl;
 
   const auto table_wrapper_left = std::make_shared<TableWrapper>(join_pair->first);
+  table_wrapper_left->execute();
   const auto table_wrapper_right = std::make_shared<TableWrapper>(join_pair->second);
+  table_wrapper_right->execute();
 
   std::vector<JoinPredicate> join_predicates;
   join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{1}, ColumnID{1}}, PredicateCondition::Equals});
 
   bm_join_impl(state, table_wrapper_left, table_wrapper_right, join_predicates);
 }
+
 
 }  // namespace opossum
