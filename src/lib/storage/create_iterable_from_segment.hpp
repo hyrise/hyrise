@@ -6,6 +6,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
+#include "storage/lz4/lz4_iterable.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
@@ -53,6 +54,11 @@ auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment
 template <typename T>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
   return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{segment});
+}
+
+template <typename T>
+auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
+  return erase_type_from_iterable_if_debug(LZ4Iterable<T>{segment});
 }
 
 /**

@@ -442,6 +442,10 @@ set(
     storage/prepared_plan.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
+    storage/lz4/lz4_encoder.hpp
+    storage/lz4/lz4_iterable.hpp
+    storage/lz4_segment.cpp
+    storage/lz4_segment.hpp
     storage/materialize.hpp
     storage/mvcc_data.cpp
     storage/mvcc_data.hpp

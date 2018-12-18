@@ -32,7 +32,8 @@ constexpr auto encoded_segment_for_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthSegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>,
                     template_c<FixedStringDictionarySegment>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>));
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, template_c<LZ4Segment>));
 
 /**
  * @brief Resolves the type of an encoded segment.
