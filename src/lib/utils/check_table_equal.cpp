@@ -1,5 +1,6 @@
 #include "check_table_equal.hpp"
 
+#include <iomanip>
 #include <iostream>
 
 #define ANSI_COLOR_RED "\x1B[31m"
