@@ -3,16 +3,16 @@
 #include <operators/table_wrapper.hpp>
 #include <operators/insert.hpp>
 #include <operators/delete.hpp>
-#include "mvcc_manager.hpp"
+#include "mvcc_delete_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "concurrency/transaction_manager.hpp"
 
 
-void opossum::MvccManager::testDeleteChunkLogically(const std::string &tableName, const opossum::ChunkID chunkID) {
-  deleteChunkLogically(tableName, chunkID);
+void opossum::MvccDeleteManager::run_logical_delete(const std::string &tableName, ChunkID chunkID) {
+  _delete_logically(tableName, chunkID);
 }
 
-void opossum::MvccManager::deleteChunkLogically(const std::string &tableName, const opossum::ChunkID chunkID) {
+void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName, const opossum::ChunkID chunkID) {
   auto& sm = StorageManager::get();
   const auto table = sm.get_table(tableName);
 
@@ -32,8 +32,6 @@ void opossum::MvccManager::deleteChunkLogically(const std::string &tableName, co
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
 
-
-
   // Re-insert valid records into table (most recent chunk)
   auto insert_op = std::make_shared<Insert>(tableName, validate_table);
   insert_op->set_transaction_context(transaction_context);
@@ -45,7 +43,7 @@ void opossum::MvccManager::deleteChunkLogically(const std::string &tableName, co
   delete_op->execute();
 }
 
-void opossum::MvccManager::deleteChunkPhysically(const std::string &tableName, const opossum::ChunkID chunkID) {
+void opossum::MvccDeleteManager::_delete_physically(const std::string &tableName, const opossum::ChunkID chunkID) {
   // Assert: Logical delete must have happened to this point.
 
   // TODO later
