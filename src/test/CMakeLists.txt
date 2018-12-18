@@ -95,6 +95,7 @@ set(
     operators/projection_test.cpp
     operators/sort_test.cpp
     operators/table_scan_between_test.cpp
+    operators/table_scan_sorted_test.cpp
     operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
     operators/typed_operator_base_test.hpp
@@ -265,8 +266,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/jit_runtime_pointer_test.cpp
         operators/jit_operator/specialization/resolve_condition_test.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
-        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
-    )
+        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp)
 
 
     set(SYSTEM_TEST_SOURCES
