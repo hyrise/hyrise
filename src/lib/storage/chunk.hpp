@@ -162,7 +162,7 @@ class Chunk : private Noncopyable {
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
-  uint32_t _invalid_row_count;
+  uint32_t _invalid_row_count = 0;
 };
 
 }  // namespace opossum
