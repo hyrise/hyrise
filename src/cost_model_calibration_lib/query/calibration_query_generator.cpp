@@ -83,7 +83,11 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   //    add_queries_if_present(queries, _generate_aggregate(table_name));
   //  }
 
+
+  // TODO(Sven): Permutations produce unnecessarily duplicate scans, e.g., when running a single column scan,
+  // but with varying permutations for the second and third column
   const auto permutations = CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
+  // TODO(Sven): shuffle permutations to cover a wide range of queries faster
   for (const auto& permutation : permutations) {
     add_queries_if_present(
         queries,

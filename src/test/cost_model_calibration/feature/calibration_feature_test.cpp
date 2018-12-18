@@ -30,7 +30,7 @@ using FeatureTypes = ::testing::Types<CalibrationAggregateFeatures, CalibrationC
                                       CalibrationFeatures, CalibrationJoinFeatures, CalibrationProjectionFeatures,
                                       CalibrationRuntimeHardwareFeatures, CalibrationTableScanFeatures>;
 
-TYPED_TEST_CASE(CalibrationFeatureTest, FeatureTypes);
+TYPED_TEST_CASE(CalibrationFeatureTest, FeatureTypes, );
 
 TYPED_TEST(CalibrationFeatureTest, SimpleTest) {
   const auto features = std::make_shared<TypeParam>();

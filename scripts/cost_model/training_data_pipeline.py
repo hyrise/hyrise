@@ -33,7 +33,7 @@ class TrainingDataPipeline:
     def prepare_df_table_scan(df):
         df['is_output_selectivity_below_50_percent'] = df.output_selectivity < 0.5
         df['output_selectivity_distance_to_50_percent'] = abs(df.output_selectivity - 0.5)
-        df['is_small_table'] = df.left_input_row_count < 100000 # less than chunk size
+        df['is_small_table'] = df.left_input_row_count < 1000
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
         boolean_categories = [False, True]

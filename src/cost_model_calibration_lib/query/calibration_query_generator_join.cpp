@@ -22,8 +22,10 @@ namespace opossum {
         for (const auto& encoding : configuration.encodings) {
           for (const auto& left_table : tables) {
             for (const auto& right_table : tables) {
-              output.push_back({left_table.first, right_table.first, encoding, data_type, false});
-              output.push_back({left_table.first, right_table.first, encoding, data_type, true});
+              if (left_table.second == right_table.second * 10) {
+                output.push_back({left_table.first, right_table.first, encoding, data_type, false});
+                output.push_back({left_table.first, right_table.first, encoding, data_type, true});
+              }
             }
           }
         }

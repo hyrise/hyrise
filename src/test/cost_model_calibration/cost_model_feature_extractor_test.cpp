@@ -112,7 +112,7 @@ TEST_F(CostModelFeatureExtractorTest, ExtractOr) {
 }
 
 using JoinTypes = ::testing::Types<JoinHash, JoinIndex, JoinSortMerge, JoinNestedLoop, JoinMPSM>;
-TYPED_TEST_CASE(CostModelFeatureExtractorJoinTest, JoinTypes);
+TYPED_TEST_CASE(CostModelFeatureExtractorJoinTest, JoinTypes, );
 
 TYPED_TEST(CostModelFeatureExtractorJoinTest, ExtractJoin) {
   const auto join = std::make_shared<TypeParam>(this->_int_int, this->_int_string, JoinMode::Inner,
