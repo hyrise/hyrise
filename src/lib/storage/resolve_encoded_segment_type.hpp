@@ -11,6 +11,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
 #include "storage/run_length_segment.hpp"
 
 #include "storage/encoding_type.hpp"
