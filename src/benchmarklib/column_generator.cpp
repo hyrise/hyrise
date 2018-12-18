@@ -222,7 +222,7 @@ std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
 
   int col_b_value_tbl1 = 0;
   int col_b_value_tbl2 = 0;
-  const size_t idk = static_cast<size_t>(fact_factor * probing_factor);
+  const size_t idk = static_cast<size_t>(fact_factor * fact_factor * probing_factor);
 
   for (int fact_value = 0; fact_value <= fact_value_upper_bound; ++fact_value) {
 
