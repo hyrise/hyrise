@@ -128,12 +128,6 @@ int main(int argc, char* argv[]) {
   context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
-<<<<<<< HEAD
-  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(query_ids),
-                           std::make_unique<TpchTableGenerator>(scale_factor, config), context)
-=======
   opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, query_ids),
-                           context)
->>>>>>> 0bc175be957c488f4a82d34544ed92cf77e2f7f2
-      .run();
+                           std::make_unique<TpchTableGenerator>(scale_factor, config), context).run();
 }
