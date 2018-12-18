@@ -1088,24 +1088,21 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
       Assert(select_expression, "Expected PQPSelectExpression");
 
+      const auto invert = exists_expression.exists_expression_type == ExistsExpressionType::NotExists;
+
       const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
-
-      switch (exists_expression.exists_expression_type) {
-        case ExistsExpressionType::Exists:
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-            if (select_result_tables[chunk_offset]->row_count() > 0) {
-              result_pos_list.emplace_back(_chunk_id, chunk_offset);
-            }
+      if (select_expression->is_correlated()) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+          if ((select_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
-          break;
-
-        case ExistsExpressionType::NotExists:
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-            if (select_result_tables[chunk_offset]->row_count() == 0) {
-              result_pos_list.emplace_back(_chunk_id, chunk_offset);
-            }
+        }
+      } else {
+        if ((select_result_tables.front()->row_count() > 0) ^ invert) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
-          break;
+        }
       }
     } break;
 
