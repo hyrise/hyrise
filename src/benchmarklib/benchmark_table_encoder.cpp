@@ -13,13 +13,13 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-SegmentEncodingSpec generate_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
+SegmentEncodingSpec get_segment_encoding_spec(const BaseValueSegment&) { return {EncodingType::Unencoded}; }
 
-SegmentEncodingSpec generate_segment_encoding_spec(const ReferenceSegment&) {
+SegmentEncodingSpec get_segment_encoding_spec(const ReferenceSegment&) {
   Fail("Did not expect a ReferenceSegment in base table");
 }
 
-SegmentEncodingSpec generate_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
+SegmentEncodingSpec get_segment_encoding_spec(const BaseEncodedSegment& base_encoded_segment) {
   if (base_encoded_segment.compressed_vector_type()) {
     switch (*base_encoded_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize1ByteAligned:
@@ -36,14 +36,14 @@ SegmentEncodingSpec generate_segment_encoding_spec(const BaseEncodedSegment& bas
   }
 }
 
-ChunkEncodingSpec generate_chunk_encoding_spec(const Chunk& chunk) {
+ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
 
   for (auto column_id = ColumnID{0}; column_id < chunk.column_count(); ++column_id) {
     const auto& base_segment = *chunk.get_segment(column_id);
 
     resolve_data_and_segment_type(base_segment, [&](const auto /* data_type_t */, const auto& segment) {
-      chunk_encoding_spec[column_id] = generate_segment_encoding_spec(segment);
+      chunk_encoding_spec[column_id] = get_segment_encoding_spec(segment);
     });
   }
 
@@ -131,7 +131,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   const auto column_data_types = table->column_data_types();
 
   for (const auto& chunk : table->chunks()) {
-    if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, generate_chunk_encoding_spec(*chunk))) {
+    if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
       ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
       encoding_performed = true;
     }

@@ -39,10 +39,10 @@ struct SumUpWithIterator {
 
 struct SumUp {
   template <typename T>
-  void operator()(const T& value) const {
-    if (value.is_null()) return;
+  void operator()(const T& position) const {
+    if (position.is_null()) return;
 
-    _sum += value.value();
+    _sum += position.value();
   }
 
   uint32_t& _sum;

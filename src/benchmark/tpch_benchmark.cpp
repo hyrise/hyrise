@@ -48,12 +48,14 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
-    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()); // NOLINT
+    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
+    ("use_prepared_statements", "Do not use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("true")); // NOLINT
   // clang-format on
 
   std::shared_ptr<opossum::BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
+  bool use_prepared_statements;
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
@@ -64,6 +66,7 @@ int main(int argc, char* argv[]) {
     config = std::make_shared<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
+    use_prepared_statements = json_config.value("use_prepared_statements", false);
   } else {
     // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -81,6 +84,8 @@ int main(int argc, char* argv[]) {
 
     config =
         std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+
+    use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   }
 
   std::vector<opossum::QueryID> query_ids;
@@ -120,9 +125,15 @@ int main(int argc, char* argv[]) {
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
+  context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
+<<<<<<< HEAD
   opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(query_ids),
                            std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+=======
+  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, query_ids),
+                           context)
+>>>>>>> 0bc175be957c488f4a82d34544ed92cf77e2f7f2
       .run();
 }
