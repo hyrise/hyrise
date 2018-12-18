@@ -34,6 +34,10 @@ class DataGenerator:
         return np.array(range(row_count))
 
     @staticmethod
+    def foreign_key_column(row_count):
+        return np.array(range(row_count / 10))
+
+    @staticmethod
     def int_column(row_count, distinct_values):
         distinct_values = random.sample(range(0, 10000000), distinct_values)
         return np.random.choice(distinct_values, row_count)
@@ -67,6 +71,9 @@ class DataGenerator:
 
         if column_name == 'column_pk':
             return pd.DataFrame(self.key_column(row_count), columns=[column_name])
+
+        if column_name == 'foreign_key':
+            return pd.DataFrame(self.foreign_key_column(row_count), columns=[column_name])
 
         column_generator = self.type_to_function(column_type)
         data = column_generator(row_count, distinct_values)
