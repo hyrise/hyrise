@@ -341,16 +341,17 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
     // Execute the query, we don't care about the results
     pipeline.get_result_table();
   } else {
-    // TODO this ignores TPC-H 15
     const auto hyrise_result = pipeline.get_result_table();
     const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
+
+    // check_table_equal does not handle empty tables well    
     if (hyrise_result->row_count() > 0) {
       Assert(sqlite_result->row_count() > 0, "Validation failed: Hyrise returned a result, but SQLite didn't");
       Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                FloatComparisonMode::RelativeDifference),
              "Validation failed");
     } else {
-      Assert(hyrise_result->row_count() > 0, "Validation failed: SQLite returned a result, but Hyrise didn't");
+      Assert(!sqlite_result || sqlite_result->row_count() == 0, "Validation failed: SQLite returned a result, but Hyrise didn't");
     }
   }
 
