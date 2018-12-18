@@ -362,7 +362,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
       const auto nation = nations.list[nation_dist(random_engine)].text;
 
-      parameters.emplace_back("'"s + color + "'");
+      parameters.emplace_back("'"s + color + "%'");
       parameters.emplace_back("'"s + begin_date + "'");
       parameters.emplace_back("'"s + end_date + "'");
       parameters.emplace_back("'"s + nation + "'");
