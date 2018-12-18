@@ -92,11 +92,11 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       {"'SAUDI ARABIA'"},
       {"'13'", "'31'", "'23'", "'29'", "'30'", "'18'", "'17'", "'13'", "'31'", "'23'", "'29'", "'30'", "'18'", "'17'"}};
 
-  return _build_query_with_placeholders(query_id, parameter_values[query_id]);
+  return _build_executable_query(query_id, parameter_values[query_id]);
 }
 
-std::string TPCHQueryGenerator::_build_query_with_placeholders(const QueryID query_id,
-                                                               const std::vector<std::string>& parameter_values) {
+std::string TPCHQueryGenerator::_build_executable_query(const QueryID query_id,
+                                                        const std::vector<std::string>& parameter_values) {
   if (_use_prepared_statements) {
     // Join the parameter values for an "EXECUTE TPCHn VALUES (...)" string
     std::stringstream sql;
