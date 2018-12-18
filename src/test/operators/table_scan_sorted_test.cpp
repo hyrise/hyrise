@@ -2,7 +2,6 @@
 #include "gtest/gtest.h"
 #include "operators/table_wrapper.hpp"
 
-
 namespace opossum {
 
 class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
@@ -75,10 +74,10 @@ TEST_P(OperatorsTableScanSortedTest, TestAscendingScan) {
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
   tests[PredicateCondition::Equals] = {5};
   //  tests[PredicateCondition::NotEquals] = {100, 102, 104, 108, 110, 112, 100, 102, 104, 108, 110, 112};
-  //  tests[PredicateCondition::LessThan] = {100, 102, 104, 100, 102, 104};
-  //  tests[PredicateCondition::LessThanEquals] = {0,1,2,3,4,5};
+  tests[PredicateCondition::LessThan] = {0, 1, 2, 3, 4};
+  tests[PredicateCondition::LessThanEquals] = {0, 1, 2, 3, 4, 5};
   tests[PredicateCondition::GreaterThan] = {6, 7, 8, 9};
-  //  tests[PredicateCondition::GreaterThanEquals] = {106, 108, 110, 112, 106, 108, 110, 112};
+  tests[PredicateCondition::GreaterThanEquals] = {5, 6, 7, 8, 9};
 
   for (const auto& test : tests) {
     for (auto column_index = ColumnID{0}; column_index < _table_column_definitions.size(); ++column_index) {

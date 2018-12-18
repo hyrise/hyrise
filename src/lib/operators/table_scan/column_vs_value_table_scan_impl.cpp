@@ -156,7 +156,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
       //     return predicate_comparator(iterator_value.value(), typed_value);
       //   };
 
-      // TODO(hendraet): Be aware of Null values
+      // TODO(hendraet): Support Null values correctly
       auto segment_iterable = create_iterable_from_segment(typed_segment);
       segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
         auto lower_it = it;
@@ -166,7 +166,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         if (segment.sort_order().value() == OrderByMode::Ascending ||
             segment.sort_order().value() == OrderByMode::AscendingNullsLast) {
           if (_predicate_condition == PredicateCondition::GreaterThanEquals) {
-            std::cout << ">=" << std::endl;
+            std::cout << ">=" << std::endl;  // TODO(hendraet): remove all those outputs
             const auto lower_bound = typed_segment.get_first_bound(_value);
             if (lower_bound == INVALID_CHUNK_OFFSET) {
               return;
@@ -216,24 +216,57 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
           }
         } else {  // Descending Order
           if (_predicate_condition == PredicateCondition::GreaterThanEquals) {
+            // Same as Ascending LessThanEquals
             std::cout << ">=" << std::endl;
             const auto last_bound = typed_segment.get_last_bound(_value);
             if (last_bound != INVALID_CHUNK_OFFSET) {
               std::advance(upper_it, last_bound);
             } else {
-              return;  // Only difference to Ascending LessThanEquals
+              std::advance(upper_it, std::distance(it, end));
             }
           } else if (_predicate_condition == PredicateCondition::GreaterThan) {
+            // Same as Ascending LessThan
             std::cout << ">" << std::endl;
             const auto lower_bound = typed_segment.get_first_bound(_value);
             if (lower_bound != INVALID_CHUNK_OFFSET) {
               std::advance(upper_it, lower_bound);
             } else {
-              return;  // Only difference to Ascending LessThan
+              std::advance(upper_it, std::distance(it, end));
             }
           } else if (_predicate_condition == PredicateCondition::LessThanEquals) {
+            // Same as Ascending GreaterThanEquals
+            std::cout << "<=" << std::endl;
+            const auto lower_bound = typed_segment.get_first_bound(_value);
+            if (lower_bound == INVALID_CHUNK_OFFSET) {
+              return;
+            }
+            std::advance(lower_it, lower_bound);
+            std::advance(upper_it, std::distance(it, end));
           } else if (_predicate_condition == PredicateCondition::LessThan) {
+            // Same as Ascending GreaterThan
+            std::cout << "<" << std::endl;
+            const auto upper_bound = typed_segment.get_last_bound(_value);
+            if (upper_bound == INVALID_CHUNK_OFFSET) {
+              return;
+            }
+            std::advance(lower_it, upper_bound);
+            std::advance(upper_it, std::distance(it, end));
           } else if (_predicate_condition == PredicateCondition::Equals) {
+            // Same as Ascending Equals
+            std::cout << "<" << std::endl;
+            std::cout << "=" << std::endl;
+            const auto lower_bound = typed_segment.get_first_bound(_value);
+            const auto upper_bound = typed_segment.get_last_bound(_value);
+            if (lower_bound == INVALID_CHUNK_OFFSET) {
+              return;
+            } else {
+              std::advance(lower_it, lower_bound);
+            }
+            if (upper_bound == INVALID_CHUNK_OFFSET) {
+              std::advance(upper_it, std::distance(it, end));
+            } else {
+              std::advance(upper_it, upper_bound);
+            }
           } else {
             Fail("Unsupported comparison type encountered");
           }

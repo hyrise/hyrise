@@ -169,8 +169,7 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value)
     // TODO(hendraet): Double check how std::greater() handles Null values
     const auto result =
         std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
-    if (result == _values.cbegin() && *result != type_cast_variant<T>(search_value)) {
-      // Chunk offset is technically valid but in this case search value is not in segment
+    if (result == _values.cend()) {
       return INVALID_CHUNK_OFFSET;
     }
     return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
@@ -192,8 +191,7 @@ ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value) 
              _sort_order.value() == OrderByMode::DescendingNullsLast) {
     const auto result =
         std::upper_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
-    if (result == _values.cbegin()) {
-      // Chunk offset is technically valid but in this case search value is not in segment
+    if (result == _values.cend()) {
       return INVALID_CHUNK_OFFSET;
     }
     return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
