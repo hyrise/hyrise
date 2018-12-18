@@ -11,6 +11,8 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
+#include "utils/check_table_equal.hpp"
+#include "utils/sqlite_wrapper.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
@@ -40,6 +42,17 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
+  }
+
+  if (config.validate) {
+    // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
+    Assert(!config.enable_scheduler, "Cannot use validation with enabled scheduler");
+    Assert(config.clients == 1, "Cannot use validation with multiple clients");
+
+    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
+    for (const auto& [table_name, table] : StorageManager::get().tables()) {
+      _sqlite_wrapper->create_table(*table, table_name);
+    }
   }
 }
 
@@ -323,8 +336,23 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
-  // Execute the query, we don't care about the results
-  pipeline.get_result_table();
+
+  if (!_config.validate) {
+    // Execute the query, we don't care about the results
+    pipeline.get_result_table();
+  } else {
+    // TODO this ignores TPC-H 15
+    const auto hyrise_result = pipeline.get_result_table();
+    const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
+    if (hyrise_result) {
+      Assert(sqlite_result, "Validation failed: Hyrise returned a result, but SQLite didn't");
+      Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                               FloatComparisonMode::RelativeDifference),
+             "Validation failed");
+    } else {
+      Assert(hyrise_result, "Validation failed: SQLite returned a result, but Hyrise didn't");
+    }
+  }
 
   if (done_callback) done_callback();
 
@@ -428,7 +456,8 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint>()->default_value("0")) // NOLINT
     ("clients", "Specify how many queries should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("validate", "Validate each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;
@@ -470,6 +499,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"cores", config.cores},
       {"clients", config.clients},
       {"verbose", config.verbose},
+      {"validate", config.validate},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 

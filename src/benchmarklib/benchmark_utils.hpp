@@ -99,7 +99,7 @@ struct BenchmarkConfig {
                   const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const Duration& warmup_duration, const UseMvcc use_mvcc,
                   const std::optional<std::string>& output_file_path, const bool enable_scheduler, const uint cores,
-                  const uint clients, const bool enable_visualization, std::ostream& out);
+                  const uint clients, const bool enable_visualization, const bool validate, std::ostream& out);
 
   static BenchmarkConfig get_default_config();
 
@@ -116,6 +116,7 @@ struct BenchmarkConfig {
   const uint cores = 0;
   const uint clients = 1;
   const bool enable_visualization = false;
+  const bool validate = false;
   std::ostream& out;
 
   static const char* description;

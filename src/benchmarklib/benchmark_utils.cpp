@@ -63,7 +63,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
                                  const Duration& max_duration, const Duration& warmup_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const uint cores, const uint clients, const bool enable_visualization,
-                                 std::ostream& out)
+                                 const bool validate, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
@@ -77,6 +77,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       cores(cores),
       clients(clients),
       enable_visualization(enable_visualization),
+      validate(validate),
       out(out) {}
 
 BenchmarkConfig BenchmarkConfig::get_default_config() { return BenchmarkConfig(); }
@@ -190,9 +191,15 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
-  return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,       *encoding_config, max_runs, timeout_duration,
-                         warmup_duration,      use_mvcc, output_file_path, enable_scheduler, cores,    clients,
-                         enable_visualization, out};
+  const auto validate = json_config.value("validate", default_config.validate);
+  if (validate)
+    out << "- Automatically validating results with SQLite. This will make the reported numbers invalid." << std::endl;
+
+  return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,
+                         *encoding_config,     max_runs, timeout_duration,
+                         warmup_duration,      use_mvcc, output_file_path,
+                         enable_scheduler,     cores,    clients,
+                         enable_visualization, validate, out};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -216,6 +223,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
+  json_config.emplace("validate", parse_result["validate"].as<bool>());
 
   return json_config;
 }
