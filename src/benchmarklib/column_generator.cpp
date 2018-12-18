@@ -136,7 +136,7 @@ std::vector<int> ColumnGenerator::generate_join_partner(
  * @return
  */
 std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
-ColumnGenerator::generate_joinable_table_pair(std::vector<double>& selectivities, size_t chunk_size,
+ColumnGenerator::generate_joinable_table_pair(const std::vector<double>& selectivities, size_t chunk_size,
                                               size_t row_count_table1, size_t row_count_table2, uint32_t min_value,
                                               uint32_t max_value, const std::function<bool(int)>& allow_value,
                                               const std::function<int(double)>& get_value_without_join_partner) {

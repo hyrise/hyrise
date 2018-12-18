@@ -1,19 +1,20 @@
 #include <memory>
 
+#include "column_generator.hpp"
+#include "types.hpp"
+
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/storage_manager.hpp"
-#include "table_generator.hpp"
 
 namespace {
-constexpr auto NUMBER_OF_CHUNKS = size_t{50};
-
-// These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks
-// that run in a tolerable amount of time
-constexpr auto TABLE_SIZE_SMALL = size_t{1'000};
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -23,55 +24,69 @@ void clear_cache() {
   }
   clear.resize(0);
 }
-}  // namespace
+
+}
 
 namespace opossum {
 
-std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows, const int smallFactor, const int bigFactor) {
-  TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Int);
-  column_definitions.emplace_back("b", DataType::Int);
+void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>& left,
+                                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                                  const std::vector<JoinPredicate>& join_predicates) {
+  // execute join for the first join predicate
+  std::shared_ptr<AbstractOperator> latest_operator = std::make_shared<JoinHash>(
+      left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition);
+  latest_operator->execute();
 
-  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, number_of_rows);
-
-  for (auto index = int{0}; index < static_cast<int>(number_of_rows); ++index) {
-    table->append({index % smallFactor, index % bigFactor});
+  // execute table scans for the following predicates (ColumnVsColumnTableScan)
+  for (size_t index = 1; index < join_predicates.size(); ++index) {
+    const auto left_column_expr =
+        PQPColumnExpression::from_table(*left->get_output(), join_predicates[index].column_id_pair.first);
+    const auto right_column_expr =
+        PQPColumnExpression::from_table(*right->get_output(), join_predicates[index].column_id_pair.second);
+    const auto predicate = std::make_shared<BinaryPredicateExpression>(join_predicates[index].predicateCondition,
+                                                                       left_column_expr, right_column_expr);
+    latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
+    latest_operator->execute();
   }
-
-  std::shared_ptr<TableWrapper> table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-
-  return table_wrapper;
 }
 
-template <class C>
 void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_wrapper_left,
-                  std::shared_ptr<TableWrapper> table_wrapper_right) {
+                  std::shared_ptr<TableWrapper> table_wrapper_right, const std::vector<JoinPredicate>& join_predicates) {
   clear_cache();
 
-  auto warm_up =
-      std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                          std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
-  warm_up->execute();
+  // Warm up
+  execute_multi_predicate_join(table_wrapper_left, table_wrapper_right, JoinMode::Inner, join_predicates);
+
   while (state.KeepRunning()) {
-    auto join =
-        std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                            std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
-    join->execute();
+    execute_multi_predicate_join(table_wrapper_left, table_wrapper_right, JoinMode::Inner, join_predicates);
   }
 
   opossum::StorageManager::get().reset();
 }
 
-template <class C>
-void BM_Hash_Join_SmallAndSmall(benchmark::State& state) {  // NOLINT 1,000 x 1,000
-  auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL, 2, 8);
-  auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL, 4, 16);
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_OneToFive)(benchmark::State& state) {  // NOLINT 1,000 x 1,000
 
-  bm_join_impl<C>(state, table_wrapper_left, table_wrapper_right);
+  const size_t chunk_size = 10'000;
+  const size_t row_count = 5;
+  const size_t max_value = 5;
+
+  ColumnGenerator gen;
+
+
+  const auto allow_value = [](int value) { return value != 2; };
+  const auto get_value_without_join_partner = [](double rnd_real) { return 2; };
+
+  const auto join_pair = gen
+      .generate_joinable_table_pair({1}, chunk_size, row_count, 5 * row_count, 0, max_value, allow_value,
+                                    get_value_without_join_partner);
+
+  const auto table_wrapper_left = std::make_shared<TableWrapper>(join_pair->first);
+  const auto table_wrapper_right = std::make_shared<TableWrapper>(join_pair->second);
+
+  std::vector<JoinPredicate> join_predicates;
+  join_predicates.emplace_back(JoinPredicate{ColumnIDPair{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+
+  bm_join_impl(state, table_wrapper_left, table_wrapper_right, join_predicates);
 }
-
-BENCHMARK_TEMPLATE(BM_Hash_Join_SmallAndSmall, JoinHash);
-//BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinHashMultiplePredicatesTest);
 
 }  // namespace opossum
