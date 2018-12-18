@@ -44,7 +44,7 @@ class JoinDetectionRule : public AbstractRule {
  protected:
   std::string name() const override;
 
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
   std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join) const;

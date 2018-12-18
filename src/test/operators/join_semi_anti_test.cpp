@@ -28,9 +28,9 @@ class JoinSemiAntiTest : public JoinTest {
     JoinTest::SetUp();
 
     _table_wrapper_semi_a =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_left.tbl", 2));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/semi_left.tbl", 2));
     _table_wrapper_semi_b =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/semi_right.tbl", 2));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/joinoperators/semi_right.tbl", 2));
 
     _table_wrapper_semi_a->execute();
     _table_wrapper_semi_b->execute();
@@ -41,7 +41,7 @@ class JoinSemiAntiTest : public JoinTest {
 
 TEST_F(JoinSemiAntiTest, SemiJoin) {
   test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::Semi, "src/test/tables/int.tbl", 1);
+                             JoinMode::Semi, "resources/test_data/tbl/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
@@ -52,18 +52,18 @@ TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
   scan_b->execute();
 
   test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Semi,
-                             "src/test/tables/int.tbl", 1);
+                             "resources/test_data/tbl/int.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, SemiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
                              PredicateCondition::Equals, JoinMode::Semi,
-                             "src/test/tables/joinoperators/semi_result.tbl", 1);
+                             "resources/test_data/tbl/joinoperators/semi_result.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoin) {
   test_join_output<JoinHash>(_table_wrapper_k, _table_wrapper_a, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals,
-                             JoinMode::Anti, "src/test/tables/joinoperators/anti_int4.tbl", 1);
+                             JoinMode::Anti, "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
@@ -74,13 +74,13 @@ TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
   scan_b->execute();
 
   test_join_output<JoinHash>(scan_a, scan_b, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals, JoinMode::Anti,
-                             "src/test/tables/joinoperators/anti_int4.tbl", 1);
+                             "resources/test_data/tbl/joinoperators/anti_int4.tbl", 1);
 }
 
 TEST_F(JoinSemiAntiTest, AntiJoinBig) {
   test_join_output<JoinHash>(_table_wrapper_semi_a, _table_wrapper_semi_b, {ColumnID{0}, ColumnID{0}},
                              PredicateCondition::Equals, JoinMode::Anti,
-                             "src/test/tables/joinoperators/anti_result.tbl", 1);
+                             "resources/test_data/tbl/joinoperators/anti_result.tbl", 1);
 }
 
 }  // namespace opossum

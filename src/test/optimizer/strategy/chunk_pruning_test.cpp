@@ -34,11 +34,11 @@ class ChunkPruningTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     auto& storage_manager = StorageManager::get();
-    storage_manager.add_table("compressed", load_table("src/test/tables/int_float2.tbl", 2u));
-    storage_manager.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
-    storage_manager.add_table("run_length_compressed", load_table("src/test/tables/10_ints.tbl", 5u));
-    storage_manager.add_table("string_compressed", load_table("src/test/tables/string.tbl", 3u));
-    storage_manager.add_table("fixed_string_compressed", load_table("src/test/tables/string.tbl", 3u));
+    storage_manager.add_table("compressed", load_table("resources/test_data/tbl/int_float2.tbl", 2u));
+    storage_manager.add_table("long_compressed", load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u));
+    storage_manager.add_table("run_length_compressed", load_table("resources/test_data/tbl/10_ints.tbl", 5u));
+    storage_manager.add_table("string_compressed", load_table("resources/test_data/tbl/string.tbl", 3u));
+    storage_manager.add_table("fixed_string_compressed", load_table("resources/test_data/tbl/string.tbl", 3u));
 
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("compressed"), EncodingType::Dictionary);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("long_compressed"), EncodingType::Dictionary);
@@ -48,7 +48,7 @@ class ChunkPruningTest : public StrategyBaseTest {
                                     EncodingType::FixedStringDictionary);
     _rule = std::make_shared<ChunkPruningRule>();
 
-    storage_manager.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
+    storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", 10u));
   }
 
   std::shared_ptr<ChunkPruningRule> _rule;

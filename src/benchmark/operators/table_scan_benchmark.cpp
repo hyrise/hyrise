@@ -59,7 +59,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
-  const auto lineitem_table = load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl");
+  const auto lineitem_table = load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl");
 
   const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
   lineitem_wrapper->execute();

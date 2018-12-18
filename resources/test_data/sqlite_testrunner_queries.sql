@@ -166,6 +166,7 @@ DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 
 DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a = 5 OR b = 6 OR (a > 2 AND b > 80) OR (a = (SELECT MIN(a) FROM id_int_int_int_100)); SELECT * FROM id_int_int_int_100;
 
 -- Update
@@ -283,6 +284,9 @@ SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT * FROM mixed AS outer_mixed WHERE EXISTS(SELECT * FROM mixed AS inner_mixed WHERE inner_mixed.id = outer_mixed.id * 10);
 SELECT * FROM mixed WHERE EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
 SELECT * FROM mixed WHERE NOT EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
+SELECT * FROM mixed_null WHERE EXISTS(SELECT 0) OR b = 42;
+SELECT * FROM mixed_null WHERE EXISTS(SELECT 1);
+SELECT * FROM mixed_null WHERE NOT EXISTS(SELECT * FROM mixed WHERE b > 1000);
 
 -- Cannot test the following expressions, because sqlite doesn't support them:
 --  * EXTRACT

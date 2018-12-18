@@ -1,6 +1,6 @@
 #include <regex>
 
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -18,10 +18,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPSelectExpressionTest : public ::testing::Test {
+class LQPSelectExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
     a = {int_float_node_a, ColumnID{0}};
@@ -29,8 +29,8 @@ class LQPSelectExpressionTest : public ::testing::Test {
 
     // clang-format off
     lqp_a =
-    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, uncorrelated_parameter_(ParameterID{0})))),
-      ProjectionNode::make(expression_vector(add_(a, uncorrelated_parameter_(ParameterID{0}))),
+    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, placeholder_(ParameterID{0})))),
+      ProjectionNode::make(expression_vector(add_(a, placeholder_(ParameterID{0}))),
         int_float_node_a));
 
     parameter_c = correlated_parameter_(ParameterID{0}, a);
@@ -44,11 +44,9 @@ class LQPSelectExpressionTest : public ::testing::Test {
     select_c = lqp_select_(lqp_c, std::make_pair(ParameterID{0}, a));
   }
 
-  void TearDown() { StorageManager::reset(); }
-
   std::shared_ptr<StoredTableNode> int_float_node_a;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
-  std::shared_ptr<ParameterExpression> parameter_c;
+  std::shared_ptr<CorrelatedParameterExpression> parameter_c;
   std::shared_ptr<LQPSelectExpression> select_a, select_c;
   LQPColumnReference a, b;
 };
@@ -60,8 +58,8 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
 
   // clang-format off
   const auto lqp_b =
-  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, uncorrelated_parameter_(ParameterID{0})))),
-    ProjectionNode::make(expression_vector(add_(a, uncorrelated_parameter_(ParameterID{0}))),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, placeholder_(ParameterID{0})))),
+    ProjectionNode::make(expression_vector(add_(a, placeholder_(ParameterID{0}))),
       int_float_node_a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");

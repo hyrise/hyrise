@@ -32,19 +32,20 @@ TEST(TpchDbGeneratorTest, TableContents) {
   const auto chunk_size = 1000;
   const auto tables = TpchDbGenerator(scale_factor, chunk_size).generate();
 
-  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part), load_table("src/test/tables/tpch/sf-0.001/part.tbl", chunk_size));
+  EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Part),
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/part.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Supplier),
-                          load_table("src/test/tables/tpch/sf-0.001/supplier.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/supplier.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::PartSupp),
-                          load_table("src/test/tables/tpch/sf-0.001/partsupp.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/partsupp.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Customer),
-                          load_table("src/test/tables/tpch/sf-0.001/customer.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/customer.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Orders),
-                          load_table("src/test/tables/tpch/sf-0.001/orders.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Nation),
-                          load_table("src/test/tables/tpch/sf-0.001/nation.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/nation.tbl", chunk_size));
   EXPECT_TABLE_EQ_ORDERED(tables.at(TpchTable::Region),
-                          load_table("src/test/tables/tpch/sf-0.001/region.tbl", chunk_size));
+                          load_table("resources/test_data/tbl/tpch/sf-0.001/region.tbl", chunk_size));
 }
 
 TEST(TpchDbGeneratorTest, GenerateAndStore) {
@@ -57,7 +58,7 @@ TEST(TpchDbGeneratorTest, GenerateAndStore) {
   EXPECT_FALSE(StorageManager::get().has_table("region"));
 
   // Small scale factor
-  TpchDbGenerator(0.01f, Chunk::MAX_SIZE).generate_and_store();
+  TpchDbGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
 
   EXPECT_TRUE(StorageManager::get().has_table("part"));
   EXPECT_TRUE(StorageManager::get().has_table("supplier"));

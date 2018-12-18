@@ -21,7 +21,7 @@ Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_dat
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter>& access_counter)
     : _segments(segments), _mvcc_data(mvcc_data), _access_counter(access_counter) {
-#if IS_DEBUG
+#if HYRISE_DEBUG
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
   Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
   for (const auto& segment : segments) {

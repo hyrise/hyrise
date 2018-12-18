@@ -54,7 +54,7 @@ TEST_F(StorageChunkTest, AddValuesToChunk) {
   chunk->append({2, "two"});
   EXPECT_EQ(chunk->size(), 4u);
 
-  if (IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     EXPECT_THROW(chunk->append({}), std::exception);
     EXPECT_THROW(chunk->append({4, "val", 3}), std::exception);
     EXPECT_EQ(chunk->size(), 4u);
@@ -71,10 +71,9 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
 
 TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
-  if (IS_DEBUG) {
-    auto wrapper = []() { make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Null); };
-    EXPECT_THROW(wrapper(), std::logic_error);
-  }
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+  auto wrapper = []() { make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Null); };
+  EXPECT_THROW(wrapper(), std::logic_error);
 }
 
 TEST_F(StorageChunkTest, AddIndexByColumnID) {

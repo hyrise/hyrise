@@ -137,7 +137,7 @@ class RadixClusterSortNUMA {
   **/
   static size_t _materialized_table_size(MaterializedNUMAPartition<T>& table) {
     auto total_size = size_t{0};
-    for (auto chunk : table._materialized_segments) {
+    for (auto chunk : table.materialized_segments) {
       total_size += chunk->size();
     }
 
@@ -156,11 +156,11 @@ class RadixClusterSortNUMA {
     // Reserve the required space and move the data to the output
     auto output_chunk = std::make_shared<MaterializedSegment<T>>();
     output_chunk->reserve(_materialized_table_size((*input_table)[0]));
-    for (auto& chunk : (*input_table)[0]._materialized_segments) {
+    for (auto& chunk : (*input_table)[0].materialized_segments) {
       output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
     }
 
-    (*output_table)[0]._materialized_segments[0] = output_chunk;
+    (*output_table)[0].materialized_segments[0] = output_chunk;
 
     return output_table;
   }
@@ -176,14 +176,14 @@ class RadixClusterSortNUMA {
   **/
   MaterializedNUMAPartition<T> _cluster(MaterializedNUMAPartition<T>& input_chunks,
                                         std::function<size_t(const T&)> clusterer, NodeID node_id) {
-    auto num_chunks = input_chunks._materialized_segments.size();
+    auto num_chunks = input_chunks.materialized_segments.size();
     auto output_table = MaterializedNUMAPartition<T>(node_id, _cluster_count);
     auto numa_partition_information = NUMAPartitionInformation(num_chunks, _cluster_count);
 
     // Count for every chunk the number of entries for each cluster in parallel
     for (auto chunk_number = size_t{0}; chunk_number < num_chunks; ++chunk_number) {
       auto& chunk_information = numa_partition_information.chunk_information[chunk_number];
-      auto input_chunk = input_chunks._materialized_segments[chunk_number];
+      auto input_chunk = input_chunks.materialized_segments[chunk_number];
 
       for (auto& entry : *input_chunk) {
         auto cluster_id = clusterer(entry.value);
@@ -202,8 +202,8 @@ class RadixClusterSortNUMA {
     // Reserve the appropriate output space for the clusters
     for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
       auto cluster_size = numa_partition_information.cluster_histogram[cluster_id];
-      output_table._materialized_segments[cluster_id] =
-          std::make_shared<MaterializedSegment<T>>(cluster_size, output_table._alloc);
+      output_table.materialized_segments[cluster_id] =
+          std::make_shared<MaterializedSegment<T>>(cluster_size, output_table.alloc);
     }
 
     // Move each entry into its appropriate cluster in parallel
@@ -212,9 +212,9 @@ class RadixClusterSortNUMA {
       auto job = std::make_shared<JobTask>(
           [chunk_number, &output_table, &input_chunks, &numa_partition_information, &clusterer] {
             auto& chunk_information = numa_partition_information.chunk_information[chunk_number];
-            for (auto& entry : (*input_chunks._materialized_segments[chunk_number])) {
+            for (auto& entry : (*input_chunks.materialized_segments[chunk_number])) {
               auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = output_table._materialized_segments[cluster_id];
+              auto& output_cluster = output_table.materialized_segments[cluster_id];
               auto& insert_position = chunk_information.insert_position[cluster_id];
               (*output_cluster)[insert_position] = entry;
               ++insert_position;
@@ -226,7 +226,7 @@ class RadixClusterSortNUMA {
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
 
-    DebugAssert(output_table._materialized_segments.size() == _cluster_count,
+    DebugAssert(output_table.materialized_segments.size() == _cluster_count,
                 "Error in clustering: Number of output segments does not match the number of clusters.")
 
         return output_table;
@@ -273,10 +273,10 @@ class RadixClusterSortNUMA {
     cluster_sizes.resize(_cluster_count, 0);
 
     for (const auto& partition : (*private_partitions)) {
-      DebugAssert(partition._materialized_segments.size() == _cluster_count,
+      DebugAssert(partition.materialized_segments.size() == _cluster_count,
                   "Number of clusters does not match the number of NUMA partitions.");
       for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
-        cluster_sizes[cluster_id] += partition._materialized_segments[cluster_id]->size();
+        cluster_sizes[cluster_id] += partition.materialized_segments[cluster_id]->size();
       }
     }
 
@@ -290,10 +290,10 @@ class RadixClusterSortNUMA {
 
         auto materialized_segment = std::make_shared<MaterializedSegment<T>>();
         materialized_segment->reserve(_cluster_count);
-        homogenous_partition._materialized_segments[0] = materialized_segment;
+        homogenous_partition.materialized_segments[0] = materialized_segment;
 
         for (const auto& partition : (*private_partitions)) {
-          const auto& src = partition._materialized_segments[numa_node];
+          const auto& src = partition.materialized_segments[numa_node];
 
           std::copy(src->begin(), src->end(), std::back_inserter(*materialized_segment));
         }
@@ -315,13 +315,13 @@ class RadixClusterSortNUMA {
     auto sort_jobs = std::vector<std::shared_ptr<AbstractTask>>();
 
     for (auto& partition : (*partitions)) {
-      for (auto cluster : partition._materialized_segments) {
+      for (auto cluster : partition.materialized_segments) {
         auto job = std::make_shared<JobTask>([cluster]() {
           std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
         });
 
         sort_jobs.push_back(job);
-        job->schedule(partition._node_id);
+        job->schedule(partition.node_id);
       }
     }
 

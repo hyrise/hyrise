@@ -9,6 +9,7 @@
 #include "binary_predicate_expression.hpp"
 #include "case_expression.hpp"
 #include "cast_expression.hpp"
+#include "correlated_parameter_expression.hpp"
 #include "exists_expression.hpp"
 #include "extract_expression.hpp"
 #include "function_expression.hpp"
@@ -18,7 +19,7 @@
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
-#include "parameter_expression.hpp"
+#include "placeholder_expression.hpp"
 #include "pqp_column_expression.hpp"
 #include "pqp_select_expression.hpp"
 #include "unary_minus_expression.hpp"
@@ -209,15 +210,15 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
   return std::make_shared<ExtractExpression>(datetime_component, to_expression(from));
 }
 
-std::shared_ptr<ParameterExpression> uncorrelated_parameter_(const ParameterID parameter_id);
+std::shared_ptr<PlaceholderExpression> placeholder_(const ParameterID parameter_id);
 std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference);
 std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
                                                  const bool nullable, const std::string& column_name);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> correlated_parameter_(const ParameterID parameter_id,
-                                                           const ReferencedExpression& referenced) {
-  return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
+std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const ParameterID parameter_id,
+                                                                     const ReferencedExpression& referenced) {
+  return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
 std::shared_ptr<AggregateExpression> count_star_();

@@ -7,6 +7,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
@@ -49,7 +50,21 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
-  _config.out << "\n- Starting Benchmark..." << std::endl;
+  // Run the preparation queries
+  {
+    auto sql = _query_generator->get_preparation_queries();
+
+    // Some benchmarks might not need preparation
+    if (!sql.empty()) {
+      _config.out << "- Preparing queries..." << std::endl;
+      auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+      // Execute the query, we don't care about the results
+      pipeline.get_result_table();
+    }
+  }
+
+  // Now run the actual benchmark
+  _config.out << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
   _query_plans.resize(available_queries_count);
@@ -280,7 +295,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
@@ -303,7 +318,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
 }
 
 void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
@@ -402,7 +417,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("help", "print this help message")
     ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
     ("r,runs", "Maximum number of runs of a single query (set)", cxxopts::value<size_t>()->default_value("10000")) // NOLINT
-    ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value("100000")) // NOLINT
+    ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
     ("t,time", "Maximum seconds that a query (set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each query is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
@@ -426,8 +441,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-  std::stringstream compiler;
   // clang-format off
+  std::stringstream compiler;
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)
@@ -441,7 +456,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"date", timestamp_stream.str()},
       {"chunk_size", config.chunk_size},
       {"compiler", compiler.str()},
-      {"build_type", IS_DEBUG ? "debug" : "release"},
+      {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySet"},

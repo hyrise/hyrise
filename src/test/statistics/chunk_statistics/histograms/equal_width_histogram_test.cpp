@@ -13,12 +13,12 @@ namespace opossum {
 
 class EqualWidthHistogramTest : public BaseTest {
   void SetUp() override {
-    _int_float4 = load_table("src/test/tables/int_float4.tbl");
-    _float2 = load_table("src/test/tables/float2.tbl");
-    _int_int4 = load_table("src/test/tables/int_int4.tbl");
-    _string3 = load_table("src/test/tables/string3.tbl");
-    _string_with_prefix = load_table("src/test/tables/string_with_prefix.tbl");
-    _string_like_pruning = load_table("src/test/tables/string_like_pruning.tbl");
+    _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
+    _float2 = load_table("resources/test_data/tbl/float2.tbl");
+    _int_int4 = load_table("resources/test_data/tbl/int_int4.tbl");
+    _string3 = load_table("resources/test_data/tbl/string3.tbl");
+    _string_with_prefix = load_table("resources/test_data/tbl/string_with_prefix.tbl");
+    _string_like_pruning = load_table("resources/test_data/tbl/string_like_pruning.tbl");
   }
 
  protected:
@@ -531,7 +531,7 @@ TEST_F(EqualWidthHistogramTest, FloatBinBoundariesLargeValues) {
   // such that values are put into a different bin than they were retrieved from.
   // This test checks that this is not the case.
   const auto value = 501'506.55f;
-  const auto table = load_table("src/test/tables/float3.tbl");
+  const auto table = load_table("resources/test_data/tbl/float3.tbl");
   const auto hist =
       EqualWidthHistogram<float>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 5'000u);
   EXPECT_FALSE(hist->can_prune(PredicateCondition::Equals, value));
