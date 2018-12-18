@@ -8,7 +8,7 @@ namespace opossum {
 class CsvMetaTest : public BaseTest {};
 
 TEST_F(CsvMetaTest, ProcessCsvMetaFile) {
-  auto meta = process_csv_meta_file("src/test/csv/sample_meta_information.csv.json");
+  auto meta = process_csv_meta_file("resources/test_data/csv/sample_meta_information.csv.json");
 
   auto meta_expected = CsvMeta{};
   meta_expected.columns.emplace_back(ColumnMeta{"a", "int", false});

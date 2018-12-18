@@ -40,9 +40,9 @@ namespace opossum {
 class SQLPipelineTest : public BaseTest {
  protected:
   static void SetUpTestCase() {  // called ONCE before the tests
-    _table_a_multi = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a_multi = load_table("resources/test_data/tbl/int_float.tbl", 2);
     _table_a_multi->append({11, 11.11});
-    _table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int);
@@ -57,7 +57,7 @@ class SQLPipelineTest : public BaseTest {
     StorageManager::get().reset();
 
     // We reload table_a every time since it is modified during the test case.
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
     StorageManager::get().add_table("table_a_multi", _table_a_multi);

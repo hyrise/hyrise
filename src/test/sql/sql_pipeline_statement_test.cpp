@@ -41,13 +41,13 @@ namespace opossum {
 class SQLPipelineStatementTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
-    _table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
-    _table_int = load_table("src/test/tables/int_int_int.tbl", 2);
+    _table_int = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
     StorageManager::get().add_table("table_int", _table_int);
 
     TableColumnDefinitions column_definitions;

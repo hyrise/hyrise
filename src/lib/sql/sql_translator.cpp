@@ -1177,7 +1177,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
              "ValuePlaceholderID out of range");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
-      return std::make_shared<ParameterExpression>(
+      return std::make_shared<PlaceholderExpression>(
           _parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
     }
 
