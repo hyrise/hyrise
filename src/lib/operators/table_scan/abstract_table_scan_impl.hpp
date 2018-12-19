@@ -59,8 +59,8 @@ class AbstractTableScanImpl {
     // See the SIMD method for a comment on IsVectorizable.
 
 #if !HYRISE_DEBUG
-    if constexpr (LeftIterator::IsVectorizable && FunctorIsVectorizable) {
-      if (left_end - left_it > 10'000) {
+    if constexpr (LeftIterator::IsVectorizable) {
+      if (functor_is_vectorizable && left_end - left_it > 10'000) {
         _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
       }
     }
