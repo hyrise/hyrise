@@ -201,6 +201,22 @@ std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinition
   return table;
 }
 
+
+// we could use this to set visibility of mvcc
+/*
+void set_all_records_visible(Table& table) {
+  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+    auto chunk = table.get_chunk(chunk_id);
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+    for (auto i = 0u; i < chunk->size(); ++i) {
+      mvcc_data->begin_cids[i] = 0u;
+      mvcc_data->end_cids[i] = MvccData::MAX_COMMIT_ID;
+    }
+  }
+}
+*/
+
 std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
 ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fact_table_size, size_t fact_factor,
                                                     double probing_factor) {
@@ -209,12 +225,12 @@ ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fa
       TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("t1_a", DataType::Int);
   column_definitions.emplace_back("t1_b", DataType::Int);
-  auto fact_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  auto fact_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   column_definitions.clear();
   column_definitions.emplace_back("t2_a", DataType::Int);
   column_definitions.emplace_back("t2_b", DataType::Int);
-  auto probe_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  auto probe_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   const int fact_value_upper_bound = (fact_table_size - 1) / fact_factor;
 
@@ -235,6 +251,10 @@ ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fa
       ++col_b_value_tbl2;
     }
   }
+
+  // see line 205
+  //set_all_records_visible(*fact_table);
+  //set_all_records_visible(*probe_table);
 
   return std::make_unique<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>(
       std::make_pair(std::move(fact_table), std::move(probe_table)));
