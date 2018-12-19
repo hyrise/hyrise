@@ -35,7 +35,7 @@ namespace opossum {
         }
         for (const auto& aggregate : _aggregates) {
             //_output_column_definitions.emplace_back(input_table->column_name(_aggregates.column) + TODO AGGREGATENAME, input_table->column_data_type(_aggregates.column));
-            _output_column_definitions.emplace_back("Aggregate for" + aggregate.column.value_or(ColumnID{42}), DataType::Int);
+            _output_column_definitions.emplace_back("MIN(" + input_table->column_name(aggregate.column.value_or(ColumnID{42})) + ")", DataType::Float);
         }
         auto result_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
 
@@ -54,16 +54,18 @@ namespace opossum {
         }
         //}
 
+        //*
         // initialize previous values with values in first row
         std::vector<AllTypeVariant> previous_values;
         previous_values.reserve(_groupby_column_ids.size());
+
         for (const auto column_id : _groupby_column_ids) {
-            previous_values.emplace_back(sorted_table->get_value<std::string>(column_id, size_t(0u)));
+            previous_values.emplace_back(sorted_table->get_value<int>(column_id, size_t(0u)));
         }
 
         std::vector<AllTypeVariant> current_aggregate_results(_aggregates.size());
-        current_aggregate_results[0] = 2000000;
-
+        current_aggregate_results[0] = 2000000.f;
+        //*
         auto chunks = sorted_table->chunks();
         for (const auto& chunk : chunks) {
             size_t chunk_size = chunk->size();
@@ -72,6 +74,7 @@ namespace opossum {
                 std::vector<AllTypeVariant> current_values;
                 current_values.reserve(_groupby_column_ids.size());
 
+
                 for (size_t index = 0; index < _groupby_column_ids.size(); index++) {
                     AllTypeVariant current_value = segments[_groupby_column_ids[index]]->operator[](offset);
                     current_values.emplace_back(current_value);
@@ -79,6 +82,7 @@ namespace opossum {
 
 
                 if (current_values == previous_values) {
+
                     for (size_t index = 0; index < current_aggregate_results.size(); index++) {
                         current_aggregate_results[index] = min(current_aggregate_results[index],
                                                            segments[*_aggregates[index].column]->operator[](offset));
@@ -96,6 +100,7 @@ namespace opossum {
         }
         _write_result_to_result_table(result_table, previous_values, current_aggregate_results);
 
+         //*/
         return result_table;
     }
 
