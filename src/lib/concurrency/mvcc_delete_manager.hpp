@@ -8,12 +8,12 @@ class MvccDeleteManager {
 public:
 
     // for testing purposes
-    void run_logical_delete(const std::string &tableName, ChunkID chunkID);
+    static void run_logical_delete(const std::string &tableName, ChunkID chunkID);
 
 private:
-    void _delete_logically(const std::string &tableName, const ChunkID chunkID);
+    static void _delete_logically(const std::string &tableName, ChunkID chunkID);
 
-    void _delete_physically(const std::string &tableName, const ChunkID chunkID);
+    void _delete_physically(const std::string &tableName, ChunkID chunkID);
 };
 
 }  // namespace opossum
