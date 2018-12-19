@@ -38,6 +38,8 @@ namespace opossum {
 
         const std::vector <AggregateColumnDefinition> _aggregates;
         const std::vector <ColumnID> _groupby_column_ids;
+
+        TableColumnDefinitions _output_column_definitions;
     };
 
 } // namespace opossum
