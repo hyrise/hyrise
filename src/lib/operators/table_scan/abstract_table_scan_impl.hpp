@@ -38,7 +38,7 @@ class AbstractTableScanImpl {
   // noinline reduces compile time drastically
   static void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, bool functor_is_vectorizable,
+                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] bool functor_is_vectorizable,
                        [[maybe_unused]] RightIterator right_it) {
     // SIMD has no benefit for iterators that are too complex (mostly iterators that do not operate on contiguous
     // storage). Currently, it is only enabled for std::vector (as used by FixedSizeByteAlignedVector). Also, the
