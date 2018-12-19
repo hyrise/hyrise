@@ -97,7 +97,8 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
+      // Matches all, so include all rows except those with NULLs in the result.
+      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
     });
 
     return;
