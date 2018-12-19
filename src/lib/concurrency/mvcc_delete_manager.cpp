@@ -41,6 +41,8 @@ void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName,
   auto delete_op = std::make_shared<Delete>(tableName, validate_table);
   delete_op->set_transaction_context(transaction_context);
   delete_op->execute();
+
+  transaction_context->commit();
 }
 
 void opossum::MvccDeleteManager::_delete_physically(const std::string &tableName, const opossum::ChunkID chunkID) {
