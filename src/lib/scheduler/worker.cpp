@@ -17,6 +17,8 @@
 
 namespace {
 
+static const auto MAX_SLEEP_TIME_NS = uint32_t{10000000};  // 10 ms
+
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
@@ -70,10 +72,13 @@ void Worker::_work() {
 
     // Sleep if there is no ready task in our queue and work stealing was not successful.
     if (!work_stealing_successful) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      // Exponential Backoff
+      std::this_thread::sleep_for(std::chrono::nanoseconds(_sleep_time_ns));
+      _sleep_time_ns = std::min(MAX_SLEEP_TIME_NS, _sleep_time_ns*2);
       return;
     }
   }
+  _sleep_time_ns = 1;
 
   task->execute();
 
