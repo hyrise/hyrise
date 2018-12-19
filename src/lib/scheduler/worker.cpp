@@ -17,7 +17,7 @@
 
 namespace {
 
-static const auto MAX_SLEEP_TIME_NS = uint32_t{10000000};  // 10 ms
+static constexpr auto MAX_SLEEP_TIME_NS = std::chrono::nanoseconds{10000000};  // 10 milliseconds
 
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
@@ -73,12 +73,12 @@ void Worker::_work() {
     // Sleep if there is no ready task in our queue and work stealing was not successful.
     if (!work_stealing_successful) {
       // Exponential Backoff
-      std::this_thread::sleep_for(std::chrono::nanoseconds(_sleep_time_ns));
+      std::this_thread::sleep_for(_sleep_time_ns);
       _sleep_time_ns = std::min(MAX_SLEEP_TIME_NS, _sleep_time_ns*2);
       return;
     }
   }
-  _sleep_time_ns = 1;
+  _sleep_time_ns = std::chrono::nanoseconds{1};
 
   task->execute();
 
