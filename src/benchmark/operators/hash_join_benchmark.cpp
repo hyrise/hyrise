@@ -8,10 +8,12 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/validate.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
+#include "concurrency/transaction_context.hpp"
 
 namespace {
 
@@ -21,8 +23,8 @@ const size_t SCALE_FACTOR = 1'000'000;
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
-    clear[i] += 1;
+  for (int &i : clear) {
+    i += 1;
   }
   clear.resize(0);
 }
@@ -66,11 +68,26 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
                   const std::vector<JoinPredicate>& join_predicates) {
   clear_cache();
 
+  // validate needs a transaction context. This is taken from test/operators/validate_test.cpp:60
+  // not sure if this is the right thing to do here
+  auto context = std::make_shared<TransactionContext>(1u, 3u);
+
+  // this currently fails since the Tables have no MVCC data
+  // src/lib/operators/validate.cpp:121
+  std::shared_ptr<AbstractOperator> validate_left = std::make_shared<Validate>(table_wrapper_left);
+  std::shared_ptr<AbstractOperator> validate_right = std::make_shared<Validate>(table_wrapper_right);
+
+  validate_left->set_transaction_context(context);
+  validate_right->set_transaction_context(context);
+
+  validate_left->execute();
+  validate_right->execute();
+
   // Warm up
-  execute_multi_predicate_join(table_wrapper_left, table_wrapper_right, JoinMode::Inner, join_predicates);
+  execute_multi_predicate_join(validate_left, validate_right, JoinMode::Inner, join_predicates);
 
   while (state.KeepRunning()) {
-    execute_multi_predicate_join(table_wrapper_left, table_wrapper_right, JoinMode::Inner, join_predicates);
+    execute_multi_predicate_join(validate_left, validate_right, JoinMode::Inner, join_predicates);
   }
 
   opossum::StorageManager::get().reset();
