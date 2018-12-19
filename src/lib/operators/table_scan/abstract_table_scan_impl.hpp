@@ -87,9 +87,9 @@ class AbstractTableScanImpl {
   }
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
+  static void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                                  const ChunkID chunk_id, PosList& matches_out,
-                                 [[maybe_unused]] RightIterator& right_it) const {
+                                 [[maybe_unused]] RightIterator& right_it) {
 #if defined(__has_feature)
 #if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
     return;
