@@ -10,7 +10,7 @@ namespace opossum {
  * @param state
  */
 static void BM_TpchDbGenerator(benchmark::State& state) {  // NOLINT
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     TpchDbGenerator(0.5f, 1000).generate();
   }
 }
