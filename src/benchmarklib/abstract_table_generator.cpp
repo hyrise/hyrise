@@ -26,19 +26,21 @@ void AbstractTableGenerator::generate_and_store() {
    */
   if (_benchmark_config->cache_binary_tables) {
     for (auto& [table_name, table_info] : table_info_by_name) {
-      if (!table_info.loaded_from_binary || table_info.re_encoded) {
-        auto binary_file_path = std::filesystem::path{};
-        if (table_info.binary_file_path) {
-          binary_file_path = *table_info.binary_file_path;
-        } else {
-          binary_file_path = *table_info.text_file_path;
-          binary_file_path.replace_extension(".bin");
-        }
-
-        _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'"
-                               << std::endl;
-        ExportBinary::write_binary(*table_info.table, binary_file_path);
+      if (table_info.loaded_from_binary && !table_info.re_encoded && !table_info.binary_file_out_of_date) {
+        continue;
       }
+
+      auto binary_file_path = std::filesystem::path{};
+      if (table_info.binary_file_path) {
+        binary_file_path = *table_info.binary_file_path;
+      } else {
+        binary_file_path = *table_info.text_file_path;
+        binary_file_path.replace_extension(".bin");
+      }
+
+      _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'"
+                             << std::endl;
+      ExportBinary::write_binary(*table_info.table, binary_file_path);
     }
   }
 

@@ -20,6 +20,10 @@ struct BenchmarkTableInfo {
 
   bool loaded_from_binary{false};
 
+  // True IFF there are both a binary and a text file for this file AND the text file was written to more recently than
+  // the binary file. We take this as the text file being changed and re-export the binary
+  bool binary_file_out_of_date{false};
+
   // True, if the encoding of the table needed to be changed after loading it in order to satisfy the benchmark's
   // encoding configuration. False, if the benchmark was loaded in the requested encoding. Note that binary table files
   // support encodings, so it is possible that the benchmark is run with, e.g. Dictionary encoding, and the tables are

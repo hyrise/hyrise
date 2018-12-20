@@ -19,7 +19,7 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
-  Assert(!std::filesystem::is_directory(_path), "Table path must be a directory");
+  Assert(std::filesystem::is_directory(_path), "Table path must be a directory");
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
@@ -58,7 +58,24 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
   }
 
   /**
-   * 2. Actually load the tables. Load from binary file if a binary file exists for a Table.
+   * 2. Check for "out of date" binary files, i.e., whether both a binary and textual file exists AND the
+   *    binary file is older than the textual file.
+   */
+  for (auto& [table_name, table_info] : table_info_by_name) {
+    if (table_info.binary_file_path && table_info.text_file_path) {
+      const auto last_binary_write = std::filesystem::last_write_time(*table_info.binary_file_path);
+      const auto last_text_write = std::filesystem::last_write_time(*table_info.text_file_path);
+
+      if (last_binary_write < last_text_write) {
+        _benchmark_config->out << "- Binary file '" << (*table_info.binary_file_path)
+                               << "' is out of date and needs to be re-exported" << std::endl;
+        table_info.binary_file_out_of_date = true;
+      }
+    }
+  }
+
+  /**
+   * 3. Actually load the tables. Load from binary file if a up-to-date binary file exists for a Table.
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
     Timer timer;
@@ -66,12 +83,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     _benchmark_config->out << "- Loading table '" << table_name << "' ";
 
     // Pick a source file to load a table from, prefer the binary version
-    if (table_info.binary_file_path) {
-      _benchmark_config->out << " from '" << *table_info.binary_file_path << std::endl;
+    if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
+      _benchmark_config->out << "from " << *table_info.binary_file_path << std::flush;
       table_info.table = ImportBinary::read_binary(*table_info.binary_file_path);
       table_info.loaded_from_binary = true;
     } else {
-      _benchmark_config->out << " from '" << *table_info.text_file_path << std::endl;
+      _benchmark_config->out << "from " << *table_info.text_file_path << std::flush;
       const auto extension = table_info.text_file_path->extension();
       if (extension == ".tbl") {
         table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
@@ -82,7 +99,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
     }
 
-    std::cout << "    Loaded " << table_info.table->row_count() << " rows in "
+    std::cout << " - Loaded " << table_info.table->row_count() << " rows in "
               << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << std::endl;
   }
 
