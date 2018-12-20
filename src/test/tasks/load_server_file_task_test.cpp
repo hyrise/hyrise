@@ -21,8 +21,10 @@ TEST_F(LoadServerFileTaskTest, LoadsDifferentFileTypes) {
   bin_task->execute();
   EXPECT_TRUE(StorageManager::get().has_table("int_float_bin"));
 
-  //  auto fail_task = std::make_shared<LoadServerFileTask>("unsupport.ed", "unsupported");
-  //  EXPECT_THROW(fail_task->execute(), std::exception);
+  auto fail_task = std::make_shared<LoadServerFileTask>("unsupport.ed", "unsupported");
+  auto future = fail_task->get_future();
+  fail_task->execute();
+  EXPECT_THROW(future.get(), std::exception);
 }
 
 }  // namespace opossum
