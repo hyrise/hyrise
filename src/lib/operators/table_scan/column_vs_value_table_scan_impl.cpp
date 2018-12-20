@@ -107,22 +107,30 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
-    auto comparator = [predicate_comparator, search_value_id](const auto& position) {
-      return predicate_comparator(position.value(), search_value_id);
-    };
+  if (_predicate_condition == PredicateCondition::GreaterThan ||
+      _predicate_condition == PredicateCondition::GreaterThanEquals) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      if (_predicate_condition == PredicateCondition::GreaterThan ||
-          _predicate_condition == PredicateCondition::GreaterThanEquals) {
-        // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
-        // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, true);
-      } else {
-        // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
-        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);
-      }
+      // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
+      // value is NULL. Thus, we need to check if the value id is lower than the size of the dictionary. We use the
+      // same hack as in ColumnBetweenTableScanImpl to get rid of one branch.
+
+      const auto value_id_diff = segment.unique_values_count() - search_value_id;
+      const auto comparator = [search_value_id, value_id_diff](const auto& position) { return (position.value() - search_value_id) < value_id_diff; };
+
+      _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);
     });
-  });
+  } else {
+    _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
+      iterable.with_iterators(position_filter, [&](auto it, auto end) {
+        const auto comparator = [predicate_comparator, search_value_id](const auto& position) {
+          return predicate_comparator(position.value(), search_value_id);
+        };
+        // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
+        // TODO Broken for NotEquals
+        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);
+      });
+    });
+  }
 }
 
 ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {

@@ -107,13 +107,13 @@ class AbstractTableScanImpl {
 
     // Assuming a maximum SIMD register size of 512 bit. Smaller registers simply lead to the inner loop being unrolled
     // more than once.
-    constexpr size_t SIMD_SIZE = 64;
-    constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ValueID);
+    constexpr size_t SIMD_SIZE = 512 / 8;
+    constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ChunkOffset);
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
     matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
 
-    alignas(SIMD_SIZE) std::array<ChunkOffset, SIMD_SIZE / sizeof(ChunkOffset)> offsets;
+    alignas(SIMD_SIZE) std::array<ChunkOffset, BLOCK_SIZE> offsets;
     offsets.fill(ChunkOffset{0});
 
     // Continue the following until we have too few rows left to run over a whole block
@@ -142,13 +142,13 @@ class AbstractTableScanImpl {
       #pragma clang loop vectorize(assume_safety)
       // clang-format on
       for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        const auto& left = *left_it;
+        const auto left = *left_it;
 
         bool matches;
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
           matches = (!CheckForNull | !left.is_null()) & func(left);
         } else {
-          const auto& right = *left_it;
+          const auto right = *left_it;
           matches = (!CheckForNull | (!left.is_null() & !right.is_null())) & func(left, right);
         }
 
