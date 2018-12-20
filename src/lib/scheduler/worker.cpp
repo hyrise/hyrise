@@ -17,7 +17,7 @@
 
 namespace {
 
-static constexpr auto MAX_SLEEP_TIME_NS = std::chrono::nanoseconds{10000000};  // 10 milliseconds
+static constexpr auto MAX_SLEEP_TIME_NS = std::chrono::nanoseconds{10'000'000};  // 10 milliseconds
 
 /**
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
