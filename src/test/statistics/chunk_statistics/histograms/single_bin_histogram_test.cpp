@@ -94,7 +94,7 @@ TEST_F(SingleBinHistogramTest, Basic) {
 }
 
 TEST_F(SingleBinHistogramTest, FromSegment) {
-  const auto table = load_table("src/test/tables/int_int4.tbl");
+  const auto table = load_table("resources/test_data/tbl/int_int4.tbl");
   ASSERT_EQ(table->chunk_count(), 1u);
 
   const auto hist = SingleBinHistogram<int32_t>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));

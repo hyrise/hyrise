@@ -19,14 +19,14 @@ namespace opossum {
  * declared using `final`.
  */
 template <typename T>
-class AbstractSegmentIteratorValue {
+class AbstractSegmentPosition {
  public:
   using Type = T;
 
  public:
-  AbstractSegmentIteratorValue() = default;
-  AbstractSegmentIteratorValue(const AbstractSegmentIteratorValue&) = default;
-  virtual ~AbstractSegmentIteratorValue() = default;
+  AbstractSegmentPosition() = default;
+  AbstractSegmentPosition(const AbstractSegmentPosition&) = default;
+  virtual ~AbstractSegmentPosition() = default;
 
   virtual const T& value() const = 0;
   virtual bool is_null() const = 0;
@@ -41,16 +41,16 @@ class AbstractSegmentIteratorValue {
 };
 
 /**
- * @brief The most generic segment iterator value
+ * @brief The most generic segment iterator position
  *
  * Used in most segment iterators.
  */
 template <typename T>
-class SegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
+class SegmentPosition : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = true;
 
-  SegmentIteratorValue(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
+  SegmentPosition(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
       : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const final { return _value; }
@@ -64,16 +64,16 @@ class SegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
 };
 
 /**
- * @brief Segment iterator value which is never null.
+ * @brief Segment iterator position which is never null.
  *
  * Used when an underlying segment (or data structure) cannot be null.
  */
 template <typename T>
-class NonNullSegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
+class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = false;
 
-  NonNullSegmentIteratorValue(const T& value, const ChunkOffset& chunk_offset)
+  NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const final { return _value; }
@@ -86,17 +86,17 @@ class NonNullSegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
 };
 
 /**
- * @brief Segment iterator value without value information
+ * @brief Segment iterator position without value information
  *
  * Used for data structures that only store if the entry is null or not.
  *
  * @see NullValueVectorIterable
  */
-class SegmentIteratorNullValue : public AbstractSegmentIteratorValue<boost::blank> {
+class IsNullSegmentPosition : public AbstractSegmentPosition<boost::blank> {
  public:
   static constexpr bool Nullable = true;
 
-  SegmentIteratorNullValue(const bool null_value, const ChunkOffset& chunk_offset)
+  IsNullSegmentPosition(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   const boost::blank& value() const final { return _blank; }

@@ -22,8 +22,8 @@ namespace opossum {
 class ExistsReformulationRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int2.tbl"));
-    StorageManager::get().add_table("table_b", load_table("src/test/tables/int_int3.tbl"));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int2.tbl"));
+    StorageManager::get().add_table("table_b", load_table("resources/test_data/tbl/int_int3.tbl"));
 
     node_table_a = StoredTableNode::make("table_a");
     node_table_a_col_a = node_table_a->get_column("a");

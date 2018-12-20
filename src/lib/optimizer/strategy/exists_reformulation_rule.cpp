@@ -4,11 +4,11 @@
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
-#include "expression/parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -51,7 +51,7 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   visit_lqp(subselect_expression->lqp, [&](const auto& deeper_node) {
     for (const auto& expression : deeper_node->node_expressions) {
       visit_expression(expression, [&](const auto& sub_expression) {
-        const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
+        const auto parameter_expression = std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression);
         if (parameter_expression && parameter_expression->parameter_id == correlated_parameter_id) {
           ++correlated_parameter_usage_count;
         }
@@ -105,20 +105,20 @@ void ExistsReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
     // Now check if one side of the predicate is a column "outside" the subselect and the other inside
     auto inner_column_expression = std::shared_ptr<LQPColumnExpression>();
-    auto parameter_expression = std::shared_ptr<ParameterExpression>();
+    auto parameter_expression = std::shared_ptr<CorrelatedParameterExpression>();
 
     if (subselect_predicate_expression->arguments[0]->type == ExpressionType::LQPColumn &&
-        subselect_predicate_expression->arguments[1]->type == ExpressionType::Parameter) {
+        subselect_predicate_expression->arguments[1]->type == ExpressionType::CorrelatedParameter) {
       // Column left, parameter right
       inner_column_expression =
           std::static_pointer_cast<LQPColumnExpression>(subselect_predicate_expression->arguments[0]);
       parameter_expression =
-          std::static_pointer_cast<ParameterExpression>(subselect_predicate_expression->arguments[1]);
-    } else if (subselect_predicate_expression->arguments[0]->type == ExpressionType::Parameter &&
+          std::static_pointer_cast<CorrelatedParameterExpression>(subselect_predicate_expression->arguments[1]);
+    } else if (subselect_predicate_expression->arguments[0]->type == ExpressionType::CorrelatedParameter &&
                subselect_predicate_expression->arguments[1]->type == ExpressionType::LQPColumn) {
       // Column right, parameter left
       parameter_expression =
-          std::static_pointer_cast<ParameterExpression>(subselect_predicate_expression->arguments[0]);
+          std::static_pointer_cast<CorrelatedParameterExpression>(subselect_predicate_expression->arguments[0]);
       inner_column_expression =
           std::static_pointer_cast<LQPColumnExpression>(subselect_predicate_expression->arguments[1]);
     } else {

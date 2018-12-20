@@ -14,6 +14,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
@@ -301,7 +302,7 @@ TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
   ASSERT_EQ(result_statistics->chunk_statistics.size(), 6u);
-  ASSERT_EQ(result_statistics->row_count(), 6u * 128u);
+  EXPECT_EQ(result_statistics->row_count(), 6u * 128u);
 
   for (auto& chunk_statistics : result_statistics->chunk_statistics) {
     ASSERT_EQ(chunk_statistics->segment_statistics.size(), 4u);
@@ -372,7 +373,7 @@ TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjusted
       std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-      CardinalityEstimator::estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms<int32_t>(
+      estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms<int32_t>(
           histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);

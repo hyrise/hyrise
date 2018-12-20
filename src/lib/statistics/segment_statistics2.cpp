@@ -116,6 +116,21 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::scale_with_select
 }
 
 template <typename T>
+std::shared_ptr<AbstractHistogram<T>> SegmentStatistics2<T>::get_best_available_histogram() const {
+  if (equal_distinct_count_histogram) {
+    return equal_distinct_count_histogram;
+  } else if (equal_width_histogram) {
+    return equal_width_histogram;
+  } else if (generic_histogram) {
+    return generic_histogram;
+  } else if (single_bin_histogram) {
+    return single_bin_histogram;
+  } else {
+    return nullptr;
+  }
+}
+
+template <typename T>
 std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predicate(
     const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
@@ -142,21 +157,6 @@ std::shared_ptr<BaseSegmentStatistics2> SegmentStatistics2<T>::slice_with_predic
   }
 
   return segment_statistics;
-}
-
-template <typename T>
-std::shared_ptr<AbstractHistogram<T>> SegmentStatistics2::get_best_available_histogram() {
-  if (equal_distinct_count_histogram) {
-    return equal_distinct_count_histogram;
-  } else if (equal_width_histogram) {
-    return equal_width_histogram;
-  } else if (generic_histogram) {
-    return generic_histogram;
-  } else if (single_bin_histogram) {
-    return single_bin_histogram;
-  } else {
-    return nullptr;
-  }
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(SegmentStatistics2);

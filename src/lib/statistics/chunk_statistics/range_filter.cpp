@@ -11,6 +11,7 @@
 #include "statistics/chunk_statistics/min_max_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "type_cast.hpp"
+#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace opossum {

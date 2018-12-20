@@ -225,6 +225,25 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
   }
 }
 
+std::shared_ptr<TableStatistics2> estimate_join_node(
+const JoinNode& join_node,
+const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
+const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
+  if (join_node.join_mode == JoinMode::Cross) {
+    return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
+  } else {
+    const auto operator_join_predicate = OperatorJoinPredicate::from_join_node(join_node);
+
+    if (!operator_join_predicate) {
+      return cardinality_estimation_predicated_join(join_node.join_mode, *operator_join_predicate, left_input_table_statistics,
+                                      right_input_table_statistics);
+    } else {
+      // TODO(anybody) For now, estimate a selectivity of one.
+      return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
+    }
+  }
+}
+
 }  // namespace
 
 namespace opossum {
@@ -311,7 +330,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
   }
 
   if (const auto validate_node = std::dynamic_pointer_cast<ValidateNode>(lqp)) {
-    output_table_statistics = estimate_validate_node(*validate_node, input_table_statistics)
+    output_table_statistics = estimate_validate_node(*validate_node, input_table_statistics);
   }
 
   if (std::dynamic_pointer_cast<SortNode>(lqp)) {
@@ -334,15 +353,9 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
   }
 
   if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp)) {
-    std::cout << "EstimateJoinNode " << join_node->description() << "{" << std::endl;
-
     const auto left_input_table_statistics = estimate_statistics(lqp->left_input(), context);
     const auto right_input_table_statistics = estimate_statistics(lqp->right_input(), context);
-
-    output_table_statistics = cardinality_estimation_join(join_node->join_mode, join_node->join_predicate(),
-                                                          left_input_table_statistics, right_input_table_statistics);
-
-    std::cout << "}" << std::endl;
+    output_table_statistics = estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
   }
 
   Assert(output_table_statistics, "NYI");

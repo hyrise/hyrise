@@ -5,7 +5,7 @@
 #include <string>
 
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -95,12 +95,9 @@ inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementTyp
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const BaseSegment>& segment) {
-  resolve_segment_type<ElementType>(*segment, [&](const auto& typed_segment) {
-    auto segment_iterable = create_iterable_from_segment<ElementType>(typed_segment);
-    segment_iterable.for_each([&](const auto& value) {
-      if (value.is_null()) return;
-      insert(value.value());
-    });
+  segment_iterate<ElementType>(*segment, [&](const auto& position) {
+    if (position.is_null()) return;
+    insert(position.value());
   });
 }
 

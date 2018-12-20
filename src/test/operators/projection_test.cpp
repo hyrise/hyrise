@@ -29,9 +29,9 @@ namespace opossum {
 class OperatorsProjectionTest : public BaseTest {
  public:
   void SetUp() override {
-    table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
     table_wrapper_a->execute();
-    table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+    table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
     table_wrapper_b->execute();
 
     a_a = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
@@ -50,7 +50,8 @@ TEST_F(OperatorsProjectionTest, OperatorName) {
 TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(add_(a_a, a_b)));
   projection->execute();
-  EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), load_table("src/test/tables/projection/int_float_add.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(projection->get_output(),
+                            load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
@@ -115,16 +116,17 @@ TEST_F(OperatorsProjectionTest, SetParameters) {
   const auto select_expression =
       std::make_shared<PQPSelectExpression>(table_scan_a, DataType::Int, false, PQPSelectExpression::Parameters{});
   const auto projection_b = std::make_shared<Projection>(
-      table_wrapper_a, expression_vector(uncorrelated_parameter_(ParameterID{2}), select_expression));
+      table_wrapper_a, expression_vector(correlated_parameter_(ParameterID{2}, a_a), select_expression));
 
   const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{5}, AllTypeVariant{12}},
                                                                           {ParameterID{2}, AllTypeVariant{13}}};
   projection_b->set_parameters(parameters);
 
-  const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(projection_b->expressions.at(0));
-  ASSERT_TRUE(parameter_expression);
-  EXPECT_TRUE(parameter_expression->value().has_value());
-  EXPECT_EQ(*parameter_expression->value(), AllTypeVariant{13});
+  const auto correlated_parameter_expression =
+      std::dynamic_pointer_cast<CorrelatedParameterExpression>(projection_b->expressions.at(0));
+  ASSERT_TRUE(correlated_parameter_expression);
+  EXPECT_TRUE(correlated_parameter_expression->value().has_value());
+  EXPECT_EQ(*correlated_parameter_expression->value(), AllTypeVariant{13});
 }
 
 }  // namespace opossum

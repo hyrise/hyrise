@@ -50,7 +50,21 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
-  _config.out << "\n- Starting Benchmark..." << std::endl;
+  // Run the preparation queries
+  {
+    auto sql = _query_generator->get_preparation_queries();
+
+    // Some benchmarks might not need preparation
+    if (!sql.empty()) {
+      _config.out << "- Preparing queries..." << std::endl;
+      auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+      // Execute the query, we don't care about the results
+      pipeline.get_result_table();
+    }
+  }
+
+  // Now run the actual benchmark
+  _config.out << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
   _query_plans.resize(available_queries_count);
@@ -281,7 +295,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_or_execute
 
 std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
     const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto query_tasks = std::vector<std::shared_ptr<AbstractTask>>();
 
@@ -304,7 +318,7 @@ std::vector<std::shared_ptr<AbstractTask>> BenchmarkRunner::_schedule_query(
 }
 
 void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function<void()>& done_callback) {
-  const auto& sql = _query_generator->build_query(query_id);
+  auto sql = _query_generator->build_query(query_id);
 
   auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
@@ -427,8 +441,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-  std::stringstream compiler;
   // clang-format off
+  std::stringstream compiler;
   #if defined(__clang__)
     compiler << "clang " << __clang_major__ << "." << __clang_minor__ << "." << __clang_patchlevel__;
   #elif defined(__GNUC__)

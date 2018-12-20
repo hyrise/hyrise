@@ -21,31 +21,16 @@ class PredicateNode;
 
 class CardinalityEstimator : public AbstractCardinalityEstimator {
  public:
-  static std::optional<boost::dynamic_bitset<>> build_plan_bitmask(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                                   const std::shared_ptr<OptimizationContext>& context);
+  static std::optional<boost::dynamic_bitset<>> build_plan_bitmask(const std::shared_ptr<AbstractLQPNode> &lqp,
+                                                                   const std::shared_ptr<OptimizationContext> &context);
 
-  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                   const std::shared_ptr<OptimizationContext>& context = {}) const override;
+  Cardinality estimate_cardinality(const std::shared_ptr<AbstractLQPNode> &lqp,
+                                   const std::shared_ptr<OptimizationContext> &context = {}) const override;
+
   std::shared_ptr<TableStatistics2> estimate_statistics(
-      const std::shared_ptr<AbstractLQPNode>& lqp,
-      const std::shared_ptr<OptimizationContext>& context = {}) const override;
-
-  template <typename T>
-  static std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-      const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
-      const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
-
-  template <typename T>
-  static std::shared_ptr<GenericHistogram<T>>
-  estimate_histogram_of_column_to_column_equi_scan_with_bin_adjusted_histograms(
-      const std::shared_ptr<AbstractHistogram<T>>& histogram_left,
-      const std::shared_ptr<AbstractHistogram<T>>& histogram_right);
-
-  static std::shared_ptr<TableStatistics2> estimate_cross_join(
-      const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
-      const std::shared_ptr<TableStatistics2>& right_input_table_statistics);
+  const std::shared_ptr<AbstractLQPNode> &lqp,
+  const std::shared_ptr<OptimizationContext> &context = {}) const override;
 };
-
 }  // namespace opossum
 
 #include "cardinality_estimator.ipp"
