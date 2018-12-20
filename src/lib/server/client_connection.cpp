@@ -14,6 +14,8 @@ const auto ignore_sent_bytes = [](uint64_t sent_bytes) {};
 
 ClientConnection::ClientConnection(boost::asio::ip::tcp::socket socket) : _socket(std::move(socket)) {
   _response_buffer.reserve(_max_response_size);
+  boost::asio::ip::tcp::no_delay option(true);
+  _socket.set_option(option);
 }
 
 boost::future<uint32_t> ClientConnection::receive_startup_packet_header() {
