@@ -6,6 +6,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
@@ -29,43 +30,29 @@ std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chu
 
   auto matches = std::make_shared<PosList>();
 
-  _scan_non_reference_segment(*segment, chunk_id, *matches, nullptr);
+  if (const auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
+    _scan_value_segment(*value_segment, chunk_id, *matches, nullptr);
+  } else {
+    _scan_generic_segment(*segment, chunk_id, *matches, nullptr);
+  }
 
   return matches;
 }
 
-void ColumnIsNullTableScanImpl::_scan_non_reference_segment(
-    const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-    const std::shared_ptr<const PosList>& position_filter) const {
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, matches, position_filter);
-  });
-}
-
-void ColumnIsNullTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                              const std::shared_ptr<const PosList>& position_filter) const {
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    using Type = typename decltype(type)::type;
-    auto iterable = create_iterable_from_segment<Type>(typed_segment);
-
+void ColumnIsNullTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                      PosList& matches,
+                                                      const std::shared_ptr<const PosList>& position_filter) const {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
 
-    if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
-      iterable.with_iterators([&](auto it, auto end) {
-        // _scan_with_iterators should not check for null - we do that ourselves
-        _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
-      });
-    } else {
-      iterable.with_iterators(position_filter, [&](auto it, auto end) {
-        _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
-      });
-    }
+    _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
   });
 }
 
-void ColumnIsNullTableScanImpl::_scan_segment(const BaseValueSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                              const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segment, const ChunkID chunk_id,
+                                                    PosList& matches,
+                                                    const std::shared_ptr<const PosList>& position_filter) const {
   if (_matches_all(segment)) {
     _add_all(chunk_id, matches, position_filter, segment.size());
     return;

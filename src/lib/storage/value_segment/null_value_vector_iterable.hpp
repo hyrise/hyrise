@@ -14,6 +14,8 @@ namespace opossum {
  */
 class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
+  using ValueType = bool;
+
   explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
   template <typename Functor>
@@ -24,9 +26,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
-    auto begin = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cbegin()};
-    auto end = PointAccessIterator{_null_values, position_filter.cbegin(), position_filter.cend()};
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    auto begin = PointAccessIterator{_null_values, position_filter->cbegin(), position_filter->cbegin()};
+    auto end = PointAccessIterator{_null_values, position_filter->begin(), position_filter->cend()};
     functor(begin, end);
   }
 
@@ -34,8 +36,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   const pmr_concurrent_vector<bool>& _null_values;
 
  private:
-  class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorNullValue> {
+  class Iterator : public BaseSegmentIterator<Iterator, IsNullSegmentPosition> {
    public:
+    using ValueType = bool;
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
    public:
@@ -48,9 +51,9 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     void increment() { ++_null_value_it; }
     bool equal(const Iterator& other) const { return _null_value_it == other._null_value_it; }
 
-    SegmentIteratorNullValue dereference() const {
-      return SegmentIteratorNullValue{*_null_value_it,
-                                      static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
+    IsNullSegmentPosition dereference() const {
+      return IsNullSegmentPosition{*_null_value_it,
+                                   static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
    private:
@@ -58,27 +61,27 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     NullValueIterator _null_value_it;
   };
 
-  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue> {
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
    public:
+    using ValueType = bool;
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values,
                                  const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue>{std::move(
-                                                                                            position_filter_begin),
-                                                                                        std::move(position_filter_it)},
+        : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
+                                                                                     std::move(position_filter_it)},
           _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    SegmentIteratorNullValue dereference() const {
+    IsNullSegmentPosition dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      return SegmentIteratorNullValue{_null_values[chunk_offsets.offset_in_referenced_chunk],
-                                      chunk_offsets.offset_in_poslist};
+      return IsNullSegmentPosition{_null_values[chunk_offsets.offset_in_referenced_chunk],
+                                   chunk_offsets.offset_in_poslist};
     }
 
    private:
