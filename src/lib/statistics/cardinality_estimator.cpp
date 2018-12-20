@@ -234,7 +234,7 @@ const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   } else {
     const auto operator_join_predicate = OperatorJoinPredicate::from_join_node(join_node);
 
-    if (!operator_join_predicate) {
+    if (operator_join_predicate) {
       return cardinality_estimation_predicated_join(join_node.join_mode, *operator_join_predicate, left_input_table_statistics,
                                       right_input_table_statistics);
     } else {
