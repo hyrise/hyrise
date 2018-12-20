@@ -17,7 +17,7 @@ void ParseServerPreparedStatementTask::_on_execute() {
         std::make_unique<PreparedPlan>(prepared_plans[0], sql_translator.parameter_ids_of_value_placeholders());
 
     _promise.set_value(std::move(prepared_plan));
-  } catch (const std::exception& exception) {
+  } catch (const std::exception&) {
     _promise.set_exception(boost::current_exception());
   }
 }

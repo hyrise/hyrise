@@ -21,8 +21,8 @@ class ValueSegment : public BaseValueSegment {
   explicit ValueSegment(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
   explicit ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                         const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
-  explicit ValueSegment(std::vector<T>& values, std::vector<bool>& null_values,
+  explicit ValueSegment(const std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueSegment(const std::vector<T>& values, std::vector<bool>& null_values,
                         const PolymorphicAllocator<T>& alloc = {});
 
   // Return the value at a certain position. If you want to write efficient operators, back off!

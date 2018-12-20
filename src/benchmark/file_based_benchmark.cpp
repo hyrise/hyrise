@@ -11,7 +11,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-#include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
@@ -53,11 +52,11 @@ void _load_table_folder(const BenchmarkConfig& config, const std::string& table_
     if (boost::algorithm::ends_with(table_path_str, ".tbl")) {
       table = load_table(table_path_str, config.chunk_size);
     } else {
-      table = CsvParser{}.parse(table_path_str);
+      table = CsvParser{}.parse(table_path_str, std::nullopt, config.chunk_size);
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;
-    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
+    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config, config.out);
     StorageManager::get().add_table(table_name, table);
   }
 }
@@ -88,7 +87,6 @@ int main(int argc, char* argv[]) {
 
   } else {
     // Parse regular command line args
-    Assert(opossum::are_args_cxxopts_compatible(argc, argv), "Command line argument incompatible with cxxopts");
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
     // Display usage and quit

@@ -30,7 +30,7 @@ void LoadServerFileTask::_on_execute() {
     }
 
     _promise.set_value();
-  } catch (const std::exception& exception) {
+  } catch (...) {
     _promise.set_exception(boost::current_exception());
   }
 }

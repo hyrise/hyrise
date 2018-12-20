@@ -45,6 +45,8 @@ set(
     expression/case_expression.hpp
     expression/cast_expression.cpp
     expression/cast_expression.hpp
+    expression/correlated_parameter_expression.cpp
+    expression/correlated_parameter_expression.hpp
     expression/evaluation/expression_evaluator.cpp
     expression/evaluation/expression_evaluator.hpp
     expression/evaluation/expression_functors.hpp
@@ -75,8 +77,8 @@ set(
     expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
-    expression/parameter_expression.cpp
-    expression/parameter_expression.hpp
+    expression/placeholder_expression.cpp
+    expression/placeholder_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
     expression/pqp_select_expression.cpp
@@ -295,8 +297,6 @@ set(
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
-    optimizer/strategy/rule_batch.cpp
-    optimizer/strategy/rule_batch.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
@@ -458,15 +458,18 @@ set(
     storage/run_length_segment.hpp
     storage/run_length_segment/run_length_encoder.hpp
     storage/run_length_segment/run_length_segment_iterable.hpp
+    storage/segment_accessor.cpp
     storage/segment_accessor.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
     storage/segment_iterables.hpp
+    storage/segment_iterables/any_segment_iterable.cpp
     storage/segment_iterables/any_segment_iterable.hpp
     storage/segment_iterables/any_segment_iterator.hpp
     storage/segment_iterables/base_segment_iterators.hpp
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
-    storage/segment_iterables/segment_iterator_values.hpp
+    storage/segment_iterables/segment_positions.hpp
+    storage/segment_iterate.hpp
     storage/split_pos_list_by_chunk_id.cpp
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp
@@ -530,11 +533,10 @@ set(
     types.hpp
     uid_allocator.hpp
     utils/abstract_plugin.hpp
-    utils/are_args_cxxopts_compatible.cpp
-    utils/are_args_cxxopts_compatible.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
+    utils/ignore_unused_variable.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
     utils/filesystem.hpp
@@ -640,7 +642,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE})
+        ${LLVM_BUNDLE_FILE}
+    )
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
@@ -658,7 +661,7 @@ add_custom_command (
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
 
-set(SOURCES ${SOURCES} ${CMAKE_BINARY_DIR}/provider.hpp)
+set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
@@ -669,3 +672,9 @@ target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
+
+if (${ENABLE_JIT_SUPPORT})
+    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
+    # This silences some compiler warnings (uses -isystem instead of -I).
+    # target_include_directories(hyrise SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
+endif()

@@ -14,7 +14,7 @@ namespace opossum {
 
 template <typename T>
 class AbstractHistogramIntTest : public BaseTest {
-  void SetUp() override { _int_float4 = load_table("src/test/tables/int_float4.tbl"); }
+  void SetUp() override { _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl"); }
 
  protected:
   std::shared_ptr<Table> _int_float4;
@@ -22,7 +22,7 @@ class AbstractHistogramIntTest : public BaseTest {
 
 using HistogramIntTypes =
     ::testing::Types<EqualDistinctCountHistogram<int32_t>, EqualWidthHistogram<int32_t>, EqualHeightHistogram<int32_t>>;
-TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes);
+TYPED_TEST_CASE(AbstractHistogramIntTest, HistogramIntTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramIntTest, EqualsPruning) {
   const auto hist = TypeParam::from_segment(this->_int_float4->get_chunk(ChunkID{0})->get_segment(ColumnID{0}), 2u);
@@ -142,9 +142,9 @@ TYPED_TEST(AbstractHistogramIntTest, CardinalityEstimationOutOfBounds) {
 template <typename T>
 class AbstractHistogramStringTest : public BaseTest {
   void SetUp() override {
-    _string2 = load_table("src/test/tables/string2.tbl");
-    _string3 = load_table("src/test/tables/string3.tbl");
-    _int_string_like_containing2 = load_table("src/test/tables/int_string_like_containing2.tbl");
+    _string2 = load_table("resources/test_data/tbl/string2.tbl");
+    _string3 = load_table("resources/test_data/tbl/string3.tbl");
+    _int_string_like_containing2 = load_table("resources/test_data/tbl/int_string_like_containing2.tbl");
   }
 
  protected:
@@ -155,7 +155,7 @@ class AbstractHistogramStringTest : public BaseTest {
 
 using HistogramStringTypes = ::testing::Types<EqualDistinctCountHistogram<std::string>,
                                               EqualWidthHistogram<std::string>, EqualHeightHistogram<std::string>>;
-TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes);
+TYPED_TEST_CASE(AbstractHistogramStringTest, HistogramStringTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(AbstractHistogramStringTest, StringConstructorTests) {
   // Histogram checks prefix length for overflow.

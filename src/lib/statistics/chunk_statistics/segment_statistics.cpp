@@ -11,10 +11,10 @@
 #include "min_max_filter.hpp"
 #include "range_filter.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
@@ -43,6 +43,7 @@ static std::shared_ptr<SegmentStatistics> build_statistics_from_dictionary(const
 std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
     DataType data_type, const std::shared_ptr<const BaseSegment>& segment) {
   std::shared_ptr<SegmentStatistics> statistics;
+
   resolve_data_and_segment_type(*segment, [&statistics](auto type, auto& typed_segment) {
     using SegmentType = std::decay_t<decltype(typed_segment)>;
     using DataTypeT = typename decltype(type)::type;
@@ -56,10 +57,10 @@ std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
       // if we have a generic segment we create the dictionary ourselves
       auto iterable = create_iterable_from_segment<DataTypeT>(typed_segment);
       std::unordered_set<DataTypeT> values;
-      iterable.for_each([&](const auto& value) {
+      iterable.for_each([&](const auto& position) {
         // we are only interested in non-null values
-        if (!value.is_null()) {
-          values.insert(value.value());
+        if (!position.is_null()) {
+          values.insert(position.value());
         }
       });
       pmr_vector<DataTypeT> dictionary{values.cbegin(), values.cend()};

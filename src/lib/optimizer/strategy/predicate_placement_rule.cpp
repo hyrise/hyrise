@@ -15,7 +15,7 @@ namespace opossum {
 
 std::string PredicatePlacementRule::name() const { return "Predicate Placement Rule"; }
 
-bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
@@ -23,9 +23,6 @@ bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
-
-  // No easy way to tell whether the plan changed
-  return false;
 }
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,

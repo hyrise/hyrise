@@ -22,155 +22,64 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 class OperatorsUpdateTest : public BaseTest {
- protected:
-  void SetUp() override {
-    auto t = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
-    // Update operator works on the StorageManager
-    StorageManager::get().add_table(_table_name, t);
+ public:
+  static void SetUpTestCase() {
+    column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+    column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
   }
 
-  void TearDown() override { StorageManager::reset(); }
+  void SetUp() override {
+    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    // Update operator works on the StorageManager
+    StorageManager::get().add_table(table_to_update_name, table);
+  }
 
-  void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
-              std::shared_ptr<Table> expected_result);
+  void helper(const std::shared_ptr<AbstractExpression>& where_predicate,
+              const std::vector<std::shared_ptr<AbstractExpression>>& update_expressions,
+              const std::string& expected_result_path) {
+    const auto get_table = std::make_shared<GetTable>(table_to_update_name);
+    const auto where_scan = std::make_shared<TableScan>(get_table, where_predicate);
+    const auto updated_values_projection = std::make_shared<Projection>(where_scan, update_expressions);
 
-  std::string _table_name{"updateTestTable"};
+    get_table->execute();
+    where_scan->execute();
+    updated_values_projection->execute();
+
+    const auto transaction_context = TransactionManager::get().new_transaction_context();
+    const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
+    update->set_transaction_context(transaction_context);
+    update->execute();
+    transaction_context->commit();
+
+    // Get validated table which should have the same row twice.
+    const auto post_update_transaction_context = TransactionManager::get().new_transaction_context();
+    const auto validate = std::make_shared<Validate>(get_table);
+    validate->set_transaction_context(post_update_transaction_context);
+    validate->execute();
+
+    EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), load_table(expected_result_path));
+  }
+
+  std::string table_to_update_name{"updateTestTable"};
+  inline static std::shared_ptr<AbstractExpression> column_a, column_b;
 };
 
-void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
-                                 std::shared_ptr<Table> expected_result) {
-  auto t_context = TransactionManager::get().new_transaction_context();
-
-  // Make input left actually referenced. Projection does NOT generate ReferenceSegments.
-  auto ref_table = std::make_shared<TableScan>(
-      table_to_update, greater_than_(get_column_expression(table_to_update, ColumnID{0}), value_(0)));
-  ref_table->set_transaction_context(t_context);
-  ref_table->execute();
-
-  // Save the original number of rows as well as the number of rows that will be updated.
-  auto original_row_count = ref_table->get_output()->row_count();
-  auto updated_rows_count = update_values->get_output()->row_count();
-
-  auto projection1 = std::make_shared<Projection>(
-      ref_table, expression_vector(PQPColumnExpression::from_table(*ref_table->get_output(), "a")));
-  auto projection2 = std::make_shared<Projection>(
-      ref_table, expression_vector(PQPColumnExpression::from_table(*ref_table->get_output(), "b")));
-  projection1->set_transaction_context(t_context);
-  projection2->set_transaction_context(t_context);
-  projection1->execute();
-  projection2->execute();
-
-  auto update = std::make_shared<Update>("updateTestTable", projection1, projection2);
-  update->set_transaction_context(t_context);
-  update->execute();
-
-  // MVCC commit.
-  t_context->commit();
-
-  // Get validated table which should have the same row twice.
-  t_context = TransactionManager::get().new_transaction_context();
-  auto validate = std::make_shared<Validate>(table_to_update);
-  validate->set_transaction_context(t_context);
-  validate->execute();
-
-  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
-
-  // The new validated table should have the same number of (valid) rows as before.
-  EXPECT_EQ(validate->get_output()->row_count(), original_row_count);
-
-  // Refresh the table that was updated. It should have the same number of valid rows (approximated) as before.
-  // Approximation should be exact here because we do not have to deal with parallelism issues in tests.
-  auto updated_table = std::make_shared<GetTable>("updateTestTable");
-  updated_table->execute();
-  ASSERT_NE(updated_table->get_output()->table_statistics(), nullptr);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 3u);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->approx_valid_row_count(), 0u);
-  EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
+TEST_F(OperatorsUpdateTest, SelfOverride) {
+  helper(greater_than_(column_a, 0), expression_vector(column_a, column_b), "resources/test_data/tbl/int_float2.tbl");
 }
 
-TEST_F(OperatorsUpdateTest, SelfUpdate) {
-  auto gt = std::make_shared<GetTable>("updateTestTable");
-  gt->execute();
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt, gt, expected_result);
+TEST_F(OperatorsUpdateTest, UpdateWithLiteral) {
+  helper(greater_than_(column_a, 100), expression_vector(column_a, 7.5f),
+         "resources/test_data/tbl/int_float2_updated_0.tbl");
 }
 
-TEST_F(OperatorsUpdateTest, NormalUpdate) {
-  auto gt = std::make_shared<GetTable>("updateTestTable");
-  gt->execute();
-
-  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
-  StorageManager::get().add_table("updateTestTable2", t2);
-
-  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
-  gt2->execute();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt, gt2, expected_result);
+TEST_F(OperatorsUpdateTest, UpdateWithExpression) {
+  helper(greater_than_(column_a, 1000), expression_vector(column_a, cast_(add_(column_a, 100), DataType::Float)),
+         "resources/test_data/tbl/int_float2_updated_1.tbl");
 }
 
-TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
-  auto gt = std::make_shared<GetTable>("updateTestTable");
-  gt->execute();
-
-  auto t2 = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
-  StorageManager::get().add_table("updateTestTable2", t2);
-
-  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
-  gt2->execute();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt, gt2, expected_result);
+TEST_F(OperatorsUpdateTest, UpdateNone) {
+  helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "resources/test_data/tbl/int_float2.tbl");
 }
 
-TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
-  auto gt = std::make_shared<GetTable>("updateTestTable");
-  gt->execute();
-
-  auto t2 = load_table("src/test/tables/int_int.tbl", 2u);
-  StorageManager::get().add_table("updateTestTable2", t2);
-
-  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
-  gt2->execute();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt, gt2, expected_result);
-}
-
-TEST_F(OperatorsUpdateTest, MultipleChunks) {
-  auto gt = std::make_shared<GetTable>("updateTestTable");
-  gt->execute();
-
-  auto t2 = load_table("src/test/tables/int_int.tbl", 1u);
-  StorageManager::get().add_table("updateTestTable2", t2);
-
-  auto gt2 = std::make_shared<GetTable>("updateTestTable2");
-  gt2->execute();
-
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
-  helper(gt, gt2, expected_result);
-}
-TEST_F(OperatorsUpdateTest, MissingChunks) {
-  auto t_context = TransactionManager::get().new_transaction_context();
-
-  auto gt = std::make_shared<GetTable>(_table_name);
-  gt->execute();
-
-  // table scan will leave out first two chunks
-  auto table_scan1 = std::make_shared<TableScan>(gt, equals_(get_column_expression(gt, ColumnID{0}), value_("12345")));
-  table_scan1->set_transaction_context(t_context);
-  table_scan1->execute();
-
-  auto updated_rows = std::make_shared<Projection>(table_scan1, expression_vector(1, 1));
-  updated_rows->set_transaction_context(t_context);
-  updated_rows->execute();
-
-  auto update = std::make_shared<Update>(_table_name, table_scan1, updated_rows);
-  update->set_transaction_context(t_context);
-  // execute will fail, if not checked for leading empty chunks
-  update->execute();
-
-  // MVCC commit.
-  t_context->commit();
-}
 }  // namespace opossum

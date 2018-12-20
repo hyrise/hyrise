@@ -9,6 +9,8 @@ namespace opossum {
 
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
+  using ValueType = ValueID;
+
   explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
 
@@ -25,18 +27,20 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   }
 
   template <typename Functor>
-  void _on_with_iterators(const PosList& position_filter, const Functor& functor) const {
+  void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     resolve_compressed_vector_type(_attribute_vector, [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
 
-      auto begin = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter.cbegin(),
-                                                           position_filter.cbegin()};
-      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter.cbegin(),
-                                                         position_filter.cend()};
+      auto begin = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter->cbegin(),
+                                                           position_filter->cbegin()};
+      auto end = PointAccessIterator<ZsDecompressorType>{_null_value_id, *decompressor, position_filter->cbegin(),
+                                                         position_filter->cend()};
       functor(begin, end);
     });
   }
+
+  size_t _on_size() const { return _attribute_vector.size(); }
 
  private:
   const BaseCompressedVector& _attribute_vector;
@@ -44,7 +48,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
  private:
   template <typename ZsIteratorType>
-  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentIteratorValue<ValueID>> {
+  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentPosition<ValueID>> {
    public:
     explicit Iterator(const ValueID null_value_id, ZsIteratorType attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{attribute_it}, _chunk_offset{chunk_offset} {}
@@ -59,7 +63,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
-    SegmentIteratorValue<ValueID> dereference() const {
+    SegmentPosition<ValueID> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
@@ -74,20 +78,20 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
 
   template <typename ZsDecompressorType>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>, SegmentIteratorValue<ValueID>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>, SegmentPosition<ValueID>> {
    public:
     PointAccessIterator(const ValueID null_value_id, ZsDecompressorType& attribute_decompressor,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType>,
-                                         SegmentIteratorValue<ValueID>>{std::move(position_filter_begin),
-                                                                        std::move(position_filter_it)},
+                                         SegmentPosition<ValueID>>{std::move(position_filter_begin),
+                                                                   std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    SegmentIteratorValue<ValueID> dereference() const {
+    SegmentPosition<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto value_id = static_cast<ValueID>(_attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk));

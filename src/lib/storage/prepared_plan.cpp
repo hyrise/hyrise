@@ -2,7 +2,7 @@
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
-#include "expression/parameter_expression.hpp"
+#include "expression/placeholder_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
@@ -19,10 +19,8 @@ void expression_bind_placeholders_impl(
     const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
-        parameter_expression &&
-        parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
-      const auto parameter_iter = parameters.find(parameter_expression->parameter_id);
+    if (const auto placeholder_expression = std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression)) {
+      const auto parameter_iter = parameters.find(placeholder_expression->parameter_id);
       Assert(parameter_iter != parameters.end(),
              "No expression specified for ValuePlaceholder. This should have been caught earlier");
       sub_expression = parameter_iter->second;
@@ -74,7 +72,9 @@ void PreparedPlan::print(std::ostream& stream) const {
 
 std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
     const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const {
-  Assert(parameters.size() == parameter_ids.size(), "Incorrect number of parameters supplied");
+  Assert(parameters.size() == parameter_ids.size(), std::string("Incorrect number of parameters supplied - expected ") +
+                                                        std::to_string(parameter_ids.size()) + " got " +
+                                                        std::to_string(parameters.size()));
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {

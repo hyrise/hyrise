@@ -50,9 +50,8 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   /**
    * Generate the output table, forwarding segments from the input chunks and ordering them according to _column_ids
    */
-  const auto output_table =
-      std::make_shared<Table>(output_column_definitions, input_table_left()->type(),
-                              input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
+  const auto output_table = std::make_shared<Table>(output_column_definitions, input_table_left()->type(), std::nullopt,
+                                                    input_table_left()->has_mvcc());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);

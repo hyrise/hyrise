@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "expression/parameter_expression.hpp"
 #include "operator_performance_data.hpp"
 #include "types.hpp"
 
@@ -127,8 +126,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   void print(std::ostream& stream = std::cout) const;
 
-  // Set all specified parameters within this Operator's expressions and its inputs
-  // Parameters can be ValuePlaceholders of prepared SQL statements, or external values in correlated subslects
+  // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
  protected:

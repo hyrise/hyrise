@@ -26,8 +26,8 @@ std::shared_ptr<ValueExpression> null_() { // NOLINT - clang-tidy doesn't like t
   return std::make_shared<ValueExpression>(NullValue{});
 }
 
-std::shared_ptr<ParameterExpression> uncorrelated_parameter_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<ParameterExpression>(parameter_id);
+std::shared_ptr<PlaceholderExpression> placeholder_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
+  return std::make_shared<PlaceholderExpression>(parameter_id);
 }
 
 std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix

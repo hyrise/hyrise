@@ -26,13 +26,13 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();
-    storage_manager.add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl", Chunk::MAX_SIZE));
-    storage_manager.add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl", Chunk::MAX_SIZE));
-    storage_manager.add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl", Chunk::MAX_SIZE));
+    storage_manager.add_table("customer", load_table("resources/test_data/tbl/tpch/minimal/customer.tbl"));
+    storage_manager.add_table("lineitem", load_table("resources/test_data/tbl/tpch/minimal/lineitem.tbl"));
+    storage_manager.add_table("orders", load_table("resources/test_data/tbl/tpch/minimal/orders.tbl"));
   }
 
   // Run a benchmark that compiles the given SQL query.
-  void BM_CompileQuery(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_CompileQuery(benchmark::State& st) {  // NOLINT
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -42,7 +42,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that only parses the given SQL query.
-  void BM_ParseQuery(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_ParseQuery(benchmark::State& st) {  // NOLINT
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -50,7 +50,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that only plans the given SQL query.
-  void BM_PlanQuery(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_PlanQuery(benchmark::State& st) {  // NOLINT
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
@@ -60,7 +60,7 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   }
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
-  void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {  // NOLINT
+  void BM_QueryPlanCache(benchmark::State& st) {  // NOLINT
     // Enable query plan cache.
     SQLPhysicalPlanCache::get().clear();
     SQLPhysicalPlanCache::get().resize(16);
@@ -82,9 +82,9 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 };
 
-BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st, query); }
-BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st, query); }
-BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st, query); }
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st, query); }
+BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st); }
 
 }  // namespace opossum

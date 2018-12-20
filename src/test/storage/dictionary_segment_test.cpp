@@ -128,11 +128,11 @@ TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test for AllTypeVariant as parameter
-  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(4)), (ValueID)2);
-  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(4)), (ValueID)3);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(4)), ValueID{2});
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(4)), ValueID{3});
 
-  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(5)), (ValueID)3);
-  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(5)), (ValueID)3);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(5)), ValueID{3});
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(5)), ValueID{3});
 
   EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
   EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);

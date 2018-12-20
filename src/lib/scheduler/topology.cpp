@@ -105,7 +105,7 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
 
   _num_cpus = std::thread::hardware_concurrency();
   if (max_num_cores != 0) {
-    _num_cpus = std::min<uint32_t>(_num_cpus, max_num_cores);
+    _num_cpus = std::min(_num_cpus, max_num_cores);
   }
 
   auto cpus = std::vector<TopologyCpu>();
@@ -180,7 +180,7 @@ void Topology::_clear() {
 }
 
 void Topology::_create_memory_resources() {
-  for (auto node_id = size_t{0}; node_id < _nodes.size(); node_id++) {
+  for (auto node_id = int{0}; node_id < static_cast<int>(_nodes.size()); ++node_id) {
     auto memsource_name = std::stringstream();
     memsource_name << "numa_" << std::setw(3) << std::setfill('0') << node_id;
 

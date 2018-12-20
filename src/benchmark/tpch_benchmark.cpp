@@ -22,7 +22,6 @@
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_query_generator.hpp"
-#include "utils/are_args_cxxopts_compatible.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
@@ -46,12 +45,14 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
-    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()); // NOLINT
+    ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
+    ("use_prepared_statements", "Do not use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("true")); // NOLINT
   // clang-format on
 
   std::unique_ptr<opossum::BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
+  bool use_prepared_statements;
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
@@ -62,9 +63,9 @@ int main(int argc, char* argv[]) {
     config = std::make_unique<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
+    use_prepared_statements = json_config.value("use_prepared_statements", false);
   } else {
     // Parse regular command line args
-    Assert(opossum::are_args_cxxopts_compatible(argc, argv), "Command line argument incompatible with cxxopts");
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
     // Display usage and quit
@@ -80,6 +81,8 @@ int main(int argc, char* argv[]) {
 
     config =
         std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+
+    use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   }
 
   std::vector<opossum::QueryID> query_ids;
@@ -103,7 +106,7 @@ int main(int argc, char* argv[]) {
   }
 
   config->out << "- Benchmarking Queries: [ ";
-  for (const auto query_id : query_ids) {
+  for (const auto& query_id : query_ids) {
     config->out << (query_id + 1) << ", ";
   }
   config->out << "]" << std::endl;
@@ -124,7 +127,7 @@ int main(int argc, char* argv[]) {
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
     auto& table = tpch_table.second;
 
-    opossum::BenchmarkTableEncoder::encode(table_name, table, config->encoding_config);
+    opossum::BenchmarkTableEncoder::encode(table_name, table, config->encoding_config, config->out);
     opossum::StorageManager::get().add_table(table_name, table);
   }
   config->out << "- ... done." << std::endl;
@@ -133,7 +136,10 @@ int main(int argc, char* argv[]) {
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
+  context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(query_ids), context).run();
+  opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, query_ids),
+                           context)
+      .run();
 }

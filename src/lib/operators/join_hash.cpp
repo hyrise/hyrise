@@ -12,7 +12,6 @@
 #include "bytell_hash_map.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -164,7 +163,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    return std::ceil(std::log2(cluster_count));
+    return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
 
   std::shared_ptr<const Table> _on_execute() override {

@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -16,7 +17,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
-#include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
 #include "tpch/tpch_db_generator.hpp"
@@ -26,31 +27,14 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-using TestConfiguration = std::pair<QueryID, bool>;  // query_idx, use_jit
+using TPCHTestParam = std::tuple<QueryID, bool /* use_jit */, bool /* use_prepared_statements */>;
 
-class TPCHTest : public BaseTestWithParam<TestConfiguration> {
+class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
-  static std::vector<TestConfiguration> build_combinations() {
-    std::vector<TestConfiguration> combinations;
-    const auto selected_queries = TPCHQueryGenerator{}.selected_queries();
-    for (const auto query_id : selected_queries) {
-      combinations.emplace_back(query_id, false);
-      if constexpr (HYRISE_JIT_SUPPORT) {
-        combinations.emplace_back(query_id, true);
-      }
-    }
-    return combinations;
-  }
   void SetUp() override {
-    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
     SQLLogicalPlanCache::get().clear();
     SQLPhysicalPlanCache::get().clear();
   }
-
-  std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
-
-  std::vector<std::string> tpch_table_names{
-      {"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"}};
 
   // Scale factors chosen so the query
   //   -> actually returns result rows (which some don't for small scale factors)
@@ -62,10 +46,9 @@ class TPCHTest : public BaseTestWithParam<TestConfiguration> {
       {17, 0.013f}, {18, 0.005f}, {19, 0.01f}, {20, 0.008f}, {21, 0.0075f}, {22, 0.01f}};
 };
 
-TEST_P(TPCHTest, TPCHQueryTest) {
-  const auto [query_idx, use_jit] = GetParam();  // NOLINT
+TEST_P(TPCHTest, Test) {
+  const auto [query_idx, use_jit, use_prepared_statements] = GetParam();  // NOLINT
   const auto tpch_idx = query_idx + 1;
-  const auto query = TPCHQueryGenerator{}.build_query(query_idx);
 
   /**
    * Generate the TPC-H tables with a scale factor appropriate for this query
@@ -73,15 +56,27 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
   TpchDbGenerator{scale_factor, 10'000}.generate_and_store();
-  for (const auto& tpch_table_name : tpch_table_names) {
-    const auto table = StorageManager::get().get_table(tpch_table_name);
-    _sqlite_wrapper->create_table(*table, tpch_table_name);
+
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
+               (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
+
+  auto query_generator = TPCHQueryGenerator{use_prepared_statements};
+  if (use_prepared_statements) {
+    // Run the preparation queries
+    const auto& sql = query_generator.get_preparation_queries();
+
+    Assert(!sql.empty(), "If using prepared statements, the preparation queries should not be empty");
+
+    auto pipeline = SQLPipelineBuilder{sql}.disable_mvcc().create_pipeline();
+    // Execute the query, we don't care about the results
+    pipeline.get_result_table();
   }
 
-  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT"));
+  const auto query = query_generator.build_query(query_idx);
 
-  std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
-
+  /**
+   * Pick a LQPTranslator, depending on whether we use JIT or not
+   */
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
     // TPCH query 13 can currently not be run with Jit Operators because of wrong output column definitions for outer
@@ -96,28 +91,48 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   }
   auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).disable_mvcc().create_pipeline();
 
+  /**
+   * Run the query and obtain the result tables, TPC-H 15 needs special handling
+   */
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
+  std::shared_ptr<const Table> result_table;
   if (tpch_idx == 15) {
     Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15") sql_pipeline.get_result_table();
 
-    hyrise_result_table = sql_pipeline.get_result_tables()[1];
-
-    // Omit the "DROP VIEW" from the SQLite query
-    const auto sqlite_query = sql_pipeline.get_sql_strings()[0] + sql_pipeline.get_sql_strings()[1];
-    sqlite_result_table = _sqlite_wrapper->execute_query(sqlite_query);
+    result_table = sql_pipeline.get_result_tables()[1];
   } else {
-    sqlite_result_table = _sqlite_wrapper->execute_query(query);
-    hyrise_result_table = sql_pipeline.get_result_table();
+    result_table = sql_pipeline.get_result_table();
   }
 
-  // EXPECT_TABLE_EQ crashes if one table is a nullptr
-  ASSERT_TRUE(hyrise_result_table);
-  ASSERT_TRUE(sqlite_result_table);
+  /**
+   * Test the results. These files are previous results of a known-to-be-good (i.e., validated with SQLite) execution
+   * of the tests.
+   */
 
-  EXPECT_TABLE_EQ(hyrise_result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
+  auto expected_table =
+      load_table(std::string("src/test/tables/tpch/test-validation/q") + std::to_string(tpch_idx) + ".tbl");
+
+  EXPECT_TABLE_EQ(result_table, expected_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
 }
 
-INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(TPCHTest::build_combinations()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(TPCHTestNoJITNoPreparedStatements, TPCHTest,
+                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false}.selected_queries()),
+                                         testing::ValuesIn({false}),
+                                         testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
+
+INSTANTIATE_TEST_CASE_P(TPCHTestNoJITPreparedStatements, TPCHTest,
+                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false}.selected_queries()),
+                                         testing::ValuesIn({false}),
+                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+
+#if HYRISE_JIT_SUPPORT
+
+INSTANTIATE_TEST_CASE_P(TPCHTestJITPreparedStatements, TPCHTest,
+                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false}.selected_queries()),
+                                         testing::ValuesIn({true}),
+                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+
+#endif
 
 }  // namespace opossum

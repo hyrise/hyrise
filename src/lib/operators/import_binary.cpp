@@ -108,13 +108,13 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto column_count = _read_value<ColumnID>(file);
-  const auto data_types = _read_values<std::string>(file, column_count);
+  const auto column_data_types = _read_values<std::string>(file, column_count);
   const auto column_nullables = _read_values<bool>(file, column_count);
   const auto column_names = _read_string_values(file, column_count);
 
   TableColumnDefinitions output_column_definitions;
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto data_type = data_type_to_string.right.at(data_types[column_id]);
+    const auto data_type = data_type_to_string.right.at(column_data_types[column_id]);
     output_column_definitions.emplace_back(column_names[column_id], data_type, column_nullables[column_id]);
   }
 

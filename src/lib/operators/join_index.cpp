@@ -11,8 +11,8 @@
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -94,15 +94,8 @@ void JoinIndex::_perform_join() {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
         const auto segment_left = input_table_left()->get_chunk(chunk_id_left)->get_segment(_column_ids.first);
 
-        resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
-          using LeftType = typename decltype(left_type)::type;
-
-          auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
-
-          // utilize index for join
-          iterable_left.with_iterators([&](auto left_it, auto left_end) {
-            _join_two_segments_using_index(left_it, left_end, chunk_id_left, chunk_id_right, index);
-          });
+        segment_with_iterators(*segment_left, [&](auto it, const auto end) {
+          _join_two_segments_using_index(it, end, chunk_id_left, chunk_id_right, index);
         });
       }
       performance_data.chunks_scanned_with_index++;
@@ -303,7 +296,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
             input_table->get_chunk(ChunkID{0})->get_segment(column_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
-        for (const auto row : *pos_list) {
+        for (const auto& row : *pos_list) {
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
             continue;

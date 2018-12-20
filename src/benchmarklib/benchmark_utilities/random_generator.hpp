@@ -19,9 +19,8 @@ class RandomGenerator {
    * @param upper       the upper bound
    * @return            a random number
    */
-  template <class IntType = uint32_t, typename LowerType, typename UpperType>
-  IntType random_number(LowerType lower, UpperType upper) {
-    std::uniform_int_distribution<IntType> dist(lower, upper);
+  uint64_t random_number(uint64_t lower, uint64_t upper) {
+    std::uniform_int_distribution<uint64_t> dist(lower, upper);
     return dist(engine);
   }
 

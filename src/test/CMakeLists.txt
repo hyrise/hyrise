@@ -3,6 +3,8 @@ set(
     base_test.hpp
     testing_assert.cpp
     testing_assert.hpp
+    sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_testrunner.hpp
     sql/sqlite_testrunner/sqlite_wrapper.cpp
     sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
@@ -106,7 +108,7 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    optimizer/lqp_translator_test.cpp
+    logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
@@ -130,7 +132,7 @@ set(
     sql/sql_pipeline_test.cpp
     sql/query_plan_cache_test.cpp
     sql/sql_translator_test.cpp
-    sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
     statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
@@ -179,7 +181,6 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
-    utils/are_args_cxxopts_compatible_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
@@ -188,6 +189,16 @@ set(
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
+)
+
+set (
+    SYSTEM_TEST_SOURCES
+    ${SHARED_SOURCES}
+    server/server_test_runner.cpp
+    sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpch_test.cpp
+    tpc/tpch_db_generator_test.cpp
+    gtest_main.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -256,18 +267,13 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/resolve_condition_test.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
-            tasks/load_server_file_task_test.cpp)
+        tasks/load_server_file_task_test.cpp)
+
+    set(SYSTEM_TEST_SOURCES
+        ${SYSTEM_TEST_SOURCES}
+        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp
+    )
 endif()
-
-set (
-    SYSTEM_TEST_SOURCES
-    ${SHARED_SOURCES}
-    server/server_test_runner.cpp
-    tpc/tpch_test.cpp
-    tpc/tpch_db_generator_test.cpp
-    gtest_main.cpp
-)
-
 
 # Both hyriseTest and hyriseSystemTest link against these
 set(
@@ -278,6 +284,9 @@ set(
     ${FILESYSTEM_LIBRARY}
     ${CMAKE_DL_LIBS}
 )
+
+# This warning does not play well with SCOPED_TRACE
+add_compile_options(-Wno-used-but-marked-unused)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
@@ -294,5 +303,6 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

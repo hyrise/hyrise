@@ -4,14 +4,14 @@
 #include <string>
 #include <type_traits>
 
+#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/reference_segment/reference_segment_iterable.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
-
-#include "utils/assert.hpp"
-
-#include "resolve_type.hpp"
 #include "type_comparison.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -34,26 +34,28 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   auto matches_out = std::make_shared<PosList>();
 
-  resolve_data_and_segment_type(*left_segment, [&](auto left_type, auto& typed_left_segment) {
-    resolve_data_and_segment_type(*right_segment, [&](auto right_type, auto& typed_right_segment) {
-      using LeftSegmentType = std::decay_t<decltype(typed_left_segment)>;
-      using RightSegmentType = std::decay_t<decltype(typed_right_segment)>;
+  segment_with_iterators(*left_segment, [&](auto left_it, const auto left_end) {
+    segment_with_iterators(*right_segment, [&](auto right_it, const auto right_end) {
+      using LeftSegmentIterableType = typename decltype(left_it)::IterableType;
+      using RightSegmentIterableType = typename decltype(right_it)::IterableType;
 
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
+      using LeftType = typename decltype(left_it)::ValueType;
+      using RightType = typename decltype(right_it)::ValueType;
 
       /**
-       * This generic lambda is instantiated for each type (int, long, etc.) and
-       * each segment type (value, dictionary, reference segment)!
-       * That’s 3x5 combinations each and 15x15=225 in total. However, not all combinations are valid or possible.
+       * The following generic lambda is instantiated for each combinations of type (int, long, etc.) and
+       * each segment iterator type (value, value-non-null, dictionary-simd, ...)!
+       * However, not all combinations are valid or possible.
        * Only data segments (value, dictionary) or reference segments will be compared, as a table with both data and
        * reference segments is ruled out. Moreover it is not possible to compare strings to any of the four numerical
        * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
-       * reduces the number of combinations to 85.
+       * reduces the number of combinations.
        */
 
-      constexpr auto LEFT_IS_REFERENCE_SEGMENT = (std::is_same<LeftSegmentType, ReferenceSegment>{});
-      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = (std::is_same<RightSegmentType, ReferenceSegment>{});
+      constexpr auto LEFT_IS_REFERENCE_SEGMENT =
+          std::is_same<LeftSegmentIterableType, ReferenceSegmentIterable<LeftType>>{};
+      constexpr auto RIGHT_IS_REFERENCE_SEGMENT =
+          std::is_same<RightSegmentIterableType, ReferenceSegmentIterable<RightType>>{};
 
       constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
       constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
@@ -64,27 +66,26 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      // clang-format off
-      if constexpr((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
-                   (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
-        auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
-        auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
+      if constexpr ((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
+                    (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
+        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto left_it_copy = left_it;
+        const auto left_end_copy = left_end;
+        const auto right_it_copy = right_it;
+        const auto chunk_id_copy = chunk_id;
+        const auto& matches_out_ref = matches_out;
+        const auto condition = _predicate_condition;
 
-        left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
-          right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(_predicate_condition, [&](auto predicate_comparator) {
-              auto comparator = [predicate_comparator](const auto& left, const auto& right) {
-                return predicate_comparator(left.value(), right.value());
-              };
-              _scan_with_iterators<true>(comparator, left_it, left_end,
-                                         chunk_id, *matches_out, right_it);
-            });
-          });
+        with_comparator(condition, [&](auto predicate_comparator) {
+          auto comparator = [predicate_comparator](const auto& left, const auto& right) {
+            return predicate_comparator(left.value(), right.value());
+          };
+          AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it_copy, left_end_copy, chunk_id_copy,
+                                                            *matches_out_ref, right_it_copy);
         });
       } else {
-        Fail("Invalid segment combination detected!");   // NOLINT - cpplint.py does not know about constexpr
+        Fail("Invalid segment combination detected!");  // NOLINT - cpplint.py does not know about constexpr
       }
-      // clang-format on
     });
   });
 

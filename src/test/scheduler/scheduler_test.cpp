@@ -193,7 +193,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
-  auto test_table = load_table("src/test/tables/int_float.tbl", 2);
+  auto test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
   StorageManager::get().add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
@@ -209,24 +209,30 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
   CurrentScheduler::get()->finish();
 
-  auto expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
 }
 
 TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
-  Topology::use_non_numa_topology(8);
+  if (std::thread::hardware_concurrency() < 4) {
+    // If the machine has less than 4 cores, the calls to use_non_numa_topology()
+    // below will implicitly reduce the worker count to the number of cores,
+    // therefore failing the assertions.
+    GTEST_SKIP();
+  }
+  Topology::use_non_numa_topology(4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
 
-  Topology::use_fake_numa_topology(8);
+  Topology::use_fake_numa_topology(4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(8, CurrentScheduler::get()->queues().size());
+  EXPECT_EQ(4, CurrentScheduler::get()->queues().size());
 
-  Topology::use_fake_numa_topology(8, 4);
+  Topology::use_fake_numa_topology(4, 2);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(2, CurrentScheduler::get()->queues().size());
 
-  Topology::use_fake_numa_topology(8, 8);
+  Topology::use_fake_numa_topology(4, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   EXPECT_EQ(1, CurrentScheduler::get()->queues().size());
 
@@ -239,9 +245,7 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 
   auto task_done = false;
   auto task = std::make_shared<JobTask>([&task_done]() {
-    auto subtask = std::make_shared<JobTask>([&task_done]() {
-      task_done = true;
-    });
+    auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
 
     subtask->schedule();
     CurrentScheduler::wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
