@@ -86,7 +86,7 @@ class BenchmarkRunner {
   Duration _total_run_duration{};
 
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
-  std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
+  std::unique_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 
 }  // namespace opossum

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-
 #include "abstract_query_generator.hpp"
 
 namespace opossum {
@@ -31,7 +29,7 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
   // Should we use prepared statements or generate "regular" SQL queries?
   const bool _use_prepared_statements;
 
-  float _scale_factor;
+  const float _scale_factor;
 };
 
 }  // namespace opossum

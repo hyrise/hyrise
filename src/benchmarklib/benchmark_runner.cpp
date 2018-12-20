@@ -47,9 +47,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
   if (config.validate) {
     // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
     Assert(!config.enable_scheduler, "Cannot use validation with enabled scheduler");
-    Assert(config.clients == 1, "Cannot use validation with multiple clients");
 
-    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
+    _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
       _sqlite_wrapper->create_table(*table, table_name);
     }
@@ -344,14 +343,15 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
     const auto hyrise_result = pipeline.get_result_table();
     const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
 
-    // check_table_equal does not handle empty tables well    
+    // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
       Assert(sqlite_result->row_count() > 0, "Validation failed: Hyrise returned a result, but SQLite didn't");
       Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                FloatComparisonMode::RelativeDifference),
              "Validation failed");
     } else {
-      Assert(!sqlite_result || sqlite_result->row_count() == 0, "Validation failed: SQLite returned a result, but Hyrise didn't");
+      Assert(!sqlite_result || sqlite_result->row_count() == 0,
+             "Validation failed: SQLite returned a result, but Hyrise didn't");
     }
   }
 
