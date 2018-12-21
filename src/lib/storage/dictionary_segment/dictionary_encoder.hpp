@@ -5,15 +5,14 @@
 #include <memory>
 
 #include "storage/base_segment_encoder.hpp"
-
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
+#include "utils/nvm_memory_resource.hpp"
 
 namespace opossum {
 
@@ -58,7 +57,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(
       U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto& values = value_segment->values();
-    const auto alloc = values.get_allocator();
+    const auto alloc = PolymorphicAllocator<T>(&NVMMemoryResource::get());
 
     // Remove null values from value vector
     if (value_segment->is_nullable()) {
@@ -81,7 +80,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
 
-    auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
+    auto attribute_vector = pmr_vector<uint32_t>{alloc};
     attribute_vector.reserve(values.size());
 
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());

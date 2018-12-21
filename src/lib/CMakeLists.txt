@@ -550,6 +550,8 @@ set(
     utils/make_bimap.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
+    utils/nvm_memory_resource.cpp
+    utils/nvm_memory_resource.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -579,6 +581,7 @@ set(
 
 set(
     LIBRARIES
+    pmemobj
     pthread
     sqlparser
     cqf
@@ -669,6 +672,8 @@ add_library(hyrise STATIC ${SOURCES})
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
+
+target_include_directories(hyrise PUBLIC ../../third_party/libpmemobj-cpp/include)
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
