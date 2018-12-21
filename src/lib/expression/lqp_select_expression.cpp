@@ -4,7 +4,6 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "expression/parameter_expression.hpp"
 #include "expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

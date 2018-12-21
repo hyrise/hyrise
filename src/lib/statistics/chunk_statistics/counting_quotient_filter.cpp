@@ -5,7 +5,7 @@
 #include <string>
 
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -24,6 +24,10 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
   Assert(quotient_size > 0, "Quotient size can not be zero.");
   Assert(_hash_bits <= 64u, "Hash length can not exceed 64 bits.");
 
+  // Floating point types are unsupported because equality checks for floating
+  // point values are cumbersome and thus is hashing them even more so.
+  Assert(!std::is_floating_point<ElementType>::value, "Quotient filters do not support floating point types.");
+
   if (remainder_size == 2) {
     _quotient_filter = gqf2::quotient_filter{};
   } else if (remainder_size == 4) {
@@ -35,7 +39,7 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(const size_t quotien
   } else if (remainder_size == 32) {
     _quotient_filter = gqf32::quotient_filter{};
   } else {
-    Fail("Invalid remainder remainder_size");
+    Fail("Invalid remainder_size");
   }
 
   const auto number_of_slots = static_cast<size_t>(std::pow(2, quotient_size));
@@ -49,11 +53,8 @@ CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType value, size_t count) {
-  const auto bitmask = static_cast<size_t>(std::pow(2, _hash_bits)) - 1;
-  const auto hash = bitmask & _hash(value);
-  for (size_t idx = 0; idx < count; ++idx) {
-    boost::apply_visitor([&](auto& filter) { qf_insert(&filter, hash, 0, 1); }, _quotient_filter);
-  }
+  const auto hash = get_hash_bits(value, _hash_bits);
+  boost::apply_visitor([&](auto& filter) { qf_insert(&filter, hash, 0, count); }, _quotient_filter);
 }
 
 template <typename ElementType>
@@ -72,8 +73,7 @@ bool CountingQuotientFilter<ElementType>::can_prune(const PredicateCondition pre
 
 template <typename ElementType>
 size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) const {
-  const auto bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
-  const auto hash = bitmask & _hash(value);
+  const auto hash = get_hash_bits(value, _hash_bits);
 
   auto count = size_t{0};
   boost::apply_visitor([&](auto& filter) { count = qf_count_key_value(&filter, hash, 0); }, _quotient_filter);
@@ -81,18 +81,26 @@ size_t CountingQuotientFilter<ElementType>::count(const ElementType& value) cons
 }
 
 template <typename ElementType>
-size_t CountingQuotientFilter<ElementType>::_hash(const ElementType& value) const {
-  return std::hash<ElementType>{}(value);
+inline __attribute__((always_inline)) uint64_t CountingQuotientFilter<ElementType>::get_hash_bits(
+    const ElementType& value, const uint64_t bit_count) {
+  /*
+   * Counting Quotient Filters use variable length hash values to build their internal data structures.
+   * These can be as low 6 bits. Hence, it has to be ensured that the lower bits include enough entropy.
+   * Using std::hash and the least significant bits can lead to ineffective pruning and bad cardinality
+   * estimations. As a consequence, we use multiply-shift (cf. Richter et al., A Seven-Dimensional
+   * Analysis of Hashing Methods and its Implications on Query Processing, PVLDB 2015) to generate
+   * fast but sufficiently scrambled hashes (here in form of fibonacci hashing, cf.
+   * https://probablydance.com/2018/06/16/fibonacci-hashing-the-optimization-
+   * that-the-world-forgot-or-a-better-alternative-to-integer-modulo/)
+   */
+  return static_cast<uint64_t>((std::hash<ElementType>{}(value)*11400714819323198485llu) >> (64 - bit_count));
 }
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::populate(const std::shared_ptr<const BaseSegment>& segment) {
-  resolve_segment_type<ElementType>(*segment, [&](const auto& typed_segment) {
-    auto segment_iterable = create_iterable_from_segment<ElementType>(typed_segment);
-    segment_iterable.for_each([&](const auto& value) {
-      if (value.is_null()) return;
-      insert(value.value());
-    });
+  segment_iterate<ElementType>(*segment, [&](const auto& position) {
+    if (position.is_null()) return;
+    insert(position.value());
   });
 }
 

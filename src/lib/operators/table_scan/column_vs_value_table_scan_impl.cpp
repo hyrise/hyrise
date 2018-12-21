@@ -8,6 +8,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iterate.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -34,37 +35,33 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     return;
   }
 
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, matches, position_filter);
+  // Select optimized or generic scanning implementation based on segment type
+  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+    _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+  } else {
+    _scan_generic_segment(segment, chunk_id, matches, position_filter);
+  }
+}
+
+void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
+    using ColumnDataType = typename decltype(it)::ValueType;
+    auto typed_value = type_cast_variant<ColumnDataType>(_value);
+
+    with_comparator(_predicate_condition, [&](auto predicate_comparator) {
+      auto comparator = [predicate_comparator, typed_value](const auto& position) {
+        return predicate_comparator(position.value(), typed_value);
+      };
+      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+    });
   });
 }
 
-void ColumnVsValueTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
-      Fail("Expected ReferenceSegments to be handled before calling this method");
-    } else {
-      using ColumnDataType = typename decltype(type)::type;
-      auto typed_value = type_cast_variant<ColumnDataType>(_value);
-
-      auto segment_iterable = create_iterable_from_segment(typed_segment);
-
-      with_comparator(_predicate_condition, [&](auto predicate_comparator) {
-        auto comparator = [predicate_comparator, typed_value](const auto& iterator_value) {
-          return predicate_comparator(iterator_value.value(), typed_value);
-        };
-        segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-        });
-      });
-    }
-  });
-}
-
-void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                               PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
+void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+                                                          PosList& matches,
+                                                          const std::shared_ptr<const PosList>& position_filter) const {
   /**
    * ValueID search_vid;              // left value id
    * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
@@ -100,7 +97,8 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
+      // Matches all, so include all rows except those with NULLs in the result.
+      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -111,8 +109,8 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   }
 
   _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
-    auto comparator = [predicate_comparator, search_value_id](const auto& iterator_value) {
-      return predicate_comparator(iterator_value.value(), search_value_id);
+    auto comparator = [predicate_comparator, search_value_id](const auto& position) {
+      return predicate_comparator(position.value(), search_value_id);
     };
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       if (_predicate_condition == PredicateCondition::GreaterThan ||

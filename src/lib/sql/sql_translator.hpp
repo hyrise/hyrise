@@ -9,7 +9,6 @@
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/parameter_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"

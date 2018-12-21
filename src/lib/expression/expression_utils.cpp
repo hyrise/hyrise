@@ -183,11 +183,11 @@ std::shared_ptr<AbstractExpression> inflate_logical_expressions(
 void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression,
                                const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type == ExpressionType::Parameter) {
-      auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-      const auto value_iter = parameters.find(parameter_expression->parameter_id);
+    if (auto correlated_parameter_expression =
+            std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
+      const auto value_iter = parameters.find(correlated_parameter_expression->parameter_id);
       if (value_iter != parameters.end()) {
-        parameter_expression->set_value(value_iter->second);
+        correlated_parameter_expression->set_value(value_iter->second);
       }
       return ExpressionVisitation::DoNotVisitArguments;
 
@@ -233,11 +233,7 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   auto placeholder_found = false;
 
   visit_expression(expression, [&](const auto& sub_expression) {
-    const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
-    if (parameter_expression) {
-      placeholder_found |= parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder;
-    }
-
+    placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression) != nullptr;
     return ExpressionVisitation::VisitArguments;
   });
 
@@ -245,10 +241,9 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
 }
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
-  if (expression.type == ExpressionType::Parameter) {
-    const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
-    DebugAssert(parameter_expression.value(), "ParameterExpression doesn't have a value set");
-    return *parameter_expression.value();
+  if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
+    DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set");
+    return *correlated_parameter_expression->value();
   } else if (expression.type == ExpressionType::Value) {
     return static_cast<const ValueExpression&>(expression).value;
   } else {

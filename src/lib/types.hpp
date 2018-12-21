@@ -40,7 +40,6 @@ STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
-STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
 // Used to identify a Parameter within a (Sub)Select. This can be either a parameter of a Prepared SELECT statement
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a Subselect.
@@ -77,7 +76,7 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
   pmr_concurrent_vector(tbb::concurrent_vector<T> other, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
-  pmr_concurrent_vector(std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
+  pmr_concurrent_vector(const std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
 
   template <class I>

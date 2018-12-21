@@ -1,12 +1,12 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "storage/base_segment.hpp"
@@ -23,22 +23,13 @@ std::map<T, size_t> value_counts() {
 
 template <>
 std::map<int32_t, size_t> value_counts<int32_t>() {
-  return {{1, 54}, {12, 43}, {123, 32}, {1234, 21}, {12345, 8}, {123456, 6}};
+  return {{-17, 3}, {1, 54}, {12, 43}, {123, 32}, {1'234, 21}, {12'345, 8}, {123'456, 6}};
 }
 
 template <>
 std::map<int64_t, size_t> value_counts<int64_t>() {
-  return {{100000ll, 54}, {1200000ll, 43}, {12300000ll, 32}, {123400000ll, 21}, {1234500000ll, 8}, {12345600000ll, 6}};
-}
-
-template <>
-std::map<float, size_t> value_counts<float>() {
-  return {{1.1f, 54}, {12.2f, 43}, {123.3f, 32}, {1234.4f, 21}, {12345.5f, 8}, {123456.6f, 6}};
-}
-
-template <>
-std::map<double, size_t> value_counts<double>() {
-  return {{1.1, 54}, {12.2, 43}, {123.3, 32}, {1234.4, 21}, {12345.5, 8}, {123456.6, 6}};
+  return {{-100'000'000'000, 3}, {100'000ll, 54},      {1'200'000ll, 43},    {12'300'000ll, 32},
+          {123'400'000ll, 21},   {1'234'500'000ll, 8}, {12'345'600'000ll, 6}};
 }
 
 template <>
@@ -59,14 +50,7 @@ template <>
 int64_t get_test_value<int64_t>(size_t run) {
   return static_cast<int64_t>(123457 + run);
 }
-template <>
-float get_test_value<float>(size_t run) {
-  return static_cast<float>(123457.0f + run);
-}
-template <>
-double get_test_value<double>(size_t run) {
-  return static_cast<double>(123457.0 + run);
-}
+
 template <>
 std::string get_test_value<std::string>(size_t run) {
   return std::string("test_value") + std::to_string(run);
@@ -77,7 +61,7 @@ std::string get_test_value<std::string>(size_t run) {
 namespace opossum {
 
 template <typename T>
-class CountingQuotientFilterTest : public BaseTest {
+class CountingQuotientFilterTypedTest : public BaseTest {
  protected:
   void SetUp() override {
     this->value_counts = ::value_counts<T>();
@@ -131,14 +115,14 @@ class CountingQuotientFilterTest : public BaseTest {
       }
     }
     const auto false_positive_rate = false_positives / static_cast<float>(runs);
-    EXPECT_TRUE(false_positive_rate < 0.5f);
+    EXPECT_LT(false_positive_rate, 0.4f);
   }
 };
 
-using Types = ::testing::Types<int32_t, int64_t, float, double, std::string>;
-TYPED_TEST_CASE(CountingQuotientFilterTest, Types, );  // NOLINT(whitespace/parens)
+using Types = ::testing::Types<int32_t, int64_t, std::string>;
+TYPED_TEST_CASE(CountingQuotientFilterTypedTest, Types, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(CountingQuotientFilterTest, ValueCounts) {
+TYPED_TEST(CountingQuotientFilterTypedTest, ValueCounts) {
   this->test_value_counts(this->cqf2);
   this->test_value_counts(this->cqf4);
   this->test_value_counts(this->cqf8);
@@ -146,7 +130,7 @@ TYPED_TEST(CountingQuotientFilterTest, ValueCounts) {
   this->test_value_counts(this->cqf32);
 }
 
-TYPED_TEST(CountingQuotientFilterTest, CanNotPrune) {
+TYPED_TEST(CountingQuotientFilterTypedTest, CanNotPrune) {
   this->test_can_not_prune(this->cqf2);
   this->test_can_not_prune(this->cqf4);
   this->test_can_not_prune(this->cqf8);
@@ -159,12 +143,48 @@ TYPED_TEST(CountingQuotientFilterTest, CanNotPrune) {
  * sanity checking, making sure the FPR is below a very lenient threshold. If these tests fail it is very likely,
  * however not absolutely certain, that there is a bug in the CQF.
  */
-TYPED_TEST(CountingQuotientFilterTest, DISABLED_FalsePositiveRate /* #1220 */) {
+TYPED_TEST(CountingQuotientFilterTypedTest, FalsePositiveRate) {
   this->test_false_positive_rate(this->cqf2);
   this->test_false_positive_rate(this->cqf4);
   this->test_false_positive_rate(this->cqf8);
   this->test_false_positive_rate(this->cqf16);
   this->test_false_positive_rate(this->cqf32);
+}
+
+// Testing the get_hash_bits functions which is used in the CQF.
+TYPED_TEST(CountingQuotientFilterTypedTest, HashBits) {
+  for (auto bit_count : {8, 16, 32, 64}) {
+    if constexpr (std::is_arithmetic<TypeParam>::value) {
+      for (auto numeric_value : {-1'132'323'323, -28, -0, 0, 17, 32'323'323}) {
+        const auto return_value =
+            CountingQuotientFilter<TypeParam>::get_hash_bits(static_cast<TypeParam>(numeric_value), bit_count);
+        EXPECT_GE(return_value, 0);
+        EXPECT_LT(return_value, std::pow(2, bit_count));
+      }
+    } else {
+      for (auto& string_value : {"alpha", "beta", "charlie", "zeier"}) {
+        const auto return_value = CountingQuotientFilter<TypeParam>::get_hash_bits(string_value, bit_count);
+        EXPECT_GE(return_value, 0);
+        EXPECT_LT(return_value, std::pow(2, bit_count));
+      }
+    }
+  }
+}
+
+// Floating point types are not supported.
+TEST(CountingQuotientFilterTest, FloatingPointTypesUnsupported) {
+  EXPECT_NO_THROW(CountingQuotientFilter<int>(4, 4));
+
+  EXPECT_THROW(CountingQuotientFilter<float>(4, 4), std::logic_error);
+  EXPECT_THROW(CountingQuotientFilter<double>(4, 4), std::logic_error);
+}
+
+TEST(CountingQuotientFilterTest, QuotientSizes) {
+  // Quotient needs to be larger than zero.
+  EXPECT_THROW(CountingQuotientFilter<int>(0, 4), std::logic_error);
+
+  // Sum of quotient and remainder should not exceed 64 bit.
+  EXPECT_THROW(CountingQuotientFilter<int>(32, 33), std::logic_error);
 }
 
 }  // namespace opossum
