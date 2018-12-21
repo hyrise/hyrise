@@ -35,7 +35,7 @@ class DataGenerator:
 
     @staticmethod
     def foreign_key_column(row_count, distinct_values):
-        distinct_values = random.choices(range(0, int(row_count/10)), k=distinct_values)
+        distinct_values = random.choices(range(0, max(int(row_count/10), 1)), k=distinct_values)
         return np.random.choice(distinct_values, row_count)
 
     @staticmethod
