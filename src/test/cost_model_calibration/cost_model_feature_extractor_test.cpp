@@ -1,12 +1,3 @@
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
@@ -39,15 +30,13 @@ class CostModelFeatureExtractorTest : public BaseTest {
 
   std::shared_ptr<PQPColumnExpression> a, b;
 };
+
 template <typename T>
 class CostModelFeatureExtractorJoinTest : public BaseTest {
  protected:
   void SetUp() override {
     const auto int_int = load_table("src/test/tables/int_int.tbl", 7);
     const auto int_string = load_table("src/test/tables/int_string.tbl", 7);
-
-    _int_int_a = PQPColumnExpression::from_table(*int_int, "a");
-    _int_string_a = PQPColumnExpression::from_table(*int_string, "a");
 
     _int_int = std::make_shared<TableWrapper>(int_int);
     _int_int->execute();
@@ -58,7 +47,6 @@ class CostModelFeatureExtractorJoinTest : public BaseTest {
 
  protected:
   std::shared_ptr<TableWrapper> _int_int, _int_string;
-  std::shared_ptr<PQPColumnExpression> _int_int_a, _int_string_a;
 };
 
 TEST_F(CostModelFeatureExtractorTest, ExtractSimpleComparison) {
@@ -112,7 +100,7 @@ TEST_F(CostModelFeatureExtractorTest, ExtractOr) {
 }
 
 using JoinTypes = ::testing::Types<JoinHash, JoinIndex, JoinSortMerge, JoinNestedLoop, JoinMPSM>;
-TYPED_TEST_CASE(CostModelFeatureExtractorJoinTest, JoinTypes, );
+TYPED_TEST_CASE(CostModelFeatureExtractorJoinTest, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CostModelFeatureExtractorJoinTest, ExtractJoin) {
   const auto join = std::make_shared<TypeParam>(this->_int_int, this->_int_string, JoinMode::Inner,
@@ -122,9 +110,6 @@ TYPED_TEST(CostModelFeatureExtractorJoinTest, ExtractJoin) {
   const auto calibration_example = CostModelFeatureExtractor::extract_features(join);
 
   EXPECT_TRUE(calibration_example.join_features);
-  //  EXPECT_EQ(calibration_example.join_features->scan_segment_encoding, "undefined");
-  //  EXPECT_EQ(calibration_example.table_scan_features->second_scan_segment_encoding, "undefined");
-  //  EXPECT_EQ(calibration_example.table_scan_features->number_of_computable_or_column_expressions, 5);
 }
 
 }  // namespace opossum

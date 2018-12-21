@@ -1,14 +1,4 @@
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "feature/calibration_aggregate_features.hpp"
 #include "feature/calibration_constant_hardware_features.hpp"
@@ -30,7 +20,7 @@ using FeatureTypes = ::testing::Types<CalibrationAggregateFeatures, CalibrationC
                                       CalibrationFeatures, CalibrationJoinFeatures, CalibrationProjectionFeatures,
                                       CalibrationRuntimeHardwareFeatures, CalibrationTableScanFeatures>;
 
-TYPED_TEST_CASE(CalibrationFeatureTest, FeatureTypes, );
+TYPED_TEST_CASE(CalibrationFeatureTest, FeatureTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CalibrationFeatureTest, SimpleTest) {
   const auto features = std::make_shared<TypeParam>();

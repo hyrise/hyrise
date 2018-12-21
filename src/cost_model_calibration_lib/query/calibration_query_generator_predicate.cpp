@@ -55,7 +55,7 @@ const std::vector<std::shared_ptr<PredicateNode>> CalibrationQueryGeneratorPredi
   // TODO(Sven): add test for this case
   if (!predicate) {
     return {};
-  };
+  }
 
   std::vector<ScanType> scan_types = {ScanType::TableScan, ScanType ::IndexScan};
   std::vector<std::shared_ptr<PredicateNode>> permutated_predicate_nodes{};

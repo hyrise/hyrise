@@ -8,7 +8,7 @@ namespace opossum {
 
 struct CalibrationFeatures {
   std::string operator_type;
-  long execution_time_ns = 0;
+  uint64_t execution_time_ns = 0;
   float input_table_size_ratio = 0.0;
 
   size_t left_input_row_count = 0;

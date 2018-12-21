@@ -15,11 +15,12 @@ struct AbstractCalibrationFeatures {
 
 inline const std::vector<std::string> AbstractCalibrationFeatures::feature_names(
     const std::optional<std::string>& prefix) {
-  const auto copied_columns = columns;
-  if (prefix) {
-    std::for_each(copied_columns.begin(), copied_columns.end(), [prefix](auto& s) { s.insert(0, prefix); });
+  if (!prefix) {
+    return columns;
   }
-  return copied_columns;
-};
+
+  std::for_each(columns.begin(), columns.end(), [prefix](auto& s) { s.insert(0, prefix); });
+  return columns;
+}
 
 }  // namespace opossum

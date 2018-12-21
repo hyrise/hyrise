@@ -25,7 +25,6 @@ struct CalibrationTableScanFeatures {
 };
 
 inline const std::vector<std::string> CalibrationTableScanFeatures::feature_names = {
-
     []() {
       const auto first_column_names = CalibrationColumnFeatures::feature_names_with_prefix("first_column");
       const auto second_column_names = CalibrationColumnFeatures::feature_names_with_prefix("second_column");
@@ -42,7 +41,8 @@ inline const std::vector<std::string> CalibrationTableScanFeatures::feature_name
       output.emplace_back("number_of_effective_chunks");
 
       return output;
-    }()};
+    }()
+};
 
 inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize(
     const std::optional<CalibrationTableScanFeatures>& features) {

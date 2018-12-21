@@ -1,6 +1,6 @@
 #include <iostream>
-#include <sql/sql_pipeline_builder.hpp>
 
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"

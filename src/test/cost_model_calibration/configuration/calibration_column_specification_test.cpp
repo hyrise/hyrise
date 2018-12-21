@@ -1,16 +1,6 @@
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include <json.hpp>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "configuration/calibration_column_specification.hpp"
 
