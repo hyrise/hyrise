@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../configuration/calibration_configuration.hpp"
 #include "../configuration/calibration_column_specification.hpp"
+#include "../configuration/calibration_configuration.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -25,10 +25,8 @@ using JoinGeneratorFunctor = std::function<const std::shared_ptr<AbstractExpress
 
 class CalibrationQueryGeneratorJoin {
  public:
-
-    static const std::vector<CalibrationQueryGeneratorJoinConfiguration> generate_join_permutations(
-            const std::vector<std::pair<std::string, size_t>>& tables,
-            const CalibrationConfiguration& configuration);
+  static const std::vector<CalibrationQueryGeneratorJoinConfiguration> generate_join_permutations(
+      const std::vector<std::pair<std::string, size_t>>& tables, const CalibrationConfiguration& configuration);
 
   static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_join(
       const CalibrationQueryGeneratorJoinConfiguration& configuration,

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../configuration/calibration_configuration.hpp"
 #include "../configuration/calibration_column_specification.hpp"
+#include "../configuration/calibration_configuration.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -30,17 +30,14 @@ using PredicateGeneratorFunctor =
 
 class CalibrationQueryGeneratorPredicate {
  public:
-    static const std::vector<CalibrationQueryGeneratorPredicateConfiguration> generate_predicate_permutations(
-            const std::vector<std::pair<std::string, size_t>>& tables,
-            const CalibrationConfiguration& configuration);
-
+  static const std::vector<CalibrationQueryGeneratorPredicateConfiguration> generate_predicate_permutations(
+      const std::vector<std::pair<std::string, size_t>>& tables, const CalibrationConfiguration& configuration);
 
   static const std::vector<std::shared_ptr<PredicateNode>> generate_predicates(
       const PredicateGeneratorFunctor& predicate_generator,
       const std::vector<CalibrationColumnSpecification>& column_definitions,
       const std::shared_ptr<StoredTableNode>& table,
-      const CalibrationQueryGeneratorPredicateConfiguration& configuration,
-      bool generate_index_scan = false);
+      const CalibrationQueryGeneratorPredicateConfiguration& configuration, bool generate_index_scan = false);
 
   /*
    * Functors to generate predicates.

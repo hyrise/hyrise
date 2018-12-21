@@ -42,24 +42,20 @@ TEST_F(CalibrationQueryGeneratorJoinTest, GenerateJoinPredicate) {
 }
 
 TEST_F(CalibrationQueryGeneratorJoinTest, GenerateJoinPermutation) {
+  const std::vector<std::pair<std::string, size_t>> tables = {{"SomeTable", 100}, {"SomeOtherTable", 1000}};
 
-  const std::vector<std::pair<std::string, size_t>> tables = {
-          {"SomeTable", 100},
-          {"SomeOtherTable", 1000}
-  };
-
-      CalibrationConfiguration configuration {};
-      configuration.encodings = {EncodingType::Dictionary};
-      configuration.data_types = {DataType::Int};
+  CalibrationConfiguration configuration{};
+  configuration.encodings = {EncodingType::Dictionary};
+  configuration.data_types = {DataType::Int};
 
   const auto result = CalibrationQueryGeneratorJoin::generate_join_permutations(tables, configuration);
 
   std::cout << result.size() << std::endl;
-  for (const auto & f : result) {
+  for (const auto& f : result) {
     std::cout << f.left_table_name << std::endl;
     std::cout << f.right_table_name << std::endl;
-//    std::cout << f.encoding_type << std::endl;
-//    std::cout << f.data_type << std::endl;
+    //    std::cout << f.encoding_type << std::endl;
+    //    std::cout << f.data_type << std::endl;
     std::cout << f.reference_column << std::endl;
   }
 }

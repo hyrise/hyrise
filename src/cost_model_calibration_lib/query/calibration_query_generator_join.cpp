@@ -11,37 +11,34 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-    const std::vector<CalibrationQueryGeneratorJoinConfiguration>
-    CalibrationQueryGeneratorJoin::generate_join_permutations(
-            const std::vector<std::pair<std::string, size_t>>& tables,
-            const CalibrationConfiguration& configuration) {
-      std::vector<CalibrationQueryGeneratorJoinConfiguration> output{};
+const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGeneratorJoin::generate_join_permutations(
+    const std::vector<std::pair<std::string, size_t>>& tables, const CalibrationConfiguration& configuration) {
+  std::vector<CalibrationQueryGeneratorJoinConfiguration> output{};
 
-      // Generating all combinations
-      for (const auto& data_type : configuration.data_types) {
-        for (const auto& encoding : configuration.encodings) {
-          for (const auto& left_table : tables) {
-            for (const auto& right_table : tables) {
-              if (left_table.second == right_table.second * 10) {
-                output.push_back({left_table.first, right_table.first, encoding, data_type, false});
-                output.push_back({left_table.first, right_table.first, encoding, data_type, true});
-              }
-            }
+  // Generating all combinations
+  for (const auto& data_type : configuration.data_types) {
+    for (const auto& encoding : configuration.encodings) {
+      for (const auto& left_table : tables) {
+        for (const auto& right_table : tables) {
+          if (left_table.second == right_table.second * 10) {
+            output.push_back({left_table.first, right_table.first, encoding, data_type, false});
+            output.push_back({left_table.first, right_table.first, encoding, data_type, true});
           }
         }
       }
-
-      std::cout << "Generated " << output.size() << " Permutations for Joins" << std::endl;
-      return output;
     }
+  }
 
+  std::cout << "Generated " << output.size() << " Permutations for Joins" << std::endl;
+  return output;
+}
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoin::generate_join(
     const CalibrationQueryGeneratorJoinConfiguration& configuration,
     const JoinGeneratorFunctor& join_predicate_generator, const std::shared_ptr<StoredTableNode>& left_table,
     const std::shared_ptr<StoredTableNode>& right_table,
     const std::vector<CalibrationColumnSpecification>& column_definitions) {
-//  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::NestedLoop, JoinType::MPSM, JoinType::SortMerge};
+  //  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::NestedLoop, JoinType::MPSM, JoinType::SortMerge};
   std::vector<JoinType> join_types = {JoinType::Hash, JoinType::SortMerge};
   std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
 
