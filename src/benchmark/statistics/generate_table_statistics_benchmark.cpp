@@ -11,7 +11,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)(
 
   const auto tables = TpchDbGenerator{state.range(0) / 1000.0f}.generate();
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     for (const auto& pair : tables) {
       generate_table_statistics(*pair.second);
     }
