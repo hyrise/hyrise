@@ -284,13 +284,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const size_t partition_count = radix_right.partition_offsets.size();
     left_pos_lists.resize(partition_count);
     right_pos_lists.resize(partition_count);
-    for (size_t i = 0; i < partition_count; i++) {
-      // simple heuristic: half of the rows of the right relation will match
-      const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
 
+    // simple heuristic: half of the rows of the right relation will match
+    const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
+    for (size_t i = 0; i < partition_count; i++) {
       left_pos_lists[i].reserve(result_rows_per_partition);
       right_pos_lists[i].reserve(result_rows_per_partition);
     }
+
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
