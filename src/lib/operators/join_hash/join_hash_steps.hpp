@@ -452,7 +452,7 @@ void probe(const RadixContainer<RightType>& radix_container,
           }
         }
       } else {
-        // When there is no hash table, we might still need to handle the values of the right site for left
+        // When there is no hash table, we might still need to handle the values of the right side for left
         // and right joins. We use constexpr to prune this conditional for the equi-join implementation.
         if constexpr (consider_null_values) {
           if (mode == JoinMode::Left || mode == JoinMode::Right) {
