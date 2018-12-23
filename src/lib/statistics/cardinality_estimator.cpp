@@ -226,17 +226,16 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
 }
 
 std::shared_ptr<TableStatistics2> estimate_join_node(
-const JoinNode& join_node,
-const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
-const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
+    const JoinNode& join_node, const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
+    const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   if (join_node.join_mode == JoinMode::Cross) {
     return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
   } else {
     const auto operator_join_predicate = OperatorJoinPredicate::from_join_node(join_node);
 
     if (operator_join_predicate) {
-      return cardinality_estimation_predicated_join(join_node.join_mode, *operator_join_predicate, left_input_table_statistics,
-                                      right_input_table_statistics);
+      return cardinality_estimation_predicated_join(join_node.join_mode, *operator_join_predicate,
+                                                    left_input_table_statistics, right_input_table_statistics);
     } else {
       // TODO(anybody) For now, estimate a selectivity of one.
       return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
@@ -258,9 +257,9 @@ std::optional<boost::dynamic_bitset<>> CardinalityEstimator::build_plan_bitmask(
 
 Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                        const std::shared_ptr<OptimizationContext>& context) const {
-  std::cout << "CardinalityEstimator::estimate_cardinality() {" << std::endl;
-  lqp->print();
-  std::cout << "}" << std::endl;
+  // std::cout << "CardinalityEstimator::estimate_cardinality() {" << std::endl;
+  // lqp->print();
+  // std::cout << "}" << std::endl;
   return estimate_statistics(lqp, context)->row_count();
 }
 
@@ -273,7 +272,7 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     if (bitmask) {
       const auto cache_iter = context->cache.find(*bitmask);
       if (cache_iter != context->cache.end()) {
-        std::cout << "Found statistics for " << *bitmask << " in cache" << std::endl;
+        // std::cout << "Found statistics for " << *bitmask << " in cache" << std::endl;
         const auto& cache_entry = cache_iter->second;
 
         const auto cached_table_statistics = cache_entry.table_statistics;
@@ -305,63 +304,88 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
 
         return table_statistics;
       } else {
-        std::cout << "Found no statistics for " << *bitmask << " in cache" << std::endl;
+        // std::cout << "Found no statistics for " << *bitmask << " in cache" << std::endl;
       }
     } else {
-      std::cout << "No bitmask" << std::endl;
+      // std::cout << "No bitmask" << std::endl;
     }
   } else {
-    std::cout << "No context" << std::endl;
+    // std::cout << "No context" << std::endl;
   }
 
   auto output_table_statistics = std::shared_ptr<TableStatistics2>{};
   const auto input_table_statistics = lqp->left_input() ? estimate_statistics(lqp->left_input(), context) : nullptr;
 
-  if (const auto alias_node = std::dynamic_pointer_cast<AliasNode>(lqp)) {
-    output_table_statistics = estimate_alias_node(*alias_node, input_table_statistics);
-  }
+  switch (lqp->type) {
+    case LQPNodeType::Aggregate: {
+      const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(lqp);
+      output_table_statistics = estimate_aggregate_node(*aggregate_node, input_table_statistics);
+    } break;
 
-  if (const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp)) {
-    output_table_statistics = estimate_projection_node(*projection_node, input_table_statistics);
-  }
+    case LQPNodeType::Alias: {
+      const auto alias_node = std::dynamic_pointer_cast<AliasNode>(lqp);
+      output_table_statistics = estimate_alias_node(*alias_node, input_table_statistics);
+    } break;
 
-  if (const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(lqp)) {
-    output_table_statistics = estimate_aggregate_node(*aggregate_node, input_table_statistics);
-  }
+    case LQPNodeType::Join: {
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
+      const auto right_input_table_statistics = estimate_statistics(lqp->right_input(), context);
+      output_table_statistics = estimate_join_node(*join_node, input_table_statistics, right_input_table_statistics);
+    } break;
 
-  if (const auto validate_node = std::dynamic_pointer_cast<ValidateNode>(lqp)) {
-    output_table_statistics = estimate_validate_node(*validate_node, input_table_statistics);
-  }
+    case LQPNodeType::Predicate: {
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp);
+      output_table_statistics = estimate_predicate_node(*predicate_node, input_table_statistics);
+    } break;
 
-  if (std::dynamic_pointer_cast<SortNode>(lqp)) {
-    output_table_statistics = estimate_statistics(lqp->left_input(), context);
-  }
+    case LQPNodeType::Projection: {
+      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp);
+      output_table_statistics = estimate_projection_node(*projection_node, input_table_statistics);
+    } break;
 
-  if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp)) {
-    Assert(mock_node->table_statistics2(), "");
-    output_table_statistics = mock_node->table_statistics2();
-  }
+    case LQPNodeType::Sort: {
+      output_table_statistics = input_table_statistics;
+    } break;
 
-  if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp)) {
-    const auto table = StorageManager::get().get_table(stored_table_node->table_name);
-    Assert(table->table_statistics2(), "");
-    output_table_statistics = table->table_statistics2();
-  }
+    case LQPNodeType::StoredTable: {
+      const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
+      const auto stored_table = StorageManager::get().get_table(stored_table_node->table_name);
+      Assert(stored_table->table_statistics2(), "");
+      output_table_statistics = stored_table->table_statistics2();
+    } break;
 
-  if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp)) {
-    output_table_statistics = estimate_predicate_node(*predicate_node, input_table_statistics);
-  }
+    case LQPNodeType::Validate: {
+      const auto validate_node = std::dynamic_pointer_cast<ValidateNode>(lqp);
+      output_table_statistics = estimate_validate_node(*validate_node, input_table_statistics);
+    } break;
 
-  if (const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp)) {
-    const auto left_input_table_statistics = estimate_statistics(lqp->left_input(), context);
-    const auto right_input_table_statistics = estimate_statistics(lqp->right_input(), context);
-    output_table_statistics = estimate_join_node(*join_node, left_input_table_statistics, right_input_table_statistics);
+    case LQPNodeType::Mock: {
+      const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp);
+      output_table_statistics = mock_node->table_statistics2();
+    } break;
+
+    case LQPNodeType::Union:
+    case LQPNodeType::Limit:
+    case LQPNodeType::Update:
+    case LQPNodeType::Insert:
+    case LQPNodeType::Root:
+    case LQPNodeType::ShowColumns:
+    case LQPNodeType::ShowTables:
+    case LQPNodeType::CreateTable:
+    case LQPNodeType::CreatePreparedPlan:
+    case LQPNodeType::CreateView:
+    case LQPNodeType::Delete:
+    case LQPNodeType::DropView:
+    case LQPNodeType::DropTable:
+    case LQPNodeType::DummyTable:
+      // TODO(anybody)
+      break;
   }
 
   Assert(output_table_statistics, "NYI");
 
   if (bitmask) {
-    std::cout << "Storing statistics for " << *bitmask << " in cache" << std::endl;
+    // std::cout << "Storing statistics for " << *bitmask << " in cache" << std::endl;
 
     auto cache_entry = OptimizationContext::TableStatisticsCacheEntry{};
     cache_entry.table_statistics = output_table_statistics;

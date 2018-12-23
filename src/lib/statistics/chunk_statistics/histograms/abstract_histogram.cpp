@@ -16,12 +16,12 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "histogram_utils.hpp"
+#include "resolve_type.hpp"
 #include "single_bin_histogram.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "statistics/statistics_utils.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace opossum {

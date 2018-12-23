@@ -7,11 +7,11 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
 #include "statistics/abstract_statistics_object.hpp"
 #include "statistics/chunk_statistics/min_max_filter.hpp"
 #include "statistics/empty_statistics_object.hpp"
 #include "type_cast.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace opossum {

@@ -2,21 +2,20 @@
 
 #include <iostream>
 
+#include "operators/operator_join_predicate.hpp"
+#include "resolve_type.hpp"
 #include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
 #include "statistics/chunk_statistics2.hpp"
 #include "statistics/segment_statistics2.hpp"
 #include "statistics/table_statistics2.hpp"
-#include "operators/operator_join_predicate.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
 template <typename T>
-std::shared_ptr<GenericHistogram<T>>
-estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
-const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
+std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
+    const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
+    const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
   auto left_idx = BinID{0};
   auto right_idx = BinID{0};
   auto left_bin_count = left_histogram->bin_count();
@@ -45,7 +44,7 @@ const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
                 "Histogram bin boundaries do not match");
 
     const auto [distinct_min, distinct_max] =
-    std::minmax(left_histogram->bin_distinct_count(left_idx), right_histogram->bin_distinct_count(right_idx));
+        std::minmax(left_histogram->bin_distinct_count(left_idx), right_histogram->bin_distinct_count(right_idx));
     const auto value_count_product = left_histogram->bin_height(left_idx) * right_histogram->bin_height(right_idx);
 
     bin_minima.emplace_back(left_min);
@@ -65,17 +64,20 @@ const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
                                                std::move(bin_distinct_counts));
 }
 
-std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const ColumnID left_column_id, const ColumnID right_column_id,
-                                                                         const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
-                                                                         const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
+std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
+    const ColumnID left_column_id, const ColumnID right_column_id,
+    const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
+    const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
   if (left_input_table_statistics->chunk_statistics.empty() || right_input_table_statistics->chunk_statistics.empty()) {
     return output_table_statistics;
   }
 
-  const auto left_data_type = left_input_table_statistics->chunk_statistics.front()->segment_statistics[left_column_id]->data_type;
-  const auto right_data_type = right_input_table_statistics->chunk_statistics.front()->segment_statistics[right_column_id]->data_type;
+  const auto left_data_type =
+      left_input_table_statistics->chunk_statistics.front()->segment_statistics[left_column_id]->data_type;
+  const auto right_data_type =
+      right_input_table_statistics->chunk_statistics.front()->segment_statistics[right_column_id]->data_type;
 
   // TODO(anybody)
   Assert(left_data_type == right_data_type, "NYI");
@@ -85,19 +87,17 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
 
     // TODO(anybody) For many Chunks on both sides this nested loop will be inefficient.
     //               Consider approaches to merge statistic objects on each side.
-    std::cout << "left_input_table_statistics: " << left_input_table_statistics->chunk_statistics.size()
-              << " chunks" << std::endl;
-    std::cout << "right_input_table_statistics: " << right_input_table_statistics->chunk_statistics.size()
-              << " chunks" << std::endl;
+    // std::cout << "left_input_table_statistics: " << left_input_table_statistics->chunk_statistics.size() << " chunks"
+    //          << std::endl;
+    // std::cout << "right_input_table_statistics: " << right_input_table_statistics->chunk_statistics.size() << " chunks"
+    //          << std::endl;
 
     for (const auto& left_input_chunk_statistics : left_input_table_statistics->chunk_statistics) {
       for (const auto& right_input_chunk_statistics : right_input_table_statistics->chunk_statistics) {
-        const auto left_input_segment_statistics =
-        std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-        left_input_chunk_statistics->segment_statistics[left_column_id]);
-        const auto right_input_segment_statistics =
-        std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
-        right_input_chunk_statistics->segment_statistics[right_column_id]);
+        const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
+            left_input_chunk_statistics->segment_statistics[left_column_id]);
+        const auto right_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
+            right_input_chunk_statistics->segment_statistics[right_column_id]);
 
         auto cardinality = Cardinality{0};
         auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
@@ -106,10 +106,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
           // TODO(anybody)
           cardinality = left_input_chunk_statistics->row_count * right_input_chunk_statistics->row_count;
         } else {
-          const auto left_histogram =
-          left_input_segment_statistics->get_best_available_histogram();
-          const auto right_histogram =
-          right_input_segment_statistics->get_best_available_histogram();
+          const auto left_histogram = left_input_segment_statistics->get_best_available_histogram();
+          const auto right_histogram = right_input_segment_statistics->get_best_available_histogram();
 
           // TODO(anybody)
           Assert(left_histogram && right_histogram, "NYI");
@@ -118,15 +116,16 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
           const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
 
           join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
-          unified_left_histogram, unified_right_histogram);
+              unified_left_histogram, unified_right_histogram);
 
-          std::cout << "left_histogram: " << left_histogram->description() << std::endl;
-          std::cout << "right_histogram: " << right_histogram->description() << std::endl;
-          std::cout << "unified_left_histogram: " << unified_left_histogram->description() << std::endl;
-          std::cout << "unified_right_histogram: " << unified_right_histogram->description() << std::endl;
-          if (join_column_histogram)
-            std::cout << "join_column_histogram: " << join_column_histogram->description() << std::endl;
-          std::cout << std::endl;
+          // std::cout << "left_histogram: " << left_histogram->description() << std::endl;
+          // std::cout << "right_histogram: " << right_histogram->description() << std::endl;
+          // std::cout << "unified_left_histogram: " << unified_left_histogram->description() << std::endl;
+          // std::cout << "unified_right_histogram: " << unified_right_histogram->description() << std::endl;
+          if (join_column_histogram) {
+            //std::cout << "join_column_histogram: " << join_column_histogram->description() << std::endl;
+          }
+          // std::cout << std::endl;
 
           if (!join_column_histogram) continue;
 
@@ -134,9 +133,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
         }
 
         const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(cardinality);
-        output_chunk_statistics->segment_statistics.reserve(
-        left_input_chunk_statistics->segment_statistics.size() +
-        right_input_chunk_statistics->segment_statistics.size());
+        output_chunk_statistics->segment_statistics.reserve(left_input_chunk_statistics->segment_statistics.size() +
+                                                            right_input_chunk_statistics->segment_statistics.size());
 
         const auto left_selectivity = cardinality / left_input_chunk_statistics->row_count;
         const auto right_selectivity = cardinality / right_input_chunk_statistics->row_count;
@@ -153,7 +151,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
           } else {
             const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
             output_chunk_statistics->segment_statistics.emplace_back(
-            left_segment_statistics->scale_with_selectivity(left_selectivity));
+                left_segment_statistics->scale_with_selectivity(left_selectivity));
           }
         }
 
@@ -166,7 +164,7 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
           } else {
             const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
             output_chunk_statistics->segment_statistics.emplace_back(
-            right_segment_statistics->scale_with_selectivity(right_selectivity));
+                right_segment_statistics->scale_with_selectivity(right_selectivity));
           }
         }
 
@@ -178,29 +176,27 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(const C
   return output_table_statistics;
 }
 
-std::shared_ptr<TableStatistics2> cardinality_estimation_inner_join(const OperatorJoinPredicate& join_predicate,
-                                                                    const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
-                                                                    const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
+std::shared_ptr<TableStatistics2> cardinality_estimation_inner_join(
+    const OperatorJoinPredicate& join_predicate, const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
+    const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   // If one side is empty, early out. Called functions rely on there being ChunkStatistics on each input side
   if (left_input_table_statistics->chunk_statistics.empty() || right_input_table_statistics->chunk_statistics.empty()) {
     return std::make_shared<TableStatistics2>();
   }
 
   if (join_predicate.predicate_condition == PredicateCondition::Equals) {
-    return cardinality_estimation_inner_equi_join(join_predicate.column_ids.first, join_predicate.column_ids.second, left_input_table_statistics,
-    right_input_table_statistics);
+    return cardinality_estimation_inner_equi_join(join_predicate.column_ids.first, join_predicate.column_ids.second,
+                                                  left_input_table_statistics, right_input_table_statistics);
   } else {
     // TODO(anybody)
     return cardinality_estimation_cross_join(left_input_table_statistics, right_input_table_statistics);
   }
-
 }
 
 std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
     const JoinMode join_mode, const OperatorJoinPredicate& join_predicate,
     const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
-
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
   output_table_statistics->chunk_statistics.reserve(left_input_table_statistics->chunk_statistics.size() *
                                                     right_input_table_statistics->chunk_statistics.size());
@@ -211,13 +207,13 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
       // TODO(anybody) Handle properly
       return left_input_table_statistics;
 
-
     // TODO(anybody) For now, handle outer joins just as inner joins
     case JoinMode::Left:
     case JoinMode::Right:
     case JoinMode::Outer:
     case JoinMode::Inner:
-      return cardinality_estimation_inner_join(join_predicate, left_input_table_statistics, right_input_table_statistics);
+      return cardinality_estimation_inner_join(join_predicate, left_input_table_statistics,
+                                               right_input_table_statistics);
 
     case JoinMode::Cross:
       Fail("Cross join is not a predicated join");
@@ -225,8 +221,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_predicated_join(
 }
 
 std::shared_ptr<TableStatistics2> cardinality_estimation_cross_join(
-const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
-const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
+    const std::shared_ptr<TableStatistics2>& left_input_table_statistics,
+    const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
   for (const auto& left_input_chunk_statistics : left_input_table_statistics->chunk_statistics) {
@@ -246,14 +242,14 @@ const std::shared_ptr<TableStatistics2>& right_input_table_statistics) {
            ++column_id) {
         const auto& left_segment_statistics = left_input_chunk_statistics->segment_statistics[column_id];
         output_chunk_statistics->segment_statistics.emplace_back(
-        left_segment_statistics->scale_with_selectivity(left_selectivity));
+            left_segment_statistics->scale_with_selectivity(left_selectivity));
       }
 
       for (auto column_id = ColumnID{0}; column_id < right_input_chunk_statistics->segment_statistics.size();
            ++column_id) {
         const auto& right_segment_statistics = right_input_chunk_statistics->segment_statistics[column_id];
         output_chunk_statistics->segment_statistics.emplace_back(
-        right_segment_statistics->scale_with_selectivity(right_selectivity));
+            right_segment_statistics->scale_with_selectivity(right_selectivity));
       }
 
       output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);

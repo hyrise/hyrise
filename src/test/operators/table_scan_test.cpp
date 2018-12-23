@@ -678,8 +678,8 @@ TEST_P(OperatorsTableScanTest, MatchesAllExcludesNulls) {
    */
   // Second Chunk of Column 1 has only NULL values
   const auto table_with_null_chunk = load_and_encode_table("resources/test_data/tbl/int_int_int_null.tbl");
-  const auto is_null_scan = create_table_scan(table_with_null_chunk, ColumnID{1}, PredicateCondition::IsNull,
-                                              NullValue{});
+  const auto is_null_scan =
+      create_table_scan(table_with_null_chunk, ColumnID{1}, PredicateCondition::IsNull, NullValue{});
   is_null_scan->execute();
   ASSERT_COLUMN_EQ(is_null_scan->get_output(), ColumnID{0}, {11, 9});
   ASSERT_COLUMN_EQ(is_null_scan->get_output(), ColumnID{1}, {NullValue{}, NullValue{}});

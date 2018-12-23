@@ -13,8 +13,8 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "statistics/cardinality_estimator.hpp"
 #include "statistics/cardinality_estimation/cardinality_estimation_join.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/equal_width_histogram.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
@@ -373,8 +373,7 @@ TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjusted
       std::vector<HistogramCountType>{7, 2, 10});
 
   const auto join_histogram =
-      estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms<int32_t>(
-          histogram_left, histogram_right);
+      estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms<int32_t>(histogram_left, histogram_right);
 
   ASSERT_EQ(join_histogram->bin_count(), 3u);
 

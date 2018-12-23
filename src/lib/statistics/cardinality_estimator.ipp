@@ -4,7 +4,4 @@
 #include "chunk_statistics/histograms/generic_histogram.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
-
-
-}  // namespace opossum
+namespace opossum {}  // namespace opossum

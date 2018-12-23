@@ -11,6 +11,7 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "sql/sql_pipeline.hpp"
 
 namespace opossum {
 
@@ -47,7 +48,7 @@ struct QueryBenchmarkResult : public Noncopyable {
 
   std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
-  tbb::concurrent_vector<Duration> iteration_durations;
+  tbb::concurrent_vector<SQLPipelineMetrics> iteration_durations;
 };
 
 /**
