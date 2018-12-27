@@ -80,7 +80,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
-      build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
+      build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits,
+      _additional_join_predicates);
   return _impl->_on_execute();
 }
 
@@ -92,14 +93,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   JoinHashImpl(const JoinHash& join_hash, const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
-               const std::optional<size_t>& radix_bits = std::nullopt)
+               const std::optional<size_t>& radix_bits = std::nullopt,
+               const std::optional<std::vector<JoinPredicate>>& additional_join_predicates = std::nullopt)
       : _join_hash(join_hash),
         _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped) {
+        _inputs_swapped(inputs_swapped),
+        _additional_join_predicates(additional_join_predicates){
     if (radix_bits.has_value()) {
       _radix_bits = radix_bits.value();
     } else {
@@ -114,6 +117,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
   const bool _inputs_swapped;
+  const std::optional<std::vector<JoinPredicate>> _additional_join_predicates;
 
   std::shared_ptr<Table> _output_table;
 
@@ -310,6 +314,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
 
     /**
+     * After the probe phase left_pos_lists and right_pos_lists contain all pairs of joined rows grouped by
+     * partition. Let p be a partition and r a row. The value of left_pos_lists[p][r] will match right_pos_lists[p][r].
+     */
+
+
+    /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
      *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
      *  write_output_chunks a lot.
@@ -321,6 +331,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      *
      * They hold one entry per column in the table, not per BaseSegment in a single chunk
      */
+    // std::vector<std::shared_ptr<PosLists>>;
     PosListsBySegment left_pos_lists_by_segment;
     PosListsBySegment right_pos_lists_by_segment;
 
@@ -334,6 +345,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       right_pos_lists_by_segment = setup_pos_lists_by_segment(right_in_table);
     }
 
+    // for every partition create a reference segment
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
       // moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // left_pos_lists and right_pos_lists will not be used again.
@@ -344,7 +356,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
+      /**
+       * Apply additinoal predicates
+       * Table 1, Table 2, left, right
+       * iteraes through left and right and checks if predicate applies, if not, row will be deleted from left & right
+       */
+      // left and right contain the joined row ids of the left and right table.
+
+      if (_additional_join_predicates.has_value()) {
+        _apply_additional_join_predicates(*left_in_table, *left, *right_in_table, *right,
+            _additional_join_predicates.value());
+      }
+
+      // using Segments = pmr_vector<std::shared_ptr<BaseSegment>>
       Segments output_segments;
+
+      // write_output_segments iterates through right and left and creates one segment for every column which is written
+      // to output_segments.
+      // soutput_segments is then appended as a chunk ti _output_table
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
@@ -363,6 +392,49 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     return _output_table;
+  }
+
+  /**
+   * We only accept join predicates where predicate_condition is Equals. Also, prediactes must be linked by AND.
+   * @param left
+   * @param left_rows_to_verify
+   * @param right
+   * @param right_rows_to_verify
+   * @param join_predicates
+   */
+  static void _apply_additional_join_predicates(const Table& left, PosList& left_rows_to_verify, const Table& right,
+      PosList& right_rows_to_verify, const std::vector<JoinPredicate>& join_predicates) {
+    DebugAssert(left_rows_to_verify.size() == right_rows_to_verify.size(), "left_rows_to_verify should have the same"
+      " amount of rows as right_rows_to_verify");
+
+    if (join_predicates.empty()) {
+      return;
+    }
+
+    PosList left_selection;
+    left_selection.reserve(left_rows_to_verify.size());
+    PosList right_selection;
+    right_selection.reserve(right_rows_to_verify.size());
+
+    for (size_t row_idx{0}; row_idx < left_rows_to_verify.size(); ++row_idx) {
+      const auto& left_row_id = left_rows_to_verify[row_idx];
+      const auto& right_row_id = right_rows_to_verify[row_idx];
+
+      for (const auto& pred : join_predicates) {
+        DebugAssert(pred.predicateCondition == PredicateCondition::Equals, "Only PredicateCondition::Equals is"
+                                                                           " supported.");
+        const auto& left_segment = *left.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
+        const auto& right_segment = *right.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
+
+        if (left_segment[left_row_id.chunk_offset] == right_segment[right_row_id.chunk_offset]) {
+          left_selection.push_back(left_row_id);
+          right_selection.push_back(right_row_id);
+        }
+      }
+    }
+
+    left_rows_to_verify = std::move(left_selection);
+    right_rows_to_verify = std::move(right_selection);
   }
 };
 

@@ -222,7 +222,7 @@ ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fa
                                                     double probing_factor) {
   DebugAssert(fact_table_size % fact_factor == 0, "fact factor must be a factor of fact_table_size.")
 
-      TableColumnDefinitions column_definitions;
+  TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("t1_a", DataType::Int);
   column_definitions.emplace_back("t1_b", DataType::Int);
   auto fact_table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
