@@ -12,7 +12,7 @@ BENCHMARK_DEFINE_F(MicroBenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)(
 
   TpchTableGenerator{state.range(0) / 1000.0f}.generate_and_store();
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     for (const auto& pair : StorageManager::get().tables()) {
       generate_table_statistics(*pair.second);
     }
