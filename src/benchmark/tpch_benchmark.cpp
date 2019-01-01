@@ -137,6 +137,7 @@ int main(int argc, char* argv[]) {
   Assert(!use_prepared_statements || !config->validate, "SQLite validation does not work with prepared statements");
 
   if (config->validate) {
+    // Hack: We cannot validate TPC-H Q15, thus we remove it from the list of queries
     auto it = std::remove(query_ids.begin(), query_ids.end(), 15 - 1);
     if (it != query_ids.end()) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have

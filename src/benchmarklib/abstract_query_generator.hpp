@@ -23,8 +23,8 @@ class AbstractQueryGenerator {
   // Generates a SQL string for a given (zero-indexed) query id
   virtual std::string build_query(const QueryID query_id) = 0;
 
-  // Some benchmarks might select random parameters (e.g., TPC-H). For test purposes, this method returns a constant
-  // query.
+  // Some benchmarks might select random parameters (e.g., TPC-H). For verification purposes, this method returns a
+  // constant query. The results of this query can then be compared with a known-to-be-good result.
   virtual std::string build_deterministic_query(const QueryID query_id);
 
   // Returns the names of the individual queries (e.g., "TPC-H 1")

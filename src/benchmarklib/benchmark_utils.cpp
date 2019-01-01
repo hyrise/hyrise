@@ -192,9 +192,10 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
   const auto validate = json_config.value("validate", default_config.validate);
-  if (validate)
+  if (validate) {
     out << "- Automatically validating results with SQLite. This will make the benchmark's results invalid."
         << std::endl;
+  }
 
   return BenchmarkConfig{benchmark_mode,       verbose,  chunk_size,
                          *encoding_config,     max_runs, timeout_duration,
