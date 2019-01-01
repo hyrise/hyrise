@@ -244,4 +244,5 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
   return true;
 }
+
 }  // namespace opossum

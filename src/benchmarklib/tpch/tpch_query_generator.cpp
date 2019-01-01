@@ -1,6 +1,5 @@
 #include "tpch_query_generator.hpp"
 
-#include <algorithm>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
@@ -10,7 +9,7 @@
 #include <random>
 #include <sstream>
 
-#include "tpch_dbgen.h"
+#include "tpch-dbgen/tpch_dbgen.h"
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
 
@@ -71,7 +70,7 @@ std::string TPCHQueryGenerator::get_preparation_queries() const {
 }
 
 std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
-  using namespace std::string_literals;
+  using namespace std::string_literals;  // NOLINT
 
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
   // fine with them not being synced across threads and object cost is not an issue, we simply use one generator per
@@ -292,8 +291,8 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       // assert that nobody tampered with the string over there.
       static constexpr auto begin_date_offset = 156;
       static constexpr auto end_date_offset = 192;
-      DebugAssert((std::string_view{&query_15[begin_date_offset], 10} == "1996-01-01" &&
-                   std::string_view{&query_15[end_date_offset], 10} == "1996-04-01"),
+      DebugAssert((std::string_view{&query_15[begin_date_offset], 10} == "1996-01-01" &&  // NOLINT
+                   std::string_view{&query_15[end_date_offset], 10} == "1996-04-01"),     // NOLINT
                   "TPC-H 15 string has been modified");
       query_15.replace(begin_date_offset, 10, begin_date);
       query_15.replace(end_date_offset, 10, end_date);
