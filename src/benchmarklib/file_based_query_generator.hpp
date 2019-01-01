@@ -1,7 +1,7 @@
 #pragma once
 
 #include "abstract_query_generator.hpp"
-#include "benchmark_utils.hpp"
+#include "benchmark_config.hpp"
 
 namespace opossum {
 
@@ -13,7 +13,7 @@ class FileBasedQueryGenerator : public AbstractQueryGenerator {
 
  protected:
   // Get all queries from a given file
-  void _parse_query_file(const std::string& query_file);
+  void _parse_query_file(const std::string& query_file_path);
 
   std::vector<std::string> _queries;
 };

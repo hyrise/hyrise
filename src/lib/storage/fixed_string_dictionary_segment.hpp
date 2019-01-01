@@ -51,7 +51,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
    * @defgroup BaseEncodedSegment interface
    * @{
    */
-  CompressedVectorType compressed_vector_type() const final;
+  std::optional<CompressedVectorType> compressed_vector_type() const final;
   /**@}*/
 
   /**

@@ -33,9 +33,9 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::string& query_path) {
-  std::ifstream file(query_path);
-  const auto filename = filesystem::path{query_path}.stem().string();
+void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_path) {
+  std::ifstream file(query_file_path);
+  const auto filename = filesystem::path{query_file_path}.stem().string();
 
   std::string content{std::istreambuf_iterator<char>(file), {}};
 
@@ -55,7 +55,7 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_path) {
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
     _query_names.emplace_back(query_name);
-    _queries.emplace_back(std::move(statement_string));
+    _queries.emplace_back(statement_string);
   }
 
   // More convenient names if there is only one query per file
