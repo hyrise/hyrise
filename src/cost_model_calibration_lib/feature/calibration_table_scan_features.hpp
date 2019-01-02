@@ -24,25 +24,23 @@ struct CalibrationTableScanFeatures {
   static const std::vector<AllTypeVariant> serialize(const std::optional<CalibrationTableScanFeatures>& features);
 };
 
-inline const std::vector<std::string> CalibrationTableScanFeatures::feature_names = {
-    []() {
-      const auto first_column_names = CalibrationColumnFeatures::feature_names_with_prefix("first_column");
-      const auto second_column_names = CalibrationColumnFeatures::feature_names_with_prefix("second_column");
-      const auto third_column_names = CalibrationColumnFeatures::feature_names_with_prefix("third_column");
+inline const std::vector<std::string> CalibrationTableScanFeatures::feature_names = {[]() {
+  const auto first_column_names = CalibrationColumnFeatures::feature_names_with_prefix("first_column");
+  const auto second_column_names = CalibrationColumnFeatures::feature_names_with_prefix("second_column");
+  const auto third_column_names = CalibrationColumnFeatures::feature_names_with_prefix("third_column");
 
-      std::vector<std::string> output{};
+  std::vector<std::string> output{};
 
-      output.insert(output.end(), first_column_names.begin(), first_column_names.end());
-      output.insert(output.end(), second_column_names.begin(), second_column_names.end());
-      output.insert(output.end(), third_column_names.begin(), third_column_names.end());
-      output.emplace_back("is_column_comparison");
-      output.emplace_back("scan_operator_type");
-      output.emplace_back("number_of_computable_or_column_expressions");
-      output.emplace_back("number_of_effective_chunks");
+  output.insert(output.end(), first_column_names.begin(), first_column_names.end());
+  output.insert(output.end(), second_column_names.begin(), second_column_names.end());
+  output.insert(output.end(), third_column_names.begin(), third_column_names.end());
+  output.emplace_back("is_column_comparison");
+  output.emplace_back("scan_operator_type");
+  output.emplace_back("number_of_computable_or_column_expressions");
+  output.emplace_back("number_of_effective_chunks");
 
-      return output;
-    }()
-};
+  return output;
+}()};
 
 inline const std::vector<AllTypeVariant> CalibrationTableScanFeatures::serialize(
     const std::optional<CalibrationTableScanFeatures>& features) {

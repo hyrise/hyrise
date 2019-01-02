@@ -26,9 +26,16 @@ set(
     constant_mappings.hpp
     cost_model/abstract_cost_estimator.cpp
     cost_model/abstract_cost_estimator.hpp
+    cost_model/abstract_feature_extractor.hpp
     cost_model/cost.hpp
+    cost_model/cost_model_adaptive.cpp
+    cost_model/cost_model_adaptive.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
+    cost_model/linear_regression_model.cpp
+    cost_model/linear_regression_model.hpp
+    cost_model/table_scan_feature_extractor.cpp
+    cost_model/table_scan_feature_extractor.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp

@@ -43,7 +43,7 @@ TEST_F(CostEstimatorTest, DiamondShape) {
     explicit MockCostEstimator(const DummyCosts& dummy_costs) : dummy_costs(dummy_costs) {}
 
    protected:
-    virtual Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
+    Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override {
       return dummy_costs.at(node);
     }
   };

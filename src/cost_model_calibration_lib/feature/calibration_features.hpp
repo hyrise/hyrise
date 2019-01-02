@@ -11,6 +11,7 @@ struct CalibrationFeatures {
   uint64_t execution_time_ns = 0;
   float input_table_size_ratio = 0.0;
 
+  // TODO(Sven): Extract class for TableFeatures
   size_t left_input_row_count = 0;
   size_t left_input_chunk_count = 0;
   size_t left_input_memory_usage_bytes = 0;
@@ -25,7 +26,7 @@ struct CalibrationFeatures {
   size_t output_chunk_count = 0;
   size_t output_memory_usage_bytes = 0;
   size_t output_chunk_size = 0;
-  float output_selectivity = 0.0;
+  float selectivity = 0.0;
 
   std::string operator_description;
 
@@ -37,8 +38,7 @@ inline const std::vector<std::string> CalibrationFeatures::feature_names(
     {"operator_type", "input_table_size_ratio", "left_input_row_count", "left_input_chunk_count",
      "left_input_memory_usage_bytes", "left_input_chunk_size", "right_input_row_count", "right_input_chunk_count",
      "right_input_memory_usage_bytes", "right_input_chunk_size", "output_row_count", "output_chunk_count",
-     "output_memory_usage_bytes", "output_chunk_size", "output_selectivity", "operator_description",
-     "execution_time_ns"});
+     "output_memory_usage_bytes", "output_chunk_size", "selectivity", "operator_description", "execution_time_ns"});
 
 inline const std::vector<AllTypeVariant> CalibrationFeatures::serialize(const CalibrationFeatures& features) {
   return {features.operator_type,
@@ -55,7 +55,7 @@ inline const std::vector<AllTypeVariant> CalibrationFeatures::serialize(const Ca
           static_cast<int32_t>(features.output_chunk_count),
           static_cast<int32_t>(features.output_memory_usage_bytes),
           static_cast<int32_t>(features.output_chunk_size),
-          features.output_selectivity,
+          features.selectivity,
           features.operator_description,
           static_cast<int64_t>(features.execution_time_ns)};
 }

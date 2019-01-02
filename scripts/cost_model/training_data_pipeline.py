@@ -44,42 +44,35 @@ class TrainingDataPipeline:
 
         df = df[(df['operator_type'] == 'TableScan') | (df['operator_type'] == 'IndexScan')]
 
-        df['first_column_segment_encoding'] = df['first_column_segment_encoding']\
-            .astype('category', categories=encoding_categories)
-        df['second_column_segment_encoding'] = df['second_column_segment_encoding']\
-            .astype('category', categories=encoding_categories)
-        df['third_column_segment_encoding'] = df['third_column_segment_encoding']\
-            .astype('category', categories=encoding_categories)
-        df['is_column_comparison'] = df['is_column_comparison'].astype('category', categories=boolean_categories)
+        def set_categories(internal_df, column_name, categories):
+            if column_name in internal_df.columns:
+                internal_df[column_name] = internal_df[column_name].astype('category', categories=categories)
 
-        df['first_column_is_segment_reference_segment'] = df['first_column_is_segment_reference_segment'] \
-            .astype('category', categories=boolean_categories)
-        df['second_column_is_segment_reference_segment'] = df['second_column_is_segment_reference_segment'] \
-            .astype('category', categories=boolean_categories)
-        df['third_column_is_segment_reference_segment'] = df['third_column_is_segment_reference_segment'] \
-            .astype('category', categories=boolean_categories)
+            return internal_df
 
-        df['first_column_segment_data_type'] = df['first_column_segment_data_type']\
-            .astype('category', categories=data_type_categories)
-        df['second_column_segment_data_type'] = df['second_column_segment_data_type'] \
-            .astype('category', categories=data_type_categories)
-        df['third_column_segment_data_type'] = df['third_column_segment_data_type'] \
-            .astype('category', categories=data_type_categories)
+        df = set_categories(df, 'first_column_segment_encoding', encoding_categories)
+        df = set_categories(df, 'second_column_segment_encoding', encoding_categories)
+        df = set_categories(df, 'third_column_segment_encoding', encoding_categories)
 
-        df['scan_operator_type'] = df['scan_operator_type'] \
-            .astype('category', categories=scan_operator_categories)
+        df = set_categories(df, 'is_column_comparison', boolean_categories)
 
-        df['operator_type'] = df['operator_type'] \
-            .astype('category', categories=['IndexScan', 'TableScan'])
+        df = set_categories(df, 'first_column_is_segment_reference_segment', boolean_categories)
+        df = set_categories(df, 'second_column_is_segment_reference_segment', boolean_categories)
+        df = set_categories(df, 'third_column_is_segment_reference_segment', boolean_categories)
 
-        df['is_output_selectivity_below_50_percent'] = df['is_output_selectivity_below_50_percent'] \
-            .astype('category', categories=boolean_categories)
+        df = set_categories(df, 'first_column_segment_data_type', data_type_categories)
+        df = set_categories(df, 'second_column_segment_data_type', data_type_categories)
+        df = set_categories(df, 'third_column_segment_data_type', data_type_categories)
 
-        df['is_small_table'] = df['is_small_table'] \
-            .astype('category', categories=boolean_categories)            
+        df = set_categories(df, 'scan_operator_type', scan_operator_categories)
+
+        df = set_categories(df, 'operator_type', ['IndexScan', 'TableScan'])
+
+        df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
+
+        df = set_categories(df, 'is_small_table', boolean_categories)
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
-        #df['output_selectivity_rounded'] = df['output_selectivity'].round(2)
 
         return df
 

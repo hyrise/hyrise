@@ -36,7 +36,7 @@ inline const std::vector<AllTypeVariant> CalibrationJoinFeatures::serialize(
     const auto serialized_column = CalibrationColumnFeatures::serialize({});
     const auto column_feature_count = 2 * serialized_column.size();
 
-    // +1 for the join feature
+    // +1 for the feature 'join_type'
     std::vector<AllTypeVariant> output(column_feature_count + 1, NullValue{});
     return output;
   }

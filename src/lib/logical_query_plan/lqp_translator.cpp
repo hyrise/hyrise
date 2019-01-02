@@ -332,6 +332,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   if (join_node->join_type) {
     switch (*(join_node->join_type)) {
+      // TODO(Sven): Add JoinType::Index (does not exist yet)
       case JoinType::Hash:
         return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
                                           operator_join_predicate->column_ids, predicate_condition);

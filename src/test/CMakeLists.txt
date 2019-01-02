@@ -16,6 +16,8 @@ set(
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     cost_model/cost_estimator_test.cpp
+    cost_model/cost_model_adaptive_test.cpp
+    cost_model/linear_regression_model_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp

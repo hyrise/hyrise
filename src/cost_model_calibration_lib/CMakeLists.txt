@@ -14,7 +14,6 @@ set(
         cost_model_calibration_table_generator.hpp
         cost_model_feature_extractor.cpp
         cost_model_feature_extractor.hpp
-        feature/abstract_calibration_features.hpp
         feature/calibration_aggregate_features.hpp
         feature/calibration_column_features.hpp
         feature/calibration_constant_hardware_features.hpp

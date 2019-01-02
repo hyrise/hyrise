@@ -10,6 +10,10 @@ namespace opossum {
 
 struct CalibrationColumnFeatures {
   // Assumes that all segments have the same encoding (only looking at the first chunk yet)
+  // TODO(Sven): Change to relative metric for Encoding, e.g. Dictionary 50%, Unencoded 30%, RunLength 20%.
+  // TODO(Sven): Additional feature for total chunk count.. might already exist
+
+  // TODO(Sven): Initialize all values with NullValue. makes it easier to print to CSV later. Less error-prone
   std::string column_encoding = "undefined";
   // TODO(Sven): change feature extractor
   bool is_any_segment_reference_segment = false;
@@ -18,6 +22,7 @@ struct CalibrationColumnFeatures {
   // TODO(Sven): How to calculate from segment_distinct_value_count?
   size_t column_distinct_value_count = 0;
 
+  // TODO(Sven): get rid of these static methods
   static const std::vector<std::string> feature_names;
   static const std::vector<std::string> feature_names_with_prefix(const std::optional<std::string>& prefix);
   static const std::vector<AllTypeVariant> serialize(const std::optional<CalibrationColumnFeatures>& features);
