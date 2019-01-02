@@ -9,7 +9,7 @@
 #include <random>
 #include <sstream>
 
-#include "tpch_dbgen.h"
+#include "tpch_dbgen.h"  // NOLINT
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
 
