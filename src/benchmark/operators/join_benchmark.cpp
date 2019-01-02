@@ -66,7 +66,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
       std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                           std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto join =
         std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
