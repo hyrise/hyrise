@@ -2,7 +2,11 @@
 
 #include <random>
 
+#include "cxxopts.hpp"
+
+#include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
+#include "benchmark_state.hpp"
 #include "constant_mappings.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
@@ -10,7 +14,7 @@
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "version.hpp"
@@ -20,8 +24,11 @@
 namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
-                                 const nlohmann::json& context)
-    : _config(config), _query_generator(std::move(query_generator)), _context(context) {
+                                 std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
+    : _config(config),
+      _query_generator(std::move(query_generator)),
+      _table_generator(std::move(table_generator)),
+      _context(context) {
   // In non-verbose mode, disable performance warnings
   if (!config.verbose) {
     _performance_warning_disabler.emplace();
@@ -62,6 +69,9 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
+  _config.out << "- Loading/Generating tables" << std::endl;
+  _table_generator->generate_and_store();
+
   // Run the preparation queries
   {
     auto sql = _query_generator->get_preparation_queries();
@@ -458,7 +468,8 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many queries should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("validate", "Validate each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("validate", "Validate each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("true")); // NOLINT
   // clang-format on
 
   return cli_options;
