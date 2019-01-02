@@ -88,8 +88,13 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   static const auto country_codes =
       std::vector{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34};
 
-  // Random distributions for all strings defined by the TPC-H benchmark. Distributions should not be modified when
-  // they are used, but because we have no explicit thread safety guarantee, we make this thread-local, too.
+  // Random distributions for all strings defined by the TPC-H benchmark. Each query in Chapter 2.4 has a
+  // "Substition Parameters" section. For example, 2.4.1.3 states "DELTA is randomly selected within [60. 120]."
+  // For other generation rules, check section 2.4.[query-id].3
+  //
+  // uniform_int_distributions should not be modified when they are used, but because we have no explicit thread safety
+  // guarantee, we make this thread-local, too.
+
   static thread_local std::uniform_int_distribution<> material_dist{0, static_cast<int>(materials.size() - 1)};
   static thread_local std::uniform_int_distribution<> region_dist{0, regions.count - 1};
   static thread_local std::uniform_int_distribution<> segment_dist{0, c_mseg_set.count - 1};
@@ -106,8 +111,6 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   switch (query_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
-      // Random values, such as 60-120 days, are taken from the TPC-H specification. Each query in Chapter 2.4 has a
-      // "Substition Parameters" section. For example, 2.4.1.3 states "DELTA is randomly selected within [60. 120]."
       static thread_local std::uniform_int_distribution<> date_diff_dist{60, 120};
       const auto date = calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -date_diff_dist(random_engine));
 
