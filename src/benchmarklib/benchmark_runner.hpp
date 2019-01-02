@@ -2,6 +2,7 @@
 
 #include <json.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <optional>
