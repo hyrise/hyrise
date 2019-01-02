@@ -21,9 +21,9 @@ class BaseEncodedSegment : public BaseSegment {
 
   /**
    * An encoded segment may use a compressed vector to reduce its memory footprint.
-   * Returns the vector’s type if it does, else CompressedVectorType::Invalid
+   * Returns the vector’s type if it does, else std::nullopt
    */
-  virtual CompressedVectorType compressed_vector_type() const;
+  virtual std::optional<CompressedVectorType> compressed_vector_type() const = 0;
 };
 
 }  // namespace opossum

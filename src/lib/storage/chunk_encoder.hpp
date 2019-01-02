@@ -45,7 +45,7 @@ class ChunkEncoder {
    * All segments of the chunk need to be of type ValueSegment<T>,
    * i.e., recompression is not yet supported.
    *
-   * Note: In some cases, it might be benificial to
+   * Note: In some cases, it might be beneficial to
    *       leave certain segments of a chunk unencoded.
    *       Use EncodingType::Unencoded in this case.
    */
