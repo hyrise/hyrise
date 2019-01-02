@@ -18,6 +18,26 @@ target_include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
+# Configure new server
+add_executable(
+    hyriseServerNew
+
+    start_server.cpp
+)
+target_link_libraries(
+    hyriseServerNew
+    hyrise
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+target_include_directories(
+    hyriseServerNew
+
+    PUBLIC
+    ${Boost_INCLUDE_DIRS}
+)
+
 # Configure playground
 add_executable(
     hyrisePlayground

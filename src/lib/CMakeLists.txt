@@ -317,6 +317,17 @@ set(
     server/types.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
+
+    simple_server/hyrise_communication.cpp
+    simple_server/network_message_types.hpp
+    simple_server/postgres_handler.cpp
+    simple_server/postgres_handler.hpp
+    simple_server/server.cpp
+    simple_server/server.hpp
+    simple_server/session.cpp
+    simple_server/session.hpp
+    simple_server/start_server.cpp
+
     sql/abstract_cache.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
