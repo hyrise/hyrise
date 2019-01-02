@@ -36,6 +36,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
+    // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
+    Assert(!config.validate, "Cannot use validation with enabled scheduler");
+
     Topology::use_default_topology(config.cores);
     config.out << "- Multi-threaded Topology:" << std::endl;
     Topology::get().print(config.out, 2);
@@ -50,16 +53,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
-
-  if (config.validate) {
-    // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
-    Assert(!config.enable_scheduler, "Cannot use validation with enabled scheduler");
-
-    _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
-    for (const auto& [table_name, table] : StorageManager::get().tables()) {
-      _sqlite_wrapper->create_table(*table, table_name);
-    }
-  }
 }
 
 BenchmarkRunner::~BenchmarkRunner() {
@@ -71,6 +64,14 @@ BenchmarkRunner::~BenchmarkRunner() {
 void BenchmarkRunner::run() {
   _config.out << "- Loading/Generating tables" << std::endl;
   _table_generator->generate_and_store();
+
+  if (_config.validate) {
+    // Load the data into SQLite
+    _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
+    for (const auto& [table_name, table] : StorageManager::get().tables()) {
+      _sqlite_wrapper->create_table(*table, table_name);
+    }
+  }
 
   // Run the preparation queries
   {
@@ -359,6 +360,7 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
       Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                FloatComparisonMode::RelativeDifference),
              "Validation failed");
+      _config.out << "- Validation passed (" << hyrise_result->row_count() << " rows)" << std::endl;
     } else {
       Assert(!sqlite_result || sqlite_result->row_count() == 0,
              "Validation failed: SQLite returned a result, but Hyrise didn't");
@@ -469,7 +471,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("validate", "Validate each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("true")); // NOLINT
+    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;

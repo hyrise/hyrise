@@ -123,7 +123,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto validate = json_config.value("validate", default_config.validate);
   if (validate) {
-    out << "- Automatically validating results with SQLite. This will make the benchmark's results invalid."
+    out << "- Automatically validating results with SQLite. This will make the performance numbers invalid."
         << std::endl;
   }
 
