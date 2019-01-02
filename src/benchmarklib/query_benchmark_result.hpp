@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "benchmark_config.hpp"
 
 namespace opossum {
