@@ -292,13 +292,13 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       // This is bloody disgusting. But since we cannot use prepared statements in TPC-H 15 and want to keep all
       // queries in a readable form in tpch_queries.cpp, I cannot come up with anything better. At least we can
       // assert that nobody tampered with the string over there.
-      static constexpr auto begin_date_offset = 156;
-      static constexpr auto end_date_offset = 192;
-      DebugAssert((std::string_view{&query_15[begin_date_offset], 10} == "1996-01-01" &&  // NOLINT
-                   std::string_view{&query_15[end_date_offset], 10} == "1996-04-01"),     // NOLINT
+      static constexpr auto BEGIN_DATE_OFFSET = 156;
+      static constexpr auto END_DATE_OFFSET = 192;
+      DebugAssert((std::string_view{&query_15[BEGIN_DATE_OFFSET], 10} == "1996-01-01" &&  // NOLINT
+                   std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),     // NOLINT
                   "TPC-H 15 string has been modified");
-      query_15.replace(begin_date_offset, 10, begin_date);
-      query_15.replace(end_date_offset, 10, end_date);
+      query_15.replace(BEGIN_DATE_OFFSET, 10, begin_date);
+      query_15.replace(END_DATE_OFFSET, 10, end_date);
 
       static size_t view_id = 0;
       boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(view_id++));
