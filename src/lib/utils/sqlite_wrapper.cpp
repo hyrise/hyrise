@@ -18,7 +18,7 @@
 
 namespace opossum {
 
-SQLiteWrapper::SQLiteWrapper() {
+SQLiteWrapper::SQLiteWrapper() : _db(nullptr) {
   int rc = sqlite3_open(":memory:", &_db);
 
   if (rc != SQLITE_OK) {
@@ -42,11 +42,11 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
   for (const std::string& type : split_string_by_delimiter(line, '|')) {
     std::string actual_type = split_string_by_delimiter(type, '_')[0];
     if (actual_type == "int" || actual_type == "long") {
-      column_types.push_back("INT");
+      column_types.emplace_back("INT");
     } else if (actual_type == "float" || actual_type == "double") {
-      column_types.push_back("REAL");
+      column_types.emplace_back("REAL");
     } else if (actual_type == "string") {
-      column_types.push_back("TEXT");
+      column_types.emplace_back("TEXT");
     } else {
       DebugAssert(false, "SQLiteWrapper: column type " + type + " not supported.");
     }
@@ -95,14 +95,14 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
     switch (column_definition.data_type) {
       case DataType::Int:
       case DataType::Long:
-        column_types.push_back("INT");
+        column_types.emplace_back("INT");
         break;
       case DataType::Float:
       case DataType::Double:
-        column_types.push_back("REAL");
+        column_types.emplace_back("REAL");
         break;
       case DataType::String:
-        column_types.push_back("TEXT");
+        column_types.emplace_back("TEXT");
         break;
       case DataType::Null:
       case DataType::Bool:
@@ -270,28 +270,29 @@ void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset
   _exec_sql(command_ss.str());
 }
 
-void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_add_row(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count) {
   std::vector<AllTypeVariant> row;
 
   for (int i = 0; i < column_count; ++i) {
     switch (sqlite3_column_type(result_row, i)) {
       case SQLITE_INTEGER: {
-        row.push_back(AllTypeVariant{sqlite3_column_int(result_row, i)});
+        row.emplace_back(AllTypeVariant{sqlite3_column_int(result_row, i)});
         break;
       }
 
       case SQLITE_FLOAT: {
-        row.push_back(AllTypeVariant{sqlite3_column_double(result_row, i)});
+        row.emplace_back(AllTypeVariant{sqlite3_column_double(result_row, i)});
         break;
       }
 
       case SQLITE_TEXT: {
-        row.push_back(AllTypeVariant{std::string(reinterpret_cast<const char*>(sqlite3_column_text(result_row, i)))});
+        row.emplace_back(
+            AllTypeVariant{std::string(reinterpret_cast<const char*>(sqlite3_column_text(result_row, i)))});
         break;
       }
 
       case SQLITE_NULL: {
-        row.push_back(NULL_VALUE);
+        row.emplace_back(NULL_VALUE);
         break;
       }
 

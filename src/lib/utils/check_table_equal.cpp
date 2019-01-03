@@ -15,7 +15,7 @@ namespace {
 
 using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
 
-Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
+Matrix table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   // initialize matrix with table sizes, including column names/types
   Matrix matrix(table->row_count() + 2, std::vector<opossum::AllTypeVariant>(table->column_count()));
 
@@ -46,8 +46,8 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   return matrix;
 }
 
-std::string _matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
-                              const std::string& highlight_color, const std::string& highlight_color_bg) {
+std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<uint64_t, uint16_t>>& highlight_cells,
+                             const std::string& highlight_color, const std::string& highlight_color_bg) {
   std::stringstream stream;
   bool previous_row_highlighted = false;
 
@@ -106,17 +106,17 @@ namespace opossum {
 bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                        const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
-  auto opossum_matrix = _table_to_matrix(opossum_table);
-  auto expected_matrix = _table_to_matrix(expected_table);
+  auto opossum_matrix = table_to_matrix(opossum_table);
+  auto expected_matrix = table_to_matrix(expected_table);
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
     std::cout << "========= Tables are not equal =========" << std::endl;
     std::cout << "------- Actual Result -------" << std::endl;
-    std::cout << _matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
+    std::cout << matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
     std::cout << "-----------------------------" << std::endl << std::endl;
     std::cout << "------- Expected Result -------" << std::endl;
-    std::cout << _matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
+    std::cout << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
     std::cout << "-------------------------------" << std::endl;
     std::cout << "========================================" << std::endl << std::endl;
     std::cout << "Type of error: " << error_type << std::endl;
@@ -198,7 +198,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   const auto highlight_if = [&has_error, &mismatched_cells](bool statement, uint64_t row_id, uint16_t column_id) {
     if (statement) {
       has_error = true;
-      mismatched_cells.push_back({row_id, column_id});
+      mismatched_cells.emplace_back({row_id, column_id});
     }
   };
 
