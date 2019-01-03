@@ -198,7 +198,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   const auto highlight_if = [&has_error, &mismatched_cells](bool statement, uint64_t row_id, uint16_t column_id) {
     if (statement) {
       has_error = true;
-      mismatched_cells.emplace_back({row_id, column_id});
+      mismatched_cells.emplace_back(row_id, column_id);
     }
   };
 
