@@ -13,6 +13,18 @@
 namespace opossum {
 
 template <typename T>
+std::tuple<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(
+const T& left_height, const T& left_distinct_count, const T& right_height, const T& right_distinct_count) {
+  const auto [distinct_min, distinct_max] =
+  std::minmax(left_distinct_count, right_distinct_count);
+  const auto value_count_product = left_height * right_height;
+
+  const auto height = static_cast<HistogramCountType>(std::ceil(value_count_product / static_cast<float>(distinct_max)));
+
+  return {height, distinct_min};
+}
+
+template <typename T>
 std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
     const std::shared_ptr<AbstractHistogram<T>>& left_histogram,
     const std::shared_ptr<AbstractHistogram<T>>& right_histogram) {
@@ -25,6 +37,9 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_
   std::vector<T> bin_maxima;
   std::vector<HistogramCountType> bin_heights;
   std::vector<HistogramCountType> bin_distinct_counts;
+
+//  std::cout << left_histogram->description(true) << std::endl;
+//  std::cout << right_histogram->description(true) << std::endl;
 
   for (; left_idx < left_bin_count && right_idx < right_bin_count;) {
     const auto left_min = left_histogram->bin_minimum(left_idx);
@@ -43,14 +58,13 @@ std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_
     DebugAssert(left_histogram->bin_maximum(left_idx) == right_histogram->bin_maximum(right_idx),
                 "Histogram bin boundaries do not match");
 
-    const auto [distinct_min, distinct_max] =
-        std::minmax(left_histogram->bin_distinct_count(left_idx), right_histogram->bin_distinct_count(right_idx));
-    const auto value_count_product = left_histogram->bin_height(left_idx) * right_histogram->bin_height(right_idx);
-
-    bin_minima.emplace_back(left_min);
-    bin_maxima.emplace_back(left_histogram->bin_maximum(left_idx));
-    bin_heights.emplace_back(std::ceil(value_count_product / static_cast<float>(distinct_max)));
-    bin_distinct_counts.emplace_back(distinct_min);
+    const auto[height, distinct_count] = estimate_inner_equi_join_of_histogram_bins(left_histogram->bin_height(left_idx), left_histogram->bin_distinct_count(left_idx), right_histogram->bin_height(right_idx), right_histogram->bin_distinct_count(right_idx));
+    if (height != 0) {
+      bin_minima.emplace_back(left_min);
+      bin_maxima.emplace_back(left_histogram->bin_maximum(left_idx));
+      bin_heights.emplace_back(height);
+      bin_distinct_counts.emplace_back(distinct_count);
+    }
 
     ++left_idx;
     ++right_idx;
@@ -82,16 +96,13 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
   // TODO(anybody)
   Assert(left_data_type == right_data_type, "NYI");
 
+  std::cout << "cardinality_estimation_inner_equi_join(): " << left_input_table_statistics->chunk_statistics.size() << "x" << right_input_table_statistics->chunk_statistics.size() << std::endl;
+
   resolve_data_type(left_data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    // TODO(anybody) For many Chunks on both sides this nested loop will be inefficient.
-    //               Consider approaches to merge statistic objects on each side.
-    // std::cout << "left_input_table_statistics: " << left_input_table_statistics->chunk_statistics.size() << " chunks"
-    //          << std::endl;
-    // std::cout << "right_input_table_statistics: " << right_input_table_statistics->chunk_statistics.size() << " chunks"
-    //          << std::endl;
-
+//     TODO(anybody) For many Chunks on both sides this nested loop will be inefficient.
+//                   Consider approaches to merge statistic objects on each side.
     for (const auto& left_input_chunk_statistics : left_input_table_statistics->chunk_statistics) {
       for (const auto& right_input_chunk_statistics : right_input_table_statistics->chunk_statistics) {
         const auto left_input_segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
@@ -114,6 +125,8 @@ std::shared_ptr<TableStatistics2> cardinality_estimation_inner_equi_join(
 
           const auto unified_left_histogram = left_histogram->split_at_bin_edges(right_histogram->bin_edges());
           const auto unified_right_histogram = right_histogram->split_at_bin_edges(left_histogram->bin_edges());
+
+          std::cout << "  " << unified_left_histogram->bin_count() << " + " << unified_right_histogram->bin_count() << std::endl;
 
           join_column_histogram = estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(
               unified_left_histogram, unified_right_histogram);

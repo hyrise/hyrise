@@ -363,6 +363,8 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
   }
 }
 
+
+
 TEST_F(CardinalityEstimatorTest, EstimateHistogramOfInnerEquiJoinWithBinAdjustedHistograms) {
   const auto histogram_left = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},

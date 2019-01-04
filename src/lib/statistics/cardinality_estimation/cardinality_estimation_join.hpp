@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "statistics/chunk_statistics/histograms/abstract_histogram.hpp"
 
 namespace opossum {
 
@@ -10,6 +11,19 @@ template <typename T>
 class AbstractHistogram;
 template <typename T>
 class GenericHistogram;
+
+template<typename T>
+struct HistogramBin {
+  T min;
+  T max;
+  HistogramCountType height;
+  HistogramCountType distinct_count;
+};
+
+
+template <typename T>
+std::tuple<HistogramCountType, HistogramCountType> estimate_inner_equi_join_of_histogram_bins(
+    const T& left_height, const T& left_distinct_count, const T& right_height, const T& right_distinct_count);
 
 template <typename T>
 std::shared_ptr<GenericHistogram<T>> estimate_histogram_of_inner_equi_join_with_bin_adjusted_histograms(

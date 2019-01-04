@@ -160,7 +160,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   const auto root_node = LogicalPlanRootNode::make(input);
 
   const auto context = create_optimization_context(input);
-  context->print();
+  //context->print();
 
   for (const auto& rule : _rules) {
     _apply_rule(*rule, root_node, context);

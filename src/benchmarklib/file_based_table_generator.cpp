@@ -100,7 +100,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     }
 
     _benchmark_config->out << " - Loaded " << table_info.table->row_count() << " rows in "
-                           << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
+                           << format_duration(timer.lap())
                            << std::endl;
   }
 

@@ -19,11 +19,13 @@
 #include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
 
 class SQLPipeline;
+struct SQLPipelineMetrics;
 
 class BenchmarkRunner {
  public:
@@ -48,15 +50,15 @@ class BenchmarkRunner {
   void _warmup_query(const QueryID query_id);
 
   // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
-  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const QueryID query_id,
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
                                                                         const std::function<void()>& done_callback);
 
   // Schedule and return all tasks for named_query
-  std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const QueryID query_id,
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics,
                                                              const std::function<void()>& done_callback);
 
   // Execute named_query
-  void _execute_query(const QueryID query_id, const std::function<void()>& done_callback);
+  void _execute_query(const QueryID query_id, const std::shared_ptr<SQLPipelineMetrics>& metrics, const std::function<void()>& done_callback);
 
   // If visualization is enabled, stores an executed plan
   void _store_plan(const QueryID query_id, SQLPipeline& pipeline);

@@ -16,6 +16,9 @@ struct SQLPipelineStatementMetrics {
   std::chrono::nanoseconds sql_translate_time_nanos{};
   std::chrono::nanoseconds optimize_time_nanos{};
   std::chrono::nanoseconds lqp_translate_time_nanos{};
+
+  // Will only be set if the SQLPipelineStatement was executed via SQLPipelineStatement::get_result_table().
+  // If the caller executed the tasks itself, this will not be set.
   std::chrono::nanoseconds execution_time_nanos{};
 
   bool query_plan_cache_hit = false;

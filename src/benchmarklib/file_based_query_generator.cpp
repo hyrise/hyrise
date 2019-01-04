@@ -20,12 +20,24 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
     _parse_query_file(query_path);
   } else {
+    auto query_file_paths = std::vector<std::filesystem::path>{};
+
     // Recursively walk through the specified directory and add all files on the way
     for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
       const auto filename = entry.path().string();
       if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
-        _parse_query_file(filename);
+        query_file_paths.emplace_back(filename);
       }
+    }
+
+    // Sort the files alphabetically (so the queries are in a deterministic order)
+    std::sort(query_file_paths.begin(), query_file_paths.end(), [&](const auto& lhs, const auto& rhs) {
+      return lhs.filename() < rhs.filename();
+    });
+
+    // Read the queries from the files
+    for (const auto& query_file_path : query_file_paths) {
+      _parse_query_file(query_file_path);
     }
   }
 
@@ -48,6 +60,8 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_pa
   hsql::SQLParser::parse(content, &parse_result);
   Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
 
+  std::vector<std::string> queries;
+
   size_t sql_string_offset{0u};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
     const auto query_name = filename + '.' + std::to_string(statement_idx);
@@ -61,7 +75,7 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_pa
   // More convenient names if there is only one query per file
   if (_queries.size() == 1) {
     auto& query_name = _query_names[0];
-    query_name.erase(query_name.end() - 2, query_name.end());  // -2 because .0 at end of name
+    query_name.erase(query_name.end() - 2, query_name.end());  // -2 to remove ".0" at end of name
   }
 }
 
