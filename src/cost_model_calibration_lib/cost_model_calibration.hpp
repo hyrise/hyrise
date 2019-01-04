@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "configuration/calibration_configuration.hpp"
-#include "feature/calibration_example.hpp"
+#include "feature/calibration_features.hpp"
 
 namespace opossum {
 
@@ -17,7 +17,7 @@ class CostModelCalibration {
   void run_tpch6_costing() const;
 
  private:
-  void _append_to_result_csv(const std::string& output_path, const std::vector<CalibrationExample>& examples) const;
+  void _append_to_result_csv(const std::string& output_path, const std::vector<CalibrationFeatures>& features) const;
   void _calibrate() const;
   const std::vector<std::string> _collect_csv_header_columns() const;
   void _run_tpch() const;

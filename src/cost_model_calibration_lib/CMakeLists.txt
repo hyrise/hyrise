@@ -14,15 +14,24 @@ set(
         cost_model_calibration_table_generator.hpp
         cost_model_feature_extractor.cpp
         cost_model_feature_extractor.hpp
-        feature/calibration_aggregate_features.hpp
-        feature/calibration_column_features.hpp
-        feature/calibration_constant_hardware_features.hpp
-        feature/calibration_example.hpp
+        feature/abstract_features.cpp
+        feature/abstract_features.hpp
+        feature/aggregate_features.cpp
+        feature/aggregate_features.hpp
+        feature/column_features.cpp
+        feature/column_features.hpp
+        feature/constant_hardware_features.cpp
+        feature/constant_hardware_features.hpp
+        feature/calibration_features.cpp
         feature/calibration_features.hpp
-        feature/calibration_join_features.hpp
-        feature/calibration_projection_features.hpp
-        feature/calibration_runtime_hardware_features.hpp
-        feature/calibration_table_scan_features.hpp
+        feature/join_features.cpp
+        feature/join_features.hpp
+        feature/projection_features.cpp
+        feature/projection_features.hpp
+        feature/runtime_hardware_features.cpp
+        feature/runtime_hardware_features.hpp
+        feature/table_scan_features.cpp
+        feature/table_scan_features.hpp
         query/calibration_query_generator.cpp
         query/calibration_query_generator.hpp
         query/calibration_query_generator_aggregates.cpp

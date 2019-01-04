@@ -2,7 +2,6 @@
 
 #include "concurrency/transaction_manager.hpp"
 #include "cost_model_feature_extractor.hpp"
-#include "feature/calibration_example.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/format_duration.hpp"
@@ -12,7 +11,7 @@ namespace opossum {
 CostModelCalibrationQueryRunner::CostModelCalibrationQueryRunner(const CalibrationConfiguration configuration)
     : _configuration(configuration) {}
 
-const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
+const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   lqp->print();
   auto transaction_context = TransactionManager::get().new_transaction_context();
@@ -27,7 +26,7 @@ const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate
   return _evaluate_query_plan({pqp});
 }
 
-const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate_query_from_sql(
+const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_sql(
     const std::string& query) const {
   std::cout << query << std::endl;
 
@@ -45,28 +44,28 @@ const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::calibrate
   return _evaluate_query_plan(pqps);
 }
 
-const std::vector<CalibrationExample> CostModelCalibrationQueryRunner::_evaluate_query_plan(
+const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::_evaluate_query_plan(
     const std::vector<std::shared_ptr<AbstractOperator>>& pqps) const {
-  std::vector<CalibrationExample> examples{};
+  std::vector<CalibrationFeatures> features{};
   for (const auto& pqp : pqps) {
-    _traverse(pqp, examples);
+    _traverse(pqp, features);
   }
 
   return examples;
 }
 
 void CostModelCalibrationQueryRunner::_traverse(const std::shared_ptr<const AbstractOperator>& op,
-                                                std::vector<CalibrationExample>& examples) const {
+                                                std::vector<CalibrationFeatures>& features) const {
   if (op->input_left() != nullptr) {
-    _traverse(op->input_left(), examples);
+    _traverse(op->input_left(), features);
   }
 
   if (op->input_right() != nullptr) {
-    _traverse(op->input_right(), examples);
+    _traverse(op->input_right(), features);
   }
 
   auto operator_result = CostModelFeatureExtractor::extract_features(op);
-  examples.push_back(operator_result);
+  features.push_back(operator_result);
 }
 
 }  // namespace opossum

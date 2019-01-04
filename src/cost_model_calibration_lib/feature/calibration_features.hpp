@@ -3,61 +3,60 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "feature/abstract_features.hpp"
+#include "feature/aggregate_features.hpp"
+#include "feature/constant_hardware_features.hpp"
+#include "feature/join_features.hpp"
+#include "feature/projection_features.hpp"
+#include "feature/runtime_hardware_features.hpp"
+#include "feature/table_scan_features.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "operators/abstract_operator.hpp"
 
 namespace opossum {
+    namespace cost_model {
 
-struct CalibrationFeatures {
-  std::string operator_type;
+struct CalibrationFeatures : public AbstractFeatures {
+ public:
+  const std::map<std::string, AllTypeVariant> serialize() const override;
+
+  OperatorType operator_type;
   uint64_t execution_time_ns = 0;
   float input_table_size_ratio = 0.0;
 
-  // TODO(Sven): Extract class for TableFeatures
   size_t left_input_row_count = 0;
   size_t left_input_chunk_count = 0;
   size_t left_input_memory_usage_bytes = 0;
   size_t left_input_chunk_size = 0;
+  bool left_input_is_small_table = false;
 
   size_t right_input_row_count = 0;
   size_t right_input_chunk_count = 0;
   size_t right_input_memory_usage_bytes = 0;
   size_t right_input_chunk_size = 0;
+  bool right_input_is_small_table = false;
 
   size_t output_row_count = 0;
   size_t output_chunk_count = 0;
   size_t output_memory_usage_bytes = 0;
   size_t output_chunk_size = 0;
-  float selectivity = 0.0;
+  bool output_is_small_table = false;
 
+  float selectivity = 0.0;
+  bool is_selectivity_below_50_percent = false;
+  float selectivity_distance_to_50_percent = false;
+
+  // Just for debugging
   std::string operator_description;
 
-  static const std::vector<std::string> feature_names;
-  static const std::vector<AllTypeVariant> serialize(const CalibrationFeatures& features);
+  ConstantHardwareFeatures constant_hardware_features;
+  RuntimeHardwareFeatures runtime_hardware_features;
+
+  std::optional<AggregateFeatures> aggregate_features = {};
+  std::optional<JoinFeatures> join_features = {};
+  std::optional<ProjectionFeatures> projection_features = {};
+  std::optional<TableScanFeatures> table_scan_features = {};
 };
 
-inline const std::vector<std::string> CalibrationFeatures::feature_names(
-    {"operator_type", "input_table_size_ratio", "left_input_row_count", "left_input_chunk_count",
-     "left_input_memory_usage_bytes", "left_input_chunk_size", "right_input_row_count", "right_input_chunk_count",
-     "right_input_memory_usage_bytes", "right_input_chunk_size", "output_row_count", "output_chunk_count",
-     "output_memory_usage_bytes", "output_chunk_size", "selectivity", "operator_description", "execution_time_ns"});
-
-inline const std::vector<AllTypeVariant> CalibrationFeatures::serialize(const CalibrationFeatures& features) {
-  return {features.operator_type,
-          features.input_table_size_ratio,
-          static_cast<int32_t>(features.left_input_row_count),
-          static_cast<int32_t>(features.left_input_chunk_count),
-          static_cast<int32_t>(features.left_input_memory_usage_bytes),
-          static_cast<int32_t>(features.left_input_chunk_size),
-          static_cast<int32_t>(features.right_input_row_count),
-          static_cast<int32_t>(features.right_input_chunk_count),
-          static_cast<int32_t>(features.right_input_memory_usage_bytes),
-          static_cast<int32_t>(features.right_input_chunk_size),
-          static_cast<int32_t>(features.output_row_count),
-          static_cast<int32_t>(features.output_chunk_count),
-          static_cast<int32_t>(features.output_memory_usage_bytes),
-          static_cast<int32_t>(features.output_chunk_size),
-          features.selectivity,
-          features.operator_description,
-          static_cast<int64_t>(features.execution_time_ns)};
-}
-
+}  // namespace cost_model
 }  // namespace opossum

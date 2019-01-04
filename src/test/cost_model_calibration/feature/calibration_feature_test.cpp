@@ -1,12 +1,12 @@
 #include "base_test.hpp"
 
-#include "feature/calibration_aggregate_features.hpp"
-#include "feature/calibration_constant_hardware_features.hpp"
+#include "feature/aggregate_features.hpp"
 #include "feature/calibration_features.hpp"
-#include "feature/calibration_join_features.hpp"
-#include "feature/calibration_projection_features.hpp"
-#include "feature/calibration_runtime_hardware_features.hpp"
-#include "feature/calibration_table_scan_features.hpp"
+#include "feature/constant_hardware_features.hpp"
+#include "feature/join_features.hpp"
+#include "feature/projection_features.hpp"
+#include "feature/runtime_hardware_features.hpp"
+#include "feature/table_scan_features.hpp"
 
 namespace opossum {
 

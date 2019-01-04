@@ -11,31 +11,31 @@
 #include "storage/reference_segment.hpp"
 
 namespace opossum {
+namespace cost_model {
 
-const CalibrationExample CostModelFeatureExtractor::extract_features(
+const CalibrationFeatures CostModelFeatureExtractor::extract_features(
     const std::shared_ptr<const AbstractOperator>& op) {
-  CalibrationExample calibration_result{};
 
-  calibration_result.calibration_features = _extract_general_features(op);
-  calibration_result.hardware_features = _extract_constant_hardware_features();
-  calibration_result.runtime_features = _extract_runtime_hardware_features();
+  auto calibration_result = _extract_general_features(op);
+  calibration_result.constant_hardware_features = _extract_constant_hardware_features();
+  calibration_result.runtime_hardware_features = _extract_runtime_hardware_features();
 
   auto operator_type = op->type();
 
-  // TODO(Sven): add test
+  //  // TODO(Sven): add test
   switch (operator_type) {
     case OperatorType::TableScan: {
-      auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
+      const auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
       calibration_result.table_scan_features = _extract_features_for_operator(table_scan_op);
       break;
     }
     case OperatorType::IndexScan: {
-      auto index_scan_op = std::static_pointer_cast<const IndexScan>(op);
+      const auto index_scan_op = std::static_pointer_cast<const IndexScan>(op);
       calibration_result.table_scan_features = _extract_features_for_operator(index_scan_op);
       break;
     }
     case OperatorType::Projection: {
-      auto projection_op = std::static_pointer_cast<const Projection>(op);
+      const auto projection_op = std::static_pointer_cast<const Projection>(op);
       calibration_result.projection_features = _extract_features_for_operator(projection_op);
       break;
     }
@@ -44,12 +44,12 @@ const CalibrationExample CostModelFeatureExtractor::extract_features(
     case OperatorType::JoinMPSM:
     case OperatorType::JoinNestedLoop:
     case OperatorType::JoinSortMerge: {
-      auto join_op = std::static_pointer_cast<const AbstractJoinOperator>(op);
+      const auto join_op = std::static_pointer_cast<const AbstractJoinOperator>(op);
       calibration_result.join_features = _extract_features_for_operator(join_op);
       break;
     }
     case OperatorType::Aggregate: {
-      auto aggregate_op = std::static_pointer_cast<const Aggregate>(op);
+      const auto aggregate_op = std::static_pointer_cast<const Aggregate>(op);
       calibration_result.aggregate_features = _extract_features_for_operator(aggregate_op);
       break;
     }
@@ -72,7 +72,7 @@ const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
   operator_features.execution_time_ns = execution_time_ns;
-  operator_features.operator_type = operator_type_to_string.at(op->type());
+  operator_features.operator_type = op->type();
   // Mainly for debug purposes
   operator_features.operator_description = op->description(DescriptionMode::SingleLine);
 
@@ -114,7 +114,7 @@ const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
         std::max<uint64_t>(1, left_input_row_count) * std::max<uint64_t>(1, right_input_row_count);
     const auto output_selectivity = std::min<float>(1.0, output_row_count / static_cast<float>(total_input_row_count));
 
-    operator_features.output_selectivity = output_selectivity;
+    operator_features.selectivity = output_selectivity;
     operator_features.output_row_count = output_row_count;
     operator_features.output_chunk_count = output->chunk_count();
     operator_features.output_memory_usage_bytes = output->estimate_memory_usage();
@@ -126,19 +126,16 @@ const CalibrationFeatures CostModelFeatureExtractor::_extract_general_features(
   return operator_features;
 }
 
-const CalibrationConstantHardwareFeatures CostModelFeatureExtractor::_extract_constant_hardware_features() {
-  CalibrationConstantHardwareFeatures hardware_features{};
-  return hardware_features;
+const ConstantHardwareFeatures CostModelFeatureExtractor::_extract_constant_hardware_features() {
+  return {};
 }
 
-const CalibrationRuntimeHardwareFeatures CostModelFeatureExtractor::_extract_runtime_hardware_features() {
-  CalibrationRuntimeHardwareFeatures runtime_features{};
-  return runtime_features;
+const RuntimeHardwareFeatures CostModelFeatureExtractor::_extract_runtime_hardware_features() {
+  return {};
 }
 
-const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const TableScan>& op) {
-  CalibrationTableScanFeatures features{};
+const TableScanFeatures CostModelFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const TableScan>& op) {
+  TableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
   auto chunk_count = left_input_table->chunk_count();
@@ -162,9 +159,8 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   return features;
 }
 
-const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const IndexScan>& op) {
-  CalibrationTableScanFeatures features{};
+const TableScanFeatures CostModelFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const IndexScan>& op) {
+  TableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
   const auto left_column_ids = op->left_columns_ids();
@@ -181,31 +177,31 @@ const std::optional<CalibrationTableScanFeatures> CostModelFeatureExtractor::_ex
   return features;
 }
 
-CalibrationColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
-    const std::shared_ptr<const Table>& left_input_table,
-    const std::shared_ptr<PQPColumnExpression> column_expression) {
+const ColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression> column_expression) {
   auto chunk_count = left_input_table->chunk_count();
   const auto& column_id = column_expression->column_id;
 
+  // TODO(Sven): Create that damn encoding to chunk percentage mapping thingy
   // TODO(Sven): What shall we do when there are different encodings across different chunks?
   if (chunk_count > ChunkID{0}) {
     const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
 
     const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
 
-    return CalibrationColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
+    return ColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
                                      encoding_reference_pair.second,
                                      data_type_to_string.left.at(column_expression->data_type()),
                                      _get_memory_usage_for_column(left_input_table, column_id)};
   }
 
-  return CalibrationColumnFeatures{encoding_type_to_string.left.at(EncodingType::Unencoded), false,
+  return ColumnFeatures{encoding_type_to_string.left.at(EncodingType::Unencoded), false,
                                    data_type_to_string.left.at(column_expression->data_type()),
                                    _get_memory_usage_for_column(left_input_table, column_id)};
 }
 
 void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expression(
-    std::shared_ptr<const Table>& left_input_table, CalibrationTableScanFeatures& features,
+    std::shared_ptr<const Table>& left_input_table, TableScanFeatures& features,
     const std::shared_ptr<AbstractPredicateExpression>& expression) {
   features.scan_operator_type = predicate_condition_to_string.left.at(expression->predicate_condition);
 
@@ -279,26 +275,18 @@ std::pair<EncodingType, bool> CostModelFeatureExtractor::_get_encoding_type_for_
   }
 }
 
-const std::optional<CalibrationProjectionFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const Projection>& op) {
-  CalibrationProjectionFeatures operator_result{};
+const ProjectionFeatures CostModelFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const Projection>& op) {
 
+  ProjectionFeatures features{};
   // TODO(Sven): Add features that signal whether subselects need to be executed
+  features.input_column_count = op->input_table_left()->column_count();
+  features.output_column_count = op->get_output()->column_count();
 
-  // Feature Column Counts
-  auto num_input_columns = op->input_table_left()->column_count();
-  auto num_output_columns = op->get_output()->column_count();
-
-  operator_result.input_column_count = num_input_columns;
-  operator_result.output_column_count = num_output_columns;
-
-  return operator_result;
+  return features;
 }
 
-const std::optional<CalibrationJoinFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const AbstractJoinOperator>& op) {
-  CalibrationJoinFeatures operator_result{};
-
+const JoinFeatures CostModelFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const AbstractJoinOperator>& op) {
+  JoinFeatures features {};
   const auto& left_table = op->input_table_left();
   const auto& right_table = op->input_table_right();
 
@@ -308,19 +296,15 @@ const std::optional<CalibrationJoinFeatures> CostModelFeatureExtractor::_extract
   const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
 
   //  operator_result.join_type = op->type();
-  operator_result.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression);
-  operator_result.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression);
+  features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression);
+  features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression);
 
-  return operator_result;
+  return features;
 }
 
-const std::optional<CalibrationAggregateFeatures> CostModelFeatureExtractor::_extract_features_for_operator(
-    const std::shared_ptr<const Aggregate>& op) {
-  CalibrationAggregateFeatures operator_result{};
-
-  // TODO(Sven): Add some specific features
-
-  return operator_result;
+const AggregateFeatures CostModelFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const Aggregate>& op) {
+  return {};
 }
 
+}  // namespace cost_model
 }  // namespace opossum

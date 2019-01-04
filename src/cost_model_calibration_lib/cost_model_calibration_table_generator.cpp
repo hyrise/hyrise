@@ -4,8 +4,9 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "storage/table.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -48,11 +49,11 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 }
 
 void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_factor, const EncodingType encoding) const {
-  const auto tables = opossum::TpchDbGenerator(scale_factor, _chunk_size).generate();
+  const auto tables = opossum::TpchTableGenerator(scale_factor, _chunk_size).generate();
 
   for (auto& tpch_table : tables) {
-    const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
-    const auto& table = tpch_table.second;
+    const auto& table_name = tpch_table.first;
+    const auto& table = tpch_table.second.table;
 
     //    if (table_name != "lineitem") continue;
 

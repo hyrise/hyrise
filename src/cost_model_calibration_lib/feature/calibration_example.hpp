@@ -2,14 +2,14 @@
 
 #include <vector>
 
+#include "aggregate_features.hpp"
 #include "all_type_variant.hpp"
-#include "calibration_aggregate_features.hpp"
-#include "calibration_constant_hardware_features.hpp"
 #include "calibration_features.hpp"
-#include "calibration_join_features.hpp"
-#include "calibration_projection_features.hpp"
-#include "calibration_runtime_hardware_features.hpp"
-#include "calibration_table_scan_features.hpp"
+#include "constant_hardware_features.hpp"
+#include "join_features.hpp"
+#include "projection_features.hpp"
+#include "runtime_hardware_features.hpp"
+#include "table_scan_features.hpp"
 
 namespace opossum {
 
@@ -18,7 +18,7 @@ struct CalibrationExample {
   CalibrationConstantHardwareFeatures hardware_features;
   CalibrationRuntimeHardwareFeatures runtime_features;
 
-  std::optional<CalibrationAggregateFeatures> aggregate_features = std::nullopt;
+  std::optional<CalibrationAggregateFeatures> aggregate_features = {};
   std::optional<CalibrationJoinFeatures> join_features = std::nullopt;
   std::optional<CalibrationProjectionFeatures> projection_features = std::nullopt;
   std::optional<CalibrationTableScanFeatures> table_scan_features = std::nullopt;
