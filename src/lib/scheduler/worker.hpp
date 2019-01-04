@@ -46,8 +46,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   template <typename TaskType>
   void _wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
     auto tasks_completed = [&tasks]() {
-      for (auto& task : tasks) {
-        if (!task->is_done()) {
+      for (auto it = tasks.rbegin() ; it != tasks.rend() ; ++it) {
+        if (!(*it)->is_done()) {
           return false;
         }
       }
