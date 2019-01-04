@@ -56,6 +56,11 @@ void generate_table_statistics2(Table& table) {
 
         const auto histogram =
             EqualDistinctCountHistogram<ColumnDataType>::from_segment(chunk->get_segment(column_id), bin_count);
+        if (!histogram) {
+          std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id) << ": Failed to generate histogram" << std::endl;
+          return;
+        }
+        
         segment_statistics->set_statistics_object(histogram);
 
         std::cout << "generate_table_statistics2():     Column " << table.column_name(column_id) << ": "
