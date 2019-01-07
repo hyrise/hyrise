@@ -78,6 +78,10 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
   pmr_concurrent_vector(const std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
+  pmr_concurrent_vector(std::vector<T>&& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
+      : tbb::concurrent_vector<T>(std::make_move_iterator(values.begin()),
+                                  std::make_move_iterator(values.end())),
+        _alloc(alloc) {}
 
   template <class I>
   pmr_concurrent_vector(I first, I last, PolymorphicAllocator<T> alloc = {})

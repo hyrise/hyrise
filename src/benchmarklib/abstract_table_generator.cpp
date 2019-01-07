@@ -59,7 +59,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add the Tables to the StorageManager
    */
-  _benchmark_config->out << "- Adding Tables to StorageManager (including generation of statistics) " << std::flush;
+  _benchmark_config->out << "- Adding Tables to StorageManager and generating statistics " << std::flush;
   auto& storage_manager = StorageManager::get();
   for (auto& [table_name, table_info] : table_info_by_name) {
     if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
