@@ -1,4 +1,4 @@
-#include "feature/constant_hardware_features.hpp"
+#include "constant_hardware_features.hpp"
 
 namespace opossum {
 namespace cost_model {

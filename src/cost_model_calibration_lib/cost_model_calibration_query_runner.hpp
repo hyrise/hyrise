@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "configuration/calibration_configuration.hpp"
-#include "feature/calibration_features.hpp"
+#include "cost_model/feature/calibration_features.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
 

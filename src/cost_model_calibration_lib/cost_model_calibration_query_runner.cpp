@@ -1,7 +1,7 @@
 #include "cost_model_calibration_query_runner.hpp"
 
 #include "concurrency/transaction_manager.hpp"
-#include "cost_model_feature_extractor.hpp"
+#include "calibration_feature_extractor.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/format_duration.hpp"
@@ -64,7 +64,7 @@ void CostModelCalibrationQueryRunner::_traverse(const std::shared_ptr<const Abst
     _traverse(op->input_right(), features);
   }
 
-  auto operator_result = cost_model::CostModelFeatureExtractor::extract_features(op);
+  auto operator_result = cost_model::CalibrationFeatureExtractor::extract_features(op);
   features.push_back(operator_result);
 }
 

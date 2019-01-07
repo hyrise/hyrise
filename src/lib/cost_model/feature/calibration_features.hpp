@@ -3,13 +3,13 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "feature/abstract_features.hpp"
-#include "feature/aggregate_features.hpp"
-#include "feature/constant_hardware_features.hpp"
-#include "feature/join_features.hpp"
-#include "feature/projection_features.hpp"
-#include "feature/runtime_hardware_features.hpp"
-#include "feature/table_scan_features.hpp"
+#include "abstract_features.hpp"
+#include "aggregate_features.hpp"
+#include "constant_hardware_features.hpp"
+#include "join_features.hpp"
+#include "projection_features.hpp"
+#include "runtime_hardware_features.hpp"
+#include "table_scan_features.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "operators/abstract_operator.hpp"
 

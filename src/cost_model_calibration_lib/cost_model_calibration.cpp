@@ -6,7 +6,7 @@
 
 #include "cost_model_calibration_query_runner.hpp"
 #include "cost_model_calibration_table_generator.hpp"
-#include "feature/calibration_features.hpp"
+#include "cost_model/feature/calibration_features.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "tpch/tpch_queries.hpp"

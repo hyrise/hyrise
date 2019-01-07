@@ -1,4 +1,4 @@
-#include "feature/projection_features.hpp"
+#include "projection_features.hpp"
 
 namespace opossum {
 namespace cost_model {

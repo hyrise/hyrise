@@ -1,4 +1,4 @@
-#include "feature/column_features.hpp"
+#include "column_features.hpp"
 
 #include "constant_mappings.hpp"
 

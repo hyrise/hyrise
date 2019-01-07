@@ -1,7 +1,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "cost_model_feature_extractor.hpp"
+#include "calibration_feature_extractor.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"

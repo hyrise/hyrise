@@ -12,26 +12,26 @@ set(
         cost_model_calibration_query_runner.hpp
         cost_model_calibration_table_generator.cpp
         cost_model_calibration_table_generator.hpp
-        cost_model_feature_extractor.cpp
-        cost_model_feature_extractor.hpp
-        feature/abstract_features.cpp
-        feature/abstract_features.hpp
-        feature/aggregate_features.cpp
-        feature/aggregate_features.hpp
-        feature/column_features.cpp
-        feature/column_features.hpp
-        feature/constant_hardware_features.cpp
-        feature/constant_hardware_features.hpp
-        feature/calibration_features.cpp
-        feature/calibration_features.hpp
-        feature/join_features.cpp
-        feature/join_features.hpp
-        feature/projection_features.cpp
-        feature/projection_features.hpp
-        feature/runtime_hardware_features.cpp
-        feature/runtime_hardware_features.hpp
-        feature/table_scan_features.cpp
-        feature/table_scan_features.hpp
+        calibration_feature_extractor.cpp
+        calibration_feature_extractor.hpp
+        ../lib/cost_model/feature/abstract_features.cpp
+        ../lib/cost_model/feature/abstract_features.hpp
+        ../lib/cost_model/feature/aggregate_features.cpp
+        ../lib/cost_model/feature/aggregate_features.hpp
+        ../lib/cost_model/feature/column_features.cpp
+        ../lib/cost_model/feature/column_features.hpp
+        ../lib/cost_model/feature/constant_hardware_features.cpp
+        ../lib/cost_model/feature/constant_hardware_features.hpp
+        ../lib/cost_model/feature/calibration_features.cpp
+        ../lib/cost_model/feature/calibration_features.hpp
+        ../lib/cost_model/feature/join_features.cpp
+        ../lib/cost_model/feature/join_features.hpp
+        ../lib/cost_model/feature/projection_features.cpp
+        ../lib/cost_model/feature/projection_features.hpp
+        ../lib/cost_model/feature/runtime_hardware_features.cpp
+        ../lib/cost_model/feature/runtime_hardware_features.hpp
+        ../lib/cost_model/feature/table_scan_features.cpp
+        ../lib/cost_model/feature/table_scan_features.hpp
         query/calibration_query_generator.cpp
         query/calibration_query_generator.hpp
         query/calibration_query_generator_aggregates.cpp

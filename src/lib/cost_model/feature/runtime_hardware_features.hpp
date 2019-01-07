@@ -30,7 +30,7 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "feature/abstract_features.hpp"
+#include "abstract_features.hpp"
 
 namespace opossum {
 namespace cost_model {

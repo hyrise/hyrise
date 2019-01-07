@@ -1,4 +1,4 @@
-#include "feature/join_features.hpp"
+#include "join_features.hpp"
 
 #include "constant_mappings.hpp"
 

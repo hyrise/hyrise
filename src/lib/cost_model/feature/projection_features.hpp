@@ -36,7 +36,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "feature/abstract_features.hpp"
+#include "abstract_features.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {

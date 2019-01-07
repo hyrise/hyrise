@@ -2,7 +2,7 @@
 
 #include <map>
 
-#include "feature/abstract_features.hpp"
+#include "abstract_features.hpp"
 
 namespace opossum {
 namespace cost_model {

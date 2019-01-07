@@ -5,14 +5,14 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 
-#include "feature/aggregate_features.hpp"
-#include "feature/calibration_features.hpp"
-#include "feature/column_features.hpp"
-#include "feature/constant_hardware_features.hpp"
-#include "feature/runtime_hardware_features.hpp"
-#include "feature/join_features.hpp"
-#include "feature/projection_features.hpp"
-#include "feature/table_scan_features.hpp"
+#include "cost_model/feature/aggregate_features.hpp"
+#include "cost_model/feature/calibration_features.hpp"
+#include "cost_model/feature/column_features.hpp"
+#include "cost_model/feature/constant_hardware_features.hpp"
+#include "cost_model/feature/runtime_hardware_features.hpp"
+#include "cost_model/feature/join_features.hpp"
+#include "cost_model/feature/projection_features.hpp"
+#include "cost_model/feature/table_scan_features.hpp"
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/abstract_operator.hpp"
@@ -28,7 +28,7 @@
 namespace opossum {
 namespace cost_model {
 
-class CostModelFeatureExtractor {
+class CalibrationFeatureExtractor {
  public:
   static const CalibrationFeatures extract_features(const std::shared_ptr<const AbstractOperator>& op);
 

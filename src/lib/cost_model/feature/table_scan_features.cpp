@@ -1,4 +1,4 @@
-#include "feature/table_scan_features.hpp"
+#include "table_scan_features.hpp"
 
 namespace opossum {
 namespace cost_model {
