@@ -78,7 +78,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   static thread_local std::minstd_rand random_engine{};
 
   // This is not nice, but initializing this statically would require external methods and make it harder to
-  // follow in the end. It's not like this list will ever change...
+  // follow in the end. It's not like this list (taken from TPC-H 4.2.2.13) will ever change...
   static const std::vector materials{"TIN", "NICKEL", "BRASS", "STEEL", "COPPER"};
 
   static const auto sizes =
@@ -143,7 +143,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 4 - 1: {
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 9};
+      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 3);
@@ -189,7 +189,10 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
     case 7 - 1: {
       const auto nation1 = nations.list[nation_dist(random_engine)].text;
-      const auto nation2 = nations.list[nation_dist(random_engine)].text;
+      auto nation2 = std::string{};
+      do {
+        nation2 = nations.list[nation_dist(random_engine)].text;
+      } while (nation1 == nation2);
 
       parameters.emplace_back("'"s + nation1 + "'");
       parameters.emplace_back("'"s + nation2 + "'");
@@ -284,14 +287,14 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4};
+      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
-      const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
-      const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12 + 1);
+      const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
+      const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 3);
 
-      // This is bloody disgusting. But since we cannot use prepared statements in TPC-H 15 and want to keep all
-      // queries in a readable form in tpch_queries.cpp, I cannot come up with anything better. At least we can
-      // assert that nobody tampered with the string over there.
+      // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
+      // By manually replacing the `?` from tpch_queries.cpp, we can keep all queries in a readable form there.
+      // This is ugly, but at least we can assert that nobody tampered with the string over there.
       static constexpr auto BEGIN_DATE_OFFSET = 156;
       static constexpr auto END_DATE_OFFSET = 192;
       DebugAssert((std::string_view{&query_15[BEGIN_DATE_OFFSET], 10} == "1996-01-01" &&  // NOLINT
@@ -300,8 +303,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       query_15.replace(BEGIN_DATE_OFFSET, 10, begin_date);
       query_15.replace(END_DATE_OFFSET, 10, end_date);
 
-      static size_t view_id = 0;
-      boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(view_id++));
+      boost::replace_all(query_15, std::string("revenueview"), std::string("revenue") + std::to_string(_q15_view_id++));
 
       // Not using _build_executable_query here
       return query_15;

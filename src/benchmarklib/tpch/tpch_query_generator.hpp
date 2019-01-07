@@ -30,6 +30,9 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
   const bool _use_prepared_statements;
 
   const float _scale_factor;
+
+  // Used for naming the views generated in query 15
+  size_t _q15_view_id = 0;
 };
 
 }  // namespace opossum
