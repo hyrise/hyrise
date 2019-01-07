@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
@@ -59,6 +60,12 @@ struct AggregateResult {
   std::set<ColumnDataType> distinct_values;
   RowID row_id;
 };
+
+template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
+using ResultMapAllocator = PolymorphicAllocator<std::pair<const AggregateKey, AggregateResult<AggregateType, ColumnDataType>>>;
+
+template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
+using AggregateResultMap = std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnDataType>, std::hash<AggregateKey>, std::equal_to<AggregateKey>, ResultMapAllocator<AggregateKey, AggregateType, ColumnDataType>>;
 
 /*
 The key type that is used for the aggregation map.
@@ -136,6 +143,8 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   pmr_vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
+
+  boost::container::pmr::monotonic_buffer_resource * _result_map_buffer;
 };
 
 }  // namespace opossum
