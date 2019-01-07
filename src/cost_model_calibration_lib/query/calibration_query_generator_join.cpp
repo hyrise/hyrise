@@ -12,10 +12,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-    CalibrationQueryGeneratorJoin::CalibrationQueryGeneratorJoin(
-            const CalibrationQueryGeneratorJoinConfiguration& configuration,
-            const std::vector<CalibrationColumnSpecification>& column_definitions) :
-            _configuration(configuration), _column_definitions(column_definitions) {}
+CalibrationQueryGeneratorJoin::CalibrationQueryGeneratorJoin(
+    const CalibrationQueryGeneratorJoinConfiguration& configuration,
+    const std::vector<CalibrationColumnSpecification>& column_definitions)
+    : _configuration(configuration), _column_definitions(column_definitions) {}
 
 const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGeneratorJoin::generate_join_permutations(
     const std::vector<std::pair<std::string, size_t>>& tables, const CalibrationConfiguration& configuration) {
@@ -27,9 +27,12 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
       for (const auto& left_table : tables) {
         for (const auto& right_table : tables) {
           for (const auto ratio : {1.0, 10.0, 100.0, 1000.0}) {
-            if (left_table.second <= right_table.second && ((right_table.second / static_cast<float>(left_table.second)) == ratio)) {
-              output.push_back({left_table.first, right_table.first, encoding, data_type, false, static_cast<size_t>(ratio)});
-              output.push_back({left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
+            if (left_table.second <= right_table.second &&
+                ((right_table.second / static_cast<float>(left_table.second)) == ratio)) {
+              output.push_back(
+                  {left_table.first, right_table.first, encoding, data_type, false, static_cast<size_t>(ratio)});
+              output.push_back(
+                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
             }
           }
         }
@@ -42,8 +45,7 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoin::generate_join(
-    const std::shared_ptr<StoredTableNode>& left_table,
-    const std::shared_ptr<StoredTableNode>& right_table) const {
+    const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const {
   std::vector<JoinType> join_types = {JoinType::Hash, JoinType::Index, JoinType::NestedLoop, JoinType::MPSM,
                                       JoinType::SortMerge};
   //  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::SortMerge};
@@ -64,8 +66,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_generate_join_predicate(
-    const std::shared_ptr<StoredTableNode>& left_table,
-    const std::shared_ptr<StoredTableNode>& right_table) const {
+    const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const {
   const auto left_column_definition = _find_foreign_key();
   if (!left_column_definition) return {};
 

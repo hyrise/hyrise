@@ -161,7 +161,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
   const auto left_table = StoredTableNode::make(configuration.left_table_name);
   const auto right_table = StoredTableNode::make(configuration.right_table_name);
 
-  const auto join_nodes = CalibrationQueryGeneratorJoin{configuration, _column_specifications}.generate_join(left_table, right_table);
+  const auto join_nodes =
+      CalibrationQueryGeneratorJoin{configuration, _column_specifications}.generate_join(left_table, right_table);
   if (join_nodes.empty()) {
     return {};
   }

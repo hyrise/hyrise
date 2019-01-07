@@ -107,6 +107,7 @@ class DataGenerator:
             table = self.generate_table(table_specification)
             table = pd.concat([pd.DataFrame(type_row, index=[0]), table], ignore_index=True)
             self.write_csv(table_specification['table_path'], table)
+            print('Finished table size ' + table_specification['table_size'])
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
