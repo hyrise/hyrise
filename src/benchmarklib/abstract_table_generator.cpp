@@ -4,6 +4,8 @@
 #include "benchmark_table_encoder.hpp"
 #include "operators/export_binary.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -11,7 +13,14 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
     : _benchmark_config(benchmark_config) {}
 
 void AbstractTableGenerator::generate_and_store() {
+  Timer timer;
+
+  _benchmark_config->out << "- Loading/Generating tables " << std::flush;
   auto table_info_by_name = generate();
+  _benchmark_config->out << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
+                         << ")" << std::endl;
+
+  _benchmark_config->out << "- Encoding tables " << std::flush;
 
   /**
    * Encode the Tables
@@ -43,6 +52,9 @@ void AbstractTableGenerator::generate_and_store() {
       ExportBinary::write_binary(*table_info.table, binary_file_path);
     }
   }
+
+  _benchmark_config->out << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
+                         << ")" << std::endl;
 
   /**
    * Add the Tables to the StorageManager
