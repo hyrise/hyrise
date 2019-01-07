@@ -20,10 +20,11 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
   // distinct_set is thrown away at the end of this method, so we don't want proper heap allocations for the strings
   // stored within. The initial size of the buffer is a completely random guess, but better than zero.
 
-  auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(table.row_count() * 10);
+  auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(table.row_count() * sizeof(ColumnDataType));
   auto distinct_set =
       std::unordered_set<ColumnDataType, std::hash<ColumnDataType>, std::equal_to<ColumnDataType>,
                          PolymorphicAllocator<ColumnDataType>>(PolymorphicAllocator<ColumnDataType>{&temp_buffer});
+  distinct_set.reserve(table.row_count());
 
   auto null_value_count = size_t{0};
 
