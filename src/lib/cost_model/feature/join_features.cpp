@@ -17,7 +17,7 @@ const std::map<std::string, AllTypeVariant> JoinFeatures::serialize() const {
   join_features.insert(serialized_right_join_column.begin(), serialized_right_join_column.end());
 
   return join_features;
-};
+}
 
 }  // namespace cost_model
 }  // namespace opossum

@@ -24,7 +24,7 @@ const std::map<std::string, AllTypeVariant> ColumnFeatures::serialize() const {
       {_prefix + "_column_memory_usage_bytes", static_cast<int64_t>(column_memory_usage_bytes)},
       {_prefix + "_column_distinct_value_count", static_cast<int64_t>(column_distinct_value_count)},
   };
-};
+}
 
 }  // namespace cost_model
 }  // namespace opossum
