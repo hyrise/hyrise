@@ -34,8 +34,8 @@ class DataGenerator:
         return np.array(range(row_count))
 
     @staticmethod
-    def foreign_key_column(row_count, distinct_values):
-        distinct_values = random.choices(range(0, max(int(row_count/10), 1)), k=distinct_values)
+    def foreign_key_column(row_count, distinct_values, fraction):
+        distinct_values = random.choices(range(0, max(int(row_count/fraction), 1)), k=distinct_values)
         return np.random.choice(distinct_values, row_count)
 
     @staticmethod
@@ -69,12 +69,13 @@ class DataGenerator:
         value_distribution = column_specification.get('value_distribution', "uniform")
         column_type = column_specification.get('type', "int")
         is_sorted = column_specification.get('sorted', False)
+        fraction = column_specification.get('fraction', 10)
 
-        if column_name == 'column_pk':
+        if column_name.startswith('column_pk'):
             return pd.DataFrame(self.key_column(row_count), columns=[column_name])
 
-        if column_name == 'foreign_key':
-            return pd.DataFrame(self.foreign_key_column(row_count, distinct_values), columns=[column_name])
+        if column_name.startswith('foreign_key'):
+            return pd.DataFrame(self.foreign_key_column(row_count, distinct_values, fraction), columns=[column_name])
 
         column_generator = self.type_to_function(column_type)
         data = column_generator(row_count, distinct_values)

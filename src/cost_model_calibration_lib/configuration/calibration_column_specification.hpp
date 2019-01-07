@@ -16,6 +16,7 @@ struct CalibrationColumnSpecification {
   bool sorted;
   uint distinct_values;
   EncodingType encoding;
+  size_t fraction;
 };
 
 inline void to_json(nlohmann::json& j, const CalibrationColumnSpecification& s) {
@@ -24,12 +25,14 @@ inline void to_json(nlohmann::json& j, const CalibrationColumnSpecification& s) 
                      {"value_distribution", s.value_distribution},
                      {"sorted", s.sorted},
                      {"distinct_values", s.distinct_values},
-                     {"encoding", s.encoding}};
+                     {"encoding", s.encoding},
+                     {"fraction", s.fraction}};
 }
 
 inline bool operator==(const CalibrationColumnSpecification& lhs, const CalibrationColumnSpecification& rhs) {
-  return std::tie(lhs.column_name, lhs.type, lhs.value_distribution, lhs.sorted, lhs.distinct_values, lhs.encoding) ==
-         std::tie(rhs.column_name, rhs.type, rhs.value_distribution, rhs.sorted, rhs.distinct_values, rhs.encoding);
+  return std::tie(lhs.column_name, lhs.type, lhs.value_distribution, lhs.sorted, lhs.distinct_values, lhs.encoding,
+                  lhs.fraction) == std::tie(rhs.column_name, rhs.type, rhs.value_distribution, rhs.sorted,
+                                            rhs.distinct_values, rhs.encoding, rhs.fraction);
 }
 
 inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s) {
@@ -47,6 +50,7 @@ inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s
     Fail("Unsupported encoding");
   }
   s.encoding = encoding_type_to_string.right.at(encoding_string);
+  s.fraction = j.value("fraction", 0);
 }
 
 }  // namespace opossum

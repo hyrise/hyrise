@@ -33,7 +33,7 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
   };
   // clang-format on
 
-  // std::map::merge() not supported yet by Clang
+  // std::map::merge() not supported yet by Clang - C++17
   const auto serialized_constant_hardware_features = constant_hardware_features.serialize();
   const auto serialized_runtime_hardware_features = runtime_hardware_features.serialize();
   const auto serialized_aggregate_features = aggregate_features.serialize();

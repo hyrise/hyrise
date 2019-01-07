@@ -21,7 +21,7 @@ struct ColumnFeatures : public AbstractFeatures {
   float column_segment_encoding_FrameOfReference_percentage = 0.0;
   // TODO(Sven): change feature extractor
   float column_reference_segment_percentage = 0.0;
-  DataType column_data_type;
+  std::optional<DataType> column_data_type = {};
   size_t column_memory_usage_bytes = 0;
   // TODO(Sven): How to calculate from segment_distinct_value_count?
   size_t column_distinct_value_count = 0;

@@ -17,37 +17,32 @@ struct CalibrationQueryGeneratorJoinConfiguration {
   const EncodingType encoding_type;
   const DataType data_type;
   const bool reference_column;
+  const size_t table_ratio;
 };
 
-using JoinGeneratorFunctor = std::function<const std::shared_ptr<AbstractExpression>(
-    const CalibrationQueryGeneratorJoinConfiguration& configuration, const std::shared_ptr<StoredTableNode>&,
-    const std::shared_ptr<StoredTableNode>&, const std::vector<CalibrationColumnSpecification>&)>;
 
 class CalibrationQueryGeneratorJoin {
  public:
   static const std::vector<CalibrationQueryGeneratorJoinConfiguration> generate_join_permutations(
       const std::vector<std::pair<std::string, size_t>>& tables, const CalibrationConfiguration& configuration);
 
-  static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_join(
-      const CalibrationQueryGeneratorJoinConfiguration& configuration,
-      const JoinGeneratorFunctor& join_predicate_generator, const std::shared_ptr<StoredTableNode>& left_table,
-      const std::shared_ptr<StoredTableNode>& right_table,
-      const std::vector<CalibrationColumnSpecification>& column_definitions);
+  CalibrationQueryGeneratorJoin(
+          const CalibrationQueryGeneratorJoinConfiguration& configuration,
+          const std::vector<CalibrationColumnSpecification>& column_definitions);
 
-  /*
-     * Functors to generate joins.
-     * They all implement 'JoinGeneratorFunctor'
-     */
-  static const std::shared_ptr<AbstractExpression> generate_join_predicate(
-      const CalibrationQueryGeneratorJoinConfiguration& configuration,
-      const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table,
-      const std::vector<CalibrationColumnSpecification>& column_definitions);
+  const std::vector<std::shared_ptr<AbstractLQPNode>> generate_join(
+      const std::shared_ptr<StoredTableNode>& left_table,
+      const std::shared_ptr<StoredTableNode>& right_table) const;
 
  private:
-  static const std::optional<CalibrationColumnSpecification> _find_column_for_configuration(
-      const std::vector<CalibrationColumnSpecification>& column_definitions,
-      const CalibrationQueryGeneratorJoinConfiguration& configuration);
-  CalibrationQueryGeneratorJoin() = default;
+  const std::shared_ptr<AbstractExpression> _generate_join_predicate(
+      const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const;
+
+  const std::optional<CalibrationColumnSpecification> _find_primary_key() const;
+  const std::optional<CalibrationColumnSpecification> _find_foreign_key() const;
+
+    const CalibrationQueryGeneratorJoinConfiguration _configuration;
+    const std::vector<CalibrationColumnSpecification>& _column_definitions;
 };
 
 }  // namespace opossum

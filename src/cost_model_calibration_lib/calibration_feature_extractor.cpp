@@ -182,7 +182,6 @@ const ColumnFeatures CalibrationFeatureExtractor::_extract_features_for_column_e
 
   if (chunk_count == ChunkID{0}) {
     return ColumnFeatures{prefix};
-    ;
   }
 
   size_t number_of_reference_segments = 0;

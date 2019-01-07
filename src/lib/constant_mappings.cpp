@@ -74,6 +74,7 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
 
 const std::unordered_map<JoinType, std::string> join_type_to_string = {
     {JoinType::Hash, "Hash"},
+    {JoinType::Index, "Index"},
     {JoinType::MPSM, "MPSM"},
     {JoinType::NestedLoop, "NestedLoop"},
     {JoinType::SortMerge, "SortMerge"},
