@@ -137,11 +137,11 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto next_chunk = std::atomic_uint{0};
   auto threads = std::vector<std::thread>{};
 
-  for (auto thread_id = 0u; thread_id < std::thread::hardware_concurrency() + 1; ++thread_id) {
+  for (auto thread_id = 0u; thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1); ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_chunk = next_chunk++;
-        if (next_chunk >= table->chunk_count()) return;
+        if (my_chunk >= table->chunk_count()) return;
 
         const auto& chunk = table->get_chunk(ChunkID{my_chunk});
         if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
