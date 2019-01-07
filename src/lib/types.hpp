@@ -188,7 +188,7 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
 
-enum class JoinType { Hash, MPSM, NestedLoop, SortMerge };
+enum class JoinType { Hash, Index, MPSM, NestedLoop, SortMerge };
 
 enum class UnionMode { Positions };
 

@@ -37,6 +37,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
@@ -333,10 +334,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   if (join_node->join_type) {
     switch (*(join_node->join_type)) {
-      // TODO(Sven): Add JoinType::Index (does not exist yet)
       case JoinType::Hash:
         return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
                                           operator_join_predicate->column_ids, predicate_condition);
+      case JoinType::Index:
+        return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
+                                           operator_join_predicate->column_ids, predicate_condition);
       case JoinType::MPSM:
         return std::make_shared<JoinMPSM>(input_left_operator, input_right_operator, join_node->join_mode,
                                           operator_join_predicate->column_ids, predicate_condition);
@@ -349,6 +352,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     }
   }
 
+  // TODO(Sven): These two conditions should be part of an Optimizer Rule.
+  // Otherwise it will be hard for the Cost Model to handle Joins
   if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
     return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
                                       operator_join_predicate->column_ids, predicate_condition);

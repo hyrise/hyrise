@@ -3,17 +3,17 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/base_segment.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 namespace cost_model {
 
-const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_ptr<AbstractLQPNode>& node,
-                                                              const std::shared_ptr<LQPColumnExpression>& column_expression,
-                                                              const std::string& prefix) {
+const ColumnFeatures ColumnFeatureExtractor::extract_features(
+    const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<LQPColumnExpression>& column_expression,
+    const std::string& prefix) {
   const auto column_reference = column_expression->column_reference;
   const auto original_node = column_reference.original_node();
   const auto column_id = column_reference.original_column_id();
@@ -93,17 +93,17 @@ std::pair<EncodingType, bool> _get_encoding_type_for_segment(const std::shared_p
   }
 }
 
-    size_t ColumnFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,
-                                                                   ColumnID column_id) {
-      size_t memory_usage = 0;
+size_t ColumnFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,
+                                                            ColumnID column_id) {
+  size_t memory_usage = 0;
 
-      for (const auto& chunk : table->chunks()) {
-        const auto& segment = chunk->get_segment(column_id);
-        memory_usage += segment->estimate_memory_usage();
-      }
+  for (const auto& chunk : table->chunks()) {
+    const auto& segment = chunk->get_segment(column_id);
+    memory_usage += segment->estimate_memory_usage();
+  }
 
-      return memory_usage;
-    }
+  return memory_usage;
+}
 
 }  // namespace cost_model
 }  // namespace opossum

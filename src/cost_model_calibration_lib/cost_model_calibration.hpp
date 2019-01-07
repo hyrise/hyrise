@@ -18,9 +18,8 @@ class CostModelCalibration {
 
  private:
   void _append_to_result_csv(const std::string& output_path,
-                             const std::vector<cost_model::CalibrationFeatures>& features) const;
+                             const std::vector<cost_model::CostModelFeatures>& features) const;
   void _calibrate() const;
-  const std::vector<std::string> _collect_csv_header_columns() const;
   void _run_tpch() const;
   void _write_csv_header(const std::string& output_path) const;
 

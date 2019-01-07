@@ -224,7 +224,7 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
 }
 
 OperatorType AbstractLQPNode::operator_type() const {
-    Fail("AbstractLQPNode::operator_type() not implemented for type " + lqp_node_type_to_string.at(type));
+  Fail("AbstractLQPNode::operator_type() not implemented for type " + lqp_node_type_to_string.at(type));
 }
 bool AbstractLQPNode::creates_reference_segments() const { return false; }
 

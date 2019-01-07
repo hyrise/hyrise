@@ -22,7 +22,8 @@ namespace cost_model {
 class ColumnFeatureExtractor {
  public:
   static const ColumnFeatures extract_features(const std::shared_ptr<AbstractLQPNode>& node,
-                                               const std::shared_ptr<LQPColumnExpression>& column_expression, const std::string& prefix);
+                                               const std::shared_ptr<LQPColumnExpression>& column_expression,
+                                               const std::string& prefix);
 
  private:
   static std::pair<EncodingType, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment);

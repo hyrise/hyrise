@@ -1,10 +1,10 @@
 #include "cost_model_feature_extractor.hpp"
 
-#include "expression/expression_utils.hpp"
 #include "cost_model/feature_extractor/column_feature_extractor.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "statistics/table_statistics.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 namespace cost_model {
@@ -175,8 +175,6 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
   }
 }
 
-
-
 //const std::map<EncodingType, size_t> CostModelFeatureExtractor::_get_encoding_type_for_column(
 //    const LQPColumnReference& reference) {
 //  const auto original_node = reference.original_node();
@@ -190,27 +188,27 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
 //  const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(original_node);
 //  const auto& underlying_table_name = stored_table_node->table_name;
 
-  //  auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-  //
-  //  // Dereference ReferenceSegment for encoding feature
-  //  // TODO(Sven): add test for empty referenced table
-  //  // TODO(Sven): add test to check for encoded, referenced column
-  //  if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
-  //    auto underlying_segment = reference_segment->referenced_table()
-  //                                  ->get_chunk(ChunkID{0})
-  //                                  ->get_segment(reference_segment->referenced_column_id());
-  //    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_segment);
-  //    if (encoded_scan_segment) {
-  //      return std::make_pair(encoded_scan_segment->encoding_type(), true);
-  //    }
-  //    return std::make_pair(EncodingType::Unencoded, true);
-  //  } else {
-  //    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-  //    if (encoded_scan_segment) {
-  //      return std::make_pair(encoded_scan_segment->encoding_type(), false);
-  //    }
-  //    return std::make_pair(EncodingType::Unencoded, false);
-  //  }
+//  auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+//
+//  // Dereference ReferenceSegment for encoding feature
+//  // TODO(Sven): add test for empty referenced table
+//  // TODO(Sven): add test to check for encoded, referenced column
+//  if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
+//    auto underlying_segment = reference_segment->referenced_table()
+//                                  ->get_chunk(ChunkID{0})
+//                                  ->get_segment(reference_segment->referenced_column_id());
+//    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_segment);
+//    if (encoded_scan_segment) {
+//      return std::make_pair(encoded_scan_segment->encoding_type(), true);
+//    }
+//    return std::make_pair(EncodingType::Unencoded, true);
+//  } else {
+//    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+//    if (encoded_scan_segment) {
+//      return std::make_pair(encoded_scan_segment->encoding_type(), false);
+//    }
+//    return std::make_pair(EncodingType::Unencoded, false);
+//  }
 //}
 
 const ProjectionFeatures CostModelFeatureExtractor::_extract_features(
@@ -225,23 +223,23 @@ const ProjectionFeatures CostModelFeatureExtractor::_extract_features(
 
 const JoinFeatures CostModelFeatureExtractor::_extract_features(const std::shared_ptr<const JoinNode>& node) {
   JoinFeatures features{};
-//  const auto& left_table = node->left_input();
-//  const auto& right_table = node->right_input();
-//
-//  const auto& join_predicate = node->join_predicate();
-//  Assert(join_predicate, "Need predicate for non Cross Join");
+  //  const auto& left_table = node->left_input();
+  //  const auto& right_table = node->right_input();
+  //
+  //  const auto& join_predicate = node->join_predicate();
+  //  Assert(join_predicate, "Need predicate for non Cross Join");
 
-//  const auto operator_join_predicate =
-//      OperatorJoinPredicate::from_expression(*node->join_predicate(), *node->left_input(), *node->right_input());
+  //  const auto operator_join_predicate =
+  //      OperatorJoinPredicate::from_expression(*node->join_predicate(), *node->left_input(), *node->right_input());
 
-//  const auto column_ids = operator_join_predicate->column_ids;
-//
-//  const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
-//  const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
+  //  const auto column_ids = operator_join_predicate->column_ids;
+  //
+  //  const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
+  //  const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
 
   //  operator_result.join_type = op->type();
-//  features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
-//  features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
+  //  features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
+  //  features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
 
   return features;
 }

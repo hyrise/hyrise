@@ -42,7 +42,12 @@ std::string JoinNode::description() const {
 }
 
 OperatorType JoinNode::operator_type() const {
-  switch (join_mode) {
+  // TODO(Sven): Copy logic from LQPTranslator
+  if (!join_type) {
+    return OperatorType::JoinNestedLoop;
+  }
+
+  switch (*join_type) {
     case JoinType::Hash:
       return OperatorType::JoinHash;
     case JoinType::SortMerge:

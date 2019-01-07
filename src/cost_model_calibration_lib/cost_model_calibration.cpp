@@ -91,28 +91,8 @@ void CostModelCalibration::_calibrate() const {
   }
 }
 
-const std::vector<std::string> CostModelCalibration::_collect_csv_header_columns() const {
-  //  std::vector<std::string> columns{};
-
-  return cost_model::CalibrationFeatures{}.feature_names();
-  //  const auto hardware_features = ConstantHardwareFeatures{}.feature_names();
-  //  const auto runtime_features = RuntimeHardwareFeatures{}.feature_names();
-  //  const auto join_features = JoinFeatures{}.feature_names();
-  //  const auto projection_features = ProjectionFeatures{}.feature_names();
-  //  const auto table_scan_features = TableScanFeatures{}.feature_names();
-
-  //  columns.insert(std::end(columns), std::begin(calibration_features), std::end(calibration_features));
-  //  columns.insert(std::end(columns), std::begin(hardware_features), std::end(hardware_features));
-  //  columns.insert(std::end(columns), std::begin(runtime_features), std::end(runtime_features));
-  //  columns.insert(std::end(columns), std::begin(join_features), std::end(join_features));
-  //  columns.insert(std::end(columns), std::begin(projection_features), std::end(projection_features));
-  //  columns.insert(std::end(columns), std::begin(table_scan_features), std::end(table_scan_features));
-
-  //  return columns;
-}
-
 void CostModelCalibration::_write_csv_header(const std::string& output_path) const {
-  const auto& columns = _collect_csv_header_columns();
+  const auto& columns = cost_model::CostModelFeatures{}.feature_names();
 
   std::ofstream stream;
   stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
@@ -124,7 +104,7 @@ void CostModelCalibration::_write_csv_header(const std::string& output_path) con
 }
 
 void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
-                                                 const std::vector<cost_model::CalibrationFeatures>& features) const {
+                                                 const std::vector<cost_model::CostModelFeatures>& features) const {
   CsvWriter writer(output_path);
 
   for (const auto& feature : features) {
