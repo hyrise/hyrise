@@ -76,11 +76,7 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
 
 void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Aggregate::_on_cleanup() {
-  _contexts_per_column.clear();
-  delete _result_map_buffer;
-  _result_map_buffer = nullptr;
-}
+void Aggregate::_on_cleanup() { _contexts_per_column.clear(); }
 
 /*
 Visitor context for the partitioning/grouping visitor
@@ -432,8 +428,8 @@ void Aggregate::_aggregate() {
 
   auto needed_size = aligned_size<std::pair<const AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>>>()
   * size_t{estimate} * _contexts_per_column.size();
-  _result_map_buffer = new boost::container::pmr::monotonic_buffer_resource(needed_size);
-  auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{_result_map_buffer};
+  _result_map_buffer = std::make_unique<boost::container::pmr::monotonic_buffer_resource>(needed_size);
+  auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{_result_map_buffer.get()};
 
   for (auto col_context : _contexts_per_column) {
     auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
