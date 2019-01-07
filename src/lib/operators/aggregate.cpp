@@ -394,8 +394,7 @@ void Aggregate::_aggregate() {
     We choose int8_t for column type and aggregate type because it's small.
     */
     auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>();
-    context->results =
-        std::make_shared<AggregateResultMap<AggregateKey, DistinctAggregateType, DistinctColumnType>>();
+    context->results = std::make_shared<typename decltype(context->results)::element_type>();
 
     _contexts_per_column.push_back(context);
   }
@@ -410,7 +409,7 @@ void Aggregate::_aggregate() {
     if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
-      context->results = std::make_shared<AggregateResultMap<AggregateKey, CountAggregateType, CountColumnType>>();
+      context->results = std::make_shared<typename decltype(context->results)::element_type>();
       _contexts_per_column[column_id] = context;
       continue;
     }
@@ -433,7 +432,7 @@ void Aggregate::_aggregate() {
 
   for (auto col_context : _contexts_per_column) {
     auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
-    context->results = std::make_shared<AggregateResultMap<AggregateKey, DistinctAggregateType, DistinctColumnType>>(allocator);
+    context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
     context->results->reserve(estimate);
   }
   //
