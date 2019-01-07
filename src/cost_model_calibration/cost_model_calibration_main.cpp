@@ -1,6 +1,6 @@
 #include <fstream>
 
-#include "benchmark_utils.hpp"
+#include "cli_config_parser.hpp"
 #include "configuration/calibration_configuration.hpp"
 #include "cost_model_calibration.hpp"
 

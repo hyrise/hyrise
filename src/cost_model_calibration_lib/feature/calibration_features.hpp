@@ -52,10 +52,10 @@ struct CalibrationFeatures : public AbstractFeatures {
   ConstantHardwareFeatures constant_hardware_features;
   RuntimeHardwareFeatures runtime_hardware_features;
 
-  std::optional<AggregateFeatures> aggregate_features = {};
-  std::optional<JoinFeatures> join_features = {};
-  std::optional<ProjectionFeatures> projection_features = {};
-  std::optional<TableScanFeatures> table_scan_features = {};
+  AggregateFeatures aggregate_features {};
+  JoinFeatures join_features {};
+  ProjectionFeatures projection_features {};
+  TableScanFeatures table_scan_features {};
 };
 
 }  // namespace cost_model

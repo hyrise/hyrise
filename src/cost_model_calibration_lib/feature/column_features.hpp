@@ -20,7 +20,7 @@ struct ColumnFeatures : public AbstractFeatures {
   float column_segment_encoding_FixedStringDictionary_percentage = 0.0;
   float column_segment_encoding_FrameOfReference_percentage = 0.0;
   // TODO(Sven): change feature extractor
-  bool column_is_any_segment_reference_segment = false;
+  float column_reference_segment_percentage = 0.0;
   DataType column_data_type;
   size_t column_memory_usage_bytes = 0;
   // TODO(Sven): How to calculate from segment_distinct_value_count?
@@ -28,7 +28,7 @@ struct ColumnFeatures : public AbstractFeatures {
 
   const std::map<std::string, AllTypeVariant> serialize() const override;
 
- private:
+private:
   std::string _prefix;
 };
 

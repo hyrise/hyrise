@@ -141,8 +141,8 @@ const TableScanFeatures CostModelFeatureExtractor::_extract_features_for_operato
   auto chunk_count = left_input_table->chunk_count();
 
   const auto& table_condition = op->predicate();
-  features.number_of_computable_or_column_expressions = count_expensive_child_expressions(table_condition);
-  features.number_of_effective_chunks = chunk_count - op->get_number_of_excluded_chunks();
+  features.computable_or_column_expression_count = count_expensive_child_expressions(table_condition);
+  features.effective_chunk_count = chunk_count - op->get_number_of_excluded_chunks();
 
   if (table_condition->type == ExpressionType::Predicate) {
     const auto& casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);
@@ -168,36 +168,72 @@ const TableScanFeatures CostModelFeatureExtractor::_extract_features_for_operato
   const auto predicate_condition_pointer = std::make_shared<PredicateCondition>(predicate_condition);
 
   features.scan_operator_type = predicate_condition_to_string.left.at(predicate_condition);
-  features.number_of_effective_chunks = op->get_number_of_included_chunks();
+  features.effective_chunk_count = op->get_number_of_included_chunks();
 
   DebugAssert(left_column_ids.size() == 1, "Expected only one column for IndexScan in FeatureExtractor");
   const auto column_expression = PQPColumnExpression::from_table(*left_input_table, left_column_ids.front());
-  features.first_column = _extract_features_for_column_expression(left_input_table, column_expression);
+  features.first_column = _extract_features_for_column_expression(left_input_table, column_expression, "first");
 
   return features;
 }
 
 const ColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
-    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression> column_expression) {
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression> column_expression,
+    const std::string& prefix) {
   auto chunk_count = left_input_table->chunk_count();
   const auto& column_id = column_expression->column_id;
 
-  // TODO(Sven): Create that damn encoding to chunk percentage mapping thingy
-  // TODO(Sven): What shall we do when there are different encodings across different chunks?
-  if (chunk_count > ChunkID{0}) {
-    const auto segment = left_input_table->get_chunk(ChunkID{0})->get_segment(column_id);
-
-    const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-
-    return ColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
-                                     encoding_reference_pair.second,
-                                     data_type_to_string.left.at(column_expression->data_type()),
-                                     _get_memory_usage_for_column(left_input_table, column_id)};
+  if (chunk_count == ChunkID{0}) {
+    return ColumnFeatures{prefix};;
   }
 
-  return ColumnFeatures{encoding_type_to_string.left.at(EncodingType::Unencoded), false,
-                                   data_type_to_string.left.at(column_expression->data_type()),
-                                   _get_memory_usage_for_column(left_input_table, column_id)};
+  size_t number_of_reference_segments = 0;
+  std::map<EncodingType, size_t> encoding_mapping {
+          {EncodingType::Unencoded, 0},
+          {EncodingType::Dictionary, 0},
+          {EncodingType::FixedStringDictionary, 0},
+          {EncodingType::FrameOfReference, 0},
+          {EncodingType::RunLength, 0}
+  };
+
+  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = left_input_table->get_chunk(chunk_id);
+    const auto segment = chunk->get_segment(column_id);
+    const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
+
+    encoding_mapping[encoding_reference_pair.first] += 1;
+    if (encoding_reference_pair.second) {
+      number_of_reference_segments++;
+    }
+  }
+
+
+  ColumnFeatures column_features{prefix};
+
+  column_features.column_segment_encoding_Unencoded_percentage =
+          encoding_mapping[EncodingType::Unencoded] / static_cast<float>(chunk_count);
+  column_features.column_segment_encoding_Dictionary_percentage =
+          encoding_mapping[EncodingType::Dictionary] / static_cast<float>(chunk_count);
+  column_features.column_segment_encoding_RunLength_percentage =
+          encoding_mapping[EncodingType::RunLength] / static_cast<float>(chunk_count);
+  column_features.column_segment_encoding_FixedStringDictionary_percentage =
+          encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
+  column_features.column_segment_encoding_FrameOfReference_percentage =
+          encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
+  column_features.column_reference_segment_percentage = number_of_reference_segments / static_cast<float>(chunk_count);
+  column_features.column_data_type = column_expression->data_type();
+  column_features.column_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
+  // TODO(Sven): How to calculate from segment_distinct_value_count?
+  column_features.column_distinct_value_count = 0;
+
+//  return ColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
+//                                     encoding_reference_pair.second,
+//                                     data_type_to_string.left.at(column_expression->data_type()),
+//                                     _get_memory_usage_for_column(left_input_table, column_id)};
+
+
+  return column_features;
+
 }
 
 void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expression(
@@ -214,7 +250,7 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
     const auto& first_argument = predicate_arguments[0];
     if (first_argument->type == ExpressionType::PQPColumn) {
       const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(first_argument);
-      features.first_column = _extract_features_for_column_expression(left_input_table, column_expression);
+      features.first_column = _extract_features_for_column_expression(left_input_table, column_expression, "first");
     }
 
     const auto& second_argument = predicate_arguments[1];
@@ -222,14 +258,14 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
       features.is_column_comparison = true;
 
       const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(second_argument);
-      features.second_column = _extract_features_for_column_expression(left_input_table, column_expression);
+      features.second_column = _extract_features_for_column_expression(left_input_table, column_expression, "second");
     }
 
     if (predicate_arguments.size() == 3) {
       const auto& third_argument = predicate_arguments[2];
       if (third_argument->type == ExpressionType::PQPColumn) {
         const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(third_argument);
-        features.third_column = _extract_features_for_column_expression(left_input_table, column_expression);
+        features.third_column = _extract_features_for_column_expression(left_input_table, column_expression, "third");
       }
     }
 
@@ -296,8 +332,8 @@ const JoinFeatures CostModelFeatureExtractor::_extract_features_for_operator(con
   const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
 
   //  operator_result.join_type = op->type();
-  features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression);
-  features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression);
+  features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
+  features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
 
   return features;
 }

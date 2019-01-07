@@ -11,7 +11,7 @@ namespace opossum {
 CostModelCalibrationQueryRunner::CostModelCalibrationQueryRunner(const CalibrationConfiguration configuration)
     : _configuration(configuration) {}
 
-const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
+const std::vector<cost_model::CalibrationFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   lqp->print();
   auto transaction_context = TransactionManager::get().new_transaction_context();
@@ -26,7 +26,7 @@ const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::calibrat
   return _evaluate_query_plan({pqp});
 }
 
-const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_sql(
+const std::vector<cost_model::CalibrationFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_sql(
     const std::string& query) const {
   std::cout << query << std::endl;
 
@@ -44,18 +44,18 @@ const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::calibrat
   return _evaluate_query_plan(pqps);
 }
 
-const std::vector<CalibrationFeatures> CostModelCalibrationQueryRunner::_evaluate_query_plan(
+const std::vector<cost_model::CalibrationFeatures> CostModelCalibrationQueryRunner::_evaluate_query_plan(
     const std::vector<std::shared_ptr<AbstractOperator>>& pqps) const {
-  std::vector<CalibrationFeatures> features{};
+  std::vector<cost_model::CalibrationFeatures> features{};
   for (const auto& pqp : pqps) {
     _traverse(pqp, features);
   }
 
-  return examples;
+  return features;
 }
 
 void CostModelCalibrationQueryRunner::_traverse(const std::shared_ptr<const AbstractOperator>& op,
-                                                std::vector<CalibrationFeatures>& features) const {
+                                                std::vector<cost_model::CalibrationFeatures>& features) const {
   if (op->input_left() != nullptr) {
     _traverse(op->input_left(), features);
   }
@@ -64,7 +64,7 @@ void CostModelCalibrationQueryRunner::_traverse(const std::shared_ptr<const Abst
     _traverse(op->input_right(), features);
   }
 
-  auto operator_result = CostModelFeatureExtractor::extract_features(op);
+  auto operator_result = cost_model::CostModelFeatureExtractor::extract_features(op);
   features.push_back(operator_result);
 }
 

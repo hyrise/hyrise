@@ -91,9 +91,9 @@ struct TableScanFeatures : public AbstractFeatures {
   ColumnFeatures third_column{"third"};
 
   bool is_column_comparison = false;
-  std::string scan_operator_type = "undefined";
-  size_t number_of_computable_or_column_expressions = 0;
-  size_t number_of_effective_chunks = 0;
+  std::string scan_operator_type;
+  size_t computable_or_column_expression_count = 0;
+  size_t effective_chunk_count = 0;
 
 
     const std::map<std::string, AllTypeVariant> serialize() const override;

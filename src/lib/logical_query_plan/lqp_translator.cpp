@@ -204,7 +204,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   // This implementation assumes there is only a single index type per table.
   bool found_group_key_index = false;
   bool found_btree_index = false;
-  for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+  auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
       found_group_key_index = true;

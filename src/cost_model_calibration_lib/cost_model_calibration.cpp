@@ -94,7 +94,7 @@ void CostModelCalibration::_calibrate() const {
 const std::vector<std::string> CostModelCalibration::_collect_csv_header_columns() const {
 //  std::vector<std::string> columns{};
 
-  return CalibrationFeatures{}.feature_names();
+  return cost_model::CalibrationFeatures{}.feature_names();
 //  const auto hardware_features = ConstantHardwareFeatures{}.feature_names();
 //  const auto runtime_features = RuntimeHardwareFeatures{}.feature_names();
 //  const auto join_features = JoinFeatures{}.feature_names();
@@ -124,7 +124,7 @@ void CostModelCalibration::_write_csv_header(const std::string& output_path) con
 }
 
 void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
-                                                 const std::vector<CalibrationFeatures>& features) const {
+                                                 const std::vector<cost_model::CalibrationFeatures>& features) const {
   CsvWriter writer(output_path);
 
   for (const auto& feature : features) {

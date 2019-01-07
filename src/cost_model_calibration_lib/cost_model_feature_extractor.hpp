@@ -48,7 +48,8 @@ class CostModelFeatureExtractor {
       const std::shared_ptr<AbstractPredicateExpression>& expression);
 
   static const ColumnFeatures _extract_features_for_column_expression(const std::shared_ptr<const Table>& left_input_table,
-                                                      const std::shared_ptr<PQPColumnExpression> column_expression);
+                                                      const std::shared_ptr<PQPColumnExpression> column_expression,
+                                                      const std::string& prefix);
 
   static std::pair<EncodingType, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment);
   static size_t _get_memory_usage_for_column(const std::shared_ptr<const Table>& table, ColumnID column_id);

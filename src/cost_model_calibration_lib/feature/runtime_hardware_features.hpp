@@ -36,7 +36,7 @@ namespace opossum {
 namespace cost_model {
 
 struct RuntimeHardwareFeatures : AbstractFeatures {
-  size_t current_memory_consumption_percentage = 0;
+  float current_memory_consumption_percentage = 0.0;
   size_t running_query_count = 0;
   size_t remaining_transaction_count = 0;
 
