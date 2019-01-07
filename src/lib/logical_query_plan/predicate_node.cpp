@@ -27,6 +27,17 @@ std::string PredicateNode::description() const {
   return stream.str();
 }
 
+OperatorType PredicateNode::operator_type() const {
+  switch (scan_type) {
+    case ScanType::TableScan:
+      return OperatorType::TableScan;
+    case ScanType::IndexScan:
+      return OperatorType::IndexScan;
+  }
+}
+
+bool PredicateNode::creates_reference_segments() const { return true; }
+
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");

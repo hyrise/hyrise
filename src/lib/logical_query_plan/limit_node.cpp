@@ -18,6 +18,8 @@ std::string LimitNode::description() const {
   return stream.str();
 }
 
+OperatorType LimitNode::operator_type() const { return OperatorType::Limit; }
+
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const { return node_expressions[0]; }
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

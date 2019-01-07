@@ -41,6 +41,23 @@ std::string JoinNode::description() const {
   return stream.str();
 }
 
+OperatorType JoinNode::operator_type() const {
+  switch (join_mode) {
+    case JoinType::Hash:
+      return OperatorType::JoinHash;
+    case JoinType::SortMerge:
+      return OperatorType::JoinSortMerge;
+    case JoinType::NestedLoop:
+      return OperatorType::JoinNestedLoop;
+    case JoinType::MPSM:
+      return OperatorType::JoinMPSM;
+    case JoinType::Index:
+      return OperatorType::JoinIndex;
+  }
+}
+
+bool JoinNode::creates_reference_segments() const { return true; }
+
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoiNode's output expressions");
 

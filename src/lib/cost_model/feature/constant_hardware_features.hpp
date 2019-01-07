@@ -55,8 +55,8 @@
 
 #pragma once
 
-#include "all_type_variant.hpp"
 #include "abstract_features.hpp"
+#include "all_type_variant.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {

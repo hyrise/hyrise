@@ -15,6 +15,9 @@ UnionNode::UnionNode(const UnionMode union_mode) : AbstractLQPNode(LQPNodeType::
 
 std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(union_mode); }
 
+// TODO(Sven): UnionAll or UnionPosititions?
+OperatorType UnionNode::operator_type() const { return OperatorType::UnionAll; }
+
 const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::column_expressions() const {
   Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
          "Input Expressions must match");

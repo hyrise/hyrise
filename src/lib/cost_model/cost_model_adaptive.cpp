@@ -1,6 +1,6 @@
 #include "cost_model_adaptive.hpp"
 
-#include "cost_model/table_scan_feature_extractor.hpp"
+#include "cost_model/feature/table_scan_feature_extractor.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"

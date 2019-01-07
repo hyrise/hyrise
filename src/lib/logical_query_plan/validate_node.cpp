@@ -10,6 +10,8 @@ ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
 std::string ValidateNode::description() const { return "[Validate]"; }
 
+OperatorType ValidateNode::operator_type() const { return OperatorType::Validate; }
+
 std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return ValidateNode::make();
 }

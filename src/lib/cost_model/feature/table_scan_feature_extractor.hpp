@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_feature_extractor.hpp"
+#include "cost_model/abstract_feature_extractor.hpp"
 
 namespace opossum {
 

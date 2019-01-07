@@ -19,6 +19,8 @@ std::string DeleteNode::description() const {
   return desc.str();
 }
 
+OperatorType DeleteNode::operator_type() const { return OperatorType::Delete; }
+
 std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return DeleteNode::make(table_name);
 }

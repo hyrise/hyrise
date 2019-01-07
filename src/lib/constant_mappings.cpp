@@ -79,6 +79,32 @@ const std::unordered_map<JoinType, std::string> join_type_to_string = {
     {JoinType::SortMerge, "SortMerge"},
 };
 
+const std::unordered_map<LQPNodeType, std::string> lqp_node_type_to_string = {
+    {LQPNodeType::Aggregate, "Aggregate"},
+    {LQPNodeType::Alias, "Alias"},
+    {LQPNodeType::CreateTable, "CreateTable"},
+    {LQPNodeType::CreatePreparedPlan, "CreatePreparedPlan"},
+    {LQPNodeType::CreateView, "CreateView"},
+    {LQPNodeType::Delete, "Delete"},
+    {LQPNodeType::DropView, "DropView"},
+    {LQPNodeType::DropTable, "DropTable"},
+    {LQPNodeType::DummyTable, "DummyTable"},
+    {LQPNodeType::Insert, "Insert"},
+    {LQPNodeType::Join, "Join"},
+    {LQPNodeType::Limit, "Limit"},
+    {LQPNodeType::Predicate, "Predicate"},
+    {LQPNodeType::Projection, "Projection"},
+    {LQPNodeType::Root, "Root"},
+    {LQPNodeType::ShowColumns, "ShowColumns"},
+    {LQPNodeType::ShowTables, "ShowTables"},
+    {LQPNodeType::Sort, "Sort"},
+    {LQPNodeType::StoredTable, "StoredTable"},
+    {LQPNodeType::Update, "Update"},
+    {LQPNodeType::Union, "Union"},
+    {LQPNodeType::Validate, "Validate"},
+    {LQPNodeType::Mock, "Mock"},
+};
+
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
 const std::unordered_map<OperatorType, std::string> operator_type_to_string = {

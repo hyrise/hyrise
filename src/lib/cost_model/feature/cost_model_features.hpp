@@ -2,21 +2,21 @@
 
 #include <vector>
 
-#include "all_type_variant.hpp"
 #include "abstract_features.hpp"
 #include "aggregate_features.hpp"
+#include "all_type_variant.hpp"
 #include "constant_hardware_features.hpp"
 #include "join_features.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "operators/abstract_operator.hpp"
 #include "projection_features.hpp"
 #include "runtime_hardware_features.hpp"
 #include "table_scan_features.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "operators/abstract_operator.hpp"
 
 namespace opossum {
-    namespace cost_model {
+namespace cost_model {
 
-struct CalibrationFeatures : public AbstractFeatures {
+struct CostModelFeatures : public AbstractFeatures {
  public:
   const std::map<std::string, AllTypeVariant> serialize() const override;
 
@@ -52,10 +52,10 @@ struct CalibrationFeatures : public AbstractFeatures {
   ConstantHardwareFeatures constant_hardware_features;
   RuntimeHardwareFeatures runtime_hardware_features;
 
-  AggregateFeatures aggregate_features {};
-  JoinFeatures join_features {};
-  ProjectionFeatures projection_features {};
-  TableScanFeatures table_scan_features {};
+  AggregateFeatures aggregate_features{};
+  JoinFeatures join_features{};
+  ProjectionFeatures projection_features{};
+  TableScanFeatures table_scan_features{};
 };
 
 }  // namespace cost_model

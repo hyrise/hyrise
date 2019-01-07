@@ -57,6 +57,8 @@ std::string AggregateNode::description() const {
   return stream.str();
 }
 
+OperatorType AggregateNode::operator_type() const { return OperatorType::Aggregate; }
+
 std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "AggregateNode need left_input and no right_input");

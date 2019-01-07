@@ -4,9 +4,9 @@
 #include <fstream>
 #include <iostream>
 
+#include "cost_model/feature/cost_model_features.hpp"
 #include "cost_model_calibration_query_runner.hpp"
 #include "cost_model_calibration_table_generator.hpp"
-#include "cost_model/feature/calibration_features.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "tpch/tpch_queries.hpp"
@@ -92,23 +92,23 @@ void CostModelCalibration::_calibrate() const {
 }
 
 const std::vector<std::string> CostModelCalibration::_collect_csv_header_columns() const {
-//  std::vector<std::string> columns{};
+  //  std::vector<std::string> columns{};
 
   return cost_model::CalibrationFeatures{}.feature_names();
-//  const auto hardware_features = ConstantHardwareFeatures{}.feature_names();
-//  const auto runtime_features = RuntimeHardwareFeatures{}.feature_names();
-//  const auto join_features = JoinFeatures{}.feature_names();
-//  const auto projection_features = ProjectionFeatures{}.feature_names();
-//  const auto table_scan_features = TableScanFeatures{}.feature_names();
+  //  const auto hardware_features = ConstantHardwareFeatures{}.feature_names();
+  //  const auto runtime_features = RuntimeHardwareFeatures{}.feature_names();
+  //  const auto join_features = JoinFeatures{}.feature_names();
+  //  const auto projection_features = ProjectionFeatures{}.feature_names();
+  //  const auto table_scan_features = TableScanFeatures{}.feature_names();
 
-//  columns.insert(std::end(columns), std::begin(calibration_features), std::end(calibration_features));
-//  columns.insert(std::end(columns), std::begin(hardware_features), std::end(hardware_features));
-//  columns.insert(std::end(columns), std::begin(runtime_features), std::end(runtime_features));
-//  columns.insert(std::end(columns), std::begin(join_features), std::end(join_features));
-//  columns.insert(std::end(columns), std::begin(projection_features), std::end(projection_features));
-//  columns.insert(std::end(columns), std::begin(table_scan_features), std::end(table_scan_features));
+  //  columns.insert(std::end(columns), std::begin(calibration_features), std::end(calibration_features));
+  //  columns.insert(std::end(columns), std::begin(hardware_features), std::end(hardware_features));
+  //  columns.insert(std::end(columns), std::begin(runtime_features), std::end(runtime_features));
+  //  columns.insert(std::end(columns), std::begin(join_features), std::end(join_features));
+  //  columns.insert(std::end(columns), std::begin(projection_features), std::end(projection_features));
+  //  columns.insert(std::end(columns), std::begin(table_scan_features), std::end(table_scan_features));
 
-//  return columns;
+  //  return columns;
 }
 
 void CostModelCalibration::_write_csv_header(const std::string& output_path) const {

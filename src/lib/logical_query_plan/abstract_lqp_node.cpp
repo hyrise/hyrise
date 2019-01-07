@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
@@ -208,7 +209,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
+const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() const {
   return derive_statistics_from(left_input(), right_input());
 }
 
@@ -221,6 +222,11 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
 
   return left_input->get_statistics();
 }
+
+OperatorType AbstractLQPNode::operator_type() const {
+    Fail("AbstractLQPNode::operator_type() not implemented for type " + lqp_node_type_to_string.at(type));
+}
+bool AbstractLQPNode::creates_reference_segments() const { return false; }
 
 void AbstractLQPNode::print(std::ostream& out) const {
   // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and

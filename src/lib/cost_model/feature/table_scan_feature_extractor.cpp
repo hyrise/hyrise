@@ -1,4 +1,4 @@
-#include "cost_model/table_scan_feature_extractor.hpp"
+#include "table_scan_feature_extractor.hpp"
 
 #include "logical_query_plan/predicate_node.hpp"
 #include "statistics/table_statistics.hpp"
@@ -77,7 +77,7 @@ std::unordered_map<std::string, float> TableScanFeatureExtractor::extract(
   const std::unordered_map<std::string, float> feature_map = {
       {"left_input_row_count", left_input_row_count},
       // TODO(Sven): rename
-      {"output_selectivity", selectivity},
+      {"selectivity", selectivity},
       {"number_of_computable_or_column_expressions", number_of_computable_or_column_expressions},
       {"output_selectivity_distance_to_50_percent", output_selectivity_distance_to_50_percent},
 

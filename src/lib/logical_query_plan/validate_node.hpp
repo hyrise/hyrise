@@ -14,6 +14,7 @@ class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractL
   ValidateNode();
 
   std::string description() const override;
+  OperatorType operator_type() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_input,

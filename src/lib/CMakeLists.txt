@@ -34,8 +34,30 @@ set(
     cost_model/cost_model_logical.hpp
     cost_model/linear_regression_model.cpp
     cost_model/linear_regression_model.hpp
-    cost_model/table_scan_feature_extractor.cpp
-    cost_model/table_scan_feature_extractor.hpp
+    cost_model/feature/abstract_features.cpp
+    cost_model/feature/abstract_features.hpp
+    cost_model/feature/aggregate_features.cpp
+    cost_model/feature/aggregate_features.hpp
+    cost_model/feature/column_features.cpp
+    cost_model/feature/column_features.hpp
+    cost_model/feature_extractor/column_feature_extractor.cpp
+    cost_model/feature_extractor/column_feature_extractor.hpp
+    cost_model/feature_extractor/cost_model_feature_extractor.cpp
+    cost_model/feature_extractor/cost_model_feature_extractor.hpp
+    cost_model/feature/constant_hardware_features.cpp
+    cost_model/feature/constant_hardware_features.hpp
+    cost_model/feature/cost_model_features.cpp
+    cost_model/feature/cost_model_features.hpp
+    cost_model/feature/join_features.cpp
+    cost_model/feature/join_features.hpp
+    cost_model/feature/projection_features.cpp
+    cost_model/feature/projection_features.hpp
+    cost_model/feature/runtime_hardware_features.cpp
+    cost_model/feature/runtime_hardware_features.hpp
+    cost_model/feature/table_scan_feature_extractor.cpp
+    cost_model/feature/table_scan_feature_extractor.hpp
+    cost_model/feature/table_scan_features.cpp
+    cost_model/feature/table_scan_features.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp

@@ -60,8 +60,8 @@
 #include <string>
 #include <vector>
 
-#include "all_type_variant.hpp"
 #include "abstract_features.hpp"
+#include "all_type_variant.hpp"
 #include "column_features.hpp"
 #include "storage/encoding_type.hpp"
 

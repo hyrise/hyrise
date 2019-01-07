@@ -29,6 +29,8 @@ std::string AliasNode::description() const {
   return stream.str();
 }
 
+OperatorType AliasNode::operator_type() const { return OperatorType::Alias; }
+
 const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const {
   return node_expressions;
 }

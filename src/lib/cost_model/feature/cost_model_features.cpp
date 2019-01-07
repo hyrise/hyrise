@@ -1,11 +1,11 @@
-#include "calibration_features.hpp"
+#include "cost_model_features.hpp"
 
 #include "constant_mappings.hpp"
 
 namespace opossum {
 namespace cost_model {
 
-const std::map<std::string, AllTypeVariant> CalibrationFeatures::serialize() const {
+const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const {
   // clang-format off
   std::map<std::string, AllTypeVariant> features = {
     {"operator_type", operator_type_to_string.at(operator_type)},

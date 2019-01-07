@@ -18,6 +18,7 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
                     const std::vector<OrderByMode>& order_by_modes);
 
   std::string description() const override;
+  OperatorType operator_type() const override;
 
   const std::vector<OrderByMode> order_by_modes;
 

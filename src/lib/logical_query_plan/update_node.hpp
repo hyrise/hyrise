@@ -18,6 +18,7 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public BaseNonQueryN
   explicit UpdateNode(const std::string& table_name);
 
   std::string description() const override;
+  OperatorType operator_type() const override;
 
   const std::string table_name;
 

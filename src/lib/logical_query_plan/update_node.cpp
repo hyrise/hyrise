@@ -20,6 +20,8 @@ std::string UpdateNode::description() const {
   return desc.str();
 }
 
+OperatorType UpdateNode::operator_type() const { return OperatorType::Update; }
+
 std::shared_ptr<AbstractLQPNode> UpdateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return UpdateNode::make(table_name);
 }

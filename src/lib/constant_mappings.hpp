@@ -8,6 +8,7 @@
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/logical_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "types.hpp"
 
@@ -28,6 +29,7 @@ extern const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_orde
 extern const std::unordered_map<ExpressionType, std::string> expression_type_to_string;
 extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<JoinType, std::string> join_type_to_string;
+extern const std::unordered_map<LQPNodeType, std::string> lqp_node_type_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const std::unordered_map<OperatorType, std::string> operator_type_to_string;
 extern const std::unordered_map<ScanType, std::string> scan_type_to_string;

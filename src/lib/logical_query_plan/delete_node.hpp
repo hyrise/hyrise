@@ -15,6 +15,7 @@ class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractLQPNo
   explicit DeleteNode(const std::string& table_name);
 
   std::string description() const override;
+  OperatorType operator_type() const override;
 
   const std::string table_name;
 

@@ -21,6 +21,8 @@ std::string ProjectionNode::description() const {
   return stream.str();
 }
 
+OperatorType ProjectionNode::operator_type() const { return OperatorType::Projection; }
+
 const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_expressions() const {
   return node_expressions;
 }

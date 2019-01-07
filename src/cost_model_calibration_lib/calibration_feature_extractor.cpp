@@ -13,9 +13,8 @@
 namespace opossum {
 namespace cost_model {
 
-const CalibrationFeatures CalibrationFeatureExtractor::extract_features(
+const CostModelFeatures CalibrationFeatureExtractor::extract_features(
     const std::shared_ptr<const AbstractOperator>& op) {
-
   auto calibration_result = _extract_general_features(op);
   calibration_result.constant_hardware_features = _extract_constant_hardware_features();
   calibration_result.runtime_hardware_features = _extract_runtime_hardware_features();
@@ -57,17 +56,17 @@ const CalibrationFeatures CalibrationFeatureExtractor::extract_features(
       // No need to add specific features
       break;
     default: {
-      std::cout << "Unhandled operator type in CalibrationFeatureExtractor: " << operator_type_to_string.at(operator_type)
-                << std::endl;
+      std::cout << "Unhandled operator type in CalibrationFeatureExtractor: "
+                << operator_type_to_string.at(operator_type) << std::endl;
     }
   }
 
   return calibration_result;
 }
 
-const CalibrationFeatures CalibrationFeatureExtractor::_extract_general_features(
+const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     const std::shared_ptr<const AbstractOperator>& op) {
-  CalibrationFeatures operator_features{};
+  CostModelFeatures operator_features{};
   const auto time = op->performance_data().walltime;
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
@@ -126,15 +125,12 @@ const CalibrationFeatures CalibrationFeatureExtractor::_extract_general_features
   return operator_features;
 }
 
-const ConstantHardwareFeatures CalibrationFeatureExtractor::_extract_constant_hardware_features() {
-  return {};
-}
+const ConstantHardwareFeatures CalibrationFeatureExtractor::_extract_constant_hardware_features() { return {}; }
 
-const RuntimeHardwareFeatures CalibrationFeatureExtractor::_extract_runtime_hardware_features() {
-  return {};
-}
+const RuntimeHardwareFeatures CalibrationFeatureExtractor::_extract_runtime_hardware_features() { return {}; }
 
-const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const TableScan>& op) {
+const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const TableScan>& op) {
   TableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
@@ -159,7 +155,8 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
   return features;
 }
 
-const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const IndexScan>& op) {
+const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const IndexScan>& op) {
   TableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
@@ -178,23 +175,22 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
 }
 
 const ColumnFeatures CalibrationFeatureExtractor::_extract_features_for_column_expression(
-    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression> column_expression,
+    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression>& column_expression,
     const std::string& prefix) {
   auto chunk_count = left_input_table->chunk_count();
   const auto& column_id = column_expression->column_id;
 
   if (chunk_count == ChunkID{0}) {
-    return ColumnFeatures{prefix};;
+    return ColumnFeatures{prefix};
+    ;
   }
 
   size_t number_of_reference_segments = 0;
-  std::map<EncodingType, size_t> encoding_mapping {
-          {EncodingType::Unencoded, 0},
-          {EncodingType::Dictionary, 0},
-          {EncodingType::FixedStringDictionary, 0},
-          {EncodingType::FrameOfReference, 0},
-          {EncodingType::RunLength, 0}
-  };
+  std::map<EncodingType, size_t> encoding_mapping{{EncodingType::Unencoded, 0},
+                                                  {EncodingType::Dictionary, 0},
+                                                  {EncodingType::FixedStringDictionary, 0},
+                                                  {EncodingType::FrameOfReference, 0},
+                                                  {EncodingType::RunLength, 0}};
 
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = left_input_table->get_chunk(chunk_id);
@@ -207,33 +203,30 @@ const ColumnFeatures CalibrationFeatureExtractor::_extract_features_for_column_e
     }
   }
 
-
   ColumnFeatures column_features{prefix};
 
   column_features.column_segment_encoding_Unencoded_percentage =
-          encoding_mapping[EncodingType::Unencoded] / static_cast<float>(chunk_count);
+      encoding_mapping[EncodingType::Unencoded] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_Dictionary_percentage =
-          encoding_mapping[EncodingType::Dictionary] / static_cast<float>(chunk_count);
+      encoding_mapping[EncodingType::Dictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_RunLength_percentage =
-          encoding_mapping[EncodingType::RunLength] / static_cast<float>(chunk_count);
+      encoding_mapping[EncodingType::RunLength] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FixedStringDictionary_percentage =
-          encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
+      encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FrameOfReference_percentage =
-          encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
+      encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
   column_features.column_reference_segment_percentage = number_of_reference_segments / static_cast<float>(chunk_count);
   column_features.column_data_type = column_expression->data_type();
   column_features.column_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
   // TODO(Sven): How to calculate from segment_distinct_value_count?
   column_features.column_distinct_value_count = 0;
 
-//  return ColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
-//                                     encoding_reference_pair.second,
-//                                     data_type_to_string.left.at(column_expression->data_type()),
-//                                     _get_memory_usage_for_column(left_input_table, column_id)};
-
+  //  return ColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
+  //                                     encoding_reference_pair.second,
+  //                                     data_type_to_string.left.at(column_expression->data_type()),
+  //                                     _get_memory_usage_for_column(left_input_table, column_id)};
 
   return column_features;
-
 }
 
 void CalibrationFeatureExtractor::_extract_table_scan_features_for_predicate_expression(
@@ -275,7 +268,7 @@ void CalibrationFeatureExtractor::_extract_table_scan_features_for_predicate_exp
 }
 
 size_t CalibrationFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,
-                                                               ColumnID column_id) {
+                                                                 ColumnID column_id) {
   size_t memory_usage = 0;
 
   for (const auto& chunk : table->chunks()) {
@@ -311,8 +304,8 @@ std::pair<EncodingType, bool> CalibrationFeatureExtractor::_get_encoding_type_fo
   }
 }
 
-const ProjectionFeatures CalibrationFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const Projection>& op) {
-
+const ProjectionFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const Projection>& op) {
   ProjectionFeatures features{};
   // TODO(Sven): Add features that signal whether subselects need to be executed
   features.input_column_count = op->input_table_left()->column_count();
@@ -321,8 +314,9 @@ const ProjectionFeatures CalibrationFeatureExtractor::_extract_features_for_oper
   return features;
 }
 
-const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const AbstractJoinOperator>& op) {
-  JoinFeatures features {};
+const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const AbstractJoinOperator>& op) {
+  JoinFeatures features{};
   const auto& left_table = op->input_table_left();
   const auto& right_table = op->input_table_right();
 
@@ -338,7 +332,8 @@ const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(c
   return features;
 }
 
-const AggregateFeatures CalibrationFeatureExtractor::_extract_features_for_operator(const std::shared_ptr<const Aggregate>& op) {
+const AggregateFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const Aggregate>& op) {
   return {};
 }
 
