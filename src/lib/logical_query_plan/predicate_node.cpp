@@ -34,6 +34,8 @@ OperatorType PredicateNode::operator_type() const {
     case ScanType::IndexScan:
       return OperatorType::IndexScan;
   }
+  
+  Fail("GCC thinks this is reachable");
 }
 
 bool PredicateNode::creates_reference_segments() const { return true; }

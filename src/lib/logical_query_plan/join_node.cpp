@@ -59,6 +59,8 @@ OperatorType JoinNode::operator_type() const {
     case JoinType::Index:
       return OperatorType::JoinIndex;
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 bool JoinNode::creates_reference_segments() const { return true; }
