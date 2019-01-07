@@ -137,7 +137,9 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto next_chunk = std::atomic_uint{0};
   auto threads = std::vector<std::thread>{};
 
-  for (auto thread_id = 0u; thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1); ++thread_id) {
+  for (auto thread_id = 0u;
+       thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
+       ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_chunk = next_chunk++;
