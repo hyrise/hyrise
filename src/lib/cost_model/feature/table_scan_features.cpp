@@ -20,7 +20,7 @@ const std::map<std::string, AllTypeVariant> TableScanFeatures::serialize() const
   table_scan_features.insert(serialized_third_column.begin(), serialized_third_column.end());
 
   return table_scan_features;
-};
+}
 
 }  // namespace cost_model
 }  // namespace opossum

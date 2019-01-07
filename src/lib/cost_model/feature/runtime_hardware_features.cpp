@@ -9,7 +9,7 @@ const std::map<std::string, AllTypeVariant> RuntimeHardwareFeatures::serialize()
       {"running_query_count", static_cast<int64_t>(running_query_count)},
       {"remaining_transaction_count", static_cast<int64_t>(remaining_transaction_count)},
   };
-};
+}
 
 }  // namespace cost_model
 }  // namespace opossum

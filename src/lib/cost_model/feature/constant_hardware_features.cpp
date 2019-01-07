@@ -19,7 +19,7 @@ const std::map<std::string, AllTypeVariant> ConstantHardwareFeatures::serialize(
       {"numa_node_count", static_cast<int32_t>(numa_node_count)},
       {"cpu_architecture", static_cast<int32_t>(cpu_architecture)},
   };
-};
+}
 
 }  // namespace cost_model
 }  // namespace opossum
