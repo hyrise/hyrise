@@ -96,9 +96,9 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     append_mutable_chunk();
   }
 
-  DebugAssert(_table_statistics2->chunk_statistics.size() == _chunks.size(),
+  DebugAssert(_table_statistics2->chunk_statistics_primary.size() == _chunks.size(),
               "Chunks and corresponding statistics are out of sync");
-  ++_table_statistics2->chunk_statistics.back()->row_count;
+  ++_table_statistics2->chunk_statistics_primary.back()->row_count;
   _chunks.back()->append(values);
 }
 
@@ -207,7 +207,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
     });
   }
 
-  _table_statistics2->chunk_statistics.emplace_back(chunk_statistics);
+  _table_statistics2->chunk_statistics_primary.emplace_back(chunk_statistics);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

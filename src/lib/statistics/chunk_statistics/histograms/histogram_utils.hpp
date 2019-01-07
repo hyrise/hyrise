@@ -3,11 +3,14 @@
 #include <cmath>
 
 #include <limits>
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 
 namespace opossum {
+
+template<typename T> class AbstractHistogram;
 
 template <typename T>
 std::enable_if_t<std::is_integral_v<T>, T> previous_value(const T value) {
@@ -113,6 +116,22 @@ bool check_prefix_settings(const std::string& supported_characters, const size_t
  */
 uint64_t common_prefix_length(const std::string& string1, const std::string& string2);
 
+/**
+ * Merge two histograms into one
+ */
+template<typename T>
+std::shared_ptr<AbstractHistogram<T>> merge_histograms(const AbstractHistogram<T>& histogram_a, const AbstractHistogram<T>& histogram_b);
+
+/**
+ * Reduce the number of bins in a histogram by merging consecutive bins
+ * @param max_bin_count     Max number of bins in the resulting histogram
+ */
+template<typename T>
+std::shared_ptr<AbstractHistogram<T>> reduce_histogram(const AbstractHistogram<T>& histogram, const size_t max_bin_count);
+
+
 }  // namespace histogram
 
 }  // namespace opossum
+
+#include "histogram_utils.ipp"

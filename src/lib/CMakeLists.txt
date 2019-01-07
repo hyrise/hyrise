@@ -383,6 +383,7 @@ set(
     statistics/chunk_statistics/histograms/generic_histogram.hpp
     statistics/chunk_statistics/histograms/histogram_utils.cpp
     statistics/chunk_statistics/histograms/histogram_utils.hpp
+    statistics/chunk_statistics/histograms/histogram_utils.ipp
     statistics/chunk_statistics/histograms/single_bin_histogram.cpp
     statistics/chunk_statistics/histograms/single_bin_histogram.hpp
     statistics/chunk_statistics/min_max_filter.cpp

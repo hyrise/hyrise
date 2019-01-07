@@ -24,6 +24,27 @@ constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};
  */
 using HistogramCountType = ChunkOffset;
 
+template<typename T>
+struct HistogramBin {
+  T min{};
+  T max{};
+  HistogramCountType height{};
+  HistogramCountType distinct_count{};
+};
+
+// For googletest
+template<typename T>
+bool operator==(const HistogramBin<T>& bin_a, const HistogramBin<T>& bin_b) {
+  return bin_a.min == bin_b.min && bin_a.max == bin_b.max && bin_a.height == bin_b.height && bin_a.distinct_count == bin_b.distinct_count;
+}
+
+// For googletest
+template<typename T>
+std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
+  stream << "[" << bin.min << " -> " << bin.max << "] Height: " << bin.height << "; DistinctCount: " << bin.distinct_count;
+  return stream;
+}
+
 /**
  * Abstract class for various histogram types.
  * Provides logic for estimating cardinality and making pruning decisions.
@@ -150,6 +171,14 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   virtual HistogramCountType bin_distinct_count(const BinID index) const = 0;
 
+  /**
+   * Returns the width of a bin.
+   * This method is specialized for strings to return a numerical width.
+   */
+  virtual HistogramWidthType bin_width(const BinID index) const;
+
+  HistogramBin<T> bin(const BinID index) const;
+
  protected:
   /**
    * Returns a list of pairs of distinct values and their respective number of occurrences in a given segment.
@@ -204,12 +233,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * This method is specialized for strings.
    */
   double _share_of_bin_less_than_value(const BinID bin_id, const T value) const;
-
-  /**
-   * Returns the width of a bin.
-   * This method is specialized for strings to return a numerical width.
-   */
-  virtual HistogramWidthType _bin_width(const BinID index) const;
 
   /**
    * Returns the id of the bin that holds the given `value`.

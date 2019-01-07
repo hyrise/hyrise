@@ -93,6 +93,11 @@ T AbstractHistogram<T>::maximum() const {
   return bin_maximum(bin_count() - 1u);
 }
 
+template <typename T>
+HistogramBin<T> AbstractHistogram<T>::bin(const BinID index) const {
+  return {bin_minimum(index), bin_maximum(index), bin_height(index), bin_distinct_count(index)};
+}
+
 template <>
 uint64_t AbstractHistogram<std::string>::_convert_string_to_number_representation(const std::string& value) const {
   return convert_string_to_number_representation(value, _supported_characters, _string_prefix_length);
@@ -104,13 +109,13 @@ std::string AbstractHistogram<std::string>::_convert_number_representation_to_st
 }
 
 template <typename T>
-typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::_bin_width(const BinID index) const {
+typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
   return _get_next_value(bin_maximum(index) - bin_minimum(index));
 }
 
 template <>
-AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::_bin_width(const BinID index) const {
+AbstractHistogram<std::string>::HistogramWidthType AbstractHistogram<std::string>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
   const auto repr_min = _convert_string_to_number_representation(bin_minimum(index));
@@ -160,7 +165,7 @@ double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, c
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<double>(value - bin_minimum(bin_id)) / _bin_width(bin_id);
+    return static_cast<double>(value - bin_minimum(bin_id)) / bin_width(bin_id);
   } else {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);

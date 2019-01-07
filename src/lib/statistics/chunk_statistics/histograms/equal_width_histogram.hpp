@@ -176,7 +176,7 @@ class EqualWidthHistogram : public AbstractHistogram<T> {
    * Overriding for numeric data types because it would otherwise recursively call itself.
    * For strings simply call the method in AbstractHistogram.
    */
-  typename AbstractHistogram<T>::HistogramWidthType _bin_width(const BinID index) const override;
+  typename AbstractHistogram<T>::HistogramWidthType bin_width(const BinID index) const override;
 
  private:
   const EqualWidthBinData<T> _bin_data;

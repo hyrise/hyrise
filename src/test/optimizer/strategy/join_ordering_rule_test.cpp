@@ -39,7 +39,7 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
     chunk_statistics->segment_statistics.emplace_back(segment_statistics);
 
     const auto table_statistics = std::make_shared<TableStatistics2>();
-    table_statistics->chunk_statistics.emplace_back(chunk_statistics);
+    table_statistics->chunk_statistics_primary.emplace_back(chunk_statistics);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     node_a->set_table_statistics2(table_statistics);

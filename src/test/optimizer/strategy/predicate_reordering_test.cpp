@@ -42,7 +42,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
          std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
          std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
 
-    node->table_statistics2()->chunk_statistics.at(0)->approx_invalid_row_count = 50;
+    node->table_statistics2()->chunk_statistics_primary.at(0)->approx_invalid_row_count = 50;
 
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};

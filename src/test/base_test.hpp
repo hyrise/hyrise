@@ -149,7 +149,7 @@ class BaseTestWithParam
       });
     }
 
-    table_statistics->chunk_statistics.emplace_back(chunk_statistics);
+    table_statistics->chunk_statistics_primary.emplace_back(chunk_statistics);
     mock_node->set_table_statistics2(table_statistics);
 
     return mock_node;

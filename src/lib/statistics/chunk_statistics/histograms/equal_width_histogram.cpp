@@ -185,7 +185,7 @@ HistogramCountType EqualWidthHistogram<T>::bin_distinct_count(const BinID index)
 }
 
 template <typename T>
-typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_width([
+typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::bin_width([
     [maybe_unused]] const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
@@ -199,9 +199,9 @@ typename AbstractHistogram<T>::HistogramWidthType EqualWidthHistogram<T>::_bin_w
 }
 
 template <>
-AbstractHistogram<std::string>::HistogramWidthType EqualWidthHistogram<std::string>::_bin_width(
+AbstractHistogram<std::string>::HistogramWidthType EqualWidthHistogram<std::string>::bin_width(
     const BinID index) const {
-  return AbstractHistogram<std::string>::_bin_width(index);
+  return AbstractHistogram<std::string>::bin_width(index);
 }
 
 template <typename T>
@@ -240,7 +240,7 @@ T EqualWidthHistogram<T>::bin_maximum(const BinID index) const {
                              : base + std::min(index, _bin_data.bin_count_with_larger_range - 1u);
     return this->_convert_number_representation_to_string(bin_max);
   } else {
-    const auto base = static_cast<T>(_bin_data.minimum + (index + 1u) * _bin_width(bin_count() - 1u));
+    const auto base = static_cast<T>(_bin_data.minimum + (index + 1u) * bin_width(bin_count() - 1u));
     return _bin_data.bin_count_with_larger_range == 0u
                ? previous_value(base)
                : base + static_cast<T>(std::min(index, _bin_data.bin_count_with_larger_range - 1u));
@@ -260,12 +260,12 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     if (_bin_data.bin_count_with_larger_range == 0u ||
         value <= bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
       const auto repr_min = this->_convert_string_to_number_representation(_bin_data.minimum);
-      bin_id = (num_value - repr_min) / this->_bin_width(0u);
+      bin_id = (num_value - repr_min) / this->bin_width(0u);
     } else {
       const auto num_base_min =
           this->_convert_string_to_number_representation(bin_minimum(_bin_data.bin_count_with_larger_range));
       bin_id = _bin_data.bin_count_with_larger_range +
-               (num_value - num_base_min) / this->_bin_width(_bin_data.bin_count_with_larger_range);
+               (num_value - num_base_min) / this->bin_width(_bin_data.bin_count_with_larger_range);
     }
 
     // We calculate numerical values for strings with substrings, and the bin edge calculation works with that.
@@ -284,7 +284,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     if (_bin_data.bin_count_with_larger_range == 0u ||
         value <= bin_maximum(_bin_data.bin_count_with_larger_range - 1u)) {
       // All bins up to that point have the exact same width, so we can use index 0.
-      const auto bin_id = (value - _bin_data.minimum) / _bin_width(0u);
+      const auto bin_id = (value - _bin_data.minimum) / bin_width(0u);
 
       // The above calculation can lead to an index that is equal to or larger than the number of bins there are,
       // due to floating point arithmetic.
@@ -296,7 +296,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     // All bins after that point have the exact same width as well, so we use that as the new base and add it up.
     return _bin_data.bin_count_with_larger_range +
            static_cast<BinID>((value - bin_minimum(_bin_data.bin_count_with_larger_range)) /
-                              _bin_width(_bin_data.bin_count_with_larger_range));
+                              bin_width(_bin_data.bin_count_with_larger_range));
   }
 }
 

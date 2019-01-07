@@ -91,9 +91,9 @@ void populate_cache_bitmask(const std::shared_ptr<AbstractLQPNode>& plan,
 std::shared_ptr<TableStatistics2> estimate_alias_node(const AliasNode& alias_node,
                                                       const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->chunk_statistics.reserve(input_table_statistics->chunk_statistics.size());
+  output_table_statistics->chunk_statistics_primary.reserve(input_table_statistics->chunk_statistics_default().size());
 
-  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics) {
+  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics_default()) {
     const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(input_chunk_statistics->row_count);
     output_chunk_statistics->segment_statistics.reserve(alias_node.column_expressions().size());
 
@@ -103,7 +103,7 @@ std::shared_ptr<TableStatistics2> estimate_alias_node(const AliasNode& alias_nod
           input_chunk_statistics->segment_statistics[input_column_id]);
     }
 
-    output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
+    output_table_statistics->chunk_statistics_primary.emplace_back(output_chunk_statistics);
   }
 
   return output_table_statistics;
@@ -112,9 +112,9 @@ std::shared_ptr<TableStatistics2> estimate_alias_node(const AliasNode& alias_nod
 std::shared_ptr<TableStatistics2> estimate_projection_node(
     const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->chunk_statistics.reserve(input_table_statistics->chunk_statistics.size());
+  output_table_statistics->chunk_statistics_primary.reserve(input_table_statistics->chunk_statistics_default().size());
 
-  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics) {
+  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics_default()) {
     const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(input_chunk_statistics->row_count);
     output_chunk_statistics->segment_statistics.reserve(projection_node.column_expressions().size());
 
@@ -132,7 +132,7 @@ std::shared_ptr<TableStatistics2> estimate_projection_node(
       }
     }
 
-    output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
+    output_table_statistics->chunk_statistics_primary.emplace_back(output_chunk_statistics);
   }
 
   return output_table_statistics;
@@ -141,9 +141,9 @@ std::shared_ptr<TableStatistics2> estimate_projection_node(
 std::shared_ptr<TableStatistics2> estimate_aggregate_node(
     const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->chunk_statistics.reserve(input_table_statistics->chunk_statistics.size());
+  output_table_statistics->chunk_statistics_primary.reserve(input_table_statistics->chunk_statistics_default().size());
 
-  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics) {
+  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics_default()) {
     const auto output_chunk_statistics = std::make_shared<ChunkStatistics2>(input_chunk_statistics->row_count);
     output_chunk_statistics->segment_statistics.reserve(aggregate_node.column_expressions().size());
 
@@ -161,7 +161,7 @@ std::shared_ptr<TableStatistics2> estimate_aggregate_node(
       }
     }
 
-    output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
+    output_table_statistics->chunk_statistics_primary.emplace_back(output_chunk_statistics);
   }
 
   return output_table_statistics;
@@ -170,9 +170,9 @@ std::shared_ptr<TableStatistics2> estimate_aggregate_node(
 std::shared_ptr<TableStatistics2> estimate_validate_node(
     const ValidateNode& validate_node, const std::shared_ptr<TableStatistics2>& input_table_statistics) {
   const auto output_table_statistics = std::make_shared<TableStatistics2>();
-  output_table_statistics->chunk_statistics.reserve(input_table_statistics->chunk_statistics.size());
+  output_table_statistics->chunk_statistics_primary.reserve(input_table_statistics->chunk_statistics_default().size());
 
-  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics) {
+  for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics_default()) {
     if (input_chunk_statistics->row_count == 0) {
       // No need to write out statistics for Chunks without rows
       continue;
@@ -189,7 +189,7 @@ std::shared_ptr<TableStatistics2> estimate_validate_node(
       output_chunk_statistics->segment_statistics.emplace_back(segment_statistics->scale_with_selectivity(selectivity));
     }
 
-    output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
+    output_table_statistics->chunk_statistics_primary.emplace_back(output_chunk_statistics);
   }
 
   return output_table_statistics;
@@ -207,7 +207,7 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
   } else {
     const auto output_table_statistics = std::make_shared<TableStatistics2>();
 
-    for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics) {
+    for (const auto& input_chunk_statistics : input_table_statistics->chunk_statistics_default()) {
       auto output_chunk_statistics = input_chunk_statistics;
       for (const auto& operator_scan_predicate : *operator_scan_predicates) {
         output_chunk_statistics = cardinality_estimation_chunk_scan(output_chunk_statistics, operator_scan_predicate);
@@ -217,7 +217,7 @@ std::shared_ptr<TableStatistics2> estimate_predicate_node(
       // If there are no matches expected in this Chunk, don't return a ChunkStatistics object for this
       // Chunk
       if (output_chunk_statistics) {
-        output_table_statistics->chunk_statistics.emplace_back(output_chunk_statistics);
+        output_table_statistics->chunk_statistics_primary.emplace_back(output_chunk_statistics);
       }
     }
 
@@ -267,6 +267,10 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<OptimizationContext>& context) const {
   auto bitmask = std::optional<boost::dynamic_bitset<>>{};
 
+  std::cout << "estimate_statistics()" << std::endl;
+  lqp->print();
+  std::cout << std::endl;
+
   if (context) {
     bitmask = build_plan_bitmask(lqp, context);
     if (bitmask) {
@@ -278,14 +282,14 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
         const auto cached_table_statistics = cache_entry.table_statistics;
         const auto table_statistics = std::make_shared<TableStatistics2>();
 
-        table_statistics->chunk_statistics.resize(cache_entry.table_statistics->chunk_statistics.size());
-        for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics->chunk_statistics.size(); ++chunk_id) {
-          const auto& cached_chunk_statistics = cached_table_statistics->chunk_statistics[chunk_id];
-          table_statistics->chunk_statistics[chunk_id] =
+        table_statistics->chunk_statistics_primary.resize(cache_entry.table_statistics->chunk_statistics_primary.size());
+        for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics->chunk_statistics_primary.size(); ++chunk_id) {
+          const auto& cached_chunk_statistics = cached_table_statistics->chunk_statistics_primary[chunk_id];
+          table_statistics->chunk_statistics_primary[chunk_id] =
               std::make_shared<ChunkStatistics2>(cached_chunk_statistics->row_count);
-          table_statistics->chunk_statistics[chunk_id]->segment_statistics.resize(
+          table_statistics->chunk_statistics_primary[chunk_id]->segment_statistics.resize(
               cached_chunk_statistics->segment_statistics.size());
-          table_statistics->chunk_statistics[chunk_id]->approx_invalid_row_count =
+          table_statistics->chunk_statistics_primary[chunk_id]->approx_invalid_row_count =
               cached_chunk_statistics->approx_invalid_row_count;
         }
 
@@ -296,9 +300,9 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
           Assert(column_id_iter != cache_entry.column_expressions.end(), "Column not found in cached statistics");
           const auto cached_column_id = column_id_iter->second;
 
-          for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics->chunk_statistics.size(); ++chunk_id) {
-            table_statistics->chunk_statistics[chunk_id]->segment_statistics[column_id] =
-                cached_table_statistics->chunk_statistics[chunk_id]->segment_statistics[cached_column_id];
+          for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics->chunk_statistics_primary.size(); ++chunk_id) {
+            table_statistics->chunk_statistics_primary[chunk_id]->segment_statistics[column_id] =
+                cached_table_statistics->chunk_statistics_primary[chunk_id]->segment_statistics[cached_column_id];
           }
         }
 

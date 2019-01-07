@@ -16,4 +16,6 @@ class TableStatistics2;
 TableStatistics generate_table_statistics(const Table& table);
 void generate_table_statistics2(Table& table);
 
+void generate_compact_table_statistics(TableStatistics2& table_statistics);
+
 }  // namespace opossum
