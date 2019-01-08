@@ -18,12 +18,14 @@ class InsertNodeTest : public ::testing::Test {
 
 TEST_F(InsertNodeTest, Description) { EXPECT_EQ(_insert_node->description(), "[Insert] Into table 'table_a'"); }
 
-TEST_F(InsertNodeTest, TableName) { EXPECT_EQ(_insert_node->table_name(), "table_a"); }
+TEST_F(InsertNodeTest, TableName) { EXPECT_EQ(_insert_node->table_name, "table_a"); }
 
 TEST_F(InsertNodeTest, Equals) {
   EXPECT_EQ(*_insert_node, *_insert_node);
   EXPECT_EQ(*_insert_node, *InsertNode::make("table_a"));
   EXPECT_NE(*_insert_node, *InsertNode::make("table_b"));
 }
+
+TEST_F(InsertNodeTest, NodeExpressions) { ASSERT_EQ(_insert_node->node_expressions.size(), 0u); }
 
 }  // namespace opossum

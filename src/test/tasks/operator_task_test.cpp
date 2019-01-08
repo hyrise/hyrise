@@ -5,6 +5,7 @@
 
 #include "base_test.hpp"
 
+#include "expression/expression_functional.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -13,15 +14,17 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
 
+using namespace opossum::expression_functional;  // NOLINT
+
 namespace opossum {
 
 class OperatorTaskTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _test_table_a);
 
-    _test_table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _test_table_b);
   }
 
@@ -40,7 +43,8 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto ts = std::make_shared<TableScan>(gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 1234});
+  auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
+  auto ts = std::make_shared<TableScan>(gt, equals_(a, 1234));
 
   auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
@@ -48,7 +52,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up
@@ -67,7 +71,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/joinoperators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up
@@ -77,12 +81,11 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto gt_a = std::make_shared<GetTable>("table_a");
-  auto scan_a = std::make_shared<TableScan>(
-      gt_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234});
-  auto scan_b =
-      std::make_shared<TableScan>(scan_a, OperatorScanPredicate{ColumnID{1}, PredicateCondition::LessThan, 1000});
-  auto scan_c =
-      std::make_shared<TableScan>(scan_a, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThan, 2000});
+  auto a = PQPColumnExpression::from_table(*_test_table_a, "a");
+  auto b = PQPColumnExpression::from_table(*_test_table_a, "b");
+  auto scan_a = std::make_shared<TableScan>(gt_a, greater_than_equals_(a, 1234));
+  auto scan_b = std::make_shared<TableScan>(scan_a, less_than_(b, 1000));
+  auto scan_c = std::make_shared<TableScan>(scan_a, greater_than_(b, 2000));
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
   auto tasks = OperatorTask::make_tasks_from_operator(union_positions, CleanupTemporaries::Yes);

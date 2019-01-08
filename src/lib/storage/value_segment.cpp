@@ -38,11 +38,11 @@ ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_
       _null_values({std::move(null_values), alloc}) {}
 
 template <typename T>
-ValueSegment<T>::ValueSegment(std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
+ValueSegment<T>::ValueSegment(const std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()), _values(values, alloc) {}
 
 template <typename T>
-ValueSegment<T>::ValueSegment(std::vector<T>& values, std::vector<bool>& null_values,
+ValueSegment<T>::ValueSegment(const std::vector<T>& values, std::vector<bool>& null_values,
                               const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()),
       _values(values, alloc),
@@ -89,13 +89,13 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
-    _values.push_back(is_null ? T{} : type_cast<T>(val));
+    _values.push_back(is_null ? T{} : type_cast_variant<T>(val));
     return;
   }
 
   Assert(!is_null, "ValueSegments is not nullable but value passed is null.");
 
-  _values.push_back(type_cast<T>(val));
+  _values.push_back(type_cast_variant<T>(val));
 }
 
 template <typename T>

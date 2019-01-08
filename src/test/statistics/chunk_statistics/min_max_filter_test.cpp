@@ -47,7 +47,7 @@ class MinMaxFilterTest<std::string> : public ::testing::Test {
 };
 
 using FilterTypes = ::testing::Types<int, float, double, std::string>;
-TYPED_TEST_CASE(MinMaxFilterTest, FilterTypes);
+TYPED_TEST_CASE(MinMaxFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
@@ -90,7 +90,12 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::GreaterThan, {this->_after_range}));
 
   // as null values are not comparable, we never prune them
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, NULL_VALUE));
   EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNull, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, NULL_VALUE));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, {this->_in_between}));
+  EXPECT_FALSE(filter->can_prune(PredicateCondition::IsNotNull, {this->_min_value}, {this->_in_between}));
 }
 
 }  // namespace opossum

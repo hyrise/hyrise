@@ -18,6 +18,8 @@ constexpr bool is_valid_name(const char* name) {
 
 #if defined(__APPLE__) || defined(__MACOS__)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreserved-id-macro"
 #include "provider.hpp"
 
 // Construct the probe definition by provider and probe name. Because TSan has issues and throw false positives, we
@@ -81,11 +83,10 @@ constexpr bool is_valid_name(const char* name) {
 #define DTRACE_PROBE7(provider, probe, param1, param2, param3, param4, param5, param6, param7)
 #define DTRACE_PROBE8(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8)
 #define DTRACE_PROBE9(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9)
-#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
-                      param10)
-#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10)
+#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
                        param10, param11)
-#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
                        param10, param11, param12)
 
 #pragma GCC diagnostic pop

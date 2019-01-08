@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/operator_task.hpp"
 #include "types.hpp"
@@ -70,9 +71,9 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
-#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode) \
-  EXPECT_TRUE(                                                                                                  \
-      check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode));
+#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)    \
+  EXPECT_TRUE(opossum_table&& expected_table&& check_table_equal(opossum_table, expected_table, order_sensitivity, \
+                                                                 type_cmp_mode, float_comparison_mode));
 
 /**
  * Specialised version of EXPECT_TABLE_EQ

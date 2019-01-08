@@ -8,11 +8,11 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "parameter_expression.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
+enum class LogicalOperator;
 class LQPColumnExpression;
 class TransactionContext;
 
@@ -114,10 +114,16 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
 bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
 /**
- * Convert "a AND b AND c" to [a,b,c] where a,b,c can be arbitrarily complex expressions
+ * Convert "(a AND b) AND c" to [a,b,c] where a,b,c can be arbitrarily complex expressions
  */
-std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
-    const std::shared_ptr<AbstractExpression>& expression);
+std::vector<std::shared_ptr<AbstractExpression>> flatten_logical_expressions(
+    const std::shared_ptr<AbstractExpression>& expression, const LogicalOperator logical_operator);
+
+/**
+ * Convert ([a,b,c], AND) into "(a AND b) AND c"
+ */
+std::shared_ptr<AbstractExpression> inflate_logical_expressions(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator);
 
 /**
  * Traverse the expression(s) for ParameterExpressions and set them to the requested values
@@ -136,5 +142,11 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
                                          const std::weak_ptr<TransactionContext>& transaction_context);
 
 bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
+
+/**
+ * @return  The value of a CorrelatedParameterExpression or ValueExpression
+ *          std::nullopt for other expression types
+ */
+std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);
 
 }  // namespace opossum

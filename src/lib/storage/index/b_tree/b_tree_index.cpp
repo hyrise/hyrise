@@ -5,6 +5,11 @@
 
 namespace opossum {
 
+size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
+                                               uint32_t value_bytes) {
+  Fail("BTreeIndex::estimate_memory_consumption() is not implemented yet");
+}
+
 BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<BTreeIndex>()}, _indexed_segments(segments_to_index[0]) {
   Assert((segments_to_index.size() == 1), "BTreeIndex only works with a single segment.");
@@ -12,7 +17,7 @@ BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& se
       make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_indexed_segments->data_type(), _indexed_segments);
 }
 
-uint64_t BTreeIndex::memory_consumption() const { return _impl->memory_consumption(); }
+size_t BTreeIndex::_memory_consumption() const { return _impl->memory_consumption(); }
 
 BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   return _impl->lower_bound(values);

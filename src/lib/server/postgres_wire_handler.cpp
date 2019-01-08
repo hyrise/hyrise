@@ -130,7 +130,7 @@ void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
       "Cannot update the packet size of a packet which is less than NetworkIMessageType + dummy size (i.e. 5 bytes)");
 
   // - 1 because the message type byte does not contribute to the total size
-  auto total_bytes = htonl(data.size() - 1);
+  auto total_bytes = htonl(static_cast<uint32_t>(data.size() - 1));
   auto size_chars = reinterpret_cast<char*>(&total_bytes);
 
   // The size starts at byte position 1

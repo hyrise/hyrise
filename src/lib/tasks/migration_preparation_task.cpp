@@ -70,10 +70,10 @@ std::vector<double> scale(const std::vector<double>& container) {
 }
 
 // Determines whether a NUMA node has enough capacity by specifying a relative threshold.
-bool node_has_capacity(size_t node_id, double threshold = 0.8) {
-  size_t total_capacity = numa_node_size(node_id, nullptr);
+bool node_has_capacity(NodeID node_id, double threshold = 0.8) {
+  size_t total_capacity = numa_node_size(static_cast<int>(node_id), nullptr);
   int64_t dummy;
-  size_t free_capacity = numa_node_size(node_id, &dummy);
+  size_t free_capacity = numa_node_size(static_cast<int>(node_id), &dummy);
   return static_cast<double>(total_capacity * (1.0 - threshold)) <= static_cast<double>(free_capacity);
 }
 
@@ -140,12 +140,11 @@ std::vector<ChunkInfo> collect_chunk_infos(const StorageManager& storage_manager
   std::vector<ChunkInfo> chunk_infos;
   double sum_temperature = 0.0;
   size_t lookback_samples = lookback.count() / counter_history_interval.count();
-  for (const auto& table_name : storage_manager.table_names()) {
-    const auto& table = *storage_manager.get_table(table_name);
-    const auto chunk_count = table.chunk_count();
+  for (const auto& [table_name, table] : storage_manager.tables()) {
+    const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
-      const auto chunk = table.get_chunk(i);
-      if (ChunkMigrationTask::chunk_is_completed(chunk, table.max_chunk_size()) && chunk->has_access_counter()) {
+      const auto chunk = table->get_chunk(i);
+      if (ChunkMigrationTask::chunk_is_completed(chunk, table->max_chunk_size()) && chunk->has_access_counter()) {
         const double temperature = static_cast<double>(chunk->access_counter()->history_sample(lookback_samples));
         sum_temperature += temperature;
         chunk_infos.emplace_back(ChunkInfo{/* .table_name = */ table_name,
@@ -191,7 +190,7 @@ void MigrationPreparationTask::_on_execute() {
       const auto target_node = node_info.cold_nodes.at(chunk_counter % node_info.cold_nodes.size());
       const auto task =
           std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, std::vector<ChunkID>({migration_chunk.id}),
-                                               target_node, SchedulePriority::JobTask, false);
+                                               target_node, SchedulePriority::Default, false);
 
       task->schedule(target_node);
       jobs.push_back(task);

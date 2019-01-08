@@ -27,7 +27,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE);
+    _table = load_table("resources/test_data/tbl/int_float.tbl");
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
@@ -46,8 +46,7 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThan, "456.7"});
+  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, "456.7");
 
   table_scan->execute();
 
@@ -101,12 +100,9 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
 
-  auto table_scan1 =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, "123"});
-  auto expected_result =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::NotEquals, "123"});
-  auto table_scan2 =
-      std::make_shared<TableScan>(_gt, OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThan, "1234"});
+  auto table_scan1 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "123");
+  auto expected_result = create_table_scan(_gt, ColumnID{0}, PredicateCondition::NotEquals, "123");
+  auto table_scan2 = create_table_scan(_gt, ColumnID{0}, PredicateCondition::LessThan, "1234");
 
   table_scan1->execute();
   expected_result->execute();
@@ -139,6 +135,35 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result->get_output());
+}
+
+TEST_F(OperatorsDeleteTest, EmptyDelete) {
+  auto tx_context_modification = TransactionManager::get().new_transaction_context();
+
+  auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "112233");
+
+  table_scan->execute();
+
+  EXPECT_EQ(table_scan->get_output()->chunk_count(), 0u);
+
+  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
+  delete_op->set_transaction_context(tx_context_modification);
+
+  delete_op->execute();
+
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  // MVCC commit.
+  tx_context_modification->commit();
+
+  // Get validated table which should be the original one
+  auto tx_context_verification = TransactionManager::get().new_transaction_context();
+  auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(tx_context_verification);
+
+  validate->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), _gt->get_output());
 }
 
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
@@ -183,7 +208,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   for (const auto value : {456.7, 457.7}) {
     auto context = TransactionManager::get().new_transaction_context();
 
-    auto values_to_insert = load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE);
+    auto values_to_insert = load_table("resources/test_data/tbl/int_float3.tbl");
     auto table_name_for_insert = "bla";
     StorageManager::get().add_table(table_name_for_insert, values_to_insert);
     auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
@@ -197,8 +222,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto table_scan1 =
-        std::make_shared<TableScan>(validate1, OperatorScanPredicate{ColumnID{1}, PredicateCondition::Equals, value});
+    auto table_scan1 = create_table_scan(validate1, ColumnID{1}, PredicateCondition::Equals, value);
     table_scan1->execute();
     EXPECT_EQ(table_scan1->get_output()->row_count(), 2);
 
@@ -213,8 +237,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate2->set_transaction_context(context);
     validate2->execute();
 
-    auto table_scan2 =
-        std::make_shared<TableScan>(validate2, OperatorScanPredicate{ColumnID{1}, PredicateCondition::Equals, value});
+    auto table_scan2 = create_table_scan(validate2, ColumnID{1}, PredicateCondition::Equals, value);
     table_scan2->execute();
     EXPECT_EQ(table_scan2->get_output()->row_count(), 0);
 
@@ -237,7 +260,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto expected_result = load_table("src/test/tables/int_float_deleted.tbl", Chunk::MAX_SIZE);
+    auto expected_result = load_table("resources/test_data/tbl/int_float_deleted.tbl");
 
     EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
 

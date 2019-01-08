@@ -25,8 +25,8 @@ class OperatorsIndexScanTest : public BaseTest {
   void SetUp() override {
     _index_type = get_index_type_of<DerivedIndex>();
 
-    auto int_int_7 = load_table("src/test/tables/int_int_shuffled.tbl", 7);
-    auto int_int_5 = load_table("src/test/tables/int_int_shuffled_2.tbl", 5);
+    auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
+    auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", 5);
 
     ChunkEncoder::encode_all_chunks(int_int_7);
     ChunkEncoder::encode_all_chunks(int_int_5);
@@ -92,7 +92,7 @@ typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKe
                          BTreeIndex /* add further indices */>
     DerivedIndices;
 
-TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
+TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk

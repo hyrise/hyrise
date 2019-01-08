@@ -9,9 +9,9 @@
 
 namespace opossum {
 
-std::unique_ptr<const BaseCompressedVector> SimdBp128Compressor::encode(const pmr_vector<uint32_t>& vector,
-                                                                        const PolymorphicAllocator<size_t>& alloc,
-                                                                        const UncompressedVectorInfo& meta_info) {
+std::unique_ptr<const BaseCompressedVector> SimdBp128Compressor::compress(const pmr_vector<uint32_t>& vector,
+                                                                          const PolymorphicAllocator<size_t>& alloc,
+                                                                          const UncompressedVectorInfo& meta_info) {
   _init(vector.size(), alloc);
   for (auto value : vector) _append(value);
   _finish();
@@ -78,7 +78,7 @@ void SimdBp128Compressor::_pack_incomplete_meta_block() {
   // Returns ceiling of integer division
   const auto num_blocks_left = (_meta_block_index + Packing::block_size - 1) / Packing::block_size;
 
-  _pack_blocks(num_blocks_left, bits_needed);
+  _pack_blocks(static_cast<uint8_t>(num_blocks_left), bits_needed);
 }
 
 auto SimdBp128Compressor::_bits_needed_per_block() -> std::array<uint8_t, Packing::blocks_in_meta_block> {

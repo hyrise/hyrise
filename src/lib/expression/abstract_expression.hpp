@@ -7,7 +7,6 @@
 
 #include "all_type_variant.hpp"
 #include "expression_precedence.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -17,6 +16,7 @@ enum class ExpressionType {
   Arithmetic,
   Cast,
   Case,
+  CorrelatedParameter,
   PQPColumn,
   LQPColumn,
   Exists,
@@ -24,7 +24,7 @@ enum class ExpressionType {
   Function,
   List,
   Logical,
-  Parameter,
+  Placeholder,
   Predicate,
   PQPSelect,
   LQPSelect,
@@ -110,6 +110,11 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    */
   std::string _enclose_argument_as_column_name(const AbstractExpression& argument) const;
 };
+
+// So that google test, e.g., prints readable error messages
+inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& expression) {
+  return stream << expression.as_column_name();
+}
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {

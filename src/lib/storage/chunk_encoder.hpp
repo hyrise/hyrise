@@ -45,17 +45,17 @@ class ChunkEncoder {
    * All segments of the chunk need to be of type ValueSegment<T>,
    * i.e., recompression is not yet supported.
    *
-   * Note: In some cases, it might be benificial to
+   * Note: In some cases, it might be beneficial to
    *       leave certain segments of a chunk unencoded.
    *       Use EncodingType::Unencoded in this case.
    */
-  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
+  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                            const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
    * @brief Encodes a chunk using the same segment-encoding spec
    */
-  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
+  static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                            const SegmentEncodingSpec& segment_encoding_spec = {});
 
   /**

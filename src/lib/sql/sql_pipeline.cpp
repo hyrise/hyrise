@@ -15,9 +15,7 @@ namespace opossum {
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
-                         const std::shared_ptr<Optimizer>& optimizer,
-                         const std::shared_ptr<PreparedStatementCache>& prepared_statements,
-                         const CleanupTemporaries cleanup_temporaries)
+                         const std::shared_ptr<Optimizer>& optimizer, const CleanupTemporaries cleanup_temporaries)
     : _transaction_context(transaction_context), _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
@@ -75,9 +73,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
-        statement_string, std::move(parsed_statement), use_mvcc, transaction_context, lqp_translator, optimizer,
-        prepared_statements, cleanup_temporaries);
+    auto pipeline_statement =
+        std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement), use_mvcc,
+                                               transaction_context, lqp_translator, optimizer, cleanup_temporaries);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
@@ -151,21 +149,21 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
   return _optimized_logical_plans;
 }
 
-const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans() {
-  if (!_query_plans.empty()) {
-    return _query_plans;
+const std::vector<std::shared_ptr<AbstractOperator>>& SQLPipeline::get_physical_plans() {
+  if (!_physical_plans.empty()) {
+    return _physical_plans;
   }
 
   Assert(!_requires_execution || _pipeline_was_executed,
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
-  _query_plans.reserve(statement_count());
+  _physical_plans.reserve(statement_count());
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    _query_plans.push_back(pipeline_statement->get_query_plan());
+    _physical_plans.push_back(pipeline_statement->get_physical_plan());
   }
 
-  return _query_plans;
+  return _physical_plans;
 }
 
 const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
@@ -236,16 +234,16 @@ const SQLPipelineMetrics& SQLPipeline::metrics() {
 }
 
 std::string SQLPipelineMetrics::to_string() const {
-  auto total_translate_nanos = std::chrono::nanoseconds::zero();
+  auto total_sql_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_optimize_nanos = std::chrono::nanoseconds::zero();
-  auto total_compile_nanos = std::chrono::nanoseconds::zero();
+  auto total_lqp_translate_nanos = std::chrono::nanoseconds::zero();
   auto total_execute_nanos = std::chrono::nanoseconds::zero();
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_metric : statement_metrics) {
-    total_translate_nanos += statement_metric->translate_time_nanos;
+    total_sql_translate_nanos += statement_metric->sql_translate_time_nanos;
     total_optimize_nanos += statement_metric->optimize_time_nanos;
-    total_compile_nanos += statement_metric->compile_time_nanos;
+    total_lqp_translate_nanos += statement_metric->lqp_translate_time_nanos;
     total_execute_nanos += statement_metric->execution_time_nanos;
 
     query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
@@ -256,9 +254,9 @@ std::string SQLPipelineMetrics::to_string() const {
   std::ostringstream info_string;
   info_string << "Execution info: [";
   info_string << "PARSE: " << format_duration(parse_time_nanos) << ", ";
-  info_string << "TRANSLATE: " << format_duration(total_translate_nanos) << ", ";
+  info_string << "SQL TRANSLATE: " << format_duration(total_sql_translate_nanos) << ", ";
   info_string << "OPTIMIZE: " << format_duration(total_optimize_nanos) << ", ";
-  info_string << "COMPILE: " << format_duration(total_compile_nanos) << ", ";
+  info_string << "LQP TRANSLATE: " << format_duration(total_lqp_translate_nanos) << ", ";
   info_string << "EXECUTE: " << format_duration(total_execute_nanos) << " (wall time) | ";
   info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
   info_string << "]\n";

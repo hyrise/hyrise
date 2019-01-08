@@ -20,7 +20,7 @@ namespace opossum {
 class OperatorsLimitTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 3));
+    _table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", 3));
     _table_wrapper->execute();
   }
 
@@ -28,7 +28,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{1}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 3);
+    auto expected_result = load_table("resources/test_data/tbl/int_int3_limit_1.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -36,7 +36,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{2}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3_limit_2.tbl", 3);
+    auto expected_result = load_table("resources/test_data/tbl/int_int3_limit_2.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -47,7 +47,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{4}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3_limit_4.tbl", 3);
+    auto expected_result = load_table("resources/test_data/tbl/int_int3_limit_4.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -58,7 +58,7 @@ class OperatorsLimitTest : public BaseTest {
     auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{10}));
     limit->execute();
 
-    auto expected_result = load_table("src/test/tables/int_int3.tbl", 3);
+    auto expected_result = load_table("resources/test_data/tbl/int_int3.tbl", 3);
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
@@ -73,8 +73,7 @@ TEST_F(OperatorsLimitTest, Limit1ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit1ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_1();
@@ -87,8 +86,7 @@ TEST_F(OperatorsLimitTest, Limit2ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit2ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_2();
@@ -101,8 +99,7 @@ TEST_F(OperatorsLimitTest, Limit4ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit4ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_4();
@@ -115,8 +112,7 @@ TEST_F(OperatorsLimitTest, Limit10ValueSegment) {
 
 TEST_F(OperatorsLimitTest, Limit10ReferenceSegment) {
   // Filter accepts all rows in table.
-  auto table_scan = std::make_shared<TableScan>(
-      _table_wrapper, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, -1});
+  auto table_scan = create_table_scan(_table_wrapper, ColumnID{0}, PredicateCondition::GreaterThan, -1);
   table_scan->execute();
   _input_operator = table_scan;
   test_limit_10();

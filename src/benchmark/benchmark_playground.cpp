@@ -1,7 +1,7 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
-#include "benchmark_basic_fixture.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
 
 namespace opossum {
 
@@ -31,10 +31,10 @@ namespace opossum {
 
 using ValueT = int32_t;
 
-class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
+class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
-    BenchmarkBasicFixture::SetUp(state);
+    MicroBenchmarkBasicFixture::SetUp(state);
 
     _clear_cache();
 
@@ -47,7 +47,7 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
       return v;
     });
   }
-  void TearDown(::benchmark::State& state) override { BenchmarkBasicFixture::TearDown(state); }
+  void TearDown(::benchmark::State& state) override { MicroBenchmarkBasicFixture::TearDown(state); }
 
  protected:
   std::vector<ValueT> _vec;
@@ -59,7 +59,7 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     const auto size = _vec.size();
@@ -78,7 +78,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     // pre-allocate result vector

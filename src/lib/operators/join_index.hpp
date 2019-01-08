@@ -8,6 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/pos_list.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -56,18 +57,12 @@ class JoinIndex : public AbstractJoinOperator {
   void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                        const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left, const ChunkID chunk_id_right);
 
-  void _create_table_structure();
-
   void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                               std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;
 
   std::shared_ptr<Table> _output_table;
-  std::shared_ptr<const Table> _left_in_table;
-  std::shared_ptr<const Table> _right_in_table;
-  ColumnID _left_column_id;
-  ColumnID _right_column_id;
 
   std::shared_ptr<PosList> _pos_list_left;
   std::shared_ptr<PosList> _pos_list_right;

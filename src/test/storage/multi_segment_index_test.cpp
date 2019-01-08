@@ -50,7 +50,7 @@ class MultiSegmentIndexTest : public BaseTest {
 
 // List of indices to test
 typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndices;
-TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndices);
+TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
@@ -165,7 +165,7 @@ TYPED_TEST(MultiSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(MultiSegmentIndexTest, TooManyReferenceValues) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }
@@ -202,9 +202,9 @@ TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   auto indices_int_str = chunk->get_indices({this->dict_segment_int, this->dict_segment_str});
   auto indices_str = chunk->get_indices({this->dict_segment_str});
 
-  EXPECT_EQ(2u, indices_int.size());
-  EXPECT_EQ(1u, indices_int_str.size());
-  EXPECT_EQ(0u, indices_str.size());
+  EXPECT_EQ(indices_int.size(), 2u);
+  EXPECT_EQ(indices_int_str.size(), 1u);
+  EXPECT_EQ(indices_str.size(), 0u);
 
   EXPECT_TRUE(indices_int[0]->is_index_for({this->dict_segment_int}));
   EXPECT_TRUE(indices_int[1]->is_index_for({this->dict_segment_int}));

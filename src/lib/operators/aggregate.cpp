@@ -17,6 +17,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
@@ -213,39 +214,30 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  // clang-format off
-  resolve_segment_type<ColumnDataType>(
-      // clang-format on
-      base_segment, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_segment) {
-        auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
+  ChunkOffset chunk_offset{0};
+  segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
+    auto& hash_entry = results[hash_keys[chunk_offset]];
+    hash_entry.row_id = RowID(chunk_id, chunk_offset);
 
-        ChunkOffset chunk_offset{0};
+    /**
+    * If the value is NULL, the current aggregate value does not change.
+    */
+    if (!position.is_null()) {
+      // If we have a value, use the aggregator lambda to update the current aggregate value for this group
+      aggregator(position.value(), hash_entry.current_aggregate);
 
-        // Now that all relevant types have been resolved, we can iterate over the segment and build the aggregations.
-        iterable.for_each([&, chunk_id, aggregator](const auto& value) {
-          auto& hash_entry = results[hash_keys[chunk_offset]];
-          hash_entry.row_id = RowID(chunk_id, chunk_offset);
+      // increase value counter
+      ++hash_entry.aggregate_count;
 
-          /**
-          * If the value is NULL, the current aggregate value does not change.
-          */
-          if (!value.is_null()) {
-            // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-            aggregator(value.value(), hash_entry.current_aggregate);
+      if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
+        // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
+        // for the case of CountDistinct, insert this value into the set to keep track of distinct values
+        hash_entry.distinct_values.insert(position.value());
+      }
+    }
 
-            // increase value counter
-            ++hash_entry.aggregate_count;
-
-            if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
-              // clang-tidy error: https://bugs.llvm.org/show_bug.cgi?id=35824
-              // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-              hash_entry.distinct_values.insert(value.value());
-            }
-          }
-
-          ++chunk_offset;
-        });
-      });
+    ++chunk_offset;
+  });
 }
 
 template <typename AggregateKey>
@@ -262,7 +254,7 @@ void Aggregate::_aggregate() {
 
   auto input_table = input_table_left();
 
-  for ([[maybe_unused]] const auto groupby_column_id : _groupby_column_ids) {
+  for ([[maybe_unused]] const auto& groupby_column_id : _groupby_column_ids) {
     DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
   }
 
@@ -358,32 +350,28 @@ void Aggregate::_aggregate() {
           const auto chunk_in = input_table->get_chunk(chunk_id);
           const auto base_segment = chunk_in->get_segment(column_id);
 
-          resolve_segment_type<ColumnDataType>(*base_segment, [&](auto& typed_segment) {
-            auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
-
-            ChunkOffset chunk_offset{0};
-            iterable.for_each([&](const auto& value) {
-              if (value.is_null()) {
-                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                  keys_per_chunk[chunk_id][chunk_offset] = 0u;
-                } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
-                }
+          ChunkOffset chunk_offset{0};
+          segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+            if (position.is_null()) {
+              if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                keys_per_chunk[chunk_id][chunk_offset] = 0u;
               } else {
-                auto inserted = id_map.try_emplace(value.value(), id_counter);
-                // store either the current id_counter or the existing ID of the value
-                if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                  keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
-                } else {
-                  keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
-                }
-
-                // if the id_map didn't have the value as a key and a new element was inserted
-                if (inserted.second) ++id_counter;
+                keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
+              }
+            } else {
+              auto inserted = id_map.try_emplace(position.value(), id_counter);
+              // store either the current id_counter or the existing ID of the value
+              if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
+                keys_per_chunk[chunk_id][chunk_offset] = inserted.first->second;
+              } else {
+                keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
               }
 
-              ++chunk_offset;
-            });
+              // if the id_map didn't have the value as a key and a new element was inserted
+              if (inserted.second) ++id_counter;
+            }
+
+            ++chunk_offset;
           });
         }
       });
@@ -440,6 +428,9 @@ void Aggregate::_aggregate() {
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
 
+    // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
+    const auto input_chunk_size = chunk_in->size();
+
     if (_aggregates.empty()) {
       /**
        * DISTINCT implementation
@@ -467,7 +458,7 @@ void Aggregate::_aggregate() {
               _contexts_per_column[0]);
       auto& results = *context->results;
 
-      for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
@@ -487,7 +478,7 @@ void Aggregate::_aggregate() {
           auto& results = *context->results;
 
           // count occurrences for each group key
-          for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+          for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
             auto& hash_entry = results[hash_keys[chunk_offset]];
             hash_entry.row_id = RowID(chunk_id, chunk_offset);
             ++hash_entry.aggregate_count;
@@ -541,7 +532,7 @@ void Aggregate::_aggregate() {
   }
 
   // add group by columns
-  for (const auto column_id : _groupby_column_ids) {
+  for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
                                             input_table->column_data_type(column_id));
 
@@ -727,7 +718,7 @@ void Aggregate::_write_groupby_output(PosList& pos_list) {
       base_segments.push_back(chunk->get_segment(_groupby_column_ids[group_column_index]));
     }
     _groupby_segments[group_column_index]->reserve(pos_list.size());
-    for (const auto row_id : pos_list) {
+    for (const auto& row_id : pos_list) {
       _groupby_segments[group_column_index]->append((*base_segments[row_id.chunk_id])[row_id.chunk_offset]);
     }
   }

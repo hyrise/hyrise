@@ -8,22 +8,28 @@
 #include <unordered_map>
 #include <vector>
 
-#include "benchmark_utils.hpp"
+#include "cxxopts.hpp"
+
+#include "abstract_query_generator.hpp"
+#include "abstract_table_generator.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "operators/abstract_operator.hpp"
+#include "query_benchmark_result.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
 
+class SQLPipeline;
+
 class BenchmarkRunner {
  public:
-  BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries, const nlohmann::json& context);
-
-  static BenchmarkRunner create(const BenchmarkConfig& config, const std::string& table_path,
-                                const std::string& query_path);
+  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
+                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
+  ~BenchmarkRunner();
 
   void run();
 
@@ -38,40 +44,43 @@ class BenchmarkRunner {
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries();
 
+  // Execute warmup run of a query
+  void _warmup_query(const QueryID query_id);
+
   // Calls _schedule_query if the scheduler is active, otherwise calls _execute_query and returns no tasks
-  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const NamedQuery& named_query,
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_or_execute_query(const QueryID query_id,
                                                                         const std::function<void()>& done_callback);
 
   // Schedule and return all tasks for named_query
-  std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const NamedQuery& named_query,
+  std::vector<std::shared_ptr<AbstractTask>> _schedule_query(const QueryID query_id,
                                                              const std::function<void()>& done_callback);
 
   // Execute named_query
-  void _execute_query(const NamedQuery& named_query, const std::function<void()>& done_callback);
+  void _execute_query(const QueryID query_id, const std::function<void()>& done_callback);
+
+  // If visualization is enabled, stores an executed plan
+  void _store_plan(const QueryID query_id, SQLPipeline& pipeline);
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
-  // Get all the files/tables/queries from a given path
-  static std::vector<std::string> _read_table_folder(const std::string& table_path);
-  static NamedQueries _read_query_folder(const std::string& query_path);
-
-  static NamedQueries _parse_query_file(const std::string& query_path);
-
   struct QueryPlans final {
     // std::vector<>s, since queries can contain multiple statements
     std::vector<std::shared_ptr<AbstractLQPNode>> lqps;
-    std::vector<std::shared_ptr<SQLQueryPlan>> pqps;
+    std::vector<std::shared_ptr<AbstractOperator>> pqps;
   };
 
-  std::unordered_map<std::string, QueryPlans> _query_plans;
+  // If visualization is enabled, this stores the LQP and PQP for each query. Its length is defined by the number of
+  // available queries.
+  std::vector<QueryPlans> _query_plans;
 
   const BenchmarkConfig _config;
 
-  // NamedQuery = <name, sql>
-  const NamedQueries _queries;
+  std::unique_ptr<AbstractQueryGenerator> _query_generator;
+  std::unique_ptr<AbstractTableGenerator> _table_generator;
 
-  BenchmarkResults _query_results_by_query_name;
+  // Stores the results of the query executions. Its length is defined by the number of available queries.
+  std::vector<QueryBenchmarkResult> _query_results;
 
   nlohmann::json _context;
 

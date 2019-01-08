@@ -37,7 +37,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<TableGenerator>();
 
   ColumnDataDistribution config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
-  const auto chunk_size = static_cast<ChunkID>(number_of_rows / NUMBER_OF_CHUNKS);
+  const auto chunk_size = static_cast<ChunkID::base_type>(number_of_rows / NUMBER_OF_CHUNKS);
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
 
   auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size,
@@ -66,7 +66,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
       std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                           std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto join =
         std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);

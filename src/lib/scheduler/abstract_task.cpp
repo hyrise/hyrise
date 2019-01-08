@@ -68,25 +68,9 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   }
 }
 
-void AbstractTask::join() {
+void AbstractTask::_join() {
   DebugAssert((_is_scheduled), "Task must be scheduled before it can be waited for");
 
-  /**
-   * When join() is called from a Task, i.e. from a Worker Thread, let the worker handle the join()-ing (via
-   * _wait_for_tasks()), otherwise just join right here
-   */
-  if (CurrentScheduler::is_set()) {
-    auto worker = Worker::get_this_thread_worker();
-    if (worker) {
-      worker->_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>({shared_from_this()}));
-      return;
-    }
-  }
-
-  _join_without_replacement_worker();
-}
-
-void AbstractTask::_join_without_replacement_worker() {
   std::unique_lock<std::mutex> lock(_done_mutex);
   _done_condition_variable.wait(lock, [&]() { return static_cast<bool>(_done); });
 }
@@ -113,7 +97,7 @@ void AbstractTask::execute() {
 }
 
 void AbstractTask::_mark_as_scheduled() {
-  [[gnu::unused]] auto already_scheduled = _is_scheduled.exchange(true);
+  [[maybe_unused]] auto already_scheduled = _is_scheduled.exchange(true);
 
   DebugAssert((!already_scheduled), "Task was already scheduled!");
 }
@@ -125,7 +109,7 @@ void AbstractTask::_on_predecessor_done() {
       auto worker = Worker::get_this_thread_worker();
       DebugAssert(static_cast<bool>(worker), "No worker");
 
-      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::Highest));
+      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"

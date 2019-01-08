@@ -3,7 +3,7 @@
 
 #include "benchmark/benchmark.h"
 
-#include "../benchmark_basic_fixture.hpp"
+#include "../micro_benchmark_basic_fixture.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/projection.hpp"
@@ -19,13 +19,13 @@ void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<co
                                const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   auto warm_up = std::make_shared<Projection>(in, expressions);
   warm_up->execute();
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto projection = std::make_shared<Projection>(in, expressions);
     projection->execute();
   }
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
   _clear_cache();
 
   const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
@@ -33,7 +33,7 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state
   benchmark_projection_impl(state, _table_wrapper_a, {a});
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_VariableTerm)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_VariableTerm)(benchmark::State& state) {
   _clear_cache();
 
   // "a" + "b"
@@ -43,7 +43,7 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_VariableTerm)(benchmark::State&
   benchmark_projection_impl(state, _table_wrapper_a, {add_(a, b)});
 }
 
-BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_ConstantTerm)(benchmark::State& state) {
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_ConstantTerm)(benchmark::State& state) {
   _clear_cache();
 
   const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");

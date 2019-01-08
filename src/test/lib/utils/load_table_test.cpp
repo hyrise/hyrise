@@ -9,7 +9,7 @@ namespace opossum {
 class LoadTableTest : public BaseTest {};
 
 TEST_F(LoadTableTest, EmptyTableFromHeader) {
-  const auto tbl_header_table = create_table_from_header("src/test/tables/float_int.tbl");
+  const auto tbl_header_table = create_table_from_header("resources/test_data/tbl/float_int.tbl");
   const auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Float}, {"a", DataType::Int}}, TableType::Data);
 

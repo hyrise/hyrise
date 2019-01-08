@@ -33,19 +33,19 @@ class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
 using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM>;
-TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
+TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   EXPECT_THROW(std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan),
                std::logic_error);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
@@ -54,26 +54,33 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
   }
 
   // int with float
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_o,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_float_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_o, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_float_inner.tbl", 1);
 
   // float with int
-  this->template test_join_output<TypeParam>(this->_table_wrapper_o, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/float_int_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_o, this->_table_wrapper_a, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/float_int_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloatRadixBit) {
   if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     // float with int
-    // radix bits = 1
-    std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/float_int_inner.tbl", 1);
+    // radix bits = 0
+    std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/joinoperators/float_int_inner.tbl", 1);
     auto join = std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
-                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 1);
+                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, 0);
     join->execute();
-
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+
+    for (size_t radix_bits : {1, 2, 3, 10, 17}) {
+      auto join_comp =
+          std::make_shared<JoinHash>(this->_table_wrapper_o, this->_table_wrapper_a, JoinMode::Inner,
+                                     ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, radix_bits);
+      join_comp->execute();
+      EXPECT_TABLE_EQ_UNORDERED(join->get_output(), join_comp->get_output());
+    }
   }
 }
 
@@ -83,14 +90,14 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
   }
 
   // int with double
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_p,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_double_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_p, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_double_inner.tbl", 1);
 
   // double with int
-  this->template test_join_output<TypeParam>(this->_table_wrapper_p, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/double_int_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_p, this->_table_wrapper_a, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/double_int_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
@@ -98,190 +105,179 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntString) {
     return;
   }
 
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_q,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_q, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_string_inner.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinOnString) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
-                                             ColumnIDPair(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Left, "src/test/tables/joinoperators/string_left_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{1}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Left, "resources/test_data/tbl/joinoperators/string_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Right, "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, OuterJoin) {
   if constexpr (std::is_same_v<TypeParam, JoinHash>) {
     return;
   }
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Outer, "resources/test_data/tbl/joinoperators/int_outer_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinOnString) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
-                                             ColumnIDPair(ColumnID{1}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/string_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{1}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerValueDictJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b_dict,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictValueJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_dict, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerValueDictRefJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b =
+      this->create_table_scan(this->_table_wrapper_b_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictValueRefJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a =
+      this->create_table_scan(this->_table_wrapper_a_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 1000});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerDictJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefDictJoin) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a =
+      this->create_table_scan(this->_table_wrapper_a_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b =
+      this->create_table_scan(this->_table_wrapper_b_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefDictJoinFiltered) {
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a_dict,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 1000});
+  auto scan_a =
+      this->create_table_scan(this->_table_wrapper_a_dict, ColumnID{0}, PredicateCondition::GreaterThan, 1000);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b_dict, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b =
+      this->create_table_scan(this->_table_wrapper_b_dict, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(scan_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join_filtered.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinBig) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_c, this->_table_wrapper_d, ColumnIDPair(ColumnID{0}, ColumnID{1}),
-      PredicateCondition::Equals, JoinMode::Inner, "src/test/tables/joinoperators/int_string_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(this->_table_wrapper_c, this->_table_wrapper_d,
+                                             ColumnIDPair(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals,
+                                             JoinMode::Inner,
+                                             "resources/test_data/tbl/joinoperators/int_string_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
-  auto scan_c = std::make_shared<TableScan>(
-      this->_table_wrapper_c, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_c = this->create_table_scan(this->_table_wrapper_c, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
-  auto scan_d = std::make_shared<TableScan>(
-      this->_table_wrapper_d, OperatorScanPredicate{ColumnID{1}, PredicateCondition::GreaterThanEquals, 6});
+  auto scan_d = this->create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
   scan_d->execute();
 
-  this->template test_join_output<TypeParam>(scan_c, scan_d, ColumnIDPair(ColumnID{0}, ColumnID{1}),
-                                             PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      scan_c, scan_d, ColumnIDPair(ColumnID{0}, ColumnID{1}), PredicateCondition::Equals, JoinMode::Inner,
+      "resources/test_data/tbl/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionarySegments) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      this->_table_wrapper_c_dict, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+      PredicateCondition::Equals, JoinMode::Inner, "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndReferenceSegments) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeft) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_f, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_g, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = std::make_shared<TableScan>(
-      this->_table_wrapper_h, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<TypeParam>(scan_a, scan_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -290,19 +286,16 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeft) {
 
   this->template test_join_output<TypeParam>(
       join, scan_c, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_f, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_g, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = std::make_shared<TableScan>(
-      this->_table_wrapper_h, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<TypeParam>(scan_a, scan_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -311,19 +304,16 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceRight) {
 
   this->template test_join_output<TypeParam>(
       scan_c, join, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_f,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThan, 6});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThan, 6);
   scan_a->execute();
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_g, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
-  auto scan_c = std::make_shared<TableScan>(
-      this->_table_wrapper_h, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_c->execute();
 
   auto join = std::make_shared<TypeParam>(scan_a, scan_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
@@ -332,7 +322,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnReferenceLeftFiltered) {
 
   this->template test_join_output<TypeParam>(
       join, scan_c, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_ref_ref_ref_left_filtered.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
@@ -342,7 +332,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnValue) {
 
   this->template test_join_output<TypeParam>(
       join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_left.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_val_val_val_left.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
@@ -352,7 +342,7 @@ TYPED_TEST(JoinEquiTest, MultiJoinOnRefOuter) {
 
   this->template test_join_output<TypeParam>(
       join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
-      "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
@@ -360,9 +350,9 @@ TYPED_TEST(JoinEquiTest, MixNestedLoopAndHash) {
                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
 
-  this->template test_join_output<TypeParam>(join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                             PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
@@ -370,73 +360,65 @@ TYPED_TEST(JoinEquiTest, MixHashAndNestedLoop) {
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
 
-  this->template test_join_output<TypeParam>(join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                             PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
+  this->template test_join_output<TypeParam>(
+      join, this->_table_wrapper_h, ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals, JoinMode::Inner,
+      "resources/test_data/tbl/joinoperators/int_inner_multijoin_nlj_hash.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoinRefSegment) {
   // scan that returns all rows
-  auto scan_a = std::make_shared<TableScan>(
-      this->_table_wrapper_a, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Right,
-                                             "src/test/tables/joinoperators/int_right_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_right_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinRefSegment) {
   // scan that returns all rows
-  auto scan_b = std::make_shared<TableScan>(
-      this->_table_wrapper_b, OperatorScanPredicate{ColumnID{0}, PredicateCondition::GreaterThanEquals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Left,
-                                             "src/test/tables/joinoperators/int_left_join.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_left_join.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, RightJoinEmptyRefSegment) {
   // scan that returns no rows
-  auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 0});
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
 
   this->template test_join_output<TypeParam>(scan_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Right,
-                                             "src/test/tables/joinoperators/int_join_empty.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_join_empty.tbl", 1);
 }
 
 TYPED_TEST(JoinEquiTest, LeftJoinEmptyRefSegment) {
   // scan that returns no rows
-  auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b,
-                                            OperatorScanPredicate{ColumnID{0}, PredicateCondition::Equals, 0});
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
 
   this->template test_join_output<TypeParam>(this->_table_wrapper_b, scan_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Left,
-                                             "src/test/tables/joinoperators/int_join_empty_left.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/int_join_empty_left.tbl", 1);
 }
 
 // Does not work yet due to problems with RowID implementation (RowIDs need to reference a table)
 TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
   //  Filtering to generate RefSegments
-  auto filtered_left = std::make_shared<TableScan>(
-      this->_table_wrapper_e,
-      OperatorScanPredicate{OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThanEquals, 10}});
+  auto filtered_left =
+      this->create_table_scan(this->_table_wrapper_e, ColumnID{0}, PredicateCondition::LessThanEquals, 10);
   filtered_left->execute();
-  auto filtered_left2 = std::make_shared<TableScan>(
-      this->_table_wrapper_f,
-      OperatorScanPredicate{OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThanEquals, 10}});
+  auto filtered_left2 =
+      this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::LessThanEquals, 10);
   filtered_left2->execute();
-  auto filtered_right = std::make_shared<TableScan>(
-      this->_table_wrapper_g,
-      OperatorScanPredicate{OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThanEquals, 10}});
+  auto filtered_right =
+      this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::LessThanEquals, 10);
   filtered_right->execute();
-  auto filtered_right2 = std::make_shared<TableScan>(
-      this->_table_wrapper_h,
-      OperatorScanPredicate{OperatorScanPredicate{ColumnID{0}, PredicateCondition::LessThanEquals, 10}});
+  auto filtered_right2 =
+      this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::LessThanEquals, 10);
   filtered_right2->execute();
 
   // Union left and right
@@ -447,7 +429,7 @@ TYPED_TEST(JoinEquiTest, DISABLED_JoinOnUnion /* #160 */) {
 
   this->template test_join_output<TypeParam>(union_left, union_right, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                              PredicateCondition::Equals, JoinMode::Inner,
-                                             "src/test/tables/joinoperators/expected_join_result_1.tbl", 1);
+                                             "resources/test_data/tbl/joinoperators/expected_join_result_1.tbl", 1);
 }
 
 }  // namespace opossum

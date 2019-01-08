@@ -8,7 +8,8 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
          predicate_condition == PredicateCondition::LessThanEquals ||
          predicate_condition == PredicateCondition::GreaterThan ||
          predicate_condition == PredicateCondition::GreaterThanEquals ||
-         predicate_condition == PredicateCondition::NotLike || predicate_condition == PredicateCondition::Like;
+         predicate_condition == PredicateCondition::NotLike || predicate_condition == PredicateCondition::Like ||
+         predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn;
 }
 
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition) {
@@ -28,6 +29,7 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 
     case PredicateCondition::Between:
     case PredicateCondition::In:
+    case PredicateCondition::NotIn:
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
     case PredicateCondition::IsNull:
@@ -59,6 +61,10 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       return PredicateCondition::IsNotNull;
     case PredicateCondition::IsNotNull:
       return PredicateCondition::IsNull;
+    case PredicateCondition::In:
+      return PredicateCondition::NotIn;
+    case PredicateCondition::NotIn:
+      return PredicateCondition::In;
 
     default:
       Fail("Can't inverse the specified PredicateCondition");

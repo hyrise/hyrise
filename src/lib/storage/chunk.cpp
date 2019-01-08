@@ -21,7 +21,7 @@ Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_dat
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter>& access_counter)
     : _segments(segments), _mvcc_data(mvcc_data), _access_counter(access_counter) {
-#if IS_DEBUG
+#if HYRISE_DEBUG
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
   Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
   for (const auto& segment : segments) {
@@ -54,7 +54,9 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   auto segment_it = _segments.cbegin();
   auto value_it = values.begin();
   for (; segment_it != _segments.end(); segment_it++, value_it++) {
-    (*segment_it)->append(*value_it);
+    const auto& base_value_segment = std::dynamic_pointer_cast<BaseValueSegment>(*segment_it);
+    DebugAssert(base_value_segment, "Can't append to segment that is not a ValueSegment");
+    base_value_segment->append(*value_it);
   }
 }
 
@@ -64,12 +66,12 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
 
 const Segments& Chunk::segments() const { return _segments; }
 
-uint16_t Chunk::column_count() const { return _segments.size(); }
+uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.size()); }
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
   auto first_segment = get_segment(ColumnID{0});
-  return first_segment->size();
+  return static_cast<uint32_t>(first_segment->size());
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }

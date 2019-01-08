@@ -3,6 +3,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
+#include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "utils/assert.hpp"
 
@@ -13,7 +14,7 @@ JoinOrderingRule::JoinOrderingRule(const std::shared_ptr<AbstractCostEstimator>&
 
 std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 
-bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   /**
    * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it
@@ -31,10 +32,6 @@ bool JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
   }
 
   root->set_left_input(result_lqp);
-
-  // Figuring out whether the JoinOrderingRule changed the LQP is hard (and the rule should be applied only once,
-  // anyway). So, return false.
-  return false;
 }
 
 std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recursively(
@@ -47,15 +44,20 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
    *        -> look for more JoinGraphs below the JoinGraph's vertices
    */
 
-  const auto join_graph = JoinGraph::from_lqp(lqp);
+  const auto join_graph = JoinGraph::build_from_lqp(lqp);
   if (!join_graph) {
     _recurse_to_inputs(lqp);
     return lqp;
   }
 
-  // Currently, we apply DpCcp to any JoinGraph we encounter.
-  // TODO(anybody) in the future we should use, e.g., a different algorithm for very complex JoinGraphs
-  auto result_lqp = DpCcp{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
+  // Simple heuristic: Use DpCcp for any query with less than X tables and GOO for everything more complex
+  // TODO(anybody) Increase X once our costing/cardinality estimation is faster/uses internal caching
+  auto result_lqp = std::shared_ptr<AbstractLQPNode>{};
+  if (join_graph->vertices.size() < 9) {
+    result_lqp = DpCcp{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
+  } else {
+    result_lqp = GreedyOperatorOrdering{_cost_estimator}(*join_graph);  // NOLINT - doesn't like `{}()`
+  }
 
   for (const auto& vertex : join_graph->vertices) {
     _recurse_to_inputs(vertex);

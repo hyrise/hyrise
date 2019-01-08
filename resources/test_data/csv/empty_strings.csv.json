@@ -1,0 +1,16 @@
+{
+    "columns": [
+        {
+            "name": "a",
+            "type": "string"
+        },
+        {
+            "name": "b",
+            "type": "string"
+        },
+        {
+            "name": "c",
+            "type": "string"
+        }
+    ]
+}

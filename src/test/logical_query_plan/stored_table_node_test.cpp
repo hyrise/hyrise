@@ -14,8 +14,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
-    StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
+    StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl"));
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});
@@ -48,5 +48,7 @@ TEST_F(StoredTableNodeTest, Equals) {
 }
 
 TEST_F(StoredTableNodeTest, Copy) { EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node); }
+
+TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u); }
 
 }  // namespace opossum

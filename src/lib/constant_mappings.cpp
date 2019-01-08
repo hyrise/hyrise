@@ -14,17 +14,9 @@
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "utils/make_bimap.hpp"
 
 namespace opossum {
-
-/*
- * boost::bimap does not support initializer_lists.
- * Instead we use this helper function to have an initializer_list-friendly interface.
- */
-template <typename L, typename R>
-boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>::value_type> list) {
-  return boost::bimap<L, R>(list.begin(), list.end());
-}
 
 const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
     make_bimap<PredicateCondition, std::string>({
@@ -37,6 +29,8 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::Between, "BETWEEN"},
         {PredicateCondition::Like, "LIKE"},
         {PredicateCondition::NotLike, "NOT LIKE"},
+        {PredicateCondition::In, "IN"},
+        {PredicateCondition::NotIn, "NOT IN"},
         {PredicateCondition::IsNull, "IS NULL"},
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
@@ -93,27 +87,5 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
 
 const boost::bimap<TableType, std::string> table_type_to_string =
     make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
-
-const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string =
-    make_bimap<JitExpressionType, std::string>({{JitExpressionType::Addition, "+"},
-                                                {JitExpressionType::Column, "<COLUMN>"},
-                                                {JitExpressionType::Subtraction, "-"},
-                                                {JitExpressionType::Multiplication, "*"},
-                                                {JitExpressionType::Division, "/"},
-                                                {JitExpressionType::Modulo, "%"},
-                                                {JitExpressionType::Power, "^"},
-                                                {JitExpressionType::Equals, "="},
-                                                {JitExpressionType::NotEquals, "<>"},
-                                                {JitExpressionType::GreaterThan, ">"},
-                                                {JitExpressionType::GreaterThanEquals, ">="},
-                                                {JitExpressionType::LessThan, "<"},
-                                                {JitExpressionType::LessThanEquals, "<="},
-                                                {JitExpressionType::Like, "LIKE"},
-                                                {JitExpressionType::NotLike, "NOT LIKE"},
-                                                {JitExpressionType::And, "AND"},
-                                                {JitExpressionType::Or, "OR"},
-                                                {JitExpressionType::Not, "NOT"},
-                                                {JitExpressionType::IsNull, "IS NULL"},
-                                                {JitExpressionType::IsNotNull, "IS NOT NULL"}});
 
 }  // namespace opossum

@@ -9,7 +9,7 @@
 
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
-#include "storage/segment_iterables/chunk_offset_mapping.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {
@@ -117,7 +117,7 @@ class Sort::SortImplMaterializeOutput {
           } else {
             const auto value = (*base_segment)[chunk_offset];
             const auto is_null = variant_is_null(value);
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast<ColumnDataType>(value));
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast_variant<ColumnDataType>(value));
             value_segment_null_vector.push_back(is_null);
           }
 
@@ -216,16 +216,12 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
       auto base_segment = chunk->get_segment(_column_id);
 
-      resolve_segment_type<SortColumnType>(*base_segment, [&](auto& typed_segment) {
-        auto iterable = create_iterable_from_segment<SortColumnType>(typed_segment);
-
-        iterable.for_each([&](const auto& value) {
-          if (value.is_null()) {
-            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
-          } else {
-            row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
-          }
-        });
+      segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+        if (position.is_null()) {
+          null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
+        } else {
+          row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
+        }
       });
     }
   }

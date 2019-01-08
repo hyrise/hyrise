@@ -29,7 +29,7 @@ TEST_F(ShowColumnsNodeTest, Description) {
   EXPECT_EQ(_show_columns_node->description(), "[ShowColumns] Table: 'table_a'");
 }
 
-TEST_F(ShowColumnsNodeTest, TableName) { EXPECT_EQ(_show_columns_node->table_name(), "table_a"); }
+TEST_F(ShowColumnsNodeTest, TableName) { EXPECT_EQ(_show_columns_node->table_name, "table_a"); }
 
 TEST_F(ShowColumnsNodeTest, Equals) {
   EXPECT_EQ(*_show_columns_node, *_show_columns_node);
@@ -39,5 +39,7 @@ TEST_F(ShowColumnsNodeTest, Equals) {
 }
 
 TEST_F(ShowColumnsNodeTest, Copy) { EXPECT_EQ(*_show_columns_node->deep_copy(), *_show_columns_node); }
+
+TEST_F(ShowColumnsNodeTest, NodeExpressions) { ASSERT_EQ(_show_columns_node->node_expressions.size(), 0u); }
 
 }  // namespace opossum

@@ -14,11 +14,13 @@
 #include "concurrency/transaction_manager.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/storage_manager.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
+#include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 #include "client_connection.hpp"
 #include "query_response_builder.hpp"
@@ -161,8 +163,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
   };
 
   auto send_command_complete = [=](uint64_t row_count) {
-    auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
-    auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);
+    auto root_op = sql_pipeline->get_physical_plans().front();
+    auto complete_message = QueryResponseBuilder::build_command_complete_message(*root_op, row_count);
     return _connection->send_command_complete(complete_message);
   };
 
@@ -190,7 +192,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
   };
 
   // A simple query command invalidates unnamed statements and portals
-  _prepared_statements.erase("");
+  if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
   _portals.erase("");
 
   return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
@@ -205,33 +207,35 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(const ParsePacket& parse_info) {
-  auto prepared_statement_name = parse_info.statement_name;
-
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
-  auto statement_it = _prepared_statements.find(prepared_statement_name);
-  if (statement_it != _prepared_statements.end()) {
-    if (!prepared_statement_name.empty()) {
+  if (StorageManager::get().has_prepared_plan(parse_info.statement_name)) {
+    // Not using Assert() since it includes file:line info that we don't want to hard code in tests
+    if (!parse_info.statement_name.empty()) {
       Fail("Named prepared statements must be explicitly closed before they can be redefined.");
     }
-    _prepared_statements.erase(statement_it);
+    StorageManager::get().drop_prepared_plan(parse_info.statement_name);
   }
 
-  return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(parse_info.query)) >> then >>
-         [=](std::unique_ptr<CreatePipelineResult> result) {
+  auto task = std::make_shared<ParseServerPreparedStatementTask>(parse_info.query);
+  return _task_runner->dispatch_server_task(task) >> then >>
+         [=](std::unique_ptr<PreparedPlan> prepared_plan) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
-           _prepared_statements.insert(std::make_pair(prepared_statement_name, result->sql_pipeline));
+           StorageManager::get().add_prepared_plan(parse_info.statement_name, std::move(prepared_plan));
          } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
-  auto statement_it = _prepared_statements.find(packet.statement_name);
-  if (statement_it == _prepared_statements.end()) Fail("The specified statement does not exist.");
+  // Not using Assert() since it includes file:line info that we don't want to hard code in tests
+  if (!StorageManager::get().has_prepared_plan(packet.statement_name)) {
+    Fail("The specified statement does not exist.");
+  }
 
-  auto sql_pipeline = statement_it->second;
-  if (packet.statement_name.empty()) _prepared_statements.erase(statement_it);
+  const auto prepared_plan = StorageManager::get().get_prepared_plan(packet.statement_name);
+
+  if (packet.statement_name.empty()) StorageManager::get().drop_prepared_plan(packet.statement_name);
 
   auto portal_name = packet.destination_portal;
 
@@ -240,19 +244,14 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   auto portal_it = _portals.find(portal_name);
   if (portal_it != _portals.end()) {
+    // Not using Assert() since it includes file:line info that we don't want to hard code in tests
     if (!portal_name.empty()) Fail("Named portals must be explicitly closed before they can be redefined.");
     _portals.erase(portal_it);
   }
 
-  auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
-
-  auto task = std::make_shared<BindServerPreparedStatementTask>(sql_pipeline, packet.params);
+  auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_plan, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
-         [=](std::unique_ptr<SQLQueryPlan> query_plan) {
-           std::shared_ptr<SQLQueryPlan> shared_query_plan = std::move(query_plan);
-           auto portal = std::make_pair(statement_type, shared_query_plan);
-           _portals.insert(std::make_pair(portal_name, portal));
-         } >>
+         [=](std::shared_ptr<AbstractOperator> physical_plan) { _portals.emplace(portal_name, physical_plan); } >>
          then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
@@ -283,23 +282,24 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute_command(
     const std::string& portal_name) {
   auto portal_it = _portals.find(portal_name);
-  if (portal_it == _portals.end()) throw std::logic_error("The specified portal does not exist.");
+  Assert(portal_it != _portals.end(), "The specified portal does not exist.");
 
-  auto statement_type = portal_it->second.first;
-  auto query_plan = portal_it->second.second;
+  const auto physical_plan = portal_it->second;
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
   if (!_transaction) _transaction = TransactionManager::get().new_transaction_context();
 
-  query_plan->set_transaction_context(_transaction);
+  physical_plan->set_transaction_context_recursively(_transaction);
 
-  return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan)) >> then >>
+  return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(physical_plan)) >>
+         then >>
          [=](std::shared_ptr<const Table> result_table) {
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
-           if (!result_table)
+           if (!result_table) {
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
                     []() { return uint64_t(0); };
+           }
 
            const auto row_description = QueryResponseBuilder::build_row_description(result_table);
            return _connection->send_row_description(row_description) >> then >> [=]() {
@@ -308,7 +308,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
            };
          } >>
          then >> [=](uint64_t row_count) {
-           auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);
+           auto complete_message = QueryResponseBuilder::build_command_complete_message(*physical_plan, row_count);
            return _connection->send_command_complete(complete_message);
          };
 }

@@ -1,14 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <vector>
+#include "abstract_join_ordering_algorithm.hpp"
 
 namespace opossum {
-
-class AbstractExpression;
-class AbstractCostEstimator;
-class AbstractLQPNode;
-class JoinGraph;
 
 /**
  * Optimal join ordering algorithm described in "Analysis of two existing and one new dynamic programming algorithm for
@@ -21,7 +15,7 @@ class JoinGraph;
  *
  * Local predicates are pushed down and sorted by increasing cost.
  */
-class DpCcp final {
+class DpCcp final : public AbstractJoinOrderingAlgorithm {
  public:
   explicit DpCcp(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 
@@ -33,17 +27,6 @@ class DpCcp final {
    *                         * the subplans from the vertices below them
    */
   std::shared_ptr<AbstractLQPNode> operator()(const JoinGraph& join_graph);
-
- private:
-  std::shared_ptr<AbstractLQPNode> _add_predicates_to_plan(
-      const std::shared_ptr<AbstractLQPNode>& lqp,
-      const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const;
-
-  std::shared_ptr<AbstractLQPNode> _add_join_to_plan(
-      const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-      std::vector<std::shared_ptr<AbstractExpression>> join_predicates) const;
-
-  std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 };
 
 }  // namespace opossum

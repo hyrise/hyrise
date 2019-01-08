@@ -19,6 +19,10 @@ namespace hana = boost::hana;
 
 enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference };
 
+inline static std::vector<EncodingType> encoding_type_enum_values{
+    EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength, EncodingType::FixedStringDictionary,
+    EncodingType::FrameOfReference};
+
 /**
  * @brief Maps each encoding type to its supported data types
  *

@@ -3,9 +3,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(
     hyriseMicroBenchmarks
 
-    benchmark_basic_fixture.cpp
-    benchmark_basic_fixture.hpp
-    benchmark_main.cpp
+    micro_benchmark_basic_fixture.cpp
+    micro_benchmark_basic_fixture.hpp
+    micro_benchmark_main.cpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
     operators/join_benchmark.cpp
@@ -16,7 +16,7 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
     statistics/generate_table_statistics_benchmark.cpp
-    tpch_db_generator_benchmark.cpp
+    tpch_table_generator_benchmark.cpp
 )
 
 target_link_libraries(
@@ -31,9 +31,9 @@ add_executable(
     hyriseBenchmarkPlayground
 
     benchmark_playground.cpp
-    benchmark_basic_fixture.cpp
-    benchmark_basic_fixture.hpp
-    benchmark_main.cpp
+    micro_benchmark_basic_fixture.cpp
+    micro_benchmark_basic_fixture.hpp
+    micro_benchmark_main.cpp
 )
 target_link_libraries(
     hyriseBenchmarkPlayground
@@ -44,9 +44,14 @@ target_link_libraries(
 )
 
 # General purpose benchmark runner
-add_executable(hyriseBenchmark benchmark_runner_main.cpp)
+add_executable(
+    hyriseBenchmarkFileBased
+
+    file_based_benchmark.cpp
+)
+
 target_link_libraries(
-    hyriseBenchmark
+    hyriseBenchmarkFileBased
 
     hyrise
     hyriseBenchmarkLib

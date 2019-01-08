@@ -22,13 +22,15 @@ Avoid exception handling. Because Hyrise is not a product, we do not have to rec
 - If your templated methods/classes are used outside of your file, they have to be in the header. But if you only use them internally, you should place them in the cpp file.
 - Try to keep the size of your templated methods as small as possible (Thin Template idiom). If only a small part of your method depends on the template parameter, consider moving the rest into a non-templated method. This reduces compile times.
 - Use smart pointers over c-style pointers
-- Use `IS_DEBUG` macro for non-essential checks
+- Use `HYRISE_DEBUG` macro for non-essential checks
 - Be specific: `double a = 3.0;` but `float a = 3.0f;`
 - Use forward declarations whenever possible to reduce compile time
 - We mostly use structs for PODS (plain old data structures). If it has methods, chances are that it is a class.
 - Don't write `this->` if you don't have to
 - Use C++11 for loops when possible: `for (const auto& item : items) {...}`
 - When creating a vector where you know the size beforehand, use `reserve` to avoid unnecessary resizes and allocations
+- Don’t evaluate end() every time through a loop: http://llvm.org/docs/CodingStandards.html#don-t-evaluate-end-every-time-through-a-loop
+
 
 ## Naming Conventions
 - Files: lowercase separated by underscores, e.g., abstract_operator.cpp

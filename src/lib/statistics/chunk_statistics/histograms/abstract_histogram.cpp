@@ -12,9 +12,7 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-
-#include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -62,13 +60,10 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
     const std::shared_ptr<const BaseSegment>& segment) {
   std::map<T, HistogramCountType> value_counts;
 
-  resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
-    auto iterable = create_iterable_from_segment<T>(typed_segment);
-    iterable.for_each([&](const auto& value) {
-      if (!value.is_null()) {
-        value_counts[value.value()]++;
-      }
-    });
+  segment_iterate<T>(*segment, [&](const auto& position) {
+    if (!position.is_null()) {
+      value_counts[position.value()]++;
+    }
   });
 
   std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
@@ -120,7 +115,7 @@ T AbstractHistogram<T>::_get_next_value(const T value) const {
 }
 
 template <typename T>
-float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
+double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -152,7 +147,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
+    return static_cast<double>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
   } else {
     const auto bin_min = _bin_minimum(bin_id);
     const auto bin_max = _bin_maximum(bin_id);
@@ -164,14 +159,14 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
     const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
     const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
     const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-    return static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    return static_cast<double>(value_repr - min_repr) / (max_repr - min_repr + 1);
   }
 }
 
 template <typename T>
 bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                                       const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -196,7 +191,7 @@ bool AbstractHistogram<T>::_can_prune(const PredicateCondition predicate_type, c
         return true;
       }
 
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
       if (can_prune(PredicateCondition::LessThanEquals, value2) || value2 < value) {
         return true;
       }
@@ -244,7 +239,7 @@ template <>
 bool AbstractHistogram<std::string>::can_prune(const PredicateCondition predicate_type,
                                                const AllTypeVariant& variant_value,
                                                const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<std::string>(variant_value);
+  const auto value = type_cast_variant<std::string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.
@@ -387,7 +382,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
     return 0.f;
   }
 
-  const auto value = type_cast<T>(variant_value);
+  const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_type) {
     case PredicateCondition::Equals: {
@@ -417,7 +412,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
         // Therefore, we need to sum up the counts of all bins with a max < value.
         index = _next_bin_for_value(value);
       } else {
-        cardinality += _share_of_bin_less_than_value(index, value) * _bin_height(index);
+        cardinality += static_cast<float>(_share_of_bin_less_than_value(index, value)) * _bin_height(index);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.
@@ -448,7 +443,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
       return total_count() - estimate_cardinality(PredicateCondition::LessThanEquals, variant_value);
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = type_cast<T>(*variant_value2);
+      const auto value2 = type_cast_variant<T>(*variant_value2);
 
       if (value2 < value) {
         return 0.f;
@@ -479,7 +474,7 @@ template <>
 float AbstractHistogram<std::string>::estimate_cardinality(const PredicateCondition predicate_type,
                                                            const AllTypeVariant& variant_value,
                                                            const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = type_cast<std::string>(variant_value);
+  const auto value = type_cast_variant<std::string>(variant_value);
 
   // Only allow supported characters in search value.
   // If predicate is (NOT) LIKE additionally allow wildcards.

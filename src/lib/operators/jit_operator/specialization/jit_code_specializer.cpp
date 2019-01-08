@@ -146,14 +146,20 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
       }
     }
 
-    auto& function = *call_site.getCalledFunction();
-    auto function_name = function.getName().str();
+    auto function = call_site.getCalledFunction();
+    // ignore invalid functions
+    if (!function) {
+      call_sites.pop();
+      continue;
+    }
 
-    auto function_has_opossum_namespace = boost::starts_with(function.getName().str(), "_ZNK7opossum") ||
-                                          boost::starts_with(function.getName().str(), "_ZN7opossum");
+    const auto function_name = function->getName().str();
+
+    const auto function_has_opossum_namespace =
+        boost::starts_with(function_name, "_ZNK7opossum") || boost::starts_with(function_name, "_ZN7opossum");
 
     // A note about "__clang_call_terminate":
-    // __clang_call_terminate is generated / used internally by clang to call the std::terminate function when expection
+    // __clang_call_terminate is generated / used internally by clang to call the std::terminate function when exception
     // handling fails. For some unknown reason this function cannot be resolved in the Hyrise binary when jit-compiling
     // bitcode that uses the function. The function is, however, present in the bitcode repository.
     // We thus always inline this function from the repository.
@@ -161,7 +167,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
     // All function that are not in the opossum:: namespace are not considered for inlining. Instead, a function
     // declaration (without a function body) is created.
     if (!function_has_opossum_namespace && function_name != "__clang_call_terminate") {
-      context.llvm_value_map[&function] = _create_function_declaration(context, function, function.getName());
+      context.llvm_value_map[function] = _create_function_declaration(context, *function, function->getName());
       call_sites.pop();
       continue;
     }
@@ -188,23 +194,23 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
     context.llvm_value_map.clear();
 
     // Map called functions
-    _visit<const llvm::Function>(function, [&](const auto& fn) {
+    _visit<const llvm::Function>(*function, [&](const auto& fn) {
       if (fn.isDeclaration() && !context.llvm_value_map.count(&fn)) {
         context.llvm_value_map[&fn] = _create_function_declaration(context, fn, fn.getName());
       }
     });
 
     // Map global variables
-    _visit<const llvm::GlobalVariable>(function, [&](auto& global) {
+    _visit<const llvm::GlobalVariable>(*function, [&](auto& global) {
       if (!context.llvm_value_map.count(&global)) {
         context.llvm_value_map[&global] = _clone_global_variable(context, global);
       }
     });
 
     // Map function arguments
-    auto function_arg = function.arg_begin();
+    auto function_arg = function->arg_begin();
     auto call_arg = call_site.arg_begin();
-    for (; function_arg != function.arg_end() && call_arg != call_site.arg_end(); ++function_arg, ++call_arg) {
+    for (; function_arg != function->arg_end() && call_arg != call_site.arg_end(); ++function_arg, ++call_arg) {
       context.llvm_value_map[function_arg] = call_arg->get();
     }
 

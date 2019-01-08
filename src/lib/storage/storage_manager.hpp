@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "lqp_view.hpp"
+#include "prepared_plan.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
 
@@ -19,35 +20,38 @@ class AbstractLQPNode;
 // by mapping table names to table instances.
 class StorageManager : public Singleton<StorageManager> {
  public:
-  // adds a table to the storage manager
+  /**
+   * @defgroup Manage Tables
+   * @{
+   */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
-
-  // removes the table from the storage manger
   void drop_table(const std::string& name);
-
-  // returns the table instance with the given name
   std::shared_ptr<Table> get_table(const std::string& name) const;
-
-  // returns whether the storage manager holds a table with the given name
   bool has_table(const std::string& name) const;
-
-  // returns a list of all table names
   std::vector<std::string> table_names() const;
+  const std::map<std::string, std::shared_ptr<Table>>& tables() const;
+  /** @} */
 
-  // adds a view to the storage manager
-  void add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view);
-
-  // removes the view from the storage manger
-  void drop_lqp_view(const std::string& name);
-
-  // returns the view instance with the given name
+  /**
+   * @defgroup Manage SQL VIEWs
+   * @{
+   */
+  void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
+  void drop_view(const std::string& name);
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
-
-  // returns whether the storage manager holds a table with the given name
   bool has_view(const std::string& name) const;
-
-  // returns a list of all view names
   std::vector<std::string> view_names() const;
+  /** @} */
+
+  /**
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements
+   * @{
+   */
+  void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
+  std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
+  bool has_prepared_plan(const std::string& name) const;
+  void drop_prepared_plan(const std::string& name);
+  /** @} */
 
   // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
   void print(std::ostream& out = std::cout) const;
@@ -73,5 +77,6 @@ class StorageManager : public Singleton<StorageManager> {
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
   std::map<std::string, std::shared_ptr<LQPView>> _views;
+  std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 };
 }  // namespace opossum

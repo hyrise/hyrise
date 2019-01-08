@@ -8,6 +8,7 @@
 #include <string>
 
 #include "invalid_input_exception.hpp"
+#include "string_utils.hpp"
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
@@ -39,11 +40,6 @@
  *     invalid input might want to be caught.
  */
 
-// __FILENAME__ is __FILE__ with irrelevant leading chars trimmed
-#ifndef __FILENAME__
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
-#endif
-
 namespace opossum {
 
 [[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
@@ -54,9 +50,9 @@ namespace opossum {
 
 }  // namespace opossum
 
-#define Assert(expr, msg)                                                                  \
-  if (!static_cast<bool>(expr)) {                                                          \
-    opossum::Fail(std::string(__FILENAME__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+#define Assert(expr, msg)                                                                                 \
+  if (!static_cast<bool>(expr)) {                                                                         \
+    opossum::Fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   }
 
 #define AssertInput(expr, msg)                                               \
@@ -64,7 +60,7 @@ namespace opossum {
     throw InvalidInputException(std::string("Invalid input error: ") + msg); \
   }
 
-#if IS_DEBUG
+#if HYRISE_DEBUG
 #define DebugAssert(expr, msg) Assert(expr, msg)
 #else
 #define DebugAssert(expr, msg)

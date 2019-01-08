@@ -1,10 +1,12 @@
 #include "jit_read_tuples.hpp"
 
-#include "constant_mappings.hpp"
+#include "../jit_types.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
+
+JitReadTuples::JitReadTuples(const bool has_validate) : _has_validate(has_validate) {}
 
 std::string JitReadTuples::description() const {
   std::stringstream desc;
@@ -25,10 +27,18 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
     auto data_type = input_literal.tuple_value.data_type();
-    resolve_data_type(data_type, [&](auto type) {
-      using DataType = typename decltype(type)::type;
-      context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
-    });
+    if (data_type == DataType::Null) {
+      input_literal.tuple_value.set_is_null(true, context);
+    } else {
+      resolve_data_type(data_type, [&](auto type) {
+        using LiteralDataType = typename decltype(type)::type;
+        input_literal.tuple_value.set<LiteralDataType>(boost::get<LiteralDataType>(input_literal.value), context);
+        // Non-jit operators store bool values as int values
+        if constexpr (std::is_same_v<LiteralDataType, Bool>) {
+          input_literal.tuple_value.set<bool>(boost::get<LiteralDataType>(input_literal.value), context);
+        }
+      });
+    }
   }
 }
 
@@ -37,24 +47,49 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   context.chunk_offset = 0;
   context.chunk_size = in_chunk.size();
 
+  if (_has_validate) {
+    if (in_chunk.has_mvcc_data()) {
+      // materialize atomic transaction ids as specialization cannot handle atomics
+      context.row_tids.resize(in_chunk.mvcc_data()->tids.size());
+      auto itr = context.row_tids.begin();
+      for (const auto& tid : in_chunk.mvcc_data()->tids) {
+        *itr++ = tid.load();
+      }
+      // Lock MVCC data before accessing it.
+      context.mvcc_data_lock =
+          std::make_unique<SharedScopedLockingPtr<const MvccData>>(in_chunk.get_scoped_mvcc_data_lock());
+      context.mvcc_data = in_chunk.mvcc_data();
+    } else {
+      DebugAssert(in_chunk.references_exactly_one_table(),
+                  "Input to Validate contains a Chunk referencing more than one table.");
+      const auto& ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(in_chunk.get_segment(ColumnID{0}));
+      context.referenced_table = ref_col_in->referenced_table();
+      context.pos_list = ref_col_in->pos_list();
+    }
+  }
+
   // Create the segment iterator for each input segment and store them to the runtime context
   for (const auto& input_column : _input_columns) {
     const auto column_id = input_column.column_id;
     const auto segment = in_chunk.get_segment(column_id);
     const auto is_nullable = in_table.column_is_nullable(column_id);
-    resolve_data_and_segment_type(*segment, [&](auto type, auto& typed_segment) {
-      using ColumnDataType = typename decltype(type)::type;
-      create_iterable_from_segment<ColumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
+
+    if (is_nullable) {
+      segment_with_iterators(*segment, [&](auto it, const auto end) {
         using IteratorType = decltype(it);
-        if (is_nullable) {
-          context.inputs.push_back(
-              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value));
-        } else {
-          context.inputs.push_back(
-              std::make_shared<JitSegmentReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value));
-        }
+        using Type = typename IteratorType::ValueType;
+
+        context.inputs.push_back(
+            std::make_shared<JitSegmentReader<IteratorType, Type, true>>(it, input_column.tuple_value));
       });
-    });
+    } else {
+      segment_with_iterators(*segment, [&](auto it, const auto end) {
+        using IteratorType = decltype(it);
+        using Type = typename IteratorType::ValueType;
+        context.inputs.push_back(
+            std::make_shared<JitSegmentReader<IteratorType, Type, false>>(it, input_column.tuple_value));
+      });
+    }
   }
 }
 
@@ -87,7 +122,8 @@ JitTupleValue JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple value to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
-  const auto tuple_value = JitTupleValue(data_type, false, _num_tuple_values++);
+  const bool nullable = variant_is_null(value);
+  const auto tuple_value = JitTupleValue(data_type, nullable, _num_tuple_values++);
   _input_literals.push_back({value, tuple_value});
   return tuple_value;
 }

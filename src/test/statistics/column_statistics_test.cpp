@@ -5,6 +5,8 @@
 
 #include "all_parameter_variant.hpp"
 #include "base_test.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -16,7 +18,7 @@ namespace opossum {
 class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
+    _table_with_different_column_types = load_table("resources/test_data/tbl/int_float_double_string.tbl");
     auto table_statistics1 = generate_table_statistics(*_table_with_different_column_types);
     _column_statistics_int = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[0]));
@@ -27,7 +29,7 @@ class ColumnStatisticsTest : public BaseTest {
     _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[3]));
 
-    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
+    _table_uniform_distribution = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
     auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
     _column_statistics_uniform_columns = table_statistics2.column_statistics();
   }
@@ -53,12 +55,16 @@ class ColumnStatisticsTest : public BaseTest {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
     auto row_count = table->row_count();
-    for (ColumnID::base_type column_1 = 0; column_1 < column_statistics.size(); ++column_1) {
-      for (ColumnID::base_type column_2 = 0; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
+    for (ColumnID column_1{0}; column_1 < column_statistics.size(); ++column_1) {
+      for (ColumnID column_2{0}; column_2 < column_statistics.size() && column_1 != column_2; ++column_2) {
         auto result_container = column_statistics[column_1]->estimate_predicate_with_column(
             predicate_condition, *column_statistics[column_2]);
-        auto table_scan = std::make_shared<TableScan>(
-            table_wrapper, OperatorScanPredicate{ColumnID{column_1}, predicate_condition, ColumnID{column_2}});
+
+        auto left_operand = PQPColumnExpression::from_table(*table, column_1);
+        auto right_operand = PQPColumnExpression::from_table(*table, column_2);
+        auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
+
+        auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
         table_scan->execute();
         auto result_row_count = table_scan->get_output()->row_count();
         EXPECT_FLOAT_EQ(result_container.selectivity,
@@ -388,9 +394,9 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
   auto stats_2 =
       std::const_pointer_cast<BaseColumnStatistics>(_column_statistics_uniform_columns[2]);  // values from 1 to 2
 
-  stats_0->set_null_value_ratio(0.1);   // non-null value ratio: 0.9
-  stats_1->set_null_value_ratio(0.2);   // non-null value ratio: 0.8
-  stats_2->set_null_value_ratio(0.15);  // non-null value ratio: 0.85
+  stats_0->set_null_value_ratio(0.1f);   // non-null value ratio: 0.9
+  stats_1->set_null_value_ratio(0.2f);   // non-null value ratio: 0.8
+  stats_2->set_null_value_ratio(0.15f);  // non-null value ratio: 0.85
 
   auto predicate_condition = PredicateCondition::Equals;
   auto result = stats_0->estimate_predicate_with_column(predicate_condition, *stats_1);

@@ -1,6 +1,7 @@
 #include "jit_operator_wrapper.hpp"
 
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
+#include "operators/jit_operator/operators/jit_validate.hpp"
 
 namespace opossum {
 
@@ -46,8 +47,19 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   auto out_table = _sink()->create_output_table(in_table.max_chunk_size());
 
   JitRuntimeContext context;
+  if (transaction_context_is_set()) {
+    context.transaction_id = transaction_context()->transaction_id();
+    context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
+  }
+
   _source()->before_query(in_table, context);
   _sink()->before_query(*out_table, context);
+
+  for (auto& jit_operator : _jit_operators) {
+    if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
+      jit_validate->set_input_table_type(in_table.type());
+    }
+  }
 
   // Connect operators to a chain
   for (auto it = _jit_operators.begin(); it != _jit_operators.end() && it + 1 != _jit_operators.end(); ++it) {

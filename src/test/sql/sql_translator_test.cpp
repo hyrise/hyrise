@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -12,6 +11,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -30,11 +30,11 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
-#include "tpch/tpch_queries.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -42,14 +42,14 @@ using namespace std::string_literals;            // NOLINT
 
 namespace opossum {
 
-class SQLTranslatorTest : public ::testing::Test {
+class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
-    opossum::StorageManager::get().add_table("int_string", opossum::load_table("src/test/tables/int_string.tbl"));
-    opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
-    opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
-    opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
+    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
+    StorageManager::get().add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
+    StorageManager::get().add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
@@ -70,16 +70,28 @@ class SQLTranslatorTest : public ::testing::Test {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  void TearDown() override { StorageManager::reset(); }
-
-  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
+  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query,
+                                                          const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
     Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-    const auto lqps = opossum::SQLTranslator{}.translate_parser_result(parser_result);
+    const auto lqps = SQLTranslator{use_mvcc}.translate_parser_result(parser_result);
+
     Assert(lqps.size() == 1, "Expected just one LQP");
     return lqps.at(0);
+  }
+
+  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, std::vector<ParameterID>> compile_prepared_query(
+      const std::string& query) {
+    hsql::SQLParserResult parser_result;
+    hsql::SQLParser::parseSQLString(query, &parser_result);
+    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+    SQLTranslator sql_translator{UseMvcc::No};
+    const auto lqps = sql_translator.translate_parser_result(parser_result);
+    Assert(lqps.size() == 1, "Expected just one LQP");
+    return {lqps.at(0), sql_translator.parameter_ids_of_value_placeholders()};
   }
 
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
@@ -137,14 +149,15 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
    */
 
   // "a + b" is a temporary column that shouldn't be in the output
-  const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float WHERE a + b > 10");
-  const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float WHERE a + b > 10;");
+  const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float ORDER BY a + b");
+  const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float ORDER BY a + b");
 
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(greater_than_(add_(int_float_a, int_float_b), 10),
-      ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b), stored_table_node_int_float)));  // NOLINT
+    SortNode::make(expression_vector(add_(int_float_a, int_float_b)), std::vector<OrderByMode>{OrderByMode::Ascending},
+      ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_no_table, expected_lqp);
@@ -291,7 +304,7 @@ TEST_F(SQLTranslatorTest, WhereWithArithmetics) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a),
     PredicateNode::make(greater_than_equals_(a_times_b, b_plus_a),
-      ProjectionNode::make(expression_vector(a_times_b, b_plus_a, int_float_a, int_float_b), stored_table_node_int_float)));  // NOLINT
+      stored_table_node_int_float));  // NOLINT
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -306,10 +319,8 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
   const auto expected_lqp_a = PredicateNode::make(like_(int_string_b, "%test1%"), stored_table_node_int_string);
   const auto expected_lqp_b = PredicateNode::make(not_like_(int_string_b, "%test1%"), stored_table_node_int_string);
   const auto expected_lqp_c =
-  ProjectionNode::make(expression_vector(int_string_a, int_string_b),
-    PredicateNode::make(not_like_(int_string_b, concat_("%test1", "%")),
-      ProjectionNode::make(expression_vector(concat_("%test1", "%"), int_string_a, int_string_b),
-        stored_table_node_int_string)));
+  PredicateNode::make(not_like_(int_string_b, concat_("%test1", "%")),
+      stored_table_node_int_string);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
@@ -328,9 +339,8 @@ TEST_F(SQLTranslatorTest, WhereWithLogical) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a),
-    PredicateNode::make(not_equals_(predicate, 0),
-      ProjectionNode::make(expression_vector(predicate, int_float_a, int_float_b),
-        stored_table_node_int_float)));  // NOLINT
+    PredicateNode::make(predicate,
+      stored_table_node_int_float));  // NOLINT
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -359,8 +369,7 @@ TEST_F(SQLTranslatorTest, WhereIsNull) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_b),
     PredicateNode::make(is_null_(add_(int_float_a, int_float_b)),
-      ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
-      stored_table_node_int_float)));  // NOLINT
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -390,10 +399,26 @@ TEST_F(SQLTranslatorTest, WhereExists) {
   const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(exists_(sub_select), 0),
-      ProjectionNode::make(expression_vector(exists_(sub_select), int_float_a, int_float_b),
-        stored_table_node_int_float)));  // NOLINT
+  PredicateNode::make(exists_(sub_select),
+    stored_table_node_int_float);  // NOLINT
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereNotExists) {
+  const auto actual_lqp =
+      compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
+
+  // clang-format off
+  const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
+  const auto sub_select_lqp =
+  PredicateNode::make(equals_(parameter_int_float_a, int_float2_a), stored_table_node_int_float2);
+  const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
+
+  const auto expected_lqp =
+  PredicateNode::make(not_exists_(sub_select),
+                      stored_table_node_int_float);  // NOLINT
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -408,15 +433,13 @@ TEST_F(SQLTranslatorTest, WhereWithCorrelatedSelect) {
   // clang-format off
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(add_(int_float2_a, parameter_b))),
-    ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, add_(int_float2_a, parameter_b)),
+    ProjectionNode::make(expression_vector(add_(int_float2_a, parameter_b)),
       stored_table_node_int_float2));
   const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_b));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(greater_than_(int_float_a, sub_select),
-      ProjectionNode::make(expression_vector(sub_select, int_float_a, int_float_b),
-        stored_table_node_int_float)));
+  PredicateNode::make(greater_than_(int_float_a, sub_select),
+      stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -453,25 +476,6 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
   EXPECT_LQP_EQ(actual_lqp_h, expected_lqp_h);
 }
 
-TEST_F(SQLTranslatorTest, WhereNotFallback) {
-  /**
-   * If we can't inverse a predicate to apply NOT, we translate the NOT expression from
-   * "NOT <some_expression>" to "<some_expression> == 0"
-   */
-
-  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE NOT (a IN (1, 2));");
-
-  // clang-format off
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(equals_(in_(int_float_a, list_(1, 2)), 0),
-        ProjectionNode::make(expression_vector(in_(int_float_a, list_(1, 2)), int_float_a, int_float_b),
-      stored_table_node_int_float)));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto actual_lqp = compile_query("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
 
@@ -481,8 +485,39 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(mul_(sum_(a_times_3), int_float_b)),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_times_3),
+      ProjectionNode::make(expression_vector(a_times_3, int_float_b),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
+  const auto actual_lqp = compile_query("SELECT b, SUM(a) AS s FROM int_float GROUP BY b HAVING s > 1000");
+
+  const auto select_list_expressions = expression_vector(int_float_b, sum_(int_float_a));
+  const auto aliases = std::vector<std::string>({"b", "s"});
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(select_list_expressions, aliases,
+    PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
+      AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(int_float_a)),
       stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithGroupByAndUnrelatedHaving) {
+  const auto actual_lqp = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b HAVING SUM(a) > 1000");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_b, count_(int_float_a)),
+    PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
+      AggregateNode::make(expression_vector(int_float_b), expression_vector(count_(int_float_a), sum_(int_float_a)),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -534,8 +569,8 @@ TEST_F(SQLTranslatorTest, AggregateWithDistinctAndRelatedGroupBy) {
   const auto expected_lqp =
   AggregateNode::make(expression_vector(int_float_b, mul_(sum_(a_times_3), int_float_b)), expression_vector(),
     AggregateNode::make(expression_vector(int_float_b), expression_vector(sum_(a_times_3)),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_times_3),
-      stored_table_node_int_float)));
+      ProjectionNode::make(expression_vector(a_times_3, int_float_b),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -578,15 +613,23 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   // clang-format off
   const auto expected_lqp_count_distinct_a_plus_b =
   AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(count_distinct_(add_(int_float_a, int_float_b))),  // NOLINT
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b)),
+    ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
       stored_table_node_int_float));
-
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
+
+  const auto actual_lqp_count_1 = compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
+  // clang-format off
+  const auto expected_lqp_count_1 =
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
+    ProjectionNode::make(expression_vector(value_(1), int_float_a),
+      stored_table_node_int_float));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_count_1, expected_lqp_count_1);
 }
 
 TEST_F(SQLTranslatorTest, GroupByOnly) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, b");
+  const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, a, b");
 
   const auto b_plus_3 = add_(int_float_b, 3);
   const auto a_divided_by_b = div_(int_float_a, int_float_b);
@@ -594,8 +637,8 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 
   // clang-format off
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_b), expression_vector(),
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, a_divided_by_b),
+  AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_a, int_float_b), expression_vector(),
+    ProjectionNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_a, int_float_b),
       stored_table_node_int_float));
   // clang-format on
 
@@ -603,23 +646,37 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 }
 
 TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
-  // - "int_float.*" will select only "b", because a is not in GROUP BY
   // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
-  const auto actual_lqp = compile_query("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY y, b");
+  const auto actual_lqp = compile_query("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY a, y, b");
 
   const auto sum_a_plus_b = sum_(add_(int_float_a, int_float_b));
   const auto b_plus_3 = add_(int_float_b, 3);
 
-  const auto aliases = std::vector<std::string>({"b", "y", "SUM(a + b)"});
-  const auto select_list_expressions = expression_vector(int_float_b, b_plus_3, sum_(add_(int_float_a, int_float_b)));
+  const auto aliases = std::vector<std::string>({"a", "b", "y", "SUM(a + b)"});
+  const auto select_list_expressions =
+      expression_vector(int_float_a, int_float_b, b_plus_3, sum_(add_(int_float_a, int_float_b)));
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(select_list_expressions, aliases,
     ProjectionNode::make(select_list_expressions,
-      AggregateNode::make(expression_vector(b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
-        ProjectionNode::make(expression_vector(int_float_a, int_float_b, add_(int_float_a, int_float_b), b_plus_3),
+      AggregateNode::make(expression_vector(int_float_a, b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
+        ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, b_plus_3, int_float_b),
           stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcardTwoTables) {
+  // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
+  const auto actual_lqp =
+      compile_query("SELECT t1.*, t2.a, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a");
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(int_float_a, int_float_b, int_float_a), expression_vector(sum_(int_float_b)),
+    JoinNode::make(JoinMode::Cross, stored_table_node_int_float, stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -670,7 +727,7 @@ TEST_F(SQLTranslatorTest, SubSelectSelectList) {
   const auto a_plus_d = add_(int_float_a, parameter_d);
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_d)),
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_plus_d), stored_table_node_int_float));
+    ProjectionNode::make(expression_vector(a_plus_d), stored_table_node_int_float));
   // clang-format on
 
   const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float5_d));
@@ -704,14 +761,22 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
 TEST_F(SQLTranslatorTest, InArray) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
 
-  const auto a_plus_7_in = in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4));
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4)),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, NotInArray) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 NOT IN (1+2,3,4)");
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(a_plus_7_in, 0),
-      ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
-         stored_table_node_int_float)));
+  PredicateNode::make(not_in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4)),
+    stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -724,14 +789,10 @@ TEST_F(SQLTranslatorTest, InSelect) {
   const auto sub_select_lqp = stored_table_node_int_float2;
   const auto sub_select = lqp_select_(sub_select_lqp);
 
-  const auto a_plus_7_in = in_(add_(int_float_a, 7), sub_select);
-
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(a_plus_7_in, 0),
-      ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
-         stored_table_node_int_float)));
+  PredicateNode::make(in_(add_(int_float_a, 7), sub_select),
+    stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -749,22 +810,16 @@ TEST_F(SQLTranslatorTest, InCorrelatedSelect) {
   const auto b_times_a_times_a = mul_(mul_(parameter_b, parameter_a), parameter_a);
 
   const auto sub_select_lqp =
-  ProjectionNode::make(expression_vector(int_float2_a, int_float2_b),
-    PredicateNode::make(greater_than_(b_times_a_times_a, int_float2_b),
-      ProjectionNode::make(expression_vector(b_times_a_times_a, int_float2_a, int_float2_b),
-        stored_table_node_int_float2)));
+  PredicateNode::make(greater_than_(b_times_a_times_a, int_float2_b),
+      stored_table_node_int_float2);
 
   const auto sub_select = lqp_select_(sub_select_lqp, std::make_pair(ParameterID{1}, int_float_a),
                                   std::make_pair(ParameterID{0}, int_float_b));
 
-  const auto a_in_sub_select = in_(int_float_a, sub_select);
-
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(a_in_sub_select, 0),
-      ProjectionNode::make(expression_vector(a_in_sub_select, int_float_a, int_float_b),
-         stored_table_node_int_float)));
+    PredicateNode::make(in_(int_float_a, sub_select),
+      stored_table_node_int_float);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -909,12 +964,10 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
   const auto a_plus_a = add_(int_float_a, int_float2_a);
   const auto b_times_a = mul_(int_float2_b, int_float_a);
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_a, int_float2_b),
-    PredicateNode::make(equals_(a_plus_a, b_times_a),
-      ProjectionNode::make(expression_vector(a_plus_a, b_times_a, int_float_a, int_float_b, int_float2_a, int_float2_b),
-        JoinNode::make(JoinMode::Cross,
-          stored_table_node_int_float,
-          stored_table_node_int_float2))));
+  PredicateNode::make(equals_(a_plus_a, b_times_a),
+      JoinNode::make(JoinMode::Cross,
+        stored_table_node_int_float,
+        stored_table_node_int_float2));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -932,12 +985,10 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
   const auto join_predicate = or_(equals_(mul_(int_float_a, 3), sub_(int_float_a, 5)), greater_than_(int_float_a, 20));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(join_predicate, 0),
-      ProjectionNode::make(expression_vector(join_predicate, int_float_a, int_float_b, int_float_a, int_float_b),
-        JoinNode::make(JoinMode::Cross,
-          stored_table_node_int_float,
-          stored_table_node_int_float))));
+  PredicateNode::make(join_predicate,
+      JoinNode::make(JoinMode::Cross,
+        stored_table_node_int_float,
+        stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1036,10 +1087,47 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, uncorrelated_parameter_(ParameterID{1})),
-                                         uncorrelated_parameter_(ParameterID{2})),
-    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_(ParameterID{1})),
+                                         placeholder_(ParameterID{2})),
+    PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
       stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
+  // NOLINTNEXTLINE
+  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+      "SELECT ? + (SELECT a + ? FROM int_float2) FROM (SELECT a FROM int_float WHERE ? > (SELECT a + ? FROM "
+      "int_string)) s1");
+
+  ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 4u);
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{3});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{0});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{1});
+
+  const auto placeholder_0 = placeholder_(ParameterID{2});
+  const auto placeholder_1 = placeholder_(ParameterID{3});
+  const auto placeholder_2 = placeholder_(ParameterID{0});
+  const auto placeholder_3 = placeholder_(ParameterID{1});
+
+  // clang-format off
+  const auto subselect_a_lqp =
+  ProjectionNode::make(expression_vector(add_(int_float2_a, placeholder_1)),
+                       stored_table_node_int_float2);
+  const auto subselect_a = lqp_select_(subselect_a_lqp);
+  const auto subselect_b_lqp =
+  ProjectionNode::make(expression_vector(add_(int_string_a, placeholder_3)),
+    stored_table_node_int_string);
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(placeholder_0, subselect_a)),
+    ProjectionNode::make(expression_vector(int_float_a),
+      PredicateNode::make(greater_than_(placeholder_2, subselect_b),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1047,7 +1135,7 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
 TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   /**
-   * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
+   * Test that ParameterIDs are correctly allocated to correlated Parameters
    */
 
   const auto query = "SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float";
@@ -1056,7 +1144,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   hsql::SQLParser::parseSQLString(query, &parser_result);
   Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
 
-  SQLTranslator sql_translator;
+  SQLTranslator sql_translator{UseMvcc::No};
 
   const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
@@ -1092,70 +1180,55 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
    */
   const auto query =
       "SELECT ?, "
-      "  (SELECT MIN(b) + int_float.a FROM int_float2), "
-      "  (SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
-      "FROM int_float WHERE a > ?";
+      "  (SELECT ? + MAX(b) + (SELECT int_float2.a + ? + int_float2.b) FROM int_float2) "
+      "FROM (SELECT a + ? AS k FROM int_float) s1 WHERE k > (SELECT ? FROM int_string)";
 
-  hsql::SQLParserResult parser_result;
-  hsql::SQLParser::parseSQLString(query, &parser_result);
-  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+  // NOLINTNEXTLINE
+  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
 
-  SQLTranslator sql_translator;
-  const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
+  ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{3});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{5});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{0});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{1});
+
+  const auto placeholder_0 = placeholder_(ParameterID{2});
+  const auto placeholder_1 = placeholder_(ParameterID{3});
+  const auto placeholder_2 = placeholder_(ParameterID{5});
+  const auto placeholder_3 = placeholder_(ParameterID{0});
+  const auto placeholder_4 = placeholder_(ParameterID{1});
+
+  const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
+  const auto parameter_int_float2_b = correlated_parameter_(ParameterID{6}, int_float2_b);
 
   // clang-format off
-  const auto parameter_int_float_a = correlated_parameter_(ParameterID{2}, int_float_a);
-  const auto parameter_int_float_b = correlated_parameter_(ParameterID{3}, int_float_b);
-  const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
 
-  // "(SELECT MIN(b) + int_float.a FROM int_float2)"
-  const auto expected_sub_select_lqp_a =
-  ProjectionNode::make(expression_vector(add_(min_(int_float2_b), parameter_int_float_a)),
-    AggregateNode::make(expression_vector(), expression_vector(min_(int_float2_b)),
-      stored_table_node_int_float2));
-
-  const auto expected_sub_select_a = lqp_select_(expected_sub_select_lqp_a,
-                                                 std::make_pair(ParameterID{2}, int_float_a));
-
-  // "(SELECT int_float2.a + int_float.b)"
-  const auto expected_sub_sub_select_lqp =
-  ProjectionNode::make(expression_vector(add_(parameter_int_float2_a, parameter_int_float_b)),
+  // SELECT int_float2.a + ? + int_float2.b
+  const auto subselect_a_lqp =
+  ProjectionNode::make(expression_vector(add_(add_(parameter_int_float2_a, placeholder_2), parameter_int_float2_b)),
     DummyTableNode::make());
+  const auto subselect_a = lqp_select_(subselect_a_lqp, std::make_pair(ParameterID{6}, int_float2_b),
+    std::make_pair(ParameterID{4}, int_float2_a));
 
-  const auto sub_sub_select = lqp_select_(expected_sub_sub_select_lqp,
-                                      std::make_pair(ParameterID{4}, int_float2_a));
-
-
-  // "(SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
-  const auto expected_sub_select_lqp_b =
-  ProjectionNode::make(expression_vector(add_(add_(max_(int_float2_b), parameter_int_float_b), sub_sub_select)),
+  // (SELECT ? + MAX(b) + (subselect_a) FROM int_float2)
+  const auto subselect_b_lqp =
+  ProjectionNode::make(expression_vector(add_(add_(placeholder_1, max_(int_float2_b)), subselect_a)),
     AggregateNode::make(expression_vector(), expression_vector(max_(int_float2_b)),
       stored_table_node_int_float2));
-  const auto expected_sub_select_b = lqp_select_(expected_sub_select_lqp_b,
-                                                 std::make_pair(ParameterID{3}, int_float_b));
+  const auto subselect_b = lqp_select_(subselect_b_lqp);
+
+  // SELECT ? FROM int_string
+  const auto subselect_c_lqp = ProjectionNode::make(expression_vector(placeholder_4), stored_table_node_int_string);
+  const auto subselect_c = lqp_select_(subselect_c_lqp);
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(uncorrelated_parameter_(ParameterID{1}),
-                                         expected_sub_select_a,
-                                         expected_sub_select_b),
-    PredicateNode::make(greater_than_(int_float_a, uncorrelated_parameter_(ParameterID{0})),
-      stored_table_node_int_float));
+  ProjectionNode::make(expression_vector(placeholder_0, subselect_b),
+    PredicateNode::make(greater_than_(add_(int_float_a, placeholder_3), subselect_c),
+      AliasNode::make(expression_vector(add_(int_float_a, placeholder_3)), std::vector<std::string>{"k"},
+        ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_3)),
+          stored_table_node_int_float))));
   // clang-format on
-
-  EXPECT_EQ(sql_translator.value_placeholders().size(), 2u);
-  EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{0}), ParameterID{1});
-  EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{1}), ParameterID{0});
-
-  const auto actual_projection_node = std::dynamic_pointer_cast<ProjectionNode>(actual_lqp);
-  ASSERT_TRUE(actual_projection_node);
-
-  const auto actual_sub_select_a =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(1));
-  ASSERT_TRUE(actual_sub_select_a);
-
-  const auto actual_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(2));
-  ASSERT_TRUE(actual_sub_select_b);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1207,7 +1280,7 @@ TEST_F(SQLTranslatorTest, NotExists) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(equals_(exists_(lqp_select_(stored_table_node_int_float)), 0)),
+  ProjectionNode::make(expression_vector(not_exists_(lqp_select_(stored_table_node_int_float))),
     DummyTableNode::make());
   // clang-format on
 
@@ -1264,7 +1337,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-   ProjectionNode::make(expression_vector(10, 12.5f),
+   ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
      DummyTableNode::make()));
   // clang-format on
 
@@ -1277,7 +1350,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(10, 12.5f),
+    ProjectionNode::make(expression_vector(10, cast_(12.5, DataType::Float)),
         DummyTableNode::make()));
   // clang-format on
 
@@ -1290,7 +1363,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), 12.5f),
+    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1303,7 +1376,7 @@ TEST_F(SQLTranslatorTest, InsertNull) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), 12.5f),
+    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), cast_(12.5, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1329,46 +1402,99 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(5.5f, DataType::Int), cast_(12, DataType::Float)),
+    ProjectionNode::make(expression_vector(cast_(5.5, DataType::Int), cast_(12, DataType::Float)),
       DummyTableNode::make()));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, DeleteWithoutMVCC) {
+  EXPECT_THROW(compile_query("DELETE FROM int_float;"), std::logic_error);
+}
+
 TEST_F(SQLTranslatorTest, DeleteSimple) {
-  const auto actual_lqp = compile_query("DELETE FROM int_float");
+  const auto actual_lqp = compile_query("DELETE FROM int_float", UseMvcc::Yes);
 
   // clang-format off
   const auto expected_lqp =
   DeleteNode::make("int_float",
-    StoredTableNode::make("int_float"));
+    ValidateNode::make(
+      StoredTableNode::make("int_float")));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DeleteConditional) {
-  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5");
+  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5", UseMvcc::Yes);
 
   // clang-format off
   const auto expected_lqp =
   DeleteNode::make("int_float",
     PredicateNode::make(greater_than_(int_float_a, 5),
-      stored_table_node_int_float));
+      ValidateNode::make(
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateWithoutMVCC) {
+  EXPECT_THROW(compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;"), std::logic_error);
+}
+
+TEST_F(SQLTranslatorTest, UpdateUnconditional) {
+  const auto actual_lqp = compile_query("UPDATE int_float SET b = b + 1", UseMvcc::Yes);
+
+  // clang-format off
+  const auto row_select_lqp =
+  ValidateNode::make(
+    stored_table_node_int_float);
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    row_select_lqp,
+    ProjectionNode::make(expression_vector(int_float_a, add_(int_float_b, value_(1))),
+      row_select_lqp));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, UpdateConditional) {
-  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;");
+  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;", UseMvcc::Yes);
 
   // clang-format off
-  const auto expected_lqp =
-  UpdateNode::make("int_float", expression_vector(int_float_a, 3.2f),
-    PredicateNode::make(greater_than_(int_float_a, 1),
+  const auto row_select_lqp =
+  PredicateNode::make(greater_than_(int_float_a, 1),
+    ValidateNode::make(
       stored_table_node_int_float));
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    row_select_lqp,
+    ProjectionNode::make(expression_vector(int_float_a, cast_(3.2, DataType::Float)),
+      row_select_lqp));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateCast) {
+  const auto actual_lqp = compile_query("UPDATE int_float SET a = b, b = 3 WHERE a > 1;", UseMvcc::Yes);
+
+  // clang-format off
+  const auto row_select_lqp =
+  PredicateNode::make(greater_than_(int_float_a, 1),
+    ValidateNode::make(
+      stored_table_node_int_float));
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    row_select_lqp,
+    ProjectionNode::make(expression_vector(cast_(int_float_b, DataType::Int), cast_(3, DataType::Float)),
+      row_select_lqp));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1430,12 +1556,16 @@ TEST_F(SQLTranslatorTest, DropView) {
 }
 
 TEST_F(SQLTranslatorTest, CreateTable) {
-  const auto actual_lqp = compile_query("CREATE TABLE a_table (a_int INTEGER, a_double DOUBLE, a_string TEXT)");
+  const auto actual_lqp = compile_query(
+      "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
+      "NULL)");
 
   auto column_definitions = TableColumnDefinitions{};
-  column_definitions.emplace_back("a_int", DataType::Long, true);
+  column_definitions.emplace_back("a_int", DataType::Int, false);
+  column_definitions.emplace_back("a_long", DataType::Long, false);
+  column_definitions.emplace_back("a_float", DataType::Float, false);
   column_definitions.emplace_back("a_double", DataType::Double, true);
-  column_definitions.emplace_back("a_string", DataType::String, true);
+  column_definitions.emplace_back("a_string", DataType::String, false);
 
   const auto expected_lqp = CreateTableNode::make("a_table", column_definitions);
 
@@ -1448,6 +1578,129 @@ TEST_F(SQLTranslatorTest, DropTable) {
   const auto expected_lqp = DropTableNode::make("a_table");
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, PrepareWithoutParameters) {
+  const auto actual_lqp = compile_query("PREPARE some_prepared_plan FROM 'SELECT a AS x FROM int_float'");
+
+  // clang-format off
+  const auto statement_lqp =
+  AliasNode::make(expression_vector(int_float_a), std::vector<std::string>{"x"},
+    ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float));
+  // clang-format on
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{});
+
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, PrepareWithParameters) {
+  const auto actual_lqp = compile_query(
+      "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float "
+      "WHERE a > ? AND b < ?'");
+
+  // clang-format off
+  const auto statement_lqp =
+  PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
+    PredicateNode::make(less_than_(int_float_b, placeholder_(ParameterID{1})),
+      stored_table_node_int_float));
+  // clang-format on
+
+  const auto prepared_plan =
+      std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}});
+
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, PrepareWithParametersAndCorrelatedSubSelect) {
+  // Correlated subselects and prepared statement's parameters both use the ParameterID system, so let's test that they
+  // cooperate
+
+  const auto actual_lqp = compile_query(
+      "PREPARE some_prepared_plan FROM 'SELECT * FROM int_float WHERE a > ? AND"
+      " a < (SELECT MIN(a) FROM int_string WHERE int_float.a = int_string.a) AND"
+      " b < ?'");
+
+  // clang-format off
+  const auto correlated_parameter = correlated_parameter_(ParameterID{1}, int_float_a);
+
+  const auto subselect_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min_(int_string_a)),
+    PredicateNode::make(equals_(correlated_parameter, int_string_a),
+      stored_table_node_int_string));
+
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{1}, int_float_a));
+
+  const auto statement_lqp = PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
+  PredicateNode::make(less_than_(int_float_a, subselect),
+    PredicateNode::make(less_than_(int_float_b, placeholder_(ParameterID{2})),
+       stored_table_node_int_float)));
+  // clang-format on
+
+  const auto prepared_plan =
+      std::make_shared<PreparedPlan>(statement_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{2}});
+
+  const auto expected_lqp = CreatePreparedPlanNode::make("some_prepared_plan", prepared_plan);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, Execute) {
+  // clang-format off
+  const auto uncorrelated_parameter = placeholder_(ParameterID{3});
+  const auto correlated_parameter = correlated_parameter_(ParameterID{2}, int_float_a);
+
+  const auto prepared_subselect_lqp = AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+    PredicateNode::make(equals_(uncorrelated_parameter, correlated_parameter),
+      stored_table_node_int_float));
+
+  const auto prepared_subselect = lqp_select_(prepared_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
+
+  const auto prepared_plan_lqp =
+  PredicateNode::make(greater_than_(int_string_a, placeholder_(ParameterID{1})),
+    PredicateNode::make(less_than_(int_string_b, placeholder_(ParameterID{0})),
+      PredicateNode::make(equals_(int_string_a, prepared_subselect), stored_table_node_int_string)));
+  // clang-format on
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(
+      prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
+
+  StorageManager::get().add_prepared_plan("some_prepared_plan", prepared_plan);
+
+  const auto actual_lqp = compile_query("EXECUTE some_prepared_plan ('Hello', 1, 42)");
+
+  // clang-format off
+  const auto execute_subselect_lqp =
+      AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+                          PredicateNode::make(equals_(42, correlated_parameter), stored_table_node_int_float));
+
+  const auto execute_subselect = lqp_select_(execute_subselect_lqp, std::make_pair(ParameterID{1}, int_string_a));
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(int_string_a, 1),
+    PredicateNode::make(less_than_(int_string_b, "Hello"),
+      PredicateNode::make(equals_(int_string_a, execute_subselect),
+        stored_table_node_int_string)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
+  const auto prepared_lqp =
+      AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)), stored_table_node_int_float);
+
+  const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
+
+  StorageManager::get().add_prepared_plan("another_prepared_plan", prepared_plan);
+
+  const auto actual_lqp = compile_query("EXECUTE another_prepared_plan ()");
+
+  EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
 }
 
 TEST_F(SQLTranslatorTest, OperatorPrecedence) {
@@ -1473,11 +1726,15 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM int_float GROUP BY a;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT t1.*, t2.*, SUM(t2.b) FROM int_float t1, int_float t2 GROUP BY t1.a, t1.b, t2.a"),
+               InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
 }
 
 }  // namespace opossum

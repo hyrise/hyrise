@@ -13,11 +13,11 @@ namespace opossum {
 
 class EqualHeightHistogramTest : public BaseTest {
   void SetUp() override {
-    _int_float4 = load_table("src/test/tables/int_float4.tbl");
-    _float2 = load_table("src/test/tables/float2.tbl");
-    _expected_join_result_1 = load_table("src/test/tables/joinoperators/expected_join_result_1.tbl");
-    _string3 = load_table("src/test/tables/string3.tbl");
-    _string_with_prefix = load_table("src/test/tables/string_with_prefix.tbl");
+    _int_float4 = load_table("resources/test_data/tbl/int_float4.tbl");
+    _float2 = load_table("resources/test_data/tbl/float2.tbl");
+    _expected_join_result_1 = load_table("resources/test_data/tbl/joinoperators/expected_join_result_1.tbl");
+    _string3 = load_table("resources/test_data/tbl/string3.tbl");
+    _string_with_prefix = load_table("resources/test_data/tbl/string_with_prefix.tbl");
   }
 
  protected:

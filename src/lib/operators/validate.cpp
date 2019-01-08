@@ -18,8 +18,14 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
   const auto row_tid = mvcc_data.tids[chunk_offset].load();
   const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
   const auto end_cid = mvcc_data.end_cids[chunk_offset];
+  return Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid);
+}
 
-  // Taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
+}  // namespace
+
+bool Validate::is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
+                              const CommitID begin_cid, const CommitID end_cid) {
+  // Taken from: https://github.com/hyrise/hyrise-v1/blob/master/docs/documentation/queryexecution/tx.rst
   // auto own_insert = (our_tid == row_tid) && !(snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
   // auto past_insert = (our_tid != row_tid) && (snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
   // return own_insert || past_insert;
@@ -27,8 +33,6 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
   // since gcc and clang are surprisingly bad at optimizing the above boolean expression, lets do that ourselves
   return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
 }
-
-}  // namespace
 
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
@@ -73,13 +77,32 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
-      for (auto row_id : *ref_segment_in->pos_list()) {
-        const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto& pos_list_in = *ref_segment_in->pos_list();
+      if (pos_list_in.references_single_chunk() && !pos_list_in.empty()) {
+        // Fast path - we are looking at a single referenced chunk and thus need to get the MVCC data vector only once.
 
+        pos_list_out->guarantee_single_chunk();
+
+        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-          pos_list_out->emplace_back(row_id);
+        for (auto row_id : pos_list_in) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
+        }
+
+      } else {
+        // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
+
+        for (auto row_id : pos_list_in) {
+          const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+
+          auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
+
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
         }
       }
 
@@ -97,11 +120,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
+      pos_list_out->guarantee_single_chunk();
 
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {
-        if (is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
+        if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }

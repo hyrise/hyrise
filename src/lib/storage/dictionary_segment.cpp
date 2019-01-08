@@ -19,7 +19,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
-      _decoder{_attribute_vector->create_base_decoder()} {}
+      _decompressor{_attribute_vector->create_base_decompressor()} {}
 
 template <typename T>
 const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -35,7 +35,7 @@ const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_of
 
 template <typename T>
 const std::optional<T> DictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto value_id = _decoder->get(chunk_offset);
+  const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
     return std::nullopt;
   }
@@ -70,7 +70,7 @@ size_t DictionarySegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-CompressedVectorType DictionarySegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> DictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
@@ -83,27 +83,33 @@ template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast<T>(value);
+  const auto typed_value = type_cast_variant<T>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast<T>(value);
+  const auto typed_value = type_cast_variant<T>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
-size_t DictionarySegment<T>::unique_values_count() const {
-  return _dictionary->size();
+AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
+  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  return (*_dictionary)[value_id];
+}
+
+template <typename T>
+ValueID::base_type DictionarySegment<T>::unique_values_count() const {
+  return static_cast<ValueID::base_type>(_dictionary->size());
 }
 
 template <typename T>
