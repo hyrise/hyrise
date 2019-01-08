@@ -10,7 +10,9 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path) {
+FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config,
+const std::string& query_path,
+const std::unordered_set<std::string>& filename_blacklist) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   filesystem::path path{query_path};
@@ -22,9 +24,11 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
   } else {
     // Recursively walk through the specified directory and add all files on the way
     for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
-      const auto filename = entry.path().string();
-      if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
-        _parse_query_file(filename);
+      if (filesystem::is_regular_file(entry) && is_sql_file(entry.path())) {
+        if (filename_blacklist.find(entry.path().filename()) != filename_blacklist.end()) {
+          continue;
+        }
+        _parse_query_file(entry.path());
       }
     }
   }
@@ -33,9 +37,11 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_path) {
+void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& query_file_path) {
   std::ifstream file(query_file_path);
-  const auto filename = filesystem::path{query_file_path}.stem().string();
+
+  // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."
+  const auto query_name_prefix = query_file_path.stem().string();
 
   std::string content{std::istreambuf_iterator<char>(file), {}};
 
@@ -50,7 +56,7 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_pa
 
   size_t sql_string_offset{0u};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto query_name = filename + '.' + std::to_string(statement_idx);
+    const auto query_name = query_name_prefix + '.' + std::to_string(statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
