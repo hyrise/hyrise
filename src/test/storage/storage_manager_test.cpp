@@ -33,6 +33,7 @@ class StorageManagerTest : public BaseTest {
   }
 };
 
+// TODO(Sven): There is no test for StorageManager::add_table without MVCC Data
 TEST_F(StorageManagerTest, AddTableTwice) {
   auto& sm = StorageManager::get();
   EXPECT_THROW(sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)),

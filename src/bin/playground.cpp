@@ -1,37 +1,52 @@
 #include <iostream>
 
-#include "sql/sql_pipeline_builder.hpp"
+#include "operators/get_table.hpp"
+#include "operators/join_index.hpp"
+
+#include "storage/chunk.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
-#include "tpch/tpch_queries.hpp"
-#include "types.hpp"
+#include "storage/table.hpp"
 
 using namespace opossum;  // NOLINT
 
 int main() {
-  std::cout << "Hello world!!" << std::endl;
+  const auto left_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int}}, TableType::Data,
+                                             100'000, UseMvcc::Yes);
 
-  const auto query = tpch_queries.at(21);
+  const auto right_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int}}, TableType::Data,
+                                             100'000, UseMvcc::Yes);
 
-  const auto tables = TpchDbGenerator(0.01f, 1000).generate();
-
-  for (auto& tpch_table : tables) {
-    const auto& table_name = tpch_table_names.at(tpch_table.first);
-    const auto& table = tpch_table.second;
-    StorageManager::get().add_table(table_name, table);
-
-    std::cout << "Encoded table " << table_name << " successfully." << std::endl;
+  // Create table with 600'000 rows
+  for (int i = 0; i < 600'000; i++) {
+    left_table->append({i});
   }
 
-  std::cout << query << std::endl;
-
-  const auto pipeline_builder = SQLPipelineBuilder{query};
-  auto pipeline = pipeline_builder.create_pipeline();
-  auto optimized = pipeline.get_optimized_logical_plans();
-  for (const auto& plan : optimized) {
-    plan->print();
-    std::cout << std::endl;
+  for (int i = 0; i < 60'000; i++) {
+    right_table->append({i});
   }
+
+  // Create indices
+  const auto left_chunks = left_table->chunks();
+  for (const auto& chunk : left_chunks) {
+    chunk->template create_index<BTreeIndex>(std::vector<ColumnID>{ColumnID{0}});
+  }
+  const auto right_chunks = right_table->chunks();
+  for (const auto& chunk : right_chunks) {
+    chunk->template create_index<BTreeIndex>(std::vector<ColumnID>{ColumnID{0}});
+  }
+  StorageManager::get().add_table("left_table", left_table);
+  StorageManager::get().add_table("right_table", right_table);
+
+  // Run IndexJoin
+  auto left_gt = std::make_shared<GetTable>("left_table");
+  left_gt->execute();
+  auto right_gt = std::make_shared<GetTable>("right_table");
+  right_gt->execute();
+  auto join = std::make_shared<JoinIndex>(
+      left_gt, right_gt, JoinMode::Inner, std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+  // Will crash with GCC, but not with Clang
+  join->execute();
 
   return 0;
 }

@@ -12,7 +12,7 @@ namespace opossum {
 namespace cost_model {
 
 struct JoinFeatures : AbstractFeatures {
-//  JoinType join_type;
+  //  JoinType join_type;
   ColumnFeatures left_join_column{"left"};
   ColumnFeatures right_join_column{"right"};
 

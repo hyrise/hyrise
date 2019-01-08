@@ -7,7 +7,7 @@ namespace cost_model {
 
 const std::map<std::string, AllTypeVariant> JoinFeatures::serialize() const {
   std::map<std::string, AllTypeVariant> join_features = {
-//      {"join_type", join_type_to_string.at(join_type)},
+      //      {"join_type", join_type_to_string.at(join_type)},
   };
 
   std::map<std::string, AllTypeVariant> serialized_left_join_column = left_join_column.serialize();

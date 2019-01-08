@@ -31,8 +31,8 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
                 ((right_table.second / static_cast<float>(left_table.second)) == ratio)) {
               output.push_back(
                   {left_table.first, right_table.first, encoding, data_type, false, static_cast<size_t>(ratio)});
-//              output.push_back(
-//                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
+              //              output.push_back(
+              //                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
             }
           }
         }

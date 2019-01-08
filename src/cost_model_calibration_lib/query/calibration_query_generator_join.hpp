@@ -21,18 +21,14 @@ struct CalibrationQueryGeneratorJoinConfiguration {
 };
 
 // So that google test, e.g., prints readable error messages
-    inline std::ostream& operator<<(std::ostream& stream, const CalibrationQueryGeneratorJoinConfiguration& configuration) {
-
-        const auto reference_column_string = configuration.reference_column ? "true" : "false";
-        return stream << "CalibrationQueryGeneratorJoinConfiguration("<<
-        configuration.left_table_name << " - " <<
-        configuration.right_table_name << " - " <<
-        encoding_type_to_string.left.at(configuration.encoding_type) << " - " <<
-        data_type_to_string.left.at(configuration.data_type) << " - " <<
-        reference_column_string << " - " <<
-        configuration.table_ratio
-        << ")";
-    }
+inline std::ostream& operator<<(std::ostream& stream, const CalibrationQueryGeneratorJoinConfiguration& configuration) {
+  const auto reference_column_string = configuration.reference_column ? "true" : "false";
+  return stream << "CalibrationQueryGeneratorJoinConfiguration(" << configuration.left_table_name << " - "
+                << configuration.right_table_name << " - "
+                << encoding_type_to_string.left.at(configuration.encoding_type) << " - "
+                << data_type_to_string.left.at(configuration.data_type) << " - " << reference_column_string << " - "
+                << configuration.table_ratio << ")";
+}
 
 class CalibrationQueryGeneratorJoin {
  public:
