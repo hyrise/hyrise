@@ -166,7 +166,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         if (segment.sort_order().value() == OrderByMode::Ascending ||
             segment.sort_order().value() == OrderByMode::AscendingNullsLast) {
           if (_predicate_condition == PredicateCondition::GreaterThanEquals) {
-            std::cout << ">=" << std::endl;  // TODO(hendraet): remove all those outputs
             const auto lower_bound = typed_segment.get_first_bound(_value);
             if (lower_bound == INVALID_CHUNK_OFFSET) {
               return;
@@ -174,7 +173,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             std::advance(lower_it, lower_bound);
             std::advance(upper_it, std::distance(it, end));
           } else if (_predicate_condition == PredicateCondition::GreaterThan) {
-            std::cout << ">" << std::endl;
             const auto lower_bound = typed_segment.get_last_bound(_value);
             if (lower_bound == INVALID_CHUNK_OFFSET) {
               return;
@@ -182,7 +180,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             std::advance(lower_it, lower_bound);
             std::advance(upper_it, std::distance(it, end));
           } else if (_predicate_condition == PredicateCondition::LessThanEquals) {
-            std::cout << "<=" << std::endl;
             const auto upper_bound = typed_segment.get_last_bound(_value);
             if (upper_bound != INVALID_CHUNK_OFFSET) {
               std::advance(upper_it, upper_bound);
@@ -190,7 +187,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
               std::advance(upper_it, std::distance(it, end));
             }
           } else if (_predicate_condition == PredicateCondition::LessThan) {
-            std::cout << "<" << std::endl;
             const auto upper_bound = typed_segment.get_first_bound(_value);
             if (upper_bound != INVALID_CHUNK_OFFSET) {
               std::advance(upper_it, upper_bound);
@@ -198,7 +194,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
               std::advance(upper_it, std::distance(it, end));
             }
           } else if (_predicate_condition == PredicateCondition::Equals) {
-            std::cout << "=" << std::endl;
             const auto lower_bound = typed_segment.get_first_bound(_value);
             const auto upper_bound = typed_segment.get_last_bound(_value);
             if (lower_bound == INVALID_CHUNK_OFFSET) {
@@ -217,7 +212,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
         } else {  // Descending Order
           if (_predicate_condition == PredicateCondition::GreaterThanEquals) {
             // Same as Ascending LessThanEquals
-            std::cout << ">=" << std::endl;
             const auto last_bound = typed_segment.get_last_bound(_value);
             if (last_bound != INVALID_CHUNK_OFFSET) {
               std::advance(upper_it, last_bound);
@@ -226,7 +220,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             }
           } else if (_predicate_condition == PredicateCondition::GreaterThan) {
             // Same as Ascending LessThan
-            std::cout << ">" << std::endl;
             const auto lower_bound = typed_segment.get_first_bound(_value);
             if (lower_bound != INVALID_CHUNK_OFFSET) {
               std::advance(upper_it, lower_bound);
@@ -235,7 +228,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             }
           } else if (_predicate_condition == PredicateCondition::LessThanEquals) {
             // Same as Ascending GreaterThanEquals
-            std::cout << "<=" << std::endl;
             const auto lower_bound = typed_segment.get_first_bound(_value);
             if (lower_bound == INVALID_CHUNK_OFFSET) {
               return;
@@ -244,7 +236,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             std::advance(upper_it, std::distance(it, end));
           } else if (_predicate_condition == PredicateCondition::LessThan) {
             // Same as Ascending GreaterThan
-            std::cout << "<" << std::endl;
             const auto upper_bound = typed_segment.get_last_bound(_value);
             if (upper_bound == INVALID_CHUNK_OFFSET) {
               return;
@@ -253,8 +244,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             std::advance(upper_it, std::distance(it, end));
           } else if (_predicate_condition == PredicateCondition::Equals) {
             // Same as Ascending Equals
-            std::cout << "<" << std::endl;
-            std::cout << "=" << std::endl;
             const auto lower_bound = typed_segment.get_first_bound(_value);
             const auto upper_bound = typed_segment.get_last_bound(_value);
             if (lower_bound == INVALID_CHUNK_OFFSET) {
@@ -271,8 +260,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
             Fail("Unsupported comparison type encountered");
           }
         }
-
-        std::cout << "lower: " << std::distance(it, lower_it) << " upper: " << std::distance(it, upper_it) << std::endl;
 
         for (; lower_it != upper_it; ++lower_it) {
           const auto& value = *lower_it;
