@@ -220,11 +220,6 @@ const ColumnFeatures CalibrationFeatureExtractor::_extract_features_for_column_e
   // TODO(Sven): How to calculate from segment_distinct_value_count?
   column_features.column_distinct_value_count = 0;
 
-  //  return ColumnFeatures{encoding_type_to_string.left.at(encoding_reference_pair.first),
-  //                                     encoding_reference_pair.second,
-  //                                     data_type_to_string.left.at(column_expression->data_type()),
-  //                                     _get_memory_usage_for_column(left_input_table, column_id)};
-
   return column_features;
 }
 
@@ -324,7 +319,8 @@ const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
   const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
   const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
 
-  //  operator_result.join_type = op->type();
+  // TODO(Sven): Remove. Is already covered by features.operator_type
+//  features.join_type = op->type();
   features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
   features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
 

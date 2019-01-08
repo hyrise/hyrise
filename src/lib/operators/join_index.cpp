@@ -22,6 +22,7 @@ namespace opossum {
 /*
  * This is an index join implementation. It expects to find an index on the right column.
  * It can be used for all join modes except JoinMode::Cross.
+ * // TODO(anyone): Remaining join types? What are they? Which Join Type is allowed?
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
@@ -100,6 +101,7 @@ void JoinIndex::_perform_join() {
       }
       performance_data.chunks_scanned_with_index++;
     } else {
+      std::cout << "Did not find index in JoinIndex, falling back to NestedLoopJoin" << std::endl;
       // Fall back to NestedLoopJoin
       const auto segment_right = input_table_right()->get_chunk(chunk_id_right)->get_segment(_column_ids.second);
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {

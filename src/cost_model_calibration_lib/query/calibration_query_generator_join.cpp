@@ -31,8 +31,8 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
                 ((right_table.second / static_cast<float>(left_table.second)) == ratio)) {
               output.push_back(
                   {left_table.first, right_table.first, encoding, data_type, false, static_cast<size_t>(ratio)});
-              output.push_back(
-                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
+//              output.push_back(
+//                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
             }
           }
         }
@@ -49,14 +49,15 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
   std::vector<JoinType> join_types = {JoinType::Hash, JoinType::Index, JoinType::NestedLoop, JoinType::MPSM,
                                       JoinType::SortMerge};
   //  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::SortMerge};
-  std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
 
   const auto join_predicate = _generate_join_predicate(left_table, right_table);
 
   if (!join_predicate) {
-    std::cout << "Could not generate join predicate for configuration" << std::endl;
+    std::cout << "Could not generate join predicate for configuration " << _configuration << std::endl;
+    return {};
   }
 
+  std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
   for (const auto& join_type : join_types) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, join_type);
     permutated_join_nodes.push_back(join_node);
