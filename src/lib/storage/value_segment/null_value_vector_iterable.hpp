@@ -45,12 +45,11 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it)
         : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it} {}
 
-    static constexpr bool IsVectorizable = true;
-
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() { ++_null_value_it; }
+    void advance(std::ptrdiff_t n) { _null_value_it += n; }
     bool equal(const Iterator& other) const { return _null_value_it == other._null_value_it; }
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._null_value_it - _null_value_it; }
 
@@ -76,8 +75,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
         : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
                                                                                      std::move(position_filter_it)},
           _null_values{null_values} {}
-
-    static constexpr bool IsVectorizable = true;
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

@@ -66,11 +66,6 @@ struct ChunkOffsetMapping {
  * i.e., its underlying value or dictionary segment is iterated over.
  * The passed position_filter is used to select which of the iterable's values
  * are returned.
- *
- * All iterators have a member IsVectorizable, which is used to determine if SIMD
- * can be used when decompressing the data. Generally, accesses to simple data
- * structures (e.g., vectors) can be vectorized; more complex decodings can not.
- * See abstract_table_scan_impl.hpp for a more detailed comment and an example.
  */
 
 template <typename Derived, typename Value>

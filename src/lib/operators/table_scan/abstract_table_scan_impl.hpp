@@ -3,7 +3,10 @@
 #include <array>
 
 #include "storage/pos_list.hpp"
+#include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables/any_segment_iterator.hpp"
 #include "types.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -27,56 +30,38 @@ class AbstractTableScanImpl {
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator>
   static void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, bool functor_is_vectorizable) {
+                       const ChunkID chunk_id, PosList& matches_out) {
     // Can't use a default argument for this because default arguments are non-type deduced contexts
     auto false_type = std::false_type{};
-    _scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, functor_is_vectorizable,
-                                       false_type);
+    _scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, false_type);
   }
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   // noinline reduces compile time drastically
   static void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
-                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] bool functor_is_vectorizable,
-                       [[maybe_unused]] RightIterator right_it) {
-    // SIMD has no benefit for iterators that are too complex (mostly iterators that do not operate on contiguous
-    // storage). Currently, it is only enabled for std::vector (as used by FixedSizeByteAlignedVector). Also, the
-    // AnySegmentIterator is not vectorizable because it relies on virtual method calls. While the check for `IS_DEBUG`
-    // is redundant, it makes people aware of this. Because the sanitizers blow up the lambda to a point where they
-    // can't be properly vectorized anymore, we deactivate the SIMD scan for sanitizer builds.
-    //
-    // Furthermore, we only use the vectorized scan for tables with a certain size. This is because firing up the
-    // AVX units has some cost on current CPUs. The chosen boundary is just an educated guess - a machine-dependent
-    // fine-tuning could find better values, but as long as scans with a handful of results are not vectorized, the
-    // benefits of fine-tuning should not be too big.
-    //
-    // Unfortunately, vectorization is only really beneficial when we can use AVX-512VL. In some cases, running it
-    // without AVX-512VL is slower than the straight-forward SISD version. To account for this while still making sure
-    // that the scan can be developed and tested on non-AVX-512VL machines, we do at least one SIMD iteration even on
-    // non-AVX512VL machines if the scan is eligible for vectorization.
-    //
-    // See the SIMD method for a comment on IsVectorizable.
+                       const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
+    // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
+    // For a description of the SIMD code, have a look at the comments in that method.
+    // If the iterators are type-erased, we do not generate SIMD code. Because of the virtual method calls, any
+    // chance of a good performance is gone anyway. By not generating SIMD code, we save compile time.
 
-#if !HYRISE_DEBUG
-    if constexpr (LeftIterator::IsVectorizable) {
-      if (functor_is_vectorizable && left_end - left_it > 10'000) {
-        _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
-      }
+    if constexpr (!std::is_same_v<std::decay_t<decltype(left_it)>,
+                                  AnySegmentIterator<std::decay_t<decltype(left_it->value())>>>) {
+      _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
+    } else {
+      if (!HYRISE_DEBUG) PerformanceWarning("Not using SIMD scan because iterator is type-erased");
     }
-#endif
 
     // Do the remainder the easy way. If we did not use the optimization above, left_it was not yet touched, so we
     // iterate over the entire input data.
     for (; left_it != left_end; ++left_it) {
+      const auto left = *left_it;
       if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-        const auto left = *left_it;
-
         if ((!CheckForNull || !left.is_null()) && func(left)) {
           matches_out.emplace_back(RowID{chunk_id, left.chunk_offset()});
         }
       } else {
-        const auto left = *left_it;
         const auto right = *right_it;
         if ((!CheckForNull || (!left.is_null() && !right.is_null())) && func(left, right)) {
           matches_out.emplace_back(RowID{chunk_id, left.chunk_offset()});
@@ -88,8 +73,8 @@ class AbstractTableScanImpl {
 
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   static void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
-                                 const ChunkID chunk_id, PosList& matches_out,
-                                 [[maybe_unused]] RightIterator& right_it) {
+                                        const ChunkID chunk_id, PosList& matches_out,
+                                        [[maybe_unused]] RightIterator& right_it) {
 #if defined(__has_feature)
 #if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
     return;
@@ -97,77 +82,95 @@ class AbstractTableScanImpl {
 #endif
 
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled by the caller without
-    // optimization. For each row, we write 0 to `offsets` if the row does not match, or `chunk_offset + 1` if the row
-    // matches. The reason why we need `+1` is given below. This can be parallelized using auto-vectorization/SIMD.
-    // Afterwards, we add all matching rows into `matches_out`. There, we do not push_back/emplace_back values, but
+    // optimization. We first check if the rows match and set the `mask` to 1 at the appropriate positions.
+    // If the mask is empty, we continue with the next block. If at least one row matches (and the mask is not empty),
+    // we fill `offsets` with the ChunkOffsets of ALL rows in the block, not only those that match. A SIMD optimization
+    // is used to move the matching rows into `matches_out`. There, we do not push_back/emplace_back values, but
     // resize the vector first and directly write values into the next position, given by matches_out_index. This
     // avoids calls into the stdlib from the hot loop.
+    //
+    // Most of the performance gain does not come from scanning the input data but from inserting into matches_out more
+    // efficiently. That is why you will see bigger benefits for scans that select more rows.
 
-    auto matches_out_index = matches_out.size();
-
-    // Assuming a maximum SIMD register size of 512 bit. Smaller registers simply lead to the inner loop being unrolled
-    // more than once.
-    constexpr size_t SIMD_SIZE = 512 / 8;
+    // Assuming a maximum SIMD register size of 256 bit. Smaller registers simply lead to the inner loop being unrolled
+    // more than once. Even on machines with 512-bit SIMD registers, we prefer to use 256 bits, because current Intel
+    // CPUs clock down when 512-bit is used.
+    constexpr size_t SIMD_SIZE = 256 / 8;
     constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ChunkOffset);
+
+    // The position at which we will write the next matching row
+    auto matches_out_index = matches_out.size();
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
     matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
 
-    alignas(SIMD_SIZE) std::array<ChunkOffset, BLOCK_SIZE> offsets;
-    offsets.fill(ChunkOffset{0});
-
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
-      // The pragmas promise to the compiler that there are no data dependencies within the loop. If you run into any
-      // issues with the optimization, make sure that you have only set IsVectorizable on iterators that use linear
-      // storage and where the access methods do not change any state.
-      //
-      // Also, when using clang, this causes an error to be thrown if the loop could not be vectorized. Seeing no
-      // error, however, just means that some part of the loop was vectorized - it does not mean that the loop has no
-      // sequential components. For developing fast SIMD methods, you won't get around disassembling the respective
-      // object file.
-      //
-      // Finally, a word on IsVectorizable: With the pragma giving the guarantee about no hidden dependencies, both
-      // gcc and clang can identify cases where SIMD is beneficial. However, when `loop vectorize` is set for clang,
-      // it throws errors for non-vectorized loops. To avoid these compiler errors, we don't even enter this method
-      // if we know that a certain iterator or functor cannot be vectorized. Sometimes, clang also throws an error
-      // even if the iterator itself is generally vectorizable. In that case, the functor (together with a potential
-      // check for NULL values) is too complex. I (MD) have not yet fully understood at what point this happens. You
-      // can avoid it by (a) reducing the number of instructions needed for your functor and (b) trying to make NULL
-      // checks unnecessary.
+      __mmask16 mask = 0;
 
+      // The OpenMP Pragma makes the compiler try harder to vectorize this and gives some hints to help with this.
+      // We do not use the OpenMP runtime, but only the compiler pragmas (look up -fopenmp-simd).
       // NOLINTNEXTLINE
       ;  // clang-format off
-      #pragma GCC ivdep
-      #pragma clang loop vectorize(assume_safety)
+      #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
       // clang-format on
-      for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        const auto left = *left_it;
+      for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+        // Fill `mask` with 1s at positions where the condition is fulfilled
+        const auto& left = *left_it;
 
-        bool matches;
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          matches = (!CheckForNull | !left.is_null()) & func(left);
+          mask |= ((!CheckForNull | !left.is_null()) & func(left)) << i;  // TODO check
         } else {
-          const auto right = *left_it;
-          matches = (!CheckForNull | (!left.is_null() & !right.is_null())) & func(left, right);
+          const auto& right = *right_it;
+          mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << i;  // TODO check
         }
-
-        // If the row matches, write its offset+1 into `offsets`, otherwise write 0. We need to increment the offset
-        // because otherwise a zero would be written for both "no match" and "match at offset 0". This is safe because
-        // the last possible chunk offset is defined as INVALID_CHUNK_OFFSET anyway. We later subtract from the offset
-        // again.
-        offsets[i] = matches * (left.chunk_offset() + 1);
 
         ++left_it;
         if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
+      }
+      if (!mask) continue;
+
+      // Next, write *all* offsets in the block into `offsets`
+      auto offsets = std::array<ChunkOffset, BLOCK_SIZE>{};
+
+      if constexpr (!std::is_base_of_v<BasePointAccessSegmentIterator<std::decay_t<decltype(left_it)>,
+                                                                      std::decay_t<decltype(*left_it)>>,
+                                       std::decay_t<decltype(left_it)>>) {
+        // Fast path: If this is a sequential iterator, we know that the chunk offsets are incremented by 1, so we can
+        // save us the memory lookup
+
+        const auto first_offset = (left_it - BLOCK_SIZE)->chunk_offset();
+
+        // NOLINTNEXTLINE
+        ;  // clang-format off
+        #pragma omp simd safelen(BLOCK_SIZE)
+        // clang-format on
+        for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+          offsets[i] = first_offset + static_cast<ChunkOffset>(i);
+        }
+      } else {
+        // Slow path - the chunk offsets are not guaranteed to be linear
+
+        // Rewind the iterator
+        left_it -= BLOCK_SIZE;
+
+        // NOLINTNEXTLINE
+        ;  // clang-format off
+        #pragma omp simd safelen(BLOCK_SIZE)
+        // clang-format on
+        for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+          const auto& left = *left_it;
+          offsets[i] = left.chunk_offset();
+          ++left_it;
+        }
       }
 
       // Now write the matches into matches_out.
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
       for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        if (offsets[i]) {
-          matches_out[matches_out_index++].chunk_offset = offsets[i] - 1;
+        if (mask >> (BLOCK_SIZE - i) & 1) {
+          matches_out[matches_out_index++].chunk_offset = offsets[i];
         }
       }
 
@@ -176,22 +179,21 @@ class AbstractTableScanImpl {
       break;
 #else
       // Fast path for AVX512VL systems
-      auto& offsets_m512i = *reinterpret_cast<__m512i*>(&offsets);
 
-      // Build a mask where a set bit indicates that the row in `offsets` matched the criterion.
-      const auto mask = _mm512_cmpneq_epu32_mask(offsets_m512i, __m512i{});
+      // Compress `offsets`, i.e., move all values where the mask is set to 1 to the front
+      auto offsets_simd = _mm256_maskz_compress_epi32(mask, reinterpret_cast<__m256i&>(offsets));
 
-      if (!mask) continue;
+      // Copy all offsets into `matches_out` - even those that are set to 0 (which are located at the end). This does
+      // not matter because they will be overwritten in the next round anyway. Copying more than necessary is better
+      // than stopping at the number of matching rows because we do not need a branch for this. The loop will be
+      // vectorized automatically.
 
-      // Compress `offsets`, i.e., move all values where the mask is set to 1 to the front. This is essentially
-      // std::remove(offsets.begin(), offsets.end(), ChunkOffset{0});
-      offsets_m512i = _mm512_maskz_compress_epi32(mask, offsets_m512i);
-
-      // Copy all offsets into `matches_out` - even those that are set to 0. This does not matter because they will
-      // be overwritten in the next round anyway. Copying more than necessary is better than stopping at the number
-      // of matching rows because we do not need a branch for this. The loop will be vectorized automatically.
+      // NOLINTNEXTLINE
+      ;  // clang-format off
+      #pragma omp simd safelen(BLOCK_SIZE)
+      // clang-format on
       for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        matches_out[matches_out_index + i].chunk_offset = offsets[i] - 1;
+        matches_out[matches_out_index + i].chunk_offset = (reinterpret_cast<ChunkOffset*>(&offsets_simd))[i];
       }
 
       // Count the number of matches and increase the index of the next write to matches_out accordingly

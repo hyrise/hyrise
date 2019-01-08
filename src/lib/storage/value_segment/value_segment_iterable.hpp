@@ -59,8 +59,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
         : _value_it{value_it}, _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
-    static constexpr bool IsVectorizable = false;  // tbb::concurrent_vector does not use contiguous storage
-
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -98,8 +96,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
         : _value_it(value_it),
           _null_value_it{null_value_it},
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
-
-    static constexpr bool IsVectorizable = false;  // tbb::concurrent_vector does not use contiguous storage
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -143,8 +139,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                                                                          std::move(position_filter_it)},
           _values{values} {}
 
-    static constexpr bool IsVectorizable = false;  // tbb::concurrent_vector does not use contiguous storage
-
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
@@ -174,8 +168,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                                                                   std::move(position_filter_it)},
           _values{values},
           _null_values{null_values} {}
-
-    static constexpr bool IsVectorizable = false;  // tbb::concurrent_vector does not use contiguous storage
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

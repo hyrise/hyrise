@@ -54,7 +54,7 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
       auto comparator = [predicate_comparator, typed_value](const auto& position) {
         return predicate_comparator(position.value(), typed_value);
       };
-      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches, false);
+      _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
     });
   });
 }
@@ -97,7 +97,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches, true);
+      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -115,9 +115,11 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
       // same hack as in ColumnBetweenTableScanImpl to get rid of one branch.
 
       const auto value_id_diff = segment.unique_values_count() - search_value_id;
-      const auto comparator = [search_value_id, value_id_diff](const auto& position) { return (position.value() - search_value_id) < value_id_diff; };
+      const auto comparator = [search_value_id, value_id_diff](const auto& position) {
+        return (position.value() - search_value_id) < value_id_diff;
+      };
 
-      _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);
+      _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
     });
   } else {
     _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
@@ -127,7 +129,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
         };
         // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
         // TODO Broken for NotEquals
-        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches, true);
+        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
       });
     });
   }

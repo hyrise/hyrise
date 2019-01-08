@@ -694,4 +694,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   // clang-format on
 }
 
+TEST_P(OperatorsTableScanTest, TwoBigScans) {
+  EXPECT_TRUE(false);
+}
+
 }  // namespace opossum
