@@ -35,8 +35,10 @@ TABLE_NAMES = ["aka_name", "aka_title", "cast_info", "char_name", "company_name"
                     "keyword", "kind_type", "link_type", "movie_companies", "movie_info", "movie_info_idx", "movie_keyword", "movie_link", "name",
                     "person_info", "role_type", "title"]
 
+print("Retrieving the IMDB dataset.")
+
 if is_setup():
-    print("IMDB setup already complete, no setup action required")
+    print("  IMDB setup already complete, no setup action required")
     sys.exit(0)
 
 # We are going to calculate the md5 hash later, on-the-fly while downloading
@@ -48,7 +50,6 @@ file_size = int(meta['Content-Length'])
 
 file = open(FILE_NAME, 'wb')
 
-print("Retrieving the IMDB dataset.")
 print("  Downloading: %s %.2f GB" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
 
 already_retrieved = 0
