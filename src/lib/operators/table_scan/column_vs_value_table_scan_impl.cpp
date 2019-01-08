@@ -113,9 +113,9 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
       return predicate_comparator(position.value(), search_value_id);
     };
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      // INVALID_VALUE_ID (i.e. MAX_UINT) represents a NULL in the AttributeVector. For some PredicateConditions, we can
-      // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for MAX_UINT
-      // anyway.
+      // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
+      // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
+      // dictionary.size() anyway.
       if (_predicate_condition == PredicateCondition::Equals ||
           _predicate_condition == PredicateCondition::LessThanEquals ||
           _predicate_condition == PredicateCondition::LessThan) {
