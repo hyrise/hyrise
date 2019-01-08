@@ -341,7 +341,6 @@ set(
     simple_server/session.hpp
     simple_server/start_server.cpp
 
-    sql/abstract_cache.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
     sql/parameter_id_allocator.cpp
