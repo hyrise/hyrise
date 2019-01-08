@@ -10,9 +10,8 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config,
-const std::string& query_path,
-const std::unordered_set<std::string>& filename_blacklist) {
+FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path,
+                                                 const std::unordered_set<std::string>& filename_blacklist) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   filesystem::path path{query_path};

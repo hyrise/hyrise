@@ -18,7 +18,7 @@
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace opossum;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
 int main(int argc, char* argv[]) {

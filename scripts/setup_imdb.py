@@ -49,7 +49,7 @@ file_size = int(meta['Content-Length'])
 file = open(FILE_NAME, 'wb')
 
 print("Retrieving the IMDB dataset.")
-print("Downloading: %s %.2f GB" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
+print("  Downloading: %s %.2f GB" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
 
 already_retrieved = 0
 block_size = 8192
@@ -63,36 +63,36 @@ try:
 
         already_retrieved += len(buffer)
         file.write(buffer)
-        status = r"Retrieved %3.2f%% of the data" % (already_retrieved * 100. / file_size)
+        status = r"  Retrieved %3.2f%% of the data" % (already_retrieved * 100. / file_size)
         status = status + chr(8) * (len(status) + 1)
         print(status, end='\r')
 except:
-    print("Aborting. Something went wrong during the download. Cleaning up.")
+    print("  Aborting. Something went wrong during the download. Cleaning up.")
     clean_up()
     sys.exit(1)
 
 file.close()
 print()
-print("Validating integrity...")
+print("  Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
 if hash_dl != "79e4c71f8ec0dae17d6aa9182fdab835":
-    print("Aborting. Data was modified during the download. Cleaning up.")
+    print("  Aborting. Data was modified during the download. Cleaning up.")
     clean_up()
     sys.exit(2)
 
-print("Downloaded file is valid.")
-print("Unzipping the file...")
+print("  Downloaded file is valid.")
+print("  Unzipping the file...")
 
 try:
     zip = zipfile.ZipFile("imdb.zip", "r")
     zip.extractall(table_dir)
     zip.close()
 except:
-    print("Aborting. Something went wrong during unzipping. Cleaning up.")
+    print("  Aborting. Something went wrong during unzipping. Cleaning up.")
     clean_up(including_table_dir=True)
     sys.exit(3)
 
-print("Success. Deleting the archive.")
+print("  Success. Deleting the archive.")
 clean_up()
