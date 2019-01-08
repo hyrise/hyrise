@@ -17,6 +17,7 @@
 
 #include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
@@ -151,6 +152,10 @@ class Chunk : private Noncopyable {
 
   uint64_t invalid_row_count() const { return _invalid_row_count; }
 
+  void set_cleanup_id(CommitID cleanup_id);
+
+  CommitID get_cleanup_id() const { return _cleanup_id; }
+
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
 
@@ -163,6 +168,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
   uint64_t _invalid_row_count = 0;
+  CommitID _cleanup_id = MvccData::MAX_COMMIT_ID;
 };
 
 }  // namespace opossum
