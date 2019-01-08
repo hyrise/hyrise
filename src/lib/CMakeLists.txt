@@ -54,8 +54,6 @@ set(
     cost_model/feature/projection_features.hpp
     cost_model/feature/runtime_hardware_features.cpp
     cost_model/feature/runtime_hardware_features.hpp
-    cost_model/feature/table_scan_feature_extractor.cpp
-    cost_model/feature/table_scan_feature_extractor.hpp
     cost_model/feature/table_scan_features.cpp
     cost_model/feature/table_scan_features.hpp
     expression/abstract_expression.cpp

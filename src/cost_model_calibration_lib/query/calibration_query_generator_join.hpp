@@ -14,6 +14,8 @@ namespace opossum {
 struct CalibrationQueryGeneratorJoinConfiguration {
   const std::string left_table_name;
   const std::string right_table_name;
+  const size_t left_table_size;
+  const size_t right_table_size;
   const EncodingType encoding_type;
   const DataType data_type;
   const bool reference_column;

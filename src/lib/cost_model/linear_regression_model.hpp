@@ -7,12 +7,13 @@
 
 namespace opossum {
 
+    using ModelCoefficients = std::unordered_map<std::string, float>;
 /**
  * Linear Regression Model
  */
 class LinearRegressionModel {
  public:
-  explicit LinearRegressionModel(const std::unordered_map<std::string, float>& coefficients);
+  explicit LinearRegressionModel(const ModelCoefficients& coefficients);
 
   Cost predict(const std::unordered_map<std::string, float>& features) const;
 

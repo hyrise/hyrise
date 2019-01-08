@@ -40,7 +40,7 @@ const CostModelFeatures CostModelFeatureExtractor::extract_features(
       break;
     }
     case LQPNodeType::StoredTable:
-      //                     No need to add specific features
+      // No need to add specific features
       break;
     default: {
       std::cout << "Unhandled LQP node type in CostModelFeatureExtractor: " << lqp_node_type_to_string.at(node_type)

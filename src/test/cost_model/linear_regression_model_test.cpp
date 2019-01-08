@@ -1,7 +1,6 @@
 #include <unordered_map>
 
 #include "base_test.hpp"
-//#include "gtest/gtest.h"
 
 #include "cost_model/linear_regression_model.hpp"
 #include "expression/expression_functional.hpp"

@@ -17,6 +17,7 @@ set(
     concurrency/transaction_context_test.cpp
     cost_model/cost_estimator_test.cpp
     cost_model/cost_model_adaptive_test.cpp
+    cost_model/feature_extractor/column_feature_extractor_test.cpp
     cost_model/linear_regression_model_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
@@ -281,7 +282,7 @@ HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES
 ${SHARED_SOURCES}
 
 cost_model_calibration/configuration/calibration_column_specification_test.cpp
-        cost_model_calibration/calibration_feature_extractor_test.cpp
+cost_model_calibration/calibration_feature_extractor_test.cpp
 cost_model_calibration/feature/calibration_feature_test.cpp
 cost_model_calibration/query/calibration_query_generator_test.cpp
 cost_model_calibration/query/calibration_query_generator_join_test.cpp

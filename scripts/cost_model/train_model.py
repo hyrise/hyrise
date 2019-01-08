@@ -29,7 +29,7 @@ class HeteroscedasticLinearRegression(BaseEstimator, RegressorMixin):
     def predict(self, X):
         self.lr_.predict(X)
 
-    def score(self, X, y):
+    def score(self, X, y, **kwargs):
         return self.lr_.score(X, y)
 
 class SpecializedModel:

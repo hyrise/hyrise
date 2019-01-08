@@ -30,7 +30,7 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
             if (left_table.second <= right_table.second &&
                 ((right_table.second / static_cast<float>(left_table.second)) == ratio)) {
               output.push_back(
-                  {left_table.first, right_table.first, encoding, data_type, false, static_cast<size_t>(ratio)});
+                  {left_table.first, right_table.first, left_table.second, right_table.second, encoding, data_type, false, static_cast<size_t>(ratio)});
               //              output.push_back(
               //                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
             }
@@ -59,6 +59,9 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 
   std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
   for (const auto& join_type : join_types) {
+    if ((_configuration.left_table_size > 500000 || _configuration.right_table_size > 500000) && (join_type == JoinType::NestedLoop || join_type == JoinType::Index)) {
+      continue;
+    }
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, join_type);
     permutated_join_nodes.push_back(join_node);
   }

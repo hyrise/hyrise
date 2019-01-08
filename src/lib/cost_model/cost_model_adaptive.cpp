@@ -1,6 +1,6 @@
 #include "cost_model_adaptive.hpp"
 
-#include "cost_model/feature/table_scan_feature_extractor.hpp"
+#include "cost_model/feature_extractor/cost_model_feature_extractor.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -13,17 +13,13 @@
 namespace opossum {
 
 CostModelAdaptive::CostModelAdaptive(
-    const std::unordered_map<const TableScanModelGroup, const std::unordered_map<std::string, float>,
+    const std::unordered_map<const TableScanModelGroup, const ModelCoefficients,
                              TableScanModelGroupHash>& all_coefficients)
     : _table_scan_models({}) {
-  //        std::unordered_map<TableScanModelGroup, std::shared_ptr<LinearRegressionModel>, TableScanModelGroupHash> table_scan_models;
-
   // Initialize all LinearRegression Models
   for (const auto& [group, coefficients] : all_coefficients) {
     _table_scan_models[group] = std::make_shared<LinearRegressionModel>(coefficients);
   }
-
-  //        _table_scan_models = table_scan_models;
 }
 
 Cost CostModelAdaptive::_estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -55,7 +51,7 @@ Cost CostModelAdaptive::_estimate_node_cost(const std::shared_ptr<AbstractLQPNod
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
       return _predict_predicate(predicate_node);
-      //                return left_input_row_count * _get_expression_cost_multiplier(predicate_node->predicate()) + output_row_count;
+      // return left_input_row_count * _get_expression_cost_multiplier(predicate_node->predicate()) + output_row_count;
     }
 
     default:
@@ -72,24 +68,28 @@ Cost CostModelAdaptive::_predict_predicate(const std::shared_ptr<PredicateNode>&
   const auto& predicate = node->predicate();
   const auto& predicate_arguments = predicate->arguments;
   const auto& first_argument = predicate_arguments[0];
-  //        const auto&
 
   std::cout << first_argument << std::endl;
 
   // TODO(Sven): actual data type
-  const auto first_column_data_type = DataType::Int;
+//  const auto first_column_data_type = DataType::Int;
 
-  TableScanFeatureExtractor tableScanFeatureExtractor;
+  const auto feature_map = cost_model::CostModelFeatureExtractor::extract_features(node).serialize();
 
-  const auto feature_map = tableScanFeatureExtractor.extract(node);
+  const auto reference_segment = feature_map.at("first_column_is_segment_reference_segment_True");
+  const auto is_small_table = feature_map.at("is_small_table_True");
+
+  std::cout << reference_segment << std::endl;
+  std::cout << is_small_table << std::endl;
 
   // find correct LR Model based on data type, first_segment_is_reference_segment, and is_small_table
-  const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
-                                  static_cast<bool>(feature_map.at("first_column_is_segment_reference_segment_True")),
-                                  static_cast<bool>(feature_map.at("is_small_table_True"))};
+//  const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
+//                                  static_cast<bool>(reference_segment),
+//                                  static_cast<bool>(is_small_table)};
 
-  const auto model = _table_scan_models.at(group);
-  return model->predict(feature_map);
+//  const auto model = _table_scan_models.at(group);
+//  return model->predict(feature_map);
+  return Cost{0.0f};
 }
 
 }  // namespace opossum
