@@ -90,7 +90,6 @@ void Delete::_finish_commit() {
   }
 
   for (const auto& kv : _num_rows_deleted_per_chunk) {
-    std::cout << "Chunk " << kv.first << ": " << kv.second << " of " << _table->get_chunk(kv.first)->size() << std::endl;
     _table->get_chunk(kv.first)->increase_invalid_row_count(kv.second);
   }
 }
