@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include "abstract_query_generator.hpp"
 
 namespace opossum {
