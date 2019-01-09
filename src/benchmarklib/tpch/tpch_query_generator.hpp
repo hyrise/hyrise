@@ -33,6 +33,10 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
 
   // Used for naming the views generated in query 15
   size_t _q15_view_id = 0;
+
+  // We want deterministic seeds, but since the engine is thread-local, we need to make sure that each thread has its
+  // own seed.
+  std::atomic<unsigned int> _random_seed{0};
 };
 
 }  // namespace opossum

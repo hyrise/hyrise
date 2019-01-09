@@ -75,7 +75,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   // Preferring a fast random engine over one with high-quality randomness. Engines are not thread-safe. Since we are
   // fine with them not being synced across threads and object cost is not an issue, we simply use one generator per
   // calling thread.
-  static thread_local std::minstd_rand random_engine{};
+  static thread_local std::minstd_rand random_engine{_random_seed++};
 
   // This is not nice, but initializing this statically would require external methods and make it harder to
   // follow in the end. It's not like this list (taken from TPC-H 4.2.2.13) will ever change...
@@ -95,15 +95,15 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   // uniform_int_distributions should not be modified when they are used, but because we have no explicit thread safety
   // guarantee, we make this thread-local, too.
 
-  static thread_local std::uniform_int_distribution<> material_dist{0, static_cast<int>(materials.size() - 1)};
-  static thread_local std::uniform_int_distribution<> region_dist{0, regions.count - 1};
-  static thread_local std::uniform_int_distribution<> segment_dist{0, c_mseg_set.count - 1};
-  static thread_local std::uniform_int_distribution<> nation_dist{0, nations.count - 1};
-  static thread_local std::uniform_int_distribution<> type_dist{0, p_types_set.count - 1};
-  static thread_local std::uniform_int_distribution<> color_dist{0, colors.count - 1};
-  static thread_local std::uniform_int_distribution<> shipmode_dist{0, l_smode_set.count - 1};
-  static thread_local std::uniform_int_distribution<> brand_char_dist{1, 5};
-  static thread_local std::uniform_int_distribution<> container_dist{0, p_cntr_set.count - 1};
+  std::uniform_int_distribution<> material_dist{0, static_cast<int>(materials.size() - 1)};
+  std::uniform_int_distribution<> region_dist{0, regions.count - 1};
+  std::uniform_int_distribution<> segment_dist{0, c_mseg_set.count - 1};
+  std::uniform_int_distribution<> nation_dist{0, nations.count - 1};
+  std::uniform_int_distribution<> type_dist{0, p_types_set.count - 1};
+  std::uniform_int_distribution<> color_dist{0, colors.count - 1};
+  std::uniform_int_distribution<> shipmode_dist{0, l_smode_set.count - 1};
+  std::uniform_int_distribution<> brand_char_dist{1, 5};
+  std::uniform_int_distribution<> container_dist{0, p_cntr_set.count - 1};
 
   // Will be filled with the parameters for this query and passed to the next method which builds the query string
   std::vector<std::string> parameters;
@@ -111,7 +111,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
   switch (query_id) {
     // Writing `1-1` to make people aware that this is zero-indexed while TPC-H query names are not
     case 1 - 1: {
-      static thread_local std::uniform_int_distribution<> date_diff_dist{60, 120};
+      std::uniform_int_distribution<> date_diff_dist{60, 120};
       const auto date = calculate_date(boost::gregorian::date{1998, 12, 01}, 0, -date_diff_dist(random_engine));
 
       parameters.emplace_back("'"s + date + "'");
@@ -119,7 +119,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 2 - 1: {
-      static thread_local std::uniform_int_distribution<> size_dist{1, 50};
+      std::uniform_int_distribution<> size_dist{1, 50};
       const auto size = size_dist(random_engine);
       const auto material = materials[material_dist(random_engine)];
       const auto region = regions.list[region_dist(random_engine)].text;
@@ -133,7 +133,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
     case 3 - 1: {
       const auto segment = c_mseg_set.list[segment_dist(random_engine)].text;
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 30};
+      std::uniform_int_distribution<> date_diff_dist{0, 30};
       const auto date = calculate_date(boost::gregorian::date{1995, 03, 01}, 0, date_diff_dist(random_engine));
 
       parameters.emplace_back("'"s + segment + "'");
@@ -143,7 +143,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 4 - 1: {
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
+      std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 3);
@@ -156,7 +156,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     case 5 - 1: {
       const auto region = regions.list[region_dist(random_engine)].text;
 
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4};
+      std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
@@ -168,7 +168,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 6 - 1: {
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4};
+      std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
@@ -176,7 +176,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       static std::uniform_real_distribution<> discount_dist{0.02f, 0.09f};
       const auto discount = discount_dist(random_engine);
 
-      static thread_local std::uniform_int_distribution<> quantity_dist{24, 25};
+      std::uniform_int_distribution<> quantity_dist{24, 25};
       const auto quantity = quantity_dist(random_engine);
 
       parameters.emplace_back("'"s + begin_date + "'");
@@ -224,7 +224,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 10 - 1: {
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 23};
+      std::uniform_int_distribution<> date_diff_dist{0, 23};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 3));
@@ -251,7 +251,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
         shipmode2 = l_smode_set.list[shipmode_dist(random_engine)].text;
       } while (shipmode1 == shipmode2);
 
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4};
+      std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
@@ -267,14 +267,14 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       const auto words1 = std::vector{"special", "pending", "unusual", "express"};
       const auto words2 = std::vector{"packages", "requests", "accounts", "deposits"};
 
-      static thread_local std::uniform_int_distribution<> word_dist{0, 3};
+      std::uniform_int_distribution<> word_dist{0, 3};
 
       parameters.emplace_back("'%"s + words1[word_dist(random_engine)] + '%' + words2[word_dist(random_engine)] + "%'");
       break;
     }
 
     case 14 - 1: {
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 47};
+      std::uniform_int_distribution<> date_diff_dist{0, 47};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 1);
@@ -287,7 +287,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
+      std::uniform_int_distribution<> date_diff_dist{0, 4 * 12 + 9};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 3);
@@ -326,7 +326,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
     case 17 - 1: {
       const auto brand = brand_char_dist(random_engine) * 10 + brand_char_dist(random_engine);
-      const auto container = p_cntr_set.list[nation_dist(random_engine)].text;
+      const auto container = p_cntr_set.list[container_dist(random_engine)].text;
 
       parameters.emplace_back("'Brand#"s + std::to_string(brand) + "'");
       parameters.emplace_back("'"s + container + "'");
@@ -334,7 +334,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 18 - 1: {
-      static thread_local std::uniform_int_distribution<> quantity_dist{312, 315};
+      std::uniform_int_distribution<> quantity_dist{312, 315};
       const auto quantity = quantity_dist(random_engine);
 
       parameters.emplace_back(std::to_string(quantity));
@@ -342,9 +342,9 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
     }
 
     case 19 - 1: {
-      static thread_local std::uniform_int_distribution<> quantity1_dist{1, 10};
-      static thread_local std::uniform_int_distribution<> quantity2_dist{10, 20};
-      static thread_local std::uniform_int_distribution<> quantity3_dist{20, 30};
+      std::uniform_int_distribution<> quantity1_dist{1, 10};
+      std::uniform_int_distribution<> quantity2_dist{10, 20};
+      std::uniform_int_distribution<> quantity3_dist{20, 30};
       const auto quantity1 = quantity1_dist(random_engine);
       const auto quantity2 = quantity2_dist(random_engine);
       const auto quantity3 = quantity3_dist(random_engine);
@@ -367,7 +367,7 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
     case 20 - 1: {
       const auto color = colors.list[color_dist(random_engine)].text;
-      static thread_local std::uniform_int_distribution<> date_diff_dist{0, 4};
+      std::uniform_int_distribution<> date_diff_dist{0, 4};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
