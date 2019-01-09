@@ -4,6 +4,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
+#include "pos_list.hpp"
 #include "types.hpp"
 #include "utils/format_bytes.hpp"
 
@@ -39,8 +40,10 @@ class BaseSegment : private Noncopyable {
   const std::optional<OrderByMode> sort_order() const;
   void set_sort_order(OrderByMode sort_order);
 
-  virtual ChunkOffset get_first_bound(const AllTypeVariant& search_value) const /*= 0*/;
-  virtual ChunkOffset get_last_bound(const AllTypeVariant& search_value) const /*= 0*/;
+  virtual ChunkOffset get_first_bound(const AllTypeVariant& search_value,
+                                      const std::shared_ptr<const PosList>& position_filter = nullptr) const /*= 0*/;
+  virtual ChunkOffset get_last_bound(const AllTypeVariant& search_value,
+                                     const std::shared_ptr<const PosList>& position_filter = nullptr) const /*= 0*/;
 
  protected:
   std::optional<OrderByMode> _sort_order;

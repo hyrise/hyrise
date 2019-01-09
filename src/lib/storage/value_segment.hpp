@@ -69,8 +69,10 @@ class ValueSegment : public BaseValueSegment {
 
   size_t estimate_memory_usage() const override;
 
-  ChunkOffset get_first_bound(const AllTypeVariant& search_value) const override;
-  ChunkOffset get_last_bound(const AllTypeVariant& search_value) const override;
+  ChunkOffset get_first_bound(const AllTypeVariant& search_value,
+                              const std::shared_ptr<const PosList>& position_filter) const override;
+  ChunkOffset get_last_bound(const AllTypeVariant& search_value,
+                             const std::shared_ptr<const PosList>& position_filter) const override;
 
  protected:
   pmr_concurrent_vector<T> _values;

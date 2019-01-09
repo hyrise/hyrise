@@ -33,8 +33,7 @@ std::shared_ptr<TableColumnDefinitions> create_column_definitions(const DataType
   return table_column_definitions;
 }
 
-std::shared_ptr<TableWrapper> create_int_table(const int table_size,
-                                               const bool set_sorted_flag) {
+std::shared_ptr<TableWrapper> create_int_table(const int table_size, const bool set_sorted_flag) {
   const auto table_column_definitions = create_column_definitions(DataType::Int);
 
   std::shared_ptr<Table> table;
@@ -47,7 +46,7 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size,
   }
 
   if (set_sorted_flag) {
-    for (auto &chunk : table->chunks()) {
+    for (auto& chunk : table->chunks()) {
       chunk->get_segment(ColumnID(0))->set_sort_order(OrderByMode::Ascending);
       chunk->get_segment(ColumnID(1))->set_sort_order(OrderByMode::AscendingNullsLast);
       chunk->get_segment(ColumnID(2))->set_sort_order(OrderByMode::Descending);
@@ -61,9 +60,8 @@ std::shared_ptr<TableWrapper> create_int_table(const int table_size,
   return table_wrapper;
 }
 
-std::shared_ptr<TableWrapper> create_string_table(const int table_size,
-                                               const int string_length,
-                                               const bool set_sorted_flag) {
+std::shared_ptr<TableWrapper> create_string_table(const int table_size, const int string_length,
+                                                  const bool set_sorted_flag) {
   const auto table_column_definitions = create_column_definitions(DataType::String);
   std::shared_ptr<Table> table;
   std::shared_ptr<TableWrapper> table_wrapper;
@@ -79,7 +77,7 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size,
   }
 
   if (set_sorted_flag) {
-    for (auto &chunk : table->chunks()) {
+    for (auto& chunk : table->chunks()) {
       chunk->get_segment(ColumnID(0))->set_sort_order(OrderByMode::Ascending);
       chunk->get_segment(ColumnID(1))->set_sort_order(OrderByMode::AscendingNullsLast);
       chunk->get_segment(ColumnID(2))->set_sort_order(OrderByMode::Descending);
@@ -97,7 +95,7 @@ typedef std::shared_ptr<TableWrapper> (*TableCreator)(const int);
 
 void BM_TableScanSorted(benchmark::State& state, const int table_size, const float selectivity,
                         const PredicateCondition predicate_condition,
-                        /*TableCreator*/ std::function<std::shared_ptr<TableWrapper> (const int)> table_creator) {
+                        /*TableCreator*/ std::function<std::shared_ptr<TableWrapper>(const int)> table_creator) {
   _clear_cache();
 
   int search_value;
@@ -123,7 +121,8 @@ void BM_TableScanSorted(benchmark::State& state, const int table_size, const flo
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
-  auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(search_value));
+  auto predicate =
+      std::make_shared<BinaryPredicateExpression>(predicate_condition, column_expression, value_(search_value));
 
   auto warm_up = std::make_shared<TableScan>(table_wrapper, predicate);
   warm_up->execute();
@@ -156,7 +155,8 @@ std::shared_ptr<TableWrapper> unsorted_string_table(const int table_size, const 
 const auto rows = 1'000'000;
 
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted01, rows, 0.001, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals, unsorted_int_table);
+BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
+                  unsorted_int_table);
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted1, rows, 0.01, PredicateCondition::LessThanEquals, sorted_int_table);
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted1, rows, 0.01, PredicateCondition::LessThanEquals, unsorted_int_table);
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted10, rows, 0.1, PredicateCondition::LessThanEquals, sorted_int_table);
@@ -170,25 +170,42 @@ BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted70, rows, 0.7, PredicateConditi
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted90, rows, 0.9, PredicateCondition::LessThanEquals, sorted_int_table);
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted90, rows, 0.9, PredicateCondition::LessThanEquals, unsorted_int_table);
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted99, rows, 0.99, PredicateCondition::LessThanEquals, sorted_int_table);
-BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals, unsorted_int_table);
+BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
+                  unsorted_int_table);
 
 const int string_size = 16;
 
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted01, rows, 0.001, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted1, rows, 0.01, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted1, rows, 0.01, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted10, rows, 0.1, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted10, rows, 0.1, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted30, rows, 0.3, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted30, rows, 0.3, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted50, rows, 0.5, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted50, rows, 0.5, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted70, rows, 0.7, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted70, rows, 0.7, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted90, rows, 0.9, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted90, rows, 0.9, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted99, rows, 0.99, PredicateCondition::LessThanEquals, std::bind(sorted_string_table, std::placeholders::_1, string_size));
-BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals, std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted1, rows, 0.01, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted1, rows, 0.01, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted10, rows, 0.1, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted10, rows, 0.1, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted30, rows, 0.3, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted30, rows, 0.3, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted50, rows, 0.5, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted50, rows, 0.5, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted70, rows, 0.7, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted70, rows, 0.7, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted90, rows, 0.9, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted90, rows, 0.9, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
+                  std::bind(sorted_string_table, std::placeholders::_1, string_size));
+BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
+                  std::bind(unsorted_string_table, std::placeholders::_1, string_size));
 
 }  // namespace opossum

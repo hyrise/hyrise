@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -77,6 +78,11 @@ class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
     }
   }
   /**@}*/
+
+  template <typename IteratorType, typename SegmentType>
+  std::tuple<IteratorType, IteratorType, bool> get_sorted_bounds(const std::shared_ptr<const PosList>& position_filter,
+                                                                 IteratorType begin, IteratorType end,
+                                                                 const SegmentType& segment) const;
 
   const AllTypeVariant _value;
 };

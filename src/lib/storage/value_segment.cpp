@@ -7,6 +7,11 @@
 #include <utility>
 #include <vector>
 
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/algorithm/lower_bound.hpp>
+#include <boost/range/algorithm/upper_bound.hpp>
+#include <storage/value_segment/value_segment_iterable.hpp>
+
 #include "abstract_segment_visitor.hpp"
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
@@ -156,48 +161,50 @@ size_t ValueSegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value) const {
+ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
+                                             const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the lower bound.");
+
+  auto result = _values.cbegin();
   if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
-    const auto result = std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
-    if (result == _values.cend()) {
-      return INVALID_CHUNK_OFFSET;
-    }
-    return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
-  } else if (_sort_order.value() == OrderByMode::Descending ||
-             _sort_order.value() == OrderByMode::DescendingNullsLast) {
-    // TODO(hendraet): Double check how std::greater() handles Null values
-    const auto result =
-        std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
-    if (result == _values.cend()) {
-      return INVALID_CHUNK_OFFSET;
-    }
-    return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
+    result = std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
   } else {
-    Fail("Unknown sort order");
+    result = std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
   }
+
+  // TODO(hendraet): Double check how std::greater() handles Null values
+  if (result == _values.cend()) {
+    return INVALID_CHUNK_OFFSET;
+  }
+
+  return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
 }
 
 template <typename T>
-ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value) const {
+ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
+                                            const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the upper bound.");
-  if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
-    const auto result = std::upper_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
-    if (result == _values.cend()) {
-      return INVALID_CHUNK_OFFSET;
+
+  ChunkOffset chunk_offset;
+  ValueSegmentIterable(*this).with_iterators(position_filter, [](auto begin, auto end) {
+    if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
+      const auto result = std::upper_bound(begin, end, type_cast_variant<T>(search_value));
+      if (result == _values.cend()) {
+        chunk_offset = INVALID_CHUNK_OFFSET;
+        return;
+      }
+      chunk_offset = static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
+    } else {
+      const auto result = std::upper_bound(begin, end, type_cast_variant<T>(search_value), std::greater<T>());
+      if (result == _values.cend()) {
+        chunk_offset = INVALID_CHUNK_OFFSET;
+        return;
+      }
+      chunk_offset = static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
     }
-    return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
-  } else if (_sort_order.value() == OrderByMode::Descending ||
-             _sort_order.value() == OrderByMode::DescendingNullsLast) {
-    const auto result =
-        std::upper_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
-    if (result == _values.cend()) {
-      return INVALID_CHUNK_OFFSET;
-    }
-    return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
-  } else {
-    Fail("Unknown sort order");
-  }
+  });
+
+  return chunk_offset;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
