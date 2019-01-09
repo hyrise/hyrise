@@ -8,10 +8,13 @@
 #include <unordered_map>
 #include <vector>
 
+#include "cxxopts.hpp"
+
 #include "abstract_query_generator.hpp"
-#include "benchmark_utils.hpp"
+#include "abstract_table_generator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "query_benchmark_result.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
@@ -25,7 +28,7 @@ class SQLPipeline;
 class BenchmarkRunner {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
-                  const nlohmann::json& context);
+                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
   void run();
@@ -74,6 +77,7 @@ class BenchmarkRunner {
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractQueryGenerator> _query_generator;
+  std::unique_ptr<AbstractTableGenerator> _table_generator;
 
   // Stores the results of the query executions. Its length is defined by the number of available queries.
   std::vector<QueryBenchmarkResult> _query_results;

@@ -10,6 +10,7 @@
 #include "SQLParser.h"
 #include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
+#include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "json.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -19,12 +20,14 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_query_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
+
+using namespace opossum;  // NOLINT
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -49,7 +52,7 @@ int main(int argc, char* argv[]) {
     ("use_prepared_statements", "Do not use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("true")); // NOLINT
   // clang-format on
 
-  std::unique_ptr<opossum::BenchmarkConfig> config;
+  std::shared_ptr<opossum::BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
   bool use_prepared_statements;
@@ -60,7 +63,7 @@ int main(int argc, char* argv[]) {
     scale_factor = json_config.value("scale", 0.1f);
     comma_separated_queries = json_config.value("queries", std::string(""));
 
-    config = std::make_unique<opossum::BenchmarkConfig>(
+    config = std::make_shared<opossum::BenchmarkConfig>(
         opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
     use_prepared_statements = json_config.value("use_prepared_statements", false);
@@ -80,7 +83,7 @@ int main(int argc, char* argv[]) {
     scale_factor = cli_parse_result["scale"].as<float>();
 
     config =
-        std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+        std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
 
     use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   }
@@ -118,20 +121,6 @@ int main(int argc, char* argv[]) {
            "TPC-H query 15 is not supported for multithreaded benchmarking.");
   }
 
-  // Set up TPCH benchmark
-  config->out << "- Generating TPCH Tables with scale_factor=" << scale_factor << " ..." << std::endl;
-
-  const auto tables = opossum::TpchDbGenerator(scale_factor, config->chunk_size).generate();
-
-  for (auto& tpch_table : tables) {
-    const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
-    auto& table = tpch_table.second;
-
-    opossum::BenchmarkTableEncoder::encode(table_name, table, config->encoding_config, config->out);
-    opossum::StorageManager::get().add_table(table_name, table);
-  }
-  config->out << "- ... done." << std::endl;
-
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
   // Add TPCH-specific information
@@ -140,6 +129,6 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   opossum::BenchmarkRunner(*config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, query_ids),
-                           context)
+                           std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }
