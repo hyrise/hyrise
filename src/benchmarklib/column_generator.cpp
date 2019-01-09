@@ -203,7 +203,6 @@ std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinition
 
 
 // we could use this to set visibility of mvcc
-/*
 void set_all_records_visible(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
@@ -215,7 +214,6 @@ void set_all_records_visible(Table& table) {
     }
   }
 }
-*/
 
 std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
 ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fact_table_size, size_t fact_factor,
@@ -253,8 +251,8 @@ ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fa
   }
 
   // see line 205
-  //set_all_records_visible(*fact_table);
-  //set_all_records_visible(*probe_table);
+  set_all_records_visible(*fact_table);
+  set_all_records_visible(*probe_table);
 
   return std::make_unique<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>(
       std::make_pair(std::move(fact_table), std::move(probe_table)));
