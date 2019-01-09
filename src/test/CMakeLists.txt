@@ -266,7 +266,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/jit_runtime_pointer_test.cpp
         operators/jit_operator/specialization/resolve_condition_test.cpp
         operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
-        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp)
+        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
+    )
 
 
     set(SYSTEM_TEST_SOURCES

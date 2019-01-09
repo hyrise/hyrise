@@ -23,6 +23,7 @@ class AbstractTableScanImpl {
    * @defgroup The hot loop of the table scan
    * @{
    */
+
   template <bool CheckForNull, typename BinaryFunctor, typename LeftIterator>
   static void __attribute__((noinline))
   _scan_with_iterators(const BinaryFunctor func, LeftIterator left_it, const LeftIterator left_end,
