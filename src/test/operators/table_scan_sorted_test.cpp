@@ -64,11 +64,12 @@ class OperatorsTableScanSortedTest : public BaseTest, public ::testing::WithPara
 TEST_F(OperatorsTableScanSortedTest, TestAscendingScanInt) {
   const AllTypeVariant value = 5;
 
+  // TODO(cmfcmf): This test uses reference segments (due to the double scan) while the other tests further down do not.
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
   tests[PredicateCondition::Equals] = {5};
-  tests[PredicateCondition::NotEquals] = {0, 1, 2, 3, 4, 6, 7, 8, 9};
-  tests[PredicateCondition::LessThan] = {0, 1, 2, 3, 4};
-  tests[PredicateCondition::LessThanEquals] = {0, 1, 2, 3, 4, 5};
+  tests[PredicateCondition::NotEquals] = {0, 1, 2, 4, 6, 7, 8, 9};
+  tests[PredicateCondition::LessThan] = {0, 1, 2, 4};
+  tests[PredicateCondition::LessThanEquals] = {0, 1, 2, 4, 5};
   tests[PredicateCondition::GreaterThan] = {6, 7, 8, 9};
   tests[PredicateCondition::GreaterThanEquals] = {5, 6, 7, 8, 9};
 
@@ -78,11 +79,18 @@ TEST_F(OperatorsTableScanSortedTest, TestAscendingScanInt) {
       const auto column_expression =
           pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
-      auto predicate = std::make_shared<BinaryPredicateExpression>(test.first, column_expression, value_(value));
-      auto scan = std::make_shared<TableScan>(_table_wrapper, predicate);
-      scan->execute();
+      const auto predicate_1 =
+          std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, column_expression, value_(3));
 
-      ASSERT_COLUMN_SORTED_EQ(scan->get_output(), column_index, test.second);
+      const auto predicate_2 =
+          std::make_shared<BinaryPredicateExpression>(test.first, column_expression, value_(value));
+
+      auto scan_1 = std::make_shared<TableScan>(_table_wrapper, predicate_1);
+      scan_1->execute();
+      auto scan_2 = std::make_shared<TableScan>(scan_1, predicate_2);
+      scan_2->execute();
+
+      ASSERT_COLUMN_SORTED_EQ(scan_2->get_output(), column_index, test.second);
     }
   }
 }

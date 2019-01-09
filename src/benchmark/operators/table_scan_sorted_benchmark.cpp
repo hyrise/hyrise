@@ -91,11 +91,9 @@ std::shared_ptr<TableWrapper> create_string_table(const int table_size, const in
   return table_wrapper;
 }
 
-typedef std::shared_ptr<TableWrapper> (*TableCreator)(const int);
-
 void BM_TableScanSorted(benchmark::State& state, const int table_size, const float selectivity,
                         const PredicateCondition predicate_condition,
-                        /*TableCreator*/ std::function<std::shared_ptr<TableWrapper>(const int)> table_creator) {
+                        std::function<std::shared_ptr<TableWrapper>(const int)> table_creator) {
   _clear_cache();
 
   int search_value;
@@ -109,7 +107,7 @@ void BM_TableScanSorted(benchmark::State& state, const int table_size, const flo
       search_value = static_cast<int>(table_size - table_size * selectivity);
       break;
     default:
-      // TODO Improve logic
+      // TODO(cmfcmf) Improve logic for other predicates.
       Fail("Unsupported predicate condition");
   }
   const auto table_wrapper = table_creator(table_size);

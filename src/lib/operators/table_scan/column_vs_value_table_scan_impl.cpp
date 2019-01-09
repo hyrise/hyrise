@@ -141,8 +141,6 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
       // using ColumnDataType = typename decltype(type)::type;
       // auto typed_value = type_cast_variant<ColumnDataType>(_value);
 
-      // TODO(cmfcmf): Support position_filter
-      Assert(position_filter == nullptr, "position_filter is not yet supported");
       Assert(segment.sort_order().value() == OrderByMode::AscendingNullsLast ||
                  segment.sort_order().value() == OrderByMode::Ascending ||
                  segment.sort_order().value() == OrderByMode::DescendingNullsLast ||
@@ -190,7 +188,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
 
   if ((_predicate_condition == PredicateCondition::GreaterThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::LessThanEquals && !is_ascending)) {
-    const auto lower_bound = segment.get_first_bound(position_filter, _value);
+    const auto lower_bound = segment.get_first_bound(_value, position_filter);
     if (lower_bound == INVALID_CHUNK_OFFSET) {
       return std::make_tuple(lower_it, upper_it, false);
     }
@@ -200,7 +198,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   }
   if ((_predicate_condition == PredicateCondition::GreaterThan && is_ascending) ||
       (_predicate_condition == PredicateCondition::LessThan && !is_ascending)) {
-    const auto lower_bound = segment.get_last_bound(position_filter, _value);
+    const auto lower_bound = segment.get_last_bound(_value, position_filter);
     if (lower_bound == INVALID_CHUNK_OFFSET) {
       return std::make_tuple(lower_it, upper_it, false);
     }
@@ -210,7 +208,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   }
   if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
-    const auto upper_bound = segment.get_last_bound(position_filter, _value);
+    const auto upper_bound = segment.get_last_bound(_value, position_filter);
     if (upper_bound != INVALID_CHUNK_OFFSET) {
       std::advance(upper_it, upper_bound);
     } else {
@@ -220,7 +218,7 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   }
   if ((_predicate_condition == PredicateCondition::LessThan && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThan && !is_ascending)) {
-    const auto upper_bound = segment.get_first_bound(position_filter, _value);
+    const auto upper_bound = segment.get_first_bound(_value, position_filter);
     if (upper_bound != INVALID_CHUNK_OFFSET) {
       std::advance(upper_it, upper_bound);
     } else {
@@ -230,8 +228,8 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   }
   if (_predicate_condition == PredicateCondition::Equals || _predicate_condition == PredicateCondition::NotEquals) {
     const auto is_not_equals = _predicate_condition == PredicateCondition::NotEquals;
-    const auto lower_bound = segment.get_first_bound(position_filter, _value);
-    const auto upper_bound = segment.get_last_bound(position_filter, _value);
+    const auto lower_bound = segment.get_first_bound(_value, position_filter);
+    const auto upper_bound = segment.get_last_bound(_value, position_filter);
     if (lower_bound == INVALID_CHUNK_OFFSET) {
       return std::make_tuple(lower_it, upper_it, is_not_equals);
     } else {
