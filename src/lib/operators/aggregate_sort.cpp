@@ -63,8 +63,7 @@ namespace opossum {
             previous_values.emplace_back(sorted_table->get_value<int>(column_id, size_t(0u)));
         }
 
-        std::vector<AllTypeVariant> current_aggregate_results(_aggregates.size());
-        current_aggregate_results[0] = 2000000.f;
+        std::vector<AllTypeVariant> current_aggregate_results(_aggregates.size(), 2000000.f);
         //*
         auto chunks = sorted_table->chunks();
         for (const auto& chunk : chunks) {
