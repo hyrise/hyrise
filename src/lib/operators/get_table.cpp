@@ -54,12 +54,24 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto excluded_chunks_set =
       std::unordered_set<ChunkID>(_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend());
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-    if (excluded_chunks_set.find(chunk_id) == excluded_chunks_set.end()) {
-      pruned_table->append_chunk(original_table->get_chunk(chunk_id));
+    const auto chunk = original_table->get_chunk(chunk_id);
+    if (chunk && excluded_chunks_set.find(chunk_id) == excluded_chunks_set.end()) {
+      pruned_table->append_chunk(chunk);
     }
   }
 
   return pruned_table;
 }
+std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
+  auto original_table = StorageManager::get().get_table(_name);
 
+  for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
+    const auto chunk = original_table->get_chunk(chunk_id);
+
+    if (!chunk || chunk->get_cleanup_id() <= transaction_context->snapshot_commit_id()) {
+      _excluded_chunk_ids.emplace_back(chunk_id);
+    }
+  }
+  return _on_execute();
+}
 }  // namespace opossum
