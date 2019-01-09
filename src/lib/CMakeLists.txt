@@ -224,6 +224,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_proxy.cpp
+    operators/join_proxy.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp

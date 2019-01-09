@@ -19,7 +19,7 @@ struct CalibrationQueryGeneratorJoinConfiguration {
   const EncodingType encoding_type;
   const DataType data_type;
   const bool reference_column;
-  const size_t table_ratio;
+  const double table_ratio;
 };
 
 // So that google test, e.g., prints readable error messages
@@ -48,7 +48,7 @@ class CalibrationQueryGeneratorJoin {
       const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const;
 
   const std::optional<CalibrationColumnSpecification> _find_primary_key() const;
-  const std::optional<CalibrationColumnSpecification> _find_foreign_key() const;
+  const std::optional<CalibrationColumnSpecification> _find_foreign_key(const double table_ratio) const;
 
   const CalibrationQueryGeneratorJoinConfiguration _configuration;
   const std::vector<CalibrationColumnSpecification>& _column_definitions;

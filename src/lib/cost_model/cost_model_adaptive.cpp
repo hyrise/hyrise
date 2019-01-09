@@ -71,23 +71,25 @@ Cost CostModelAdaptive::_predict_predicate(const std::shared_ptr<PredicateNode>&
   std::cout << first_argument << std::endl;
 
   // TODO(Sven): actual data type
-  //  const auto first_column_data_type = DataType::Int;
+  const auto first_column_data_type = DataType::Int;
+//    data_type_to_string.right.at(first_column_data_type);
 
   const auto feature_map = cost_model::CostModelFeatureExtractor::extract_features(node).serialize();
 
   const auto reference_segment = feature_map.at("first_column_is_segment_reference_segment_True");
+//  const auto first_column_data_type = feature_map.at("first_column_data_type");
   const auto is_small_table = feature_map.at("is_small_table_True");
 
   std::cout << reference_segment << std::endl;
   std::cout << is_small_table << std::endl;
 
   // find correct LR Model based on data type, first_segment_is_reference_segment, and is_small_table
-  //  const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
-  //                                  static_cast<bool>(reference_segment),
-  //                                  static_cast<bool>(is_small_table)};
+    const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
+                                    static_cast<bool>(get<int32_t>(reference_segment)),
+                                    static_cast<bool>(get<int32_t>(is_small_table))};
 
-  //  const auto model = _table_scan_models.at(group);
-  //  return model->predict(feature_map);
+    const auto model = _table_scan_models.at(group);
+//    return model->predict(feature_map);
   return Cost{0.0f};
 }
 
