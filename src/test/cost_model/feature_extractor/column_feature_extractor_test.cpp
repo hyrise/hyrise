@@ -10,27 +10,25 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-    class ColumnFeatureExtractorTest : public ::testing::Test {
-    public:
-        void SetUp() override {
-        }
-    };
+class ColumnFeatureExtractorTest : public ::testing::Test {
+ public:
+  void SetUp() override {}
+};
 
-    TEST_F(ColumnFeatureExtractorTest, UnencodedColumn) {
+TEST_F(ColumnFeatureExtractorTest, UnencodedColumn) {
+  const auto node = MockNode::make(MockNode::ColumnDefinitions{
+      {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
 
-        const auto node = MockNode::make(MockNode::ColumnDefinitions{
-                {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
+  const auto column_expression = lqp_column_({node, ColumnID{0}});
+  const auto column_features = cost_model::ColumnFeatureExtractor::extract_features(node, column_expression, "");
 
-        const auto column_expression = lqp_column_({node, ColumnID{0}});
-        const auto column_features = cost_model::ColumnFeatureExtractor::extract_features(node, column_expression, "");
-
-        EXPECT_EQ(column_features.column_reference_segment_percentage, 0.0);
-        EXPECT_EQ(column_features.column_data_type, DataType::Int);
-        EXPECT_EQ(column_features.column_segment_encoding_Dictionary_percentage, 0.0);
-        EXPECT_EQ(column_features.column_segment_encoding_FixedStringDictionary_percentage, 0.0);
-        EXPECT_EQ(column_features.column_segment_encoding_FrameOfReference_percentage, 0.0);
-        EXPECT_EQ(column_features.column_segment_encoding_RunLength_percentage, 0.0);
-        EXPECT_EQ(column_features.column_segment_encoding_Unencoded_percentage, 1.0);
-    }
+  EXPECT_EQ(column_features.column_reference_segment_percentage, 0.0);
+  EXPECT_EQ(column_features.column_data_type, DataType::Int);
+  EXPECT_EQ(column_features.column_segment_encoding_Dictionary_percentage, 0.0);
+  EXPECT_EQ(column_features.column_segment_encoding_FixedStringDictionary_percentage, 0.0);
+  EXPECT_EQ(column_features.column_segment_encoding_FrameOfReference_percentage, 0.0);
+  EXPECT_EQ(column_features.column_segment_encoding_RunLength_percentage, 0.0);
+  EXPECT_EQ(column_features.column_segment_encoding_Unencoded_percentage, 1.0);
+}
 
 }  // namespace opossum

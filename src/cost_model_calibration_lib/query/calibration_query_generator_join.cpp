@@ -26,13 +26,17 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
     for (const auto& encoding : configuration.encodings) {
       for (const auto& left_table : tables) {
         for (const auto& right_table : tables) {
+          const auto first_table_ratio = left_table.second / static_cast<float>(right_table.second);
+          const auto second_table_ratio = right_table.second / static_cast<float>(left_table.second);
           for (const auto ratio : {1.0, 10.0, 100.0, 1000.0}) {
-            if (left_table.second <= right_table.second &&
-                ((right_table.second / static_cast<float>(left_table.second)) == ratio)) {
-              output.push_back(
-                  {left_table.first, right_table.first, left_table.second, right_table.second, encoding, data_type, false, static_cast<size_t>(ratio)});
-              //              output.push_back(
-              //                  {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
+//            if (abs(table_ratio - ratio) == 0) {
+            if (first_table_ratio == ratio || second_table_ratio == ratio) {
+              output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, encoding,
+                                data_type, false, static_cast<size_t>(ratio)});
+              // output.push_back(
+              // {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
+            } else {
+//              std::cout << "did not find correct ratio for " << ratio << " was " << table_ratio << " (" << left_table.second << "/" << right_table.second << ")" << std::endl;
             }
           }
         }
@@ -48,7 +52,6 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
     const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const {
   std::vector<JoinType> join_types = {JoinType::Hash, JoinType::Index, JoinType::NestedLoop, JoinType::MPSM,
                                       JoinType::SortMerge};
-  //  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::SortMerge};
 
   const auto join_predicate = _generate_join_predicate(left_table, right_table);
 
@@ -59,10 +62,12 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 
   std::vector<std::shared_ptr<AbstractLQPNode>> permutated_join_nodes{};
   for (const auto& join_type : join_types) {
-    if ((_configuration.left_table_size > 500000 || _configuration.right_table_size > 500000) && (join_type == JoinType::NestedLoop || join_type == JoinType::Index)) {
+    if ((_configuration.left_table_size > 500000 || _configuration.right_table_size > 500000) &&
+        (join_type == JoinType::NestedLoop || join_type == JoinType::Index)) {
       continue;
     }
-    const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, join_type);
+    // Running LeftOuterJoin in order to prevent HashJoin from swapping inputs
+    const auto join_node = JoinNode::make(JoinMode::Left, join_predicate, join_type);
     permutated_join_nodes.push_back(join_node);
   }
 
@@ -71,18 +76,34 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoi
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_generate_join_predicate(
     const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const {
-  const auto left_column_definition = _find_foreign_key();
-  if (!left_column_definition) return {};
+  if (_configuration.left_table_size < _configuration.right_table_size) {
+    const auto left_column_definition = _find_primary_key();
+    if (!left_column_definition) return {};
 
-  const auto left_column = left_table->get_column(left_column_definition->column_name);
-  const auto left_column_expression = lqp_column_(left_column);
+    const auto left_column = left_table->get_column(left_column_definition->column_name);
+    const auto left_column_expression = lqp_column_(left_column);
 
-  const auto right_column_definition = _find_primary_key();
-  if (!right_column_definition) return {};
-  const auto right_column = right_table->get_column(right_column_definition->column_name);
-  const auto right_column_expression = lqp_column_(right_column);
+    const auto right_column_definition = _find_foreign_key();
+    if (!right_column_definition) return {};
+    const auto right_column = right_table->get_column(right_column_definition->column_name);
+    const auto right_column_expression = lqp_column_(right_column);
 
-  return expression_functional::equals_(left_column_expression, right_column_expression);
+    return expression_functional::equals_(left_column_expression, right_column_expression);
+  } else {
+    const auto left_column_definition = _find_foreign_key();
+    if (!left_column_definition) return {};
+
+    const auto left_column = left_table->get_column(left_column_definition->column_name);
+    const auto left_column_expression = lqp_column_(left_column);
+
+    const auto right_column_definition = _find_primary_key();
+    if (!right_column_definition) return {};
+    const auto right_column = right_table->get_column(right_column_definition->column_name);
+    const auto right_column_expression = lqp_column_(right_column);
+
+    return expression_functional::equals_(left_column_expression, right_column_expression);
+  }
+
 }
 
 const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoin::_find_primary_key() const {

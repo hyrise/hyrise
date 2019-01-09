@@ -12,10 +12,10 @@ using namespace opossum;  // NOLINT
 
 int main() {
   const auto left_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int}}, TableType::Data,
-                                             100'000, UseMvcc::Yes);
+                                                  100'000, UseMvcc::Yes);
 
   const auto right_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int}}, TableType::Data,
-                                             100'000, UseMvcc::Yes);
+                                                   100'000, UseMvcc::Yes);
 
   // Create table with 600'000 rows
   for (int i = 0; i < 600'000; i++) {
@@ -43,8 +43,9 @@ int main() {
   left_gt->execute();
   auto right_gt = std::make_shared<GetTable>("right_table");
   right_gt->execute();
-  auto join = std::make_shared<JoinIndex>(
-      left_gt, right_gt, JoinMode::Inner, std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+  auto join =
+      std::make_shared<JoinIndex>(left_gt, right_gt, JoinMode::Inner,
+                                  std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   // Will crash with GCC, but not with Clang
   join->execute();
 

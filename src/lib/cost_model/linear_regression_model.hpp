@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-    using ModelCoefficients = std::unordered_map<std::string, float>;
+using ModelCoefficients = std::unordered_map<std::string, float>;
 /**
  * Linear Regression Model
  */

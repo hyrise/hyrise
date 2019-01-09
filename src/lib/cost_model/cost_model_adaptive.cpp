@@ -12,9 +12,8 @@
 
 namespace opossum {
 
-CostModelAdaptive::CostModelAdaptive(
-    const std::unordered_map<const TableScanModelGroup, const ModelCoefficients,
-                             TableScanModelGroupHash>& all_coefficients)
+CostModelAdaptive::CostModelAdaptive(const std::unordered_map<const TableScanModelGroup, const ModelCoefficients,
+                                                              TableScanModelGroupHash>& all_coefficients)
     : _table_scan_models({}) {
   // Initialize all LinearRegression Models
   for (const auto& [group, coefficients] : all_coefficients) {
@@ -72,7 +71,7 @@ Cost CostModelAdaptive::_predict_predicate(const std::shared_ptr<PredicateNode>&
   std::cout << first_argument << std::endl;
 
   // TODO(Sven): actual data type
-//  const auto first_column_data_type = DataType::Int;
+  //  const auto first_column_data_type = DataType::Int;
 
   const auto feature_map = cost_model::CostModelFeatureExtractor::extract_features(node).serialize();
 
@@ -83,12 +82,12 @@ Cost CostModelAdaptive::_predict_predicate(const std::shared_ptr<PredicateNode>&
   std::cout << is_small_table << std::endl;
 
   // find correct LR Model based on data type, first_segment_is_reference_segment, and is_small_table
-//  const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
-//                                  static_cast<bool>(reference_segment),
-//                                  static_cast<bool>(is_small_table)};
+  //  const TableScanModelGroup group{OperatorType::TableScan, first_column_data_type,
+  //                                  static_cast<bool>(reference_segment),
+  //                                  static_cast<bool>(is_small_table)};
 
-//  const auto model = _table_scan_models.at(group);
-//  return model->predict(feature_map);
+  //  const auto model = _table_scan_models.at(group);
+  //  return model->predict(feature_map);
   return Cost{0.0f};
 }
 
