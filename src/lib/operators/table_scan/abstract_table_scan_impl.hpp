@@ -43,15 +43,7 @@ class AbstractTableScanImpl {
                        const ChunkID chunk_id, PosList& matches_out, [[maybe_unused]] RightIterator right_it) {
     // The major part of the table is scanned using SIMD. Only the remainder is handled in this method.
     // For a description of the SIMD code, have a look at the comments in that method.
-    // If the iterators are type-erased, we do not generate SIMD code. Because of the virtual method calls, any
-    // chance of a good performance is gone anyway. By not generating SIMD code, we save compile time.
-
-    if constexpr (!std::is_same_v<std::decay_t<decltype(left_it)>,
-                                  AnySegmentIterator<std::decay_t<decltype(left_it->value())>>>) {
-      _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
-    } else {
-      if (!HYRISE_DEBUG) PerformanceWarning("Not using SIMD scan because iterator is type-erased");
-    }
+    _simd_scan_with_iterators<CheckForNull>(func, left_it, left_end, chunk_id, matches_out, right_it);
 
     // Do the remainder the easy way. If we did not use the optimization above, left_it was not yet touched, so we
     // iterate over the entire input data.
@@ -75,12 +67,6 @@ class AbstractTableScanImpl {
   static void _simd_scan_with_iterators(const BinaryFunctor func, LeftIterator& left_it, const LeftIterator left_end,
                                         const ChunkID chunk_id, PosList& matches_out,
                                         [[maybe_unused]] RightIterator& right_it) {
-#if defined(__has_feature)
-#if __has_feature(thread_sanitizer) || __has_feature(address_sanitizer)
-    return;
-#endif
-#endif
-
     // Concept: Partition the vector into blocks of BLOCK_SIZE entries. The remainder is handled by the caller without
     // optimization. We first check if the rows match and set the `mask` to 1 at the appropriate positions.
     // If the mask is empty, we continue with the next block. If at least one row matches (and the mask is not empty),
@@ -92,13 +78,13 @@ class AbstractTableScanImpl {
     // Most of the performance gain does not come from scanning the input data but from inserting into matches_out more
     // efficiently. That is why you will see bigger benefits for scans that select more rows.
 
-    // Assuming a maximum SIMD register size of 256 bit. Smaller registers simply lead to the inner loop being unrolled
+    // We assume a maximum SIMD register size of 256 bit. Smaller registers simply lead to the inner loop being unrolled
     // more than once. Even on machines with 512-bit SIMD registers, we prefer to use 256 bits, because current Intel
     // CPUs clock down when 512-bit is used.
     constexpr size_t SIMD_SIZE = 256 / 8;
     constexpr size_t BLOCK_SIZE = SIMD_SIZE / sizeof(ChunkOffset);
 
-    // The position at which we will write the next matching row
+    // The index at which we will write the next matching row
     auto matches_out_index = matches_out.size();
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
@@ -106,6 +92,8 @@ class AbstractTableScanImpl {
 
     // Continue the following until we have too few rows left to run over a whole block
     while (static_cast<size_t>(left_end - left_it) > BLOCK_SIZE) {
+      // __mmask8 would be sufficient, but either GCC or the CPU likes a 16-bit mask better, which is good for the
+      // performance.
       __mmask16 mask = 0;
 
       // The OpenMP Pragma makes the compiler try harder to vectorize this and gives some hints to help with this.
@@ -128,6 +116,7 @@ class AbstractTableScanImpl {
         ++left_it;
         if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
       }
+
       if (!mask) continue;
 
       // Next, write *all* offsets in the block into `offsets`
@@ -169,14 +158,14 @@ class AbstractTableScanImpl {
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
       for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        if (mask >> (BLOCK_SIZE - i) & 1) {
+        if (mask >> i & 1) {
           matches_out[matches_out_index++].chunk_offset = offsets[i];
         }
       }
 
       // We have done one iteration. As described above, we stop the SIMD code here, because it won't be faster but
       // might be significantly slower.
-      break;
+      break;  // TODO verify
 #else
       // Fast path for AVX512VL systems
 
