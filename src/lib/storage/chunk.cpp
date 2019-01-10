@@ -208,4 +208,13 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
   _statistics = chunk_statistics;
 }
 
+void Chunk::increase_invalid_row_count(const uint64_t count) {
+  _invalid_row_count += count;
+}
+
+void Chunk::set_cleanup_commit_id(CommitID cleanup_commit_id) {
+  DebugAssert(_cleanup_commit_id == MvccData::MAX_COMMIT_ID, "Wrong usage: Cleanup-Commit-ID should be set only after initialization")
+  _cleanup_commit_id = cleanup_commit_id;
+}
+
 }  // namespace opossum
