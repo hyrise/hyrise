@@ -45,8 +45,9 @@ class AggregateSort : public AbstractAggregateOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   // write the aggregated output for a given aggregate column
-  //template <typename ColumnType, AggregateFunction function, typename AggregateKey>
-  //void write_aggregate_output(ColumnID column_index);
+
+  template <typename ColumnType, AggregateFunction function>
+  void write_aggregate_output(ColumnID column_index);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -61,6 +62,9 @@ class AggregateSort : public AbstractAggregateOperator {
 
   template<typename ColumnType, typename AggregateType>
   void _aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table);
+
+  template <typename ColumnType>
+  void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index, AggregateFunction function);
 };
 
 }  // namespace opossum

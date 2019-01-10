@@ -8,6 +8,7 @@
 #include "type_cast.hpp"
 #include "operators/sort.hpp"
 #include "aggregate/aggregate_traits.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -69,10 +70,21 @@ namespace opossum {
         for (const auto column_id : _groupby_column_ids) {
             _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id));
         }
+
+        ColumnID column_index{0};
         for (const auto& aggregate : _aggregates) {
-            //_output_column_definitions.emplace_back(input_table->column_name(_aggregates.column) + TODO AGGREGATENAME, input_table->column_data_type(_aggregates.column));
-            _output_column_definitions.emplace_back("MIN(" + input_table->column_name(aggregate.column.value_or(ColumnID{42})) + ")", DataType::Float);
+            const auto column = aggregate.column;
+
+            // Output column for COUNT(*). int is chosen arbitrarily.
+            const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
+
+            resolve_data_type(data_type, [&, column_index](auto type) {
+                _write_aggregate_output(type, column_index, aggregate.function);
+            });
+
+            ++column_index;
         }
+
         auto result_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
 
         if(input_table->empty()) {
@@ -184,4 +196,61 @@ namespace opossum {
     void AggregateSort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
     void AggregateSort::_on_cleanup() {}
+
+    template <typename ColumnType>
+    void AggregateSort::_write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
+                                            AggregateFunction function) {
+        switch (function) {
+            case AggregateFunction::Min:
+                write_aggregate_output<ColumnType, AggregateFunction::Min>(column_index);
+                break;
+            case AggregateFunction::Max:
+                write_aggregate_output<ColumnType, AggregateFunction::Max>(column_index);
+                break;
+            case AggregateFunction::Sum:
+                write_aggregate_output<ColumnType, AggregateFunction::Sum>(column_index);
+                break;
+            case AggregateFunction::Avg:
+                write_aggregate_output<ColumnType, AggregateFunction::Avg>(column_index);
+                break;
+            case AggregateFunction::Count:
+                write_aggregate_output<ColumnType, AggregateFunction::Count>(column_index);
+                break;
+            case AggregateFunction::CountDistinct:
+                write_aggregate_output<ColumnType, AggregateFunction::CountDistinct>(column_index);
+                break;
+        }
+    }
+
+    template <typename ColumnType, AggregateFunction function>
+    void AggregateSort::write_aggregate_output(ColumnID column_index) {
+        // retrieve type information from the aggregation traits
+        auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
+
+        const auto& aggregate = _aggregates[column_index];
+
+        if (aggregate_data_type == DataType::Null) {
+            // if not specified, it’s the input column’s type
+            aggregate_data_type = input_table_left()->column_data_type(*aggregate.column);
+        }
+
+        // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
+        // doesn't use Expressions, yet
+        std::stringstream column_name_stream;
+        if (aggregate.function == AggregateFunction::CountDistinct) {
+            column_name_stream << "COUNT(DISTINCT ";
+        } else {
+            column_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
+        }
+
+        if (aggregate.column) {
+            column_name_stream << input_table_left()->column_name(*aggregate.column);
+        } else {
+            column_name_stream << "*";
+        }
+        column_name_stream << ")";
+
+        constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
+        _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
+    }
 } // namespace opossum
