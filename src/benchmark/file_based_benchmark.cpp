@@ -25,13 +25,13 @@ int main(int argc, char* argv[]) {
   cli_options.add_options()
       ("table_path", "Directory containing the Tables", cxxopts::value<std::string>()->default_value("")) // NOLINT
       ("query_path", "Directory/file containing the queries", cxxopts::value<std::string>()->default_value("")) // NOLINT
-      ("queries", "Subset of queries to run", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+      ("queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
   std::string query_path;
   std::string table_path;
-  // Comma-separated query names
+  // Comma-separated query names or "all"
   std::string queries_str;
 
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
       return 0;
     }
 
-    query_path = cli_parse_result["table_path"].as<std::string>();
-    table_path = cli_parse_result["query_path"].as<std::string>();
+    query_path = cli_parse_result["query_path"].as<std::string>();
+    table_path = cli_parse_result["table_path"].as<std::string>();
     queries_str = cli_parse_result["queries"].as<std::string>();
 
     benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
@@ -70,13 +70,21 @@ int main(int argc, char* argv[]) {
   benchmark_config->out << "- Benchmarking queries from " << query_path << std::endl;
   benchmark_config->out << "- Running on tables from " << table_path << std::endl;
 
-  std::optional<std::vector<std::string>> query_whitelist;
+  std::optional<std::unordered_set<std::string>> query_subset;
   if (queries_str == "all") {
     benchmark_config->out << "- Running all queries from specified path" << std::endl;
   } else {
-    query_whitelist.emplace();
-    boost::algorithm::split(*query_whitelist, queries_str, boost::is_any_of(","));
     benchmark_config->out << "- Running subset of queries: " << queries_str << std::endl;
+
+    // "a, b, c, d" -> ["a", " b", " c", " d"]
+    auto query_subset_untrimmed = std::vector<std::string>{};
+    boost::algorithm::split(query_subset_untrimmed, queries_str, boost::is_any_of(","));
+
+    // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
+    query_subset.emplace();
+    for (auto& query_name : query_subset_untrimmed) {
+      query_subset->emplace(boost::trim_copy(query_name));
+    }
   }
 
   // Ignore no .sql files in the directory for now (TODO(anybody): add CLI option if required)
@@ -85,7 +93,8 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  auto query_generator = std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, query_filename_blacklist, query_whitelist);
+  auto query_generator =
+      std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, query_filename_blacklist, query_subset);
 
   BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
 }

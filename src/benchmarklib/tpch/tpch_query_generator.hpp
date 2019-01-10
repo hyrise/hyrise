@@ -14,11 +14,10 @@ class TPCHQueryGenerator : public AbstractQueryGenerator {
 
   std::string get_preparation_queries() const override;
   std::string build_query(const QueryID query_id) override;
+  std::string query_name(const QueryID query_id) const override;
+  size_t available_query_count() const override;
 
  protected:
-  // Generates the names of the queries (e.g., TPCH1)
-  void _generate_names();
-
   // Generates the PREPARE queries (if needed)
   void _generate_preparation_queries();
 
