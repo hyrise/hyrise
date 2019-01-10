@@ -1,9 +1,9 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "abstract_read_write_operator.hpp"
 #include "storage/pos_list.hpp"

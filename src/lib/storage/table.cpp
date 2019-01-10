@@ -116,7 +116,8 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const {
   ChunkID count{0};
-  for (ChunkID chunk_id{0}; chunk_id < _chunks.size(); chunk_id++) if (_chunks[chunk_id]) count++;
+  for (ChunkID chunk_id{0}; chunk_id < _chunks.size(); chunk_id++)
+    if (_chunks[chunk_id]) count++;
   return count;
 }
 

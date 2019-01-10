@@ -20,4 +20,3 @@ class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugi
 };
 
 }  // namespace opossum
-

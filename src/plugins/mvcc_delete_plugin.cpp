@@ -7,7 +7,7 @@ namespace opossum {
 const std::string MvccDeletePlugin::description() const { return "This is the Hyrise TestPlugin"; }
 
 void MvccDeletePlugin::start() {
-  for(const auto& table : sm.tables()) {
+  for (const auto& table : sm.tables()) {
     const auto& chunks = table.second->chunks();
 
     for (ChunkID chunk_id = ChunkID{0}; chunk_id < chunks.size(); chunk_id++) {
@@ -32,4 +32,3 @@ void MvccDeletePlugin::stop() {
 EXPORT_PLUGIN(MvccDeletePlugin)
 
 }  // namespace opossum
-

@@ -208,12 +208,8 @@ void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statist
   _statistics = chunk_statistics;
 }
 
-void Chunk::increase_invalid_row_count(const uint64_t count) {
-  _invalid_row_count += count;
-}
+void Chunk::increase_invalid_row_count(const uint64_t count) { _invalid_row_count += count; }
 
-void Chunk::set_cleanup_id(CommitID cleanup_id) {
-  _cleanup_id = cleanup_id;
-}
+void Chunk::set_cleanup_id(CommitID cleanup_id) { _cleanup_id = cleanup_id; }
 
 }  // namespace opossum
