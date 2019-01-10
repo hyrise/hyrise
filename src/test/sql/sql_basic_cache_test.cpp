@@ -302,18 +302,43 @@ TYPED_TEST(CacheTest, ResizeShrink) {
 }
 
 // Cache Iterator
-TYPED_TEST(CacheTest, CacheIterators) {
+TYPED_TEST(CacheTest, CacheIteratorsRangeBasedForLoop) {
   TypeParam cache(2);
 
+  cache.set(0, 100);
   cache.set(1, 100);
   cache.set(2, 100);
+  cache.set(3, 100);
 
   auto element_count = size_t{0};
   auto value_sum = size_t{0};
 
-  for (auto& [key, value] : cache) {
+  for (const auto& [key, value] : cache) {
     ++element_count;
     value_sum += value;
+    ASSERT_EQ(value, 100);
+  }
+
+  ASSERT_EQ(element_count, 2);
+  ASSERT_EQ(value_sum, 200);
+}
+
+TYPED_TEST(CacheTest, CacheIteratorsBeginEndLoop) {
+  TypeParam cache(2);
+
+  cache.set(0, 100);
+  cache.set(1, 100);
+  cache.set(2, 100);
+  cache.set(3, 100);
+
+  auto element_count = size_t{0};
+  auto value_sum = size_t{0};
+
+  for (auto iter = cache.begin(), end = cache.end(); iter != end; ++iter) {
+    const auto value = (*iter).second;
+    ++element_count;
+    value_sum += value;
+    ASSERT_EQ(value, 100);
   }
 
   ASSERT_EQ(element_count, 2);
