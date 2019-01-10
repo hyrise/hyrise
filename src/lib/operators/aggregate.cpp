@@ -76,7 +76,7 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
 
 void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Aggregate::_on_cleanup() { /*_contexts_per_column.clear();*/ }
+void Aggregate::_on_cleanup() { _contexts_per_column.clear(); }
 
 /*
 Visitor context for the partitioning/grouping visitor
@@ -122,7 +122,7 @@ struct AggregateContext : SegmentVisitorContext {
   }
 
   std::shared_ptr<GroupByContext<AggregateKey>> groupby_context;
-  // std::pair<std::shared_ptr<AggregateResultMap<AggregateKey, AggregateType, ColumnType>>, boost::container::pmr::monotonic_buffer_resource> results;
+  boost::container::pmr::monotonic_buffer_resource buffer;
   std::shared_ptr<AggregateResultMap<AggregateKey, AggregateType, ColumnType>> results;
 };
 
@@ -410,7 +410,8 @@ void Aggregate::_aggregate() {
     if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
-      context->results = std::make_shared<typename decltype(context->results)::element_type>();
+      auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&context->buffer};
+      context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
       _contexts_per_column[column_id] = context;
       continue;
     }
@@ -420,26 +421,29 @@ void Aggregate::_aggregate() {
 
   // bookmark
   //
-  auto estimate = size_t{0};
-  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    estimate += keys_per_chunk[chunk_id].size();
-  }
-  estimate /= 4;
-  // std::cout << "Estimate: " << estimate << std::endl;
+  // auto estimate = size_t{0};
+  // for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  //   estimate += keys_per_chunk[chunk_id].size();
+  // }
+  // // estimate /= 4;
+  // // auto show = estimate > 100 ? true : false;
+  // // if (show) {
+  // //   std::cout << "Estimate: " << estimate << std::endl;
+  // // }
 
-  auto needed_size = aligned_size<std::pair<const AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>>>() * size_t{estimate} * _contexts_per_column.size();
-  auto result_map_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
-  // _result_map_buffer = new boost::container::pmr::monotonic_buffer_resource(1'000'000);
-  auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&result_map_buffer};
-  // allocator.allocate(1);  // Make sure that the buffer is initialized
-  // const auto start_next_buffer_size = result_map_buffer.next_buffer_size();
+  // auto needed_size = aligned_size<std::pair<const AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>>>() * size_t{estimate} * _contexts_per_column.size();
+  // auto result_map_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
+  // // _result_map_buffer = new boost::container::pmr::monotonic_buffer_resource(1'000'000);
+  // auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&result_map_buffer};
+  // // allocator.allocate(1);  // Make sure that the buffer is initialized
+  // // const auto start_next_buffer_size = result_map_buffer.next_buffer_size();
 
-  for (auto col_context : _contexts_per_column) {
-    auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
-    // context->results = std::make_pair(std::make_shared<typename decltype(context->results.first)::element_type>(allocator), result_map_buffer);
-    context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
-    context->results->reserve(estimate);
-  }
+  // for (auto col_context : _contexts_per_column) {
+  //   auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
+  //   // context->results = std::make_pair(std::make_shared<typename decltype(context->results.first)::element_type>(allocator), result_map_buffer);
+  //   context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
+  //   context->results->reserve(estimate);
+  // }
   //
   // bookmark
 
@@ -552,15 +556,44 @@ void Aggregate::_aggregate() {
     }
   }
 
-  // for (auto col_context : _contexts_per_column) {
-  //   auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
-  //   std::cout << "Result size: " << context->results->size() << std::endl;
+  // if (show) {
+  //   for (auto col_context : _contexts_per_column) {
+  //     auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
+  //     std::cout << "Result size: " << context->results->size() << std::endl;
+  //   }
   // }
 
   // const auto end_next_buffer_size = result_map_buffer.next_buffer_size();
-  // std::cout << "Next buffer size start: " << start_next_buffer_size << std::endl;
-  // std::cout << "Next buffer size end: " << end_next_buffer_size << std::endl;
-  // std::cout << "Buffer doubled X times: " << log(end_next_buffer_size) / log(2) - log(start_next_buffer_size) / log(2) << std::endl;
+  // // std::cout << "Next buffer size start: " << start_next_buffer_size << std::endl;
+  // // std::cout << "Next buffer size end: " << end_next_buffer_size << std::endl;
+  // if (show) {
+  //   std::cout << "Buffer doubled X times: " << log(end_next_buffer_size) / log(2) - log(start_next_buffer_size) / log(2) << std::endl;
+  // }
+
+  // if (show) {
+  //   for (const auto& aggregate : _aggregates) {
+  //     switch (aggregate.function) {
+  //       case AggregateFunction::Min:
+  //         std::cout << "Min" << std::endl;
+  //         break;
+  //       case AggregateFunction::Max:
+  //         std::cout << "Max" << std::endl;
+  //         break;
+  //       case AggregateFunction::Sum:
+  //         std::cout << "Sum" << std::endl;
+  //         break;
+  //       case AggregateFunction::Avg:
+  //         std::cout << "Avg" << std::endl;
+  //         break;
+  //       case AggregateFunction::Count:
+  //         std::cout << "Count" << std::endl;
+  //         break;
+  //       case AggregateFunction::CountDistinct:
+  //         std::cout << "CountDistinct" << std::endl;
+  //         break;
+  //     }
+  //   }
+  // }
 
 
   // add group by columns
@@ -608,7 +641,7 @@ void Aggregate::_aggregate() {
 
     ++column_index;
   }
-  _contexts_per_column.clear();
+  // _contexts_per_column.clear();
 }
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
@@ -869,7 +902,8 @@ template <typename ColumnDataType, AggregateFunction aggregate_function, typenam
 std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context_impl() const {
   const auto context = std::make_shared<AggregateContext<
       ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType, AggregateKey>>();
-  context->results = std::make_shared<typename decltype(context->results)::element_type>();
+  auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&context->buffer};
+  context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
   return context;
 }
 
