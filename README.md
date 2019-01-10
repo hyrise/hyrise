@@ -1,5 +1,6 @@
-[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/Hyrise%2Fhyrise/activity/)
+[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise%2Fhyrise/activity/)
 [![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
+[![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
 # Welcome to Hyrise
 
@@ -45,6 +46,9 @@ Subsequent calls to CMake, e.g., when adding files to the build will not be nece
 ### Compiler choice
 CMake will default to your system's default compiler.
 To use a different one, call like `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory.
+
+### ccache
+For development, we strongly suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, simply add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call.
 
 ### Build
 Simply call `make -j*`, where `*` denotes the number of threads to use.

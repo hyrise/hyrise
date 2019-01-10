@@ -70,7 +70,7 @@ size_t DictionarySegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-CompressedVectorType DictionarySegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> DictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
@@ -87,7 +87,7 @@ ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
@@ -98,12 +98,18 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
-size_t DictionarySegment<T>::unique_values_count() const {
-  return _dictionary->size();
+AllTypeVariant DictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
+  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  return (*_dictionary)[value_id];
+}
+
+template <typename T>
+ValueID::base_type DictionarySegment<T>::unique_values_count() const {
+  return static_cast<ValueID::base_type>(_dictionary->size());
 }
 
 template <typename T>

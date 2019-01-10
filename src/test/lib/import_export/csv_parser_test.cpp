@@ -10,7 +10,7 @@ class CsvParserTest : public BaseTest {};
 
 TEST_F(CsvParserTest, EmptyTableFromMetaFile) {
   CsvParser parser;
-  const auto csv_meta_table = parser.create_table_from_meta_file("src/test/csv/float_int.csv.json");
+  const auto csv_meta_table = parser.create_table_from_meta_file("resources/test_data/csv/float_int.csv.json");
   const auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Float}, {"a", DataType::Int}}, TableType::Data);
 

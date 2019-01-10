@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
@@ -29,12 +28,11 @@ class OperatorsPrintTest : public BaseTest {
 
   std::ostringstream output;
 
-  const std::string _table_name = "printTestTable";
-
-  uint32_t _chunk_size = 10;
-
+  std::shared_ptr<Table> _t;
   std::shared_ptr<GetTable> _gt;
-  std::shared_ptr<Table> _t = nullptr;
+
+  const std::string _table_name = "printTestTable";
+  const uint32_t _chunk_size = 10;
 };
 
 // class used to make protected methods visible without
@@ -254,7 +252,8 @@ TEST_F(OperatorsPrintTest, AllFlags) {
 TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   // Per default, MVCC data is created when loading tables.
   // This test passes the flag for printing MVCC information, which is not printed by default.
-  std::shared_ptr<TableWrapper> table = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+  std::shared_ptr<TableWrapper> table =
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
   table->execute();
 
   Print::print(table, 2, output);
@@ -287,6 +286,25 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
   std::ostringstream output_ss_tab_inst;
   Print::print(_t, 0, output_ss_tab_inst);
   EXPECT_EQ(output_ss_tab_inst.str(), expected_output);
+}
+
+TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
+  TableColumnDefinitions nullable_column_definitions;
+  nullable_column_definitions.emplace_back("l_returnflag", DataType::String, false);
+  nullable_column_definitions.emplace_back("l_linestatus", DataType::String, false);
+  nullable_column_definitions.emplace_back("sum_qty", DataType::Double, true);
+  nullable_column_definitions.emplace_back("sum_base_price", DataType::Double, true);
+  const auto tab = std::make_shared<Table>(nullable_column_definitions, TableType::Data, _chunk_size);
+
+  auto expected_output =
+      "=== Columns\n"
+      "|l_returnflag|l_linestatus| sum_qty|sum_base_price|\n"
+      "|      string|      string|  double|        double|\n"
+      "|    not null|    not null|    null|          null|\n";
+
+  Print::print(tab, 0, output);
+
+  EXPECT_EQ(output.str(), expected_output);
 }
 
 }  // namespace opossum

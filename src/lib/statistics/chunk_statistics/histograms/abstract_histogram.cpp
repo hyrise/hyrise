@@ -12,9 +12,7 @@
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-
-#include "resolve_type.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
@@ -62,13 +60,10 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
     const std::shared_ptr<const BaseSegment>& segment) {
   std::map<T, HistogramCountType> value_counts;
 
-  resolve_segment_type<T>(*segment, [&](auto& typed_segment) {
-    auto iterable = create_iterable_from_segment<T>(typed_segment);
-    iterable.for_each([&](const auto& value) {
-      if (!value.is_null()) {
-        value_counts[value.value()]++;
-      }
-    });
+  segment_iterate<T>(*segment, [&](const auto& position) {
+    if (!position.is_null()) {
+      value_counts[position.value()]++;
+    }
   });
 
   std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
@@ -120,7 +115,7 @@ T AbstractHistogram<T>::_get_next_value(const T value) const {
 }
 
 template <typename T>
-float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
+double AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, const T value) const {
   /**
    * Returns the share of values smaller than `value` in the given bin.
    *
@@ -152,7 +147,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
    *  That is, what is the share of values smaller than "gent" in the range ["gence", "j"]?
    */
   if constexpr (!std::is_same_v<T, std::string>) {
-    return static_cast<float>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
+    return static_cast<double>(value - _bin_minimum(bin_id)) / _bin_width(bin_id);
   } else {
     const auto bin_min = _bin_minimum(bin_id);
     const auto bin_max = _bin_maximum(bin_id);
@@ -164,7 +159,7 @@ float AbstractHistogram<T>::_share_of_bin_less_than_value(const BinID bin_id, co
     const auto value_repr = _convert_string_to_number_representation(value.substr(common_prefix_len));
     const auto min_repr = _convert_string_to_number_representation(bin_min.substr(common_prefix_len));
     const auto max_repr = _convert_string_to_number_representation(bin_max.substr(common_prefix_len));
-    return static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+    return static_cast<double>(value_repr - min_repr) / (max_repr - min_repr + 1);
   }
 }
 
@@ -417,7 +412,7 @@ float AbstractHistogram<T>::_estimate_cardinality(const PredicateCondition predi
         // Therefore, we need to sum up the counts of all bins with a max < value.
         index = _next_bin_for_value(value);
       } else {
-        cardinality += _share_of_bin_less_than_value(index, value) * _bin_height(index);
+        cardinality += static_cast<float>(_share_of_bin_less_than_value(index, value)) * _bin_height(index);
       }
 
       // Sum up all bins before the bin (or gap) containing the value.

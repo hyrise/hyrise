@@ -41,7 +41,7 @@ TEST_F(JitHashmapValueTest, GetAndSet) {
     const auto column_index = static_cast<size_t>(std::rand()) % 3;
     const auto row_index = static_cast<size_t>(std::rand()) % 10;
     JitHashmapValue hashmap_value{data_type, false, column_index};
-    hashmap_value.set(value_in, row_index, context);
+    hashmap_value.set<ValueType>(value_in, row_index, context);
     const auto value_out = hashmap_value.get<ValueType>(row_index, context);
     EXPECT_EQ(value_in, value_out);
   };

@@ -1,7 +1,6 @@
 #include <regex>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -20,11 +19,11 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LogicalQueryPlanTest : public ::testing::Test {
+class LogicalQueryPlanTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl"));
+    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     node_int_int = StoredTableNode::make("int_int");
     a1 = node_int_int->get_column("a");
@@ -87,8 +86,6 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _nodes[1]->set_left_input(_nodes[2]);
     _nodes[0]->set_left_input(_nodes[1]);
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<Table> table_int_int;
   std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
@@ -318,9 +315,9 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
 
   // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
   const auto copied_expression_a =
-      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->node_expressions.at(0));
   const auto copied_expression_b =
-      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->node_expressions.at(1));
 
   EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
   EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
@@ -414,7 +411,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   const auto copied_sub_select_a =
       std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
   const auto copied_sub_select_b =
-      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate->arguments.at(1));
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate()->arguments.at(1));
 
   // Check that LQPs and SelectExpressions were actually duplicated
   EXPECT_NE(copied_sub_select_a, sub_select);

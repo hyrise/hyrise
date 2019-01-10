@@ -62,7 +62,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   _out << "|" << std::endl;
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
     const auto nullable = input_table_left()->column_is_nullable(column_id);
-    _out << "|" << (nullable ? "    null" : "not null");
+    _out << "|" << std::setw(widths[column_id]) << (nullable ? "null" : "not null") << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||      |      |      ";
@@ -84,22 +84,22 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
 
     // print the rows in the chunk
-    for (size_t row = 0; row < chunk->size(); ++row) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       _out << "|";
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
         auto column_width = widths[column_id];
-        auto cell = _truncate_cell((*chunk->get_segment(column_id))[row], column_width);
+        auto cell = _truncate_cell((*chunk->get_segment(column_id))[chunk_offset], column_width);
         _out << std::setw(column_width) << cell << "|" << std::setw(0);
       }
 
       if (_flags & PrintMvcc && chunk->has_mvcc_data()) {
         auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-        auto begin = mvcc_data->begin_cids[row];
-        auto end = mvcc_data->end_cids[row];
-        auto tid = mvcc_data->tids[row];
+        auto begin = mvcc_data->begin_cids[chunk_offset];
+        auto end = mvcc_data->end_cids[chunk_offset];
+        auto tid = mvcc_data->tids[chunk_offset];
 
         auto begin_string = begin == MvccData::MAX_COMMIT_ID ? "" : std::to_string(begin);
         auto end_string = end == MvccData::MAX_COMMIT_ID ? "" : std::to_string(end);
@@ -133,8 +133,8 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
     auto chunk = input_table_left()->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      for (size_t row = 0; row < chunk->size(); ++row) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[row]).size());
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[chunk_offset]).size());
         widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }

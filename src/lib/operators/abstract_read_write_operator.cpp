@@ -24,7 +24,6 @@ void AbstractReadWriteOperator::execute() {
     // gets destroyed, it will cause another exception that hides the one that caused the actual error. We are NOT
     // trying to handle the exception here - just making sure that we are not misled when we debug things.
     _mark_as_failed();
-
     throw;
   }
 

@@ -20,9 +20,13 @@ template <bool OnConstStorage,
           typename DereferenceValue = std::conditional_t<OnConstStorage, const std::string_view, FixedString>>
 class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<OnConstStorage>, DereferenceValue,
                                                           std::random_access_iterator_tag, DereferenceValue> {
+  using ValueType = std::string_view;
+
  public:
   FixedStringIterator(size_t string_length, Storage& vector, size_t pos = 0)
       : _string_length(string_length), _chars(vector), _pos(pos) {}
+
+  FixedStringIterator(const FixedStringIterator&) = default;
 
   FixedStringIterator& operator=(const FixedStringIterator& other) {
     DebugAssert(_string_length == other._string_length && &_chars == &other._chars,

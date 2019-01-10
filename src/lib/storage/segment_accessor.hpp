@@ -12,6 +12,26 @@
 
 namespace opossum {
 
+namespace detail {
+
+// We want to instantiate create_segment_accessor() for all data types, but our EXPLICITLY_INSTANTIATE_DATA_TYPES macro
+// only supports classes. So we wrap create_segment_accessor() in this class and instantiate the class in the .cpp
+template <typename T>
+class CreateSegmentAccessor {
+ public:
+  static std::unique_ptr<BaseSegmentAccessor<T>> create(const std::shared_ptr<const BaseSegment>& segment);
+};
+
+}  // namespace detail
+
+/**
+ * Utility method to create a SegmentAccessor for a given BaseSegment.
+ */
+template <typename T>
+std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
+  return opossum::detail::CreateSegmentAccessor<T>::create(segment);
+}
+
 /**
  * A SegmentAccessor is templated per SegmentType and DataType (T).
  * It requires that the underlying segment implements an implicit interface:
@@ -22,16 +42,13 @@ namespace opossum {
 template <typename T, typename SegmentType>
 class SegmentAccessor : public BaseSegmentAccessor<T> {
  public:
-  explicit SegmentAccessor(const SegmentType& segment) : _segment{segment} {}
+  explicit SegmentAccessor(const SegmentType& segment) : BaseSegmentAccessor<T>{}, _segment{segment} {}
 
   const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
 
  protected:
   const SegmentType& _segment;
 };
-
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment);
 
 /**
  * For ReferenceSegments, we don't use the SegmentAccessor but either the MultipleChunkReferenceSegmentAccessor or the.
@@ -82,26 +99,5 @@ class SingleChunkReferenceSegmentAccessor : public BaseSegmentAccessor<T> {
   const ChunkID _chunk_id;
   const std::unique_ptr<BaseSegmentAccessor<T>> _accessor;
 };
-
-/**
- * Utility method to create a SegmentAccessor for a given BaseSegment.
- */
-template <typename T>
-std::unique_ptr<BaseSegmentAccessor<T>> create_segment_accessor(const std::shared_ptr<const BaseSegment>& segment) {
-  std::unique_ptr<BaseSegmentAccessor<T>> accessor;
-  resolve_segment_type<T>(*segment, [&](const auto& typed_segment) {
-    using SegmentType = std::decay_t<decltype(typed_segment)>;
-    if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
-      if (typed_segment.pos_list()->references_single_chunk() && typed_segment.pos_list()->size() > 0) {
-        accessor = std::make_unique<SingleChunkReferenceSegmentAccessor<T>>(typed_segment);
-      } else {
-        accessor = std::make_unique<MultipleChunkReferenceSegmentAccessor<T>>(typed_segment);
-      }
-    } else {
-      accessor = std::make_unique<SegmentAccessor<T, SegmentType>>(typed_segment);
-    }
-  });
-  return accessor;
-}
 
 }  // namespace opossum

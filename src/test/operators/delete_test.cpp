@@ -27,7 +27,7 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE);
+    _table = load_table("resources/test_data/tbl/int_float.tbl");
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
     _gt = std::make_shared<GetTable>(_table_name);
@@ -137,6 +137,35 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result->get_output());
 }
 
+TEST_F(OperatorsDeleteTest, EmptyDelete) {
+  auto tx_context_modification = TransactionManager::get().new_transaction_context();
+
+  auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "112233");
+
+  table_scan->execute();
+
+  EXPECT_EQ(table_scan->get_output()->chunk_count(), 0u);
+
+  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
+  delete_op->set_transaction_context(tx_context_modification);
+
+  delete_op->execute();
+
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  // MVCC commit.
+  tx_context_modification->commit();
+
+  // Get validated table which should be the original one
+  auto tx_context_verification = TransactionManager::get().new_transaction_context();
+  auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(tx_context_verification);
+
+  validate->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), _gt->get_output());
+}
+
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
@@ -179,7 +208,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   for (const auto value : {456.7, 457.7}) {
     auto context = TransactionManager::get().new_transaction_context();
 
-    auto values_to_insert = load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE);
+    auto values_to_insert = load_table("resources/test_data/tbl/int_float3.tbl");
     auto table_name_for_insert = "bla";
     StorageManager::get().add_table(table_name_for_insert, values_to_insert);
     auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
@@ -231,7 +260,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto expected_result = load_table("src/test/tables/int_float_deleted.tbl", Chunk::MAX_SIZE);
+    auto expected_result = load_table("resources/test_data/tbl/int_float_deleted.tbl");
 
     EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
 

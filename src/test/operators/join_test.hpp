@@ -27,44 +27,46 @@ class JoinTest : public BaseTest {
  public:
   static void SetUpTestCase() {  // called ONCE before tests are run
     // load and create regular ValueSegment tables
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
-    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_string.tbl", 4));
-    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/string_int.tbl", 3));
-    _table_wrapper_e = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int.tbl", 4));
-    _table_wrapper_f = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int2.tbl", 4));
-    _table_wrapper_g = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 4));
-    _table_wrapper_h = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int4.tbl", 4));
-    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("src/test/tables/int5.tbl", 1));
-    _table_wrapper_j = std::make_shared<TableWrapper>(load_table("src/test/tables/int3.tbl", 1));
-    _table_wrapper_k = std::make_shared<TableWrapper>(load_table("src/test/tables/int4.tbl", 1));
-    _table_wrapper_l = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
+    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_string.tbl", 4));
+    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/string_int.tbl", 3));
+    _table_wrapper_e = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", 4));
+    _table_wrapper_f = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int2.tbl", 4));
+    _table_wrapper_g = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", 4));
+    _table_wrapper_h = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4.tbl", 4));
+    _table_wrapper_i = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int5.tbl", 1));
+    _table_wrapper_j = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int3.tbl", 1));
+    _table_wrapper_k = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int4.tbl", 1));
+    _table_wrapper_l = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", 1));
     _table_wrapper_m = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20));
     _table_wrapper_n = std::make_shared<TableWrapper>(
-        load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
-    _table_wrapper_o = std::make_shared<TableWrapper>(load_table("src/test/tables/float_zero_precision.tbl", 1));
-    _table_wrapper_p = std::make_shared<TableWrapper>(load_table("src/test/tables/double_zero_precision.tbl", 1));
-    _table_wrapper_q = std::make_shared<TableWrapper>(load_table("src/test/tables/string_numbers.tbl", 1));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20));
+    _table_wrapper_o =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/float_zero_precision.tbl", 1));
+    _table_wrapper_p =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/double_zero_precision.tbl", 1));
+    _table_wrapper_q = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/string_numbers.tbl", 1));
 
     // load and create DictionarySegment tables
-    auto table = load_table("src/test/tables/int_float.tbl", 2);
+    auto table = load_table("resources/test_data/tbl/int_float.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/int_float2.tbl", 2);
+    table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_b_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/int_float.tbl", 2);
+    table = load_table("resources/test_data/tbl/int_float.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_c_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
+    table = load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 20);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_m_dict = std::make_shared<TableWrapper>(std::move(table));
 
-    table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
+    table = load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 20);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}});
     _table_wrapper_n_dict = std::make_shared<TableWrapper>(std::move(table));
 
@@ -111,7 +113,42 @@ class JoinTest : public BaseTest {
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 
-    EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+    const auto actual_result = join->get_output();
+    EXPECT_TABLE_EQ_UNORDERED(actual_result, expected_result);
+
+    /**
+     * Test the column definitions of the output table, especially the nullability
+     */
+
+    for (auto output_column_id = ColumnID{0}; output_column_id < actual_result->column_count(); ++output_column_id) {
+      auto expected_column_definition = TableColumnDefinition{};
+
+      switch (mode) {
+        case JoinMode::Inner:
+        case JoinMode::Left:
+        case JoinMode::Right:
+        case JoinMode::Outer:
+        case JoinMode::Cross:
+          if (output_column_id < left->get_output()->column_count()) {
+            expected_column_definition = left->get_output()->column_definitions()[output_column_id];
+            if (mode == JoinMode::Right || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+          } else {
+            expected_column_definition =
+                right->get_output()->column_definitions()[output_column_id - left->get_output()->column_count()];
+            if (mode == JoinMode::Left || mode == JoinMode::Outer) expected_column_definition.nullable = true;
+          }
+          break;
+
+        case JoinMode::Semi:
+          expected_column_definition = left->get_output()->column_definitions()[output_column_id];
+          break;
+        case JoinMode::Anti:
+          expected_column_definition = right->get_output()->column_definitions()[output_column_id];
+          break;
+      }
+      const auto actual_column_definition = actual_result->column_definitions()[output_column_id];
+      EXPECT_EQ(actual_column_definition, expected_column_definition);
+    }
   }
 
   inline static std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,

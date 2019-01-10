@@ -29,8 +29,8 @@
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/sql_query_plan.hpp"
-#include "storage/materialize.hpp"
+#include "scheduler/operator_task.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -159,10 +159,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::PQPColumn:
       return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
 
-    // ValueExpression and ParameterExpression both need to unpack an AllTypeVariant, so one functions handles both
-    case ExpressionType::Parameter:
+    // ValueExpression and CorrelatedParameterExpression both need to unpack an AllTypeVariant, so one functions handles
+    // both
+    case ExpressionType::CorrelatedParameter:
     case ExpressionType::Value:
-      return _evaluate_value_or_parameter_expression<Result>(expression);
+      return _evaluate_value_or_correlated_parameter_expression<Result>(expression);
 
     case ExpressionType::Function:
       return _evaluate_function_expression<Result>(static_cast<const FunctionExpression&>(expression));
@@ -191,6 +192,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::LQPColumn:
     case ExpressionType::LQPSelect:
       Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
+
+    case ExpressionType::Placeholder:
+      Fail(
+          "Can't evaluate an expressions still containing placeholders. Are you trying to execute a PreparedPlan "
+          "without instantiating it first?");
   }
   Fail("GCC thinks this is reachable");
 }
@@ -697,7 +703,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_exists_
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_or_parameter_expression(
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_or_correlated_parameter_expression(
     const AbstractExpression& expression) {
   AllTypeVariant value;
 
@@ -705,9 +711,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     const auto& value_expression = static_cast<const ValueExpression&>(expression);
     value = value_expression.value;
   } else {
-    const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
-    Assert(parameter_expression.value().has_value(), "ParameterExpression: Parameter not set, cannot evaluate");
-    value = *parameter_expression.value();
+    const auto& correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
+    Assert(correlated_parameter_expression, "ParameterExpression not a CorrelatedParameterExpression")
+        Assert(correlated_parameter_expression->value().has_value(),
+               "CorrelatedParameterExpression: Value not set, cannot evaluate");
+    value = *correlated_parameter_expression->value();
   }
 
   if (value.type() == typeid(NullValue)) {
@@ -926,9 +934,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
 
-  SQLQueryPlan query_plan{CleanupTemporaries::Yes};
-  query_plan.add_tree_by_root(row_pqp);
-  const auto tasks = query_plan.create_tasks();
+  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
@@ -1001,7 +1007,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
                   if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                          RightDataType>::value) {
-                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
                       if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
                       auto matches = ExpressionEvaluator::Bool{0};
@@ -1025,11 +1031,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
                 if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             }
@@ -1048,7 +1054,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
@@ -1082,24 +1088,21 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
       Assert(select_expression, "Expected PQPSelectExpression");
 
+      const auto invert = exists_expression.exists_expression_type == ExistsExpressionType::NotExists;
+
       const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
-
-      switch (exists_expression.exists_expression_type) {
-        case ExistsExpressionType::Exists:
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-            if (select_result_tables[chunk_offset]->row_count() > 0) {
-              result_pos_list.emplace_back(_chunk_id, chunk_offset);
-            }
+      if (select_expression->is_correlated()) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+          if ((select_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
-          break;
-
-        case ExistsExpressionType::NotExists:
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
-            if (select_result_tables[chunk_offset]->row_count() == 0) {
-              result_pos_list.emplace_back(_chunk_id, chunk_offset);
-            }
+        }
+      } else {
+        if ((select_result_tables.front()->row_count() > 0) ^ invert) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
-          break;
+        }
       }
     } break;
 
@@ -1110,8 +1113,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
              "Cannot evaluate non-boolean literal to PosList");
       // TRUE literal returns the entire Chunk, FALSE literal returns empty PosList
       if (boost::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
-        result_pos_list.resize(_chunk->size());
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+        result_pos_list.resize(_output_row_count);
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           result_pos_list[chunk_offset] = {_chunk_id, chunk_offset};
         }
       }
@@ -1278,7 +1281,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
   if (((row_counts == 0) || ...)) return 0;
 
-  return std::max({row_counts...});
+  return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
@@ -1318,16 +1321,31 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-    std::vector<ColumnDataType> values;
-    materialize_values(segment, values);
+    std::vector<ColumnDataType> values(segment.size());
+
+    auto chunk_offset = ChunkOffset{0};
 
     if (_table->column_is_nullable(column_id)) {
-      std::vector<bool> nulls;
-      materialize_nulls<ColumnDataType>(segment, nulls);
+      std::vector<bool> nulls(segment.size());
+
+      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        if (position.is_null()) {
+          nulls[chunk_offset] = true;
+        } else {
+          values[chunk_offset] = position.value();
+        }
+        ++chunk_offset;
+      });
+
       _segment_materializations[column_id] =
           std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
 
     } else {
+      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        values[chunk_offset] = position.value();
+        ++chunk_offset;
+      });
+
       _segment_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values));
     }
   });
@@ -1481,20 +1499,31 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
            "Expected different DataType from SubSelect");
 
     std::vector<bool> result_nulls;
-    std::vector<Result> result_values;
-    result_values.reserve(table->row_count());
+    std::vector<Result> result_values(table->row_count());
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-      materialize_values(result_segment, result_values);
-    }
+    auto chunk_offset = ChunkOffset{0};
 
     if (table->column_is_nullable(ColumnID{0})) {
-      result_nulls.reserve(table->row_count());
+      result_nulls.resize(table->row_count());
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
         const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
-        materialize_nulls<Result>(result_segment, result_nulls);
+        segment_iterate<Result>(result_segment, [&](const auto& position) {
+          if (position.is_null()) {
+            result_nulls[chunk_offset] = true;
+          } else {
+            result_values[chunk_offset] = position.value();
+          }
+          ++chunk_offset;
+        });
+      }
+    } else {
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+        segment_iterate<Result>(result_segment, [&](const auto& position) {
+          result_values[chunk_offset] = position.value();
+          ++chunk_offset;
+        });
       }
     }
 

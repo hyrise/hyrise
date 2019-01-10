@@ -19,14 +19,16 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
   return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
-Table::Table(const TableColumnDefinitions& column_definitions, const TableType type, const uint32_t max_chunk_size,
-             const UseMvcc use_mvcc)
+Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
+             const std::optional<uint32_t> max_chunk_size, const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
-      _max_chunk_size(max_chunk_size),
+      _max_chunk_size(type == TableType::Data ? max_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
       _append_mutex(std::make_unique<std::mutex>()) {
-  Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
+  // _max_chunk_size has no meaning if the table is a reference table.
+  DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
+  DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
@@ -57,12 +59,12 @@ DataType Table::column_data_type(const ColumnID column_id) const {
 }
 
 std::vector<DataType> Table::column_data_types() const {
-  std::vector<DataType> data_types;
-  data_types.reserve(_column_definitions.size());
+  std::vector<DataType> types;
+  types.reserve(_column_definitions.size());
   for (const auto& column_definition : _column_definitions) {
-    data_types.emplace_back(column_definition.data_type);
+    types.emplace_back(column_definition.data_type);
   }
-  return data_types;
+  return types;
 }
 
 bool Table::column_is_nullable(const ColumnID column_id) const {
@@ -82,7 +84,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   const auto iter = std::find_if(_column_definitions.begin(), _column_definitions.end(),
                                  [&](const auto& column_definition) { return column_definition.name == column_name; });
   Assert(iter != _column_definitions.end(), "Couldn't find column '" + column_name + "'");
-  return static_cast<ColumnID>(std::distance(_column_definitions.begin(), iter));
+  return ColumnID{static_cast<ColumnID::base_type>(std::distance(_column_definitions.begin(), iter))};
 }
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
@@ -114,7 +116,7 @@ uint64_t Table::row_count() const {
 
 bool Table::empty() const { return row_count() == 0u; }
 
-ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
+ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
 const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
 
@@ -144,7 +146,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
                          const std::shared_ptr<ChunkAccessCounter>& access_counter) {
   const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
-#if IS_DEBUG
+#if HYRISE_DEBUG
   for (const auto& segment : segments) {
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
@@ -169,7 +171,7 @@ void Table::append_chunk(const Segments& segments, const std::optional<Polymorph
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
-#if IS_DEBUG
+#if HYRISE_DEBUG
   for (const auto& segment : chunk->segments()) {
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {

@@ -18,10 +18,10 @@ namespace opossum {
 class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
-  auto table = load_table("src/test/tables/compression_input.tbl", 12u);
+  auto table = load_table("resources/test_data/tbl/compression_input.tbl", 12u);
   StorageManager::get().add_table("table", table);
 
-  auto table_dict = load_table("src/test/tables/compression_input.tbl", 3u);
+  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 3u);
   StorageManager::get().add_table("table_dict", table_dict);
 
   auto compression_task1 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{0});
@@ -51,7 +51,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
 }
 
 TEST_F(ChunkCompressionTaskTest, DictionarySize) {
-  auto table_dict = load_table("src/test/tables/compression_input.tbl", 6u);
+  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_dict", table_dict);
 
   auto compression = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
@@ -77,7 +77,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 }
 
 TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
-  auto table = load_table("src/test/tables/compression_input.tbl", 6u);
+  auto table = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_insert", table);
 
   auto gt1 = std::make_shared<GetTable>("table_insert");

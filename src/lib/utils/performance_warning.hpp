@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include "utils/string_utils.hpp"
+
 /**
  * Performance Warnings can be used in places where slow workarounds are used. This includes BaseSegment[] or the
  * use of a cross join followed by a projection instead of an equijoin.
@@ -57,13 +59,10 @@ class PerformanceWarningDisabler {
   }
 };
 
-#ifndef __FILENAME__
-#define __FILENAME__ (__FILE__ + SOURCE_PATH_SIZE)
-#endif
-#define PerformanceWarning(text)                                                                 \
-  {                                                                                              \
-    static PerformanceWarningClass warn(std::string(text) + " at " + std::string(__FILENAME__) + \
-                                        ":" BOOST_PP_STRINGIZE(__LINE__));                       \
+#define PerformanceWarning(text)                                                                       \
+  {                                                                                                    \
+    static PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
+                                        ":" BOOST_PP_STRINGIZE(__LINE__));                             \
   }  // NOLINT
 
 }  // namespace opossum

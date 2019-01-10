@@ -14,6 +14,7 @@
 #include "constant_mappings.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -42,8 +43,6 @@ namespace opossum {
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
-
-TableScan::~TableScan() = default;
 
 void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
@@ -135,6 +134,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
           if (!filtered_pos_list) {
             filtered_pos_list = std::make_shared<PosList>(matches_out->size());
+            if (pos_list_in->references_single_chunk()) {
+              filtered_pos_list->guarantee_single_chunk();
+            }
 
             size_t offset = 0;
             for (const auto& match : *matches_out) {
@@ -192,13 +194,14 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     if (const auto left_value_expression = std::dynamic_pointer_cast<ValueExpression>(left_operand)) {
       left_value = left_value_expression->value;
     }
-    if (const auto left_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(left_operand)) {
+    if (const auto left_parameter_expression = std::dynamic_pointer_cast<CorrelatedParameterExpression>(left_operand)) {
       left_value = left_parameter_expression->value();
     }
     if (const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(right_operand)) {
       right_value = right_value_expression->value;
     }
-    if (const auto right_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(right_operand)) {
+    if (const auto right_parameter_expression =
+            std::dynamic_pointer_cast<CorrelatedParameterExpression>(right_operand)) {
       right_value = right_parameter_expression->value();
     }
 

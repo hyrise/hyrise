@@ -1,0 +1,12 @@
+{
+    "columns": [
+        {
+            "name": "b",
+            "type": "float"
+        },
+        {
+            "name": "a",
+            "type": "int"
+        }
+    ]
+}

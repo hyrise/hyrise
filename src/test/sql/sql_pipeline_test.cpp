@@ -17,6 +17,7 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -39,9 +40,9 @@ namespace opossum {
 class SQLPipelineTest : public BaseTest {
  protected:
   static void SetUpTestCase() {  // called ONCE before the tests
-    _table_a_multi = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a_multi = load_table("resources/test_data/tbl/int_float.tbl", 2);
     _table_a_multi->append({11, 11.11});
-    _table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int);
@@ -56,13 +57,13 @@ class SQLPipelineTest : public BaseTest {
     StorageManager::get().reset();
 
     // We reload table_a every time since it is modified during the test case.
-    _table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
 
     StorageManager::get().add_table("table_a_multi", _table_a_multi);
     StorageManager::get().add_table("table_b", _table_b);
 
-    SQLQueryCache<SQLQueryPlan>::get().clear();
+    SQLPhysicalPlanCache::get().clear();
   }
 
   // Tables modified during test case
@@ -136,21 +137,14 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto prepared_cache = std::make_shared<PreparedStatementCache>(5);
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context
   EXPECT_NO_THROW(
       SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
-  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                      .with_prepared_statement_cache(prepared_cache)
-                      .with_mvcc(UseMvcc::No)
-                      .create_pipeline());
-  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                      .with_optimizer(optimizer)
-                      .with_prepared_statement_cache(prepared_cache)
-                      .with_mvcc(UseMvcc::Yes)
-                      .create_pipeline());
+  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a).with_mvcc(UseMvcc::No).create_pipeline());
+  EXPECT_NO_THROW(
+      SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
 
   // With transaction context
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
@@ -161,7 +155,6 @@ TEST_F(SQLPipelineTest, ConstructorCombinations) {
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
                       .with_transaction_context(transaction_context)
                       .with_optimizer(optimizer)
-                      .with_prepared_statement_cache(prepared_cache)
                       .with_mvcc(UseMvcc::Yes)
                       .create_pipeline());
 }
@@ -265,14 +258,14 @@ TEST_F(SQLPipelineTest, GetOptimizedLQPExecutionRequired) {
 
 TEST_F(SQLPipelineTest, GetQueryPlans) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
-  const auto& plans = sql_pipeline.get_query_plans();
+  const auto& plans = sql_pipeline.get_physical_plans();
 
   EXPECT_EQ(plans.size(), 1u);
 }
 
 TEST_F(SQLPipelineTest, GetQueryPlansMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
-  const auto& plans = sql_pipeline.get_query_plans();
+  const auto& plans = sql_pipeline.get_physical_plans();
 
   EXPECT_EQ(plans.size(), 2u);
 }
@@ -282,11 +275,11 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   const auto& metrics = sql_pipeline.metrics();
 
-  sql_pipeline.get_query_plans();
+  sql_pipeline.get_physical_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
-  const auto& plans = sql_pipeline.get_query_plans();
+  const auto& plans = sql_pipeline.get_physical_plans();
   auto duration2 = metrics.statement_metrics[0]->lqp_translate_time_nanos;
 
   // Make sure this was not run twice
@@ -297,7 +290,7 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 TEST_F(SQLPipelineTest, GetQueryPlansExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
   try {
-    sql_pipeline.get_query_plans();
+    sql_pipeline.get_physical_plans();
     // Fail if this did not throw an exception
     FAIL();
   } catch (const std::exception& e) {
@@ -439,7 +432,7 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
-  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& cache = SQLPhysicalPlanCache::get();
   EXPECT_EQ(cache.size(), 0u);
 
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
@@ -542,7 +535,7 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
+  const auto& cache = SQLPhysicalPlanCache::get();
   EXPECT_EQ(cache.size(), 2u);
   EXPECT_TRUE(cache.has(_select_query_a));
   EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));

@@ -26,6 +26,24 @@ ImportBinary::ImportBinary(const std::string& filename, const std::optional<std:
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
+std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
+  std::ifstream file;
+  file.open(filename, std::ios::binary);
+
+  Assert(file.is_open(), "ImportBinary: Could not open file " + filename);
+
+  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+  std::shared_ptr<Table> table;
+  ChunkID chunk_count;
+  std::tie(table, chunk_count) = _read_header(file);
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    _import_chunk(file, table);
+  }
+
+  return table;
+}
+
 template <typename T>
 pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<T> values(count);
@@ -75,19 +93,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
     return StorageManager::get().get_table(*_tablename);
   }
 
-  std::ifstream file;
-  file.open(_filename, std::ios::binary);
-
-  Assert(file.is_open(), "ImportBinary: Could not find file " + _filename);
-
-  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-  std::shared_ptr<Table> table;
-  ChunkID chunk_count;
-  std::tie(table, chunk_count) = _read_header(file);
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    _import_chunk(file, table);
-  }
+  const auto table = read_binary(_filename);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);
@@ -108,13 +114,13 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto column_count = _read_value<ColumnID>(file);
-  const auto data_types = _read_values<std::string>(file, column_count);
+  const auto column_data_types = _read_values<std::string>(file, column_count);
   const auto column_nullables = _read_values<bool>(file, column_count);
   const auto column_names = _read_string_values(file, column_count);
 
   TableColumnDefinitions output_column_definitions;
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto data_type = data_type_to_string.right.at(data_types[column_id]);
+    const auto data_type = data_type_to_string.right.at(column_data_types[column_id]);
     output_column_definitions.emplace_back(column_names[column_id], data_type, column_nullables[column_id]);
   }
 

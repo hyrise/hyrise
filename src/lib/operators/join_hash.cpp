@@ -12,7 +12,6 @@
 #include "bytell_hash_map.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -77,8 +76,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
+      build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), *this,
+      build_operator, probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
   return _impl->_on_execute();
 }
 
@@ -87,11 +86,12 @@ void JoinHash::_on_cleanup() { _impl.reset(); }
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
+  JoinHashImpl(const JoinHash& join_hash, const std::shared_ptr<const AbstractOperator>& left,
                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
                const std::optional<size_t>& radix_bits = std::nullopt)
-      : _left(left),
+      : _join_hash(join_hash),
+        _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
@@ -105,6 +105,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
  protected:
+  const JoinHash& _join_hash;
   const std::shared_ptr<const AbstractOperator> _left, _right;
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
@@ -162,32 +163,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
     const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-    return std::ceil(std::log2(cluster_count));
+    return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
 
   std::shared_ptr<const Table> _on_execute() override {
-    /*
-    Preparing output table by adding columns from left table.
-    */
-    TableColumnDefinitions output_column_definitions;
-
     auto right_in_table = _right->get_output();
     auto left_in_table = _left->get_output();
 
-    if (_inputs_swapped) {
-      // Semi/Anti joins are always swapped but do not need the outer relation
-      if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
-        output_column_definitions = right_in_table->column_definitions();
-      } else {
-        output_column_definitions =
-            concatenated(right_in_table->column_definitions(), left_in_table->column_definitions());
-      }
-    } else {
-      output_column_definitions =
-          concatenated(left_in_table->column_definitions(), right_in_table->column_definitions());
-    }
-
-    _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
+    _output_table = _join_hash._initialize_output_table();
 
     /*
      * This flag is used in the materialization and probing phases.

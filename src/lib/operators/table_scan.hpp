@@ -8,12 +8,12 @@
 #include "abstract_read_only_operator.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
+#include "table_scan/abstract_table_scan_impl.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-class AbstractTableScanImpl;
 class Table;
 
 class TableScan : public AbstractReadOnlyOperator {
@@ -21,8 +21,6 @@ class TableScan : public AbstractReadOnlyOperator {
 
  public:
   TableScan(const std::shared_ptr<const AbstractOperator>& in, const std::shared_ptr<AbstractExpression>& predicate);
-
-  ~TableScan();
 
   /**
    * @brief If set, the specified chunks will not be scanned.

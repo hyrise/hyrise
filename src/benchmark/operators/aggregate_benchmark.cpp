@@ -18,7 +18,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
 
   auto warm_up = std::make_shared<Aggregate>(_table_wrapper_a, aggregates, groupby);
   warm_up->execute();
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto aggregate = std::make_shared<Aggregate>(_table_wrapper_a, aggregates, groupby);
     aggregate->execute();
   }

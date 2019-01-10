@@ -8,7 +8,6 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
 
@@ -36,7 +35,6 @@ class SQLPipeline : public Noncopyable {
   // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
               const std::shared_ptr<LQPTranslator>& lqp_translator, const std::shared_ptr<Optimizer>& optimizer,
-              const std::shared_ptr<PreparedStatementCache>& prepared_statements,
               const CleanupTemporaries cleanup_temporaries);
 
   // Returns the SQL string for each statement.
@@ -52,8 +50,8 @@ class SQLPipeline : public Noncopyable {
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
   // Returns the Physical Plans for each statement.
-  // The plans are either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQPs
-  const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
+  // The plans are either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the optimized LQPs
+  const std::vector<std::shared_ptr<AbstractOperator>>& get_physical_plans();
 
   // Returns all tasks for each statement that need to be executed for this query.
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
@@ -89,7 +87,7 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
-  std::vector<std::shared_ptr<SQLQueryPlan>> _query_plans;
+  std::vector<std::shared_ptr<AbstractOperator>> _physical_plans;
   std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::vector<std::shared_ptr<const Table>> _result_tables;
 

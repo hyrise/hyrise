@@ -32,9 +32,9 @@ struct JoinDetectionTestParam {
 class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithParamInterface<JoinDetectionTestParam> {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl"));
-    StorageManager::get().add_table("b", load_table("src/test/tables/int_float.tbl"));
-    StorageManager::get().add_table("c", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("b", load_table("resources/test_data/tbl/int_float.tbl"));
+    StorageManager::get().add_table("c", load_table("resources/test_data/tbl/int_float.tbl"));
 
     _table_node_a = StoredTableNode::make("a");
     _table_node_b = StoredTableNode::make("b");
@@ -473,7 +473,7 @@ TEST_P(JoinDetectionRuleTest, JoinDetectionSQL) {
 
   hsql::SQLParserResult parse_result;
   hsql::SQLParser::parseSQLString(params.query, &parse_result);
-  auto node = SQLTranslator{}.translate_parser_result(parse_result)[0];
+  auto node = SQLTranslator{UseMvcc::No}.translate_parser_result(parse_result)[0];
 
   auto before = _count_cross_joins(node);
   auto output = StrategyBaseTest::apply_rule(_rule, node);

@@ -2,28 +2,35 @@
 
 #include <json.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <iostream>
 #include <optional>
 #include <unordered_map>
 #include <vector>
 
+#include "cxxopts.hpp"
+
 #include "abstract_query_generator.hpp"
-#include "benchmark_utils.hpp"
+#include "abstract_table_generator.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "operators/abstract_operator.hpp"
+#include "query_benchmark_result.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
 
+class SQLPipeline;
+class SQLiteWrapper;
+
 class BenchmarkRunner {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractQueryGenerator> query_generator,
-                  const nlohmann::json& context);
+                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
   void run();
@@ -62,7 +69,7 @@ class BenchmarkRunner {
   struct QueryPlans final {
     // std::vector<>s, since queries can contain multiple statements
     std::vector<std::shared_ptr<AbstractLQPNode>> lqps;
-    std::vector<std::shared_ptr<SQLQueryPlan>> pqps;
+    std::vector<std::shared_ptr<AbstractOperator>> pqps;
   };
 
   // If visualization is enabled, this stores the LQP and PQP for each query. Its length is defined by the number of
@@ -72,6 +79,7 @@ class BenchmarkRunner {
   const BenchmarkConfig _config;
 
   std::unique_ptr<AbstractQueryGenerator> _query_generator;
+  std::unique_ptr<AbstractTableGenerator> _table_generator;
 
   // Stores the results of the query executions. Its length is defined by the number of available queries.
   std::vector<QueryBenchmarkResult> _query_results;
@@ -81,6 +89,9 @@ class BenchmarkRunner {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   Duration _total_run_duration{};
+
+  // If the query execution should be validated, this stores a pointer to the used SQLite instance
+  std::unique_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 
 }  // namespace opossum

@@ -5,7 +5,7 @@
 #include "base_column_statistics.hpp"
 #include "column_statistics.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -25,17 +25,14 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
 
-    resolve_segment_type<ColumnDataType>(*base_segment, [&](auto& segment) {
-      auto iterable = create_iterable_from_segment<ColumnDataType>(segment);
-      iterable.for_each([&](const auto& segment_value) {
-        if (segment_value.is_null()) {
-          ++null_value_count;
-        } else {
-          distinct_set.insert(segment_value.value());
-          min = std::min(min, segment_value.value());
-          max = std::max(max, segment_value.value());
-        }
-      });
+    segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
+      if (position.is_null()) {
+        ++null_value_count;
+      } else {
+        distinct_set.insert(position.value());
+        min = std::min(min, position.value());
+        max = std::max(max, position.value());
+      }
     });
   }
 

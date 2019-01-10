@@ -16,7 +16,9 @@ TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
-uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
+uint64_t TableStatistics::approx_valid_row_count() const {
+  return static_cast<size_t>(row_count()) - _approx_invalid_row_count;
+}
 
 const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
@@ -55,7 +57,7 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
 
   if (predicate_condition == PredicateCondition::IsNotNull) {
     predicated_column_statistics[column_id] = left_operand_column_statistics->without_null_values();
-    predicated_row_count *= 1.0 - left_operand_column_statistics->non_null_value_ratio();
+    predicated_row_count *= 1.0f - left_operand_column_statistics->non_null_value_ratio();
   } else if (predicate_condition == PredicateCondition::IsNull) {
     predicated_column_statistics[column_id] = left_operand_column_statistics->only_null_values();
     predicated_row_count *= left_operand_column_statistics->non_null_value_ratio();
@@ -247,9 +249,9 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       // Simple heuristic: we assume that three quarters of the elements in the smaller relation
       // (we are upper-bound by number of non-null values in both relations) will match.
       join_table_stats._row_count =
-          0.75 * std::min(row_count() * stats_container.left_column_statistics->non_null_value_ratio(),
-                          right_table_statistics.row_count() *
-                              stats_container.right_column_statistics->non_null_value_ratio());
+          0.75f * std::min(row_count() * stats_container.left_column_statistics->non_null_value_ratio(),
+                           right_table_statistics.row_count() *
+                               stats_container.right_column_statistics->non_null_value_ratio());
       break;
     case JoinMode::Anti:
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;

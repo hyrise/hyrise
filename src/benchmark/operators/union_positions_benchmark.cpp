@@ -19,10 +19,10 @@ constexpr auto REFERENCED_TABLE_CHUNK_COUNT = opossum::ChunkID{10};
 constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
 
 /**
- * Generate a random pos_list of length std::floor(pos_list_size) with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
+ * Generate a random pos_list of length pos_list_size with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, float pos_list_size) {
+std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
   std::random_device random_device;
   std::default_random_engine random_engine(random_device());
 
@@ -103,7 +103,7 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
       std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
   table_wrapper_right->execute();
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto set_union = std::make_shared<UnionPositions>(table_wrapper_left, table_wrapper_right);
     set_union->execute();
   }
@@ -120,7 +120,7 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
   auto pos_list_left = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
   auto pos_list_right = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     // Create copies, this would need to be done the UnionPositions Operator as well
     auto& left = *pos_list_left;
     auto& right = *pos_list_right;
