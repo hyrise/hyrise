@@ -37,7 +37,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     // If we wanted to, we could probably implement this, but right now, it does not seem to be worth the effort
-    Assert(!config.validate, "Cannot use validation with enabled scheduler");
+    Assert(!config.verify, "Cannot use verification with enabled scheduler");
 
     Topology::use_default_topology(config.cores);
     config.out << "- Multi-threaded Topology:" << std::endl;
@@ -65,7 +65,7 @@ void BenchmarkRunner::run() {
   _config.out << "- Loading/Generating tables" << std::endl;
   _table_generator->generate_and_store();
 
-  if (_config.validate) {
+  if (_config.verify) {
     // Load the data into SQLite
     _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
@@ -347,7 +347,7 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
   if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
   auto pipeline = pipeline_builder.create_pipeline();
 
-  if (!_config.validate) {
+  if (!_config.verify) {
     // Execute the query, we don't care about the results
     pipeline.get_result_table();
   } else {
@@ -356,14 +356,14 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
 
     // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
-      Assert(sqlite_result->row_count() > 0, "Validation failed: Hyrise returned a result, but SQLite didn't");
+      Assert(sqlite_result->row_count() > 0, "Verification failed: Hyrise returned a result, but SQLite didn't");
       Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                FloatComparisonMode::RelativeDifference),
-             "Validation failed");
-      _config.out << "- Validation passed (" << hyrise_result->row_count() << " rows)" << std::endl;
+             "Verification failed");
+      _config.out << "- Verification passed (" << hyrise_result->row_count() << " rows)" << std::endl;
     } else {
       Assert(!sqlite_result || sqlite_result->row_count() == 0,
-             "Validation failed: SQLite returned a result, but Hyrise didn't");
+             "Verification failed: SQLite returned a result, but Hyrise didn't");
     }
   }
 
@@ -470,7 +470,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many queries should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("validate", "Validate each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
@@ -513,7 +513,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"cores", config.cores},
       {"clients", config.clients},
       {"verbose", config.verbose},
-      {"validate", config.validate},
+      {"verify", config.verify},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 

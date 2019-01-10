@@ -419,7 +419,7 @@ std::string TPCHQueryGenerator::build_deterministic_query(const QueryID query_id
   }
 
   // Stores how the parameters (the ? in the query) should be replaced. These values are examples for the queries. Most
-  // of them use the validation parameters given in the TPC-H specification for the respective query. A few are
+  // of them use the verification parameters given in the TPC-H specification for the respective query. A few are
   // modified so that we get results even for a small scale factor.
   static std::vector<std::vector<std::string>> parameter_values = {
       {"'1998-09-02'"},
