@@ -235,16 +235,36 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
                                                            predicate_condition, right_column_expression->column_id);
     }
 
-    // Predicate pattern: <column> <binary predicate_condition> <uncorrelated subquery> // TODO Reversed
-    if (const auto right_subquery =
-            std::dynamic_pointer_cast<PQPSelectExpression>(right_operand); left_column_expression && !right_subquery->is_correlated()) {
-      auto uncorrelated_select_results = ExpressionEvaluator::populate_uncorrelated_select_results_cache({right_subquery});
-      auto table = uncorrelated_select_results->begin()->second;
-      Assert(table->row_count() == 1, "Expected subquery to return a single row");  // TODO AssertInput?
-      Assert(table->column_count() == 1, "Expected subquery to return a single row");  // TODO AssertInput?
-      auto result = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->operator[](0);
-      return std::make_unique<ColumnVsValueTableScanImpl>(input_table_left(), left_column_expression->column_id,
-                                                          predicate_condition, result);
+    // Predicate pattern: <column> <binary predicate_condition> <uncorrelated subquery>
+    {
+      const auto left_subquery = std::dynamic_pointer_cast<PQPSelectExpression>(left_operand);
+      const auto right_subquery = std::dynamic_pointer_cast<PQPSelectExpression>(right_operand);
+
+      std::shared_ptr<PQPColumnExpression> column_expression;
+      std::shared_ptr<PQPSelectExpression> uncorrelated_subquery;
+      bool flip = false;
+
+      if (left_column_expression && right_subquery && !right_subquery->is_correlated()) {
+        column_expression = left_column_expression;
+        uncorrelated_subquery = right_subquery;
+      } else if (right_column_expression && left_subquery && !left_subquery->is_correlated()) {
+        column_expression = right_column_expression;
+        uncorrelated_subquery = left_subquery;
+        flip = true;
+      }
+
+      if (uncorrelated_subquery) {
+        const auto uncorrelated_select_results =
+            ExpressionEvaluator::populate_uncorrelated_select_results_cache({right_subquery});
+        const auto table = uncorrelated_select_results->find(uncorrelated_subquery->pqp)->second;
+        Assert(table->row_count() == 1, "Expected subquery to return a single row");
+        DebugAssert(table->column_count() == 1,
+                    "Expected subquery to return a single column");  // Should have been caught earlier
+        const auto result = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->operator[](0);
+        return std::make_unique<ColumnVsValueTableScanImpl>(
+            input_table_left(), column_expression->column_id,
+            flip ? flip_predicate_condition(predicate_condition) : predicate_condition, result);
+      }
     }
   }
 

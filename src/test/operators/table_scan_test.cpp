@@ -757,6 +757,10 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   // clang-format off
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));  // NOLINT
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(TableScan{get_int_float_op(),
+                                                                     equals_(5, pqp_select_(get_int_string_op(), DataType::Int, false))}
+                                                                  .create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ColumnVsColumnTableScanImpl*>(TableScan{get_int_float_op(),
                                                                      equals_(column_b, column_a)}.create_impl().get()));  // NOLINT
   EXPECT_TRUE(dynamic_cast<ColumnLikeTableScanImpl*>(TableScan{get_int_string_op(),
