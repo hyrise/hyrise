@@ -2,6 +2,8 @@
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "expression/aggregate_expression.hpp"
+#include "type_comparison.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -17,6 +19,81 @@ namespace opossum {
 
         std::optional <ColumnID> column;
         AggregateFunction function;
+    };
+
+    /*
+    The AggregateFunctionBuilder is used to create the lambda function that will be used by
+    the AggregateVisitor. It is a separate class because methods cannot be partially specialized.
+    Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
+    */
+    template <typename ColumnType, typename AggregateType>
+    using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
+
+    template <typename ColumnType, typename AggregateType, AggregateFunction function>
+    struct AggregateFunctionBuilder {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() { Fail("Invalid aggregate function"); }
+    };
+
+    template <typename ColumnType, typename AggregateType>
+    struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+            return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
+                if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
+                    // New minimum found
+                    current_aggregate = new_value;
+                }
+                return *current_aggregate;
+            };
+        }
+    };
+
+    template <typename ColumnType, typename AggregateType>
+    struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+            return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
+                if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
+                    // New maximum found
+                    current_aggregate = new_value;
+                }
+                return *current_aggregate;
+            };
+        }
+    };
+
+    template <typename ColumnType, typename AggregateType>
+    struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+            return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
+                // add new value to sum
+                if (current_aggregate) {
+                    *current_aggregate += new_value;
+                } else {
+                    current_aggregate = new_value;
+                }
+            };
+        }
+    };
+
+    template <typename ColumnType, typename AggregateType>
+    struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+            // We reuse Sum here and use it together with aggregate_count to calculate the average
+            return AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
+        }
+    };
+
+    template <typename ColumnType, typename AggregateType>
+    struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+            return [](const ColumnType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
+        }
+    };
+
+    template <typename ColumnType, typename AggregateType>
+    struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
+        AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
+            return [](const ColumnType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
+        }
     };
 
     class AbstractAggregateOperator : public AbstractReadOnlyOperator {

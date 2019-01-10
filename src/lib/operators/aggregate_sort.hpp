@@ -58,6 +58,9 @@ class AggregateSort : public AbstractAggregateOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
+
+  template<typename ColumnType, typename AggregateType>
+  void _aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table);
 };
 
 }  // namespace opossum

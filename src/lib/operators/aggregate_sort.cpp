@@ -5,7 +5,9 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "type_cast.hpp"
 #include "operators/sort.hpp"
+#include "aggregate/aggregate_traits.hpp"
 
 namespace opossum {
 
@@ -18,13 +20,47 @@ namespace opossum {
       return "TODO: insert description here";
     }
 
-    void _write_result_to_result_table(const std::shared_ptr<Table> result_table, const std::vector<AllTypeVariant>& previous_values, const std::vector<AllTypeVariant>& current_aggregate_results){
-        //write current aggregate value and reset current value
-        std::vector<AllTypeVariant> new_values;
-        new_values.reserve(previous_values.size() + current_aggregate_results.size());
-        new_values.insert(new_values.end(), previous_values.begin(), previous_values.end());
-        new_values.insert(new_values.end(), current_aggregate_results.begin(), current_aggregate_results.end());
-        result_table->append(new_values);
+    template<typename ColumnType, typename AggregateType>
+    void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
+        std::optional<AggregateType> current_aggregate_value;
+
+        auto chunks = sorted_table->chunks();
+        for (const auto& chunk : chunks) {
+            size_t chunk_size = chunk->size();
+            const auto segments = chunk->segments();
+            for (ChunkOffset offset{0};offset < chunk_size;offset++) {
+                std::vector<AllTypeVariant> current_values;
+                current_values.reserve(_groupby_column_ids.size());
+
+                for (size_t index = 0; index < _groupby_column_ids.size(); index++) {
+                    AllTypeVariant current_value = segments[_groupby_column_ids[index]]->operator[](offset);
+                    current_values.emplace_back(current_value);
+                }
+
+                if (current_values == previous_values) {
+                    const ColumnType new_value = type_cast_variant<ColumnType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
+                    //const AggregateType old_value = type_cast_variant<AggregateType>(current_aggregate_value);
+                    aggregate_function(new_value, current_aggregate_value);
+                } else {
+                    aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
+                    if (aggregate_index == 0) {
+                        for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
+                            groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
+                        }
+                    }
+
+                    previous_values = current_values;
+                    current_aggregate_value = type_cast_variant<AggregateType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
+                }
+
+            }
+        }
+        aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
+        if (aggregate_index == 0) {
+            for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
+                groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
+            }
+        }
     }
 
     std::shared_ptr<const Table> AggregateSort::_on_execute() {
@@ -63,43 +99,79 @@ namespace opossum {
             previous_values.emplace_back(sorted_table->get_value<int>(column_id, size_t(0u)));
         }
 
-        std::vector<AllTypeVariant> current_aggregate_results(_aggregates.size(), 2000000.f);
-        //*
-        auto chunks = sorted_table->chunks();
-        for (const auto& chunk : chunks) {
-            size_t chunk_size = chunk->size();
-            const auto segments = chunk->segments();
-            for (ChunkOffset offset{0};offset < chunk_size;offset++) {
-                std::vector<AllTypeVariant> current_values;
-                current_values.reserve(_groupby_column_ids.size());
+        std::vector<std::vector<AllTypeVariant>> aggregate_results(_aggregates.size());
+        std::vector<std::vector<AllTypeVariant>> groupby_keys(_groupby_column_ids.size());
 
+        uint64_t aggregate_index = 0;
+        for (const auto& aggregate : _aggregates) {
+            auto data_type = input_table->column_data_type(*aggregate.column);
+            resolve_data_type(data_type, [&, aggregate](auto type) {
+                using ColumnDataType = typename decltype(type)::type;
 
-                for (size_t index = 0; index < _groupby_column_ids.size(); index++) {
-                    AllTypeVariant current_value = segments[_groupby_column_ids[index]]->operator[](offset);
-                    current_values.emplace_back(current_value);
+                switch (aggregate.function) {
+                    case AggregateFunction::Min: {
+                        using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
+                        auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min>().get_aggregate_function();
+                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                                          aggregate_function, sorted_table);
+                        break;
+                    }
+                    case AggregateFunction::Max: {
+                        using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
+                        auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max>().get_aggregate_function();
+                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                                          aggregate_function, sorted_table);
+                        break;
+                    }
+                    case AggregateFunction::Sum: {
+                        using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
+                        auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>().get_aggregate_function();
+                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                                          aggregate_function, sorted_table);
+                        break;
+                    }
+
+                    case AggregateFunction::Avg: {
+                        using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
+                        auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg>().get_aggregate_function();
+                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                                          aggregate_function, sorted_table);
+                        break;
+                    }
+                    case AggregateFunction::Count: {
+                        using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
+                        auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count>().get_aggregate_function();
+                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                                          aggregate_function, sorted_table);
+                        break;
+                    }
+                    case AggregateFunction::CountDistinct: {
+                        using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
+                        auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>().get_aggregate_function();
+                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                                          aggregate_function, sorted_table);
+                        break;
+                    }
                 }
 
 
-                if (current_values == previous_values) {
+            });
 
-                    for (size_t index = 0; index < current_aggregate_results.size(); index++) {
-                        current_aggregate_results[index] = min(current_aggregate_results[index],
-                                                           segments[*_aggregates[index].column]->operator[](offset));
-                    }
-                } else {
-                    _write_result_to_result_table(result_table, previous_values, current_aggregate_results);
-
-                    previous_values = current_values;
-                    for (size_t index = 0; index < current_aggregate_results.size(); index++) {
-                        current_aggregate_results[index] = segments[*_aggregates[index].column]->operator[](offset);
-                    }
-                }
-
-            }
+            aggregate_index++;
         }
-        _write_result_to_result_table(result_table, previous_values, current_aggregate_results);
 
-         //*/
+        const size_t num_groups = !groupby_keys.empty() ? groupby_keys[0].size() : aggregate_results[0].size();
+
+        std::vector<AllTypeVariant> result_line(_groupby_column_ids.size() + _aggregates.size());
+        for (size_t group_index = 0;group_index < num_groups;group_index++) {
+            for (size_t groupby_index = 0;groupby_index < _groupby_column_ids.size();groupby_index++) {
+                result_line[groupby_index] = groupby_keys[groupby_index][group_index];
+            }
+            for (size_t aggregate_index = 0;aggregate_index < _aggregates.size();aggregate_index++) {
+                result_line[_groupby_column_ids.size() + aggregate_index] = aggregate_results[aggregate_index][group_index];
+            }
+            result_table->append(result_line);
+        }
         return result_table;
     }
 
