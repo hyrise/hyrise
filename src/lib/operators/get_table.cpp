@@ -42,8 +42,24 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<const Table> GetTable::_on_execute() {
+std::shared_ptr<const Table> GetTable::_on_execute() { Fail("GetTable can't be called without transaction context."); }
+
+std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   auto original_table = StorageManager::get().get_table(_name);
+
+  DebugAssert(transaction_context != nullptr || !table_contains_nullptr(original_table),
+              "If chunks contain nullptrs, GetTable must be called with a transaction context.");
+
+  if (transaction_context) {
+    for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
+      const auto chunk = original_table->get_chunk(chunk_id);
+
+      if (!chunk || chunk->get_cleanup_id() <= transaction_context->snapshot_commit_id()) {
+        _excluded_chunk_ids.emplace_back(chunk_id);
+      }
+    }
+  }
+
   if (_excluded_chunk_ids.empty()) {
     return original_table;
   }
@@ -62,16 +78,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   return pruned_table;
 }
-std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
-  auto original_table = StorageManager::get().get_table(_name);
 
-  for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
-    const auto chunk = original_table->get_chunk(chunk_id);
-
-    if (!chunk || chunk->get_cleanup_id() <= transaction_context->snapshot_commit_id()) {
-      _excluded_chunk_ids.emplace_back(chunk_id);
-    }
+bool GetTable::table_contains_nullptr(const std::shared_ptr<Table> table) {
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    if (!table->get_chunk(chunk_id)) return true;
   }
-  return _on_execute();
+  return false;
 }
+
 }  // namespace opossum
