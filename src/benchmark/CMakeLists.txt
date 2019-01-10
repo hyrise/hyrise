@@ -66,15 +66,15 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-# Configure hyriseBenchmarkJOB
+# Configure hyriseBenchmarkJoinOrder
 add_executable(
-    hyriseBenchmarkJOB
+    hyriseBenchmarkJoinOrder
 
     join_order_benchmark.cpp
 )
 
 target_link_libraries(
-    hyriseBenchmarkJOB
+    hyriseBenchmarkJoinOrder
 
     hyrise
     hyriseBenchmarkLib

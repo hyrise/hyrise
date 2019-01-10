@@ -83,7 +83,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
     _benchmark_config->out << "- Loading table '" << table_name << "' ";
 
     // Pick a source file to load a table from, prefer the binary version
-    if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
+    if (table_info.binary_file_path && !table_info.binary_file_out_of_datxe) {
       _benchmark_config->out << "from " << *table_info.binary_file_path << std::flush;
       table_info.table = ImportBinary::read_binary(*table_info.binary_file_path);
       table_info.loaded_from_binary = true;

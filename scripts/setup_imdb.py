@@ -1,3 +1,9 @@
+#!/usr/bin/python3
+
+# This script is meant to be called by hyriseBenchmarkJoinOrder, but nothing stops you from calling it yourself.
+# It downloads the IMDB used by the JoinOrderBenchmark and unzips it. We do this in Python and not in C++ because
+# downloading and unzipping is straight forward in Python.
+
 import hashlib
 import os
 import sys
@@ -50,7 +56,7 @@ file_size = int(meta['Content-Length'])
 
 file = open(FILE_NAME, 'wb')
 
-print("  Downloading: %s %.2f GB" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
+print("  Downloading: %s (%.2f GB)" % (FILE_NAME, file_size / 1000 / 1000 / 1000))
 
 already_retrieved = 0
 block_size = 8192
@@ -79,7 +85,7 @@ print("  Validating integrity...")
 hash_dl = hash_md5.hexdigest()
 
 if hash_dl != "79e4c71f8ec0dae17d6aa9182fdab835":
-    print("  Aborting. Data was modified during the download. Cleaning up.")
+    print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
 
@@ -95,5 +101,6 @@ except:
     clean_up(including_table_dir=True)
     sys.exit(3)
 
-print("  Success. Deleting the archive.")
+print("  Deleting the archive file.")
 clean_up()
+print("  imdb_setup.py ran sucessfully.")

@@ -61,10 +61,15 @@ int main(int argc, char* argv[]) {
     benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
+  /**
+   * Use a Python script to download and unzip the IMDB. We do this in Python and not in C++ because downloading and
+   * unzipping is straight forward in Python.
+   */
   const auto setup_imdb_command = "python3 scripts/setup_imdb.py "s + table_path;
   const auto setup_imdb_return_code = system(setup_imdb_command.c_str());
   Assert(setup_imdb_return_code == 0, "setup_imdb.py failed");
 
+  // The join-order-benchmark ships with these, but we do not want to run them (and hyrise can't, as a matter of fact)
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
 
   benchmark_config->out << "- Benchmarking queries from " << query_path << std::endl;
