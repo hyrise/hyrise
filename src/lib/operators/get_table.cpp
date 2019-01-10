@@ -68,7 +68,7 @@ std::shared_ptr<const Table> GetTable::_on_execute(std::shared_ptr<TransactionCo
   for (ChunkID chunk_id{0}; chunk_id < original_table->chunk_count(); ++chunk_id) {
     const auto chunk = original_table->get_chunk(chunk_id);
 
-    if (!chunk || chunk->get_cleanup_id() <= transaction_context->snapshot_commit_id()) {
+    if (!chunk || chunk->get_cleanup_commit_id() <= transaction_context->snapshot_commit_id()) {
       _excluded_chunk_ids.emplace_back(chunk_id);
     }
   }

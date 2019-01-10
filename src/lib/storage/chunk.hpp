@@ -152,9 +152,9 @@ class Chunk : private Noncopyable {
 
   uint64_t invalid_row_count() const { return _invalid_row_count; }
 
-  void set_cleanup_id(CommitID cleanup_id);
+  void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
-  CommitID get_cleanup_id() const { return _cleanup_commit_id; }
+  CommitID get_cleanup_commit_id() const { return _cleanup_commit_id; }
 
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
