@@ -11,7 +11,7 @@ void opossum::MvccDeleteManager::run_logical_delete(const std::string &tableName
   _delete_logically(tableName, chunkID);
 }
 
-void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName, const opossum::ChunkID chunkID) {
+bool opossum::MvccDeleteManager::_delete_logically(const std::string &tableName, const opossum::ChunkID chunkID) {
   auto& sm = StorageManager::get();
   const auto table = sm.get_table(tableName);
   auto chunk = table->get_chunk(chunkID);
@@ -39,13 +39,16 @@ void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName,
   update_table->execute();
 
   // Check for success
-  if(!update_table->execute_failed()) {
-    transaction_context->commit();
-
-    // Save Commit-ID into logically deleted chunk
-    //chunk... = transaction_context->commit_id();
-
+  if(update_table->execute_failed()) {
+    return false;
   }
+
+  transaction_context->commit();
+  // TODO Check for success of commit
+
+  // Save Commit-ID into logically deleted chunk
+  chunk->set_cleanup_commit_id(transaction_context->commit_id());
+  return true;
 }
 
 void opossum::MvccDeleteManager::_delete_physically(const std::string &tableName, const opossum::ChunkID chunkID) {
