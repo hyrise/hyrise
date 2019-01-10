@@ -61,7 +61,7 @@ TEST_F(OperatorsGetTableTest, GetTableWithTransactionContext) {
   auto original_table = StorageManager::get().get_table("tableWithValues");
   auto chunk = original_table->get_chunk(ChunkID{0});
 
-  chunk->set_cleanup_id(CommitID{2u});
+  chunk->set_cleanup_commit_id(CommitID{2u});
 
   gt->set_transaction_context(context);
   gt->execute();
