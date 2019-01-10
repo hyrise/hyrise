@@ -30,6 +30,36 @@ class GDSCache : public AbstractCache<Key, Value> {
   typedef GDSCacheEntry entry_t;
   typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
 
+  using typename AbstractCache<Key, Value>::KeyValuePair;
+  using typename AbstractCache<Key, Value>::AbstractIterator;
+  using typename AbstractCache<Key, Value>::ErasedIterator;
+
+  class GDSCacheIterator : public AbstractIterator
+  {
+   public:
+    using map_iterator = typename std::unordered_map<Key, handle_t>::iterator;
+    explicit GDSCacheIterator(map_iterator p) : _map_position(p) {}
+    ~GDSCacheIterator() {}
+
+   private:
+    friend class boost::iterator_core_access;
+    friend class AbstractCache<Key, Value>::ErasedIterator;
+
+    map_iterator _map_position;
+
+    void increment() {
+      ++_map_position;
+    }
+
+    bool equal(AbstractIterator const& other) const {
+      return _map_position == static_cast<const GDSCacheIterator&>(other)._map_position;
+    }
+
+    KeyValuePair dereference() const {
+      return get_value(*_map_position);
+    }
+  };
+
   explicit GDSCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) {
@@ -101,17 +131,14 @@ class GDSCache : public AbstractCache<Key, Value> {
     return std::make_pair(p.first, entry.value);
   }
 
-  using CacheIterator = typename std::unordered_map<Key, handle_t>::const_iterator;
-
-  typedef boost::function<const std::pair<Key, Value> (const std::pair<Key, handle_t>&)> F;
-  typedef boost::transform_iterator<F, CacheIterator> transform_iterator;
-
-  transform_iterator begin() {
-    return boost::make_transform_iterator(_map.begin(), &get_value);
+  ErasedIterator begin() {
+    auto it = std::make_unique<GDSCacheIterator>(_map.begin());
+    return ErasedIterator(std::move(it));
   }
 
-  transform_iterator end() {
-    return boost::make_transform_iterator(_map.end(), &get_value);
+  ErasedIterator end() {
+    auto it = std::make_unique<GDSCacheIterator>(_map.end());
+    return ErasedIterator(std::move(it));
   }
 
 

@@ -13,7 +13,35 @@ namespace opossum {
 template <typename Key, typename Value>
 class LRUCache : public AbstractCache<Key, Value> {
  public:
-  typedef typename std::pair<Key, Value> KeyValuePair;
+  using typename AbstractCache<Key, Value>::KeyValuePair;
+  using typename AbstractCache<Key, Value>::AbstractIterator;
+  using typename AbstractCache<Key, Value>::ErasedIterator;
+
+  class LRUCacheIterator : public AbstractIterator
+  {
+   public:
+    using list_iterator = typename std::list<KeyValuePair>::const_iterator;
+    explicit LRUCacheIterator(list_iterator p) : _list_position(p) {}
+    ~LRUCacheIterator() {}
+
+   private:
+    friend class boost::iterator_core_access;
+    friend class AbstractCache<Key, Value>::ErasedIterator;
+
+    list_iterator _list_position;
+
+    void increment() {
+      ++_list_position;
+    }
+
+    bool equal(AbstractIterator const& other) const {
+      return _list_position == static_cast<const LRUCacheIterator&>(other)._list_position;
+    }
+
+    KeyValuePair dereference() const {
+      return *_list_position;
+    }
+  };
 
   explicit LRUCache(size_t capacity) : AbstractCache<Key, Value>(capacity) {}
 
@@ -62,14 +90,14 @@ class LRUCache : public AbstractCache<Key, Value> {
     this->_capacity = capacity;
   }
 
-  using CacheIterator = typename std::list<KeyValuePair>::const_iterator;
-
-  CacheIterator begin() {
-    return _list.begin();
+  ErasedIterator begin() {
+    auto it = std::make_unique<LRUCacheIterator>(_list.begin());
+    return ErasedIterator(std::move(it));
   }
 
-  CacheIterator end() {
-    return _list.end();
+  ErasedIterator end() {
+    auto it = std::make_unique<LRUCacheIterator>(_list.end());
+    return ErasedIterator(std::move(it));
   }
 
  protected:

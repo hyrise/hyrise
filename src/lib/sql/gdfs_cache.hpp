@@ -7,7 +7,6 @@
 #include "abstract_cache.hpp"
 #include "boost/function.hpp"
 #include "boost/heap/fibonacci_heap.hpp"
-#include "boost/iterator/transform_iterator.hpp"
 
 namespace opossum {
 
@@ -30,8 +29,37 @@ class GDFSCache : public AbstractCache<Key, Value> {
   };
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
-
   using CacheMap = typename std::unordered_map<Key, Handle>;
+
+  using typename AbstractCache<Key, Value>::KeyValuePair;
+  using typename AbstractCache<Key, Value>::AbstractIterator;
+  using typename AbstractCache<Key, Value>::ErasedIterator;
+
+  class GDFSCacheIterator : public AbstractIterator
+  {
+   public:
+    using map_iterator = typename CacheMap::iterator;
+    explicit GDFSCacheIterator(map_iterator p) : _map_position(p) {}  
+    ~GDFSCacheIterator() {}
+
+   private:
+    friend class boost::iterator_core_access;
+    friend class AbstractCache<Key, Value>::ErasedIterator;
+
+    map_iterator _map_position;
+
+    void increment() {
+      ++_map_position;
+    }
+
+    bool equal(AbstractIterator const& other) const {
+      return _map_position == static_cast<const GDFSCacheIterator&>(other)._map_position;
+    }
+
+    KeyValuePair dereference() const {
+      return get_value(*_map_position);
+    }
+  };
 
   explicit GDFSCache(size_t capacity) : AbstractCache<Key, Value>(capacity), _inflation(0.0) {}
 
@@ -77,6 +105,12 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return entry.value;
   }
 
+  static const KeyValuePair get_value(const std::pair<Key, Handle>& p) {
+    const Handle handle = p.second;
+    const GDFSCacheEntry& entry = (*handle);
+    return std::make_pair(p.first, entry.value);
+  }
+
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }
 
   size_t size() const { return _map.size(); }
@@ -102,23 +136,14 @@ class GDFSCache : public AbstractCache<Key, Value> {
     return (*it->second).priority;
   }
 
-  static const std::pair<Key, Value> get_value(std::pair<Key, Handle> const& p)  {
-    const Handle handle = p.second;
-    const GDFSCacheEntry& entry = (*handle);
-    return std::make_pair(p.first, entry.value);
+  ErasedIterator begin() {
+    auto it = std::make_unique<GDFSCacheIterator>(_map.begin());
+    return ErasedIterator(std::move(it));
   }
 
-  using CacheIterator = typename std::unordered_map<Key, Handle>::const_iterator;
-
-  typedef boost::function<const std::pair<Key, Value> (const std::pair<Key, Handle>&)> F;
-  typedef boost::transform_iterator<F, CacheIterator> transform_iterator;
-
-  transform_iterator begin() {
-    return boost::make_transform_iterator(_map.begin(), &get_value);
-  }
-
-  transform_iterator end() {
-    return boost::make_transform_iterator(_map.end(), &get_value);
+  ErasedIterator end() {
+    auto it = std::make_unique<GDFSCacheIterator>(_map.end());
+    return ErasedIterator(std::move(it));
   }
 
  protected:

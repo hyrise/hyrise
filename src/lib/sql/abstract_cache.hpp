@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include <boost/iterator/iterator_facade.hpp>
+
 namespace opossum {
 
 // Generic template for a cache implementation.
@@ -9,6 +11,31 @@ template <typename Key, typename Value>
 class AbstractCache {
  public:
   typedef typename std::pair<Key, Value> KeyValuePair;
+
+  struct AbstractIterator {
+    virtual ~AbstractIterator() {}
+
+    virtual void increment() = 0;
+    virtual bool equal(AbstractIterator const& other) const = 0;
+    virtual KeyValuePair dereference() const = 0;
+  };
+
+  class ErasedIterator : public boost::iterator_facade<ErasedIterator, KeyValuePair, boost::forward_traversal_tag, KeyValuePair>
+  {
+    public:
+      ErasedIterator(std::unique_ptr<AbstractIterator> it) : _it(std::move(it)) {}
+
+    private:
+      friend class boost::iterator_core_access;
+
+      void increment() { _it->increment(); }
+
+      bool equal(ErasedIterator const& other) const { return _it->equal(*other._it); }
+
+      KeyValuePair dereference() const { return _it->dereference(); }
+
+      std::unique_ptr<AbstractIterator> _it;
+  };
 
   explicit AbstractCache(size_t capacity) : _capacity(capacity) {}
 
@@ -35,6 +62,9 @@ class AbstractCache {
 
   // Resize to the given capacity.
   virtual void resize(size_t capacity) = 0;
+
+  virtual ErasedIterator begin() = 0;
+  virtual ErasedIterator end() = 0;
 
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
