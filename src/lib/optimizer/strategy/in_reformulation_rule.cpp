@@ -18,6 +18,7 @@ namespace opossum {
 std::string InReformulationRule::name() const { return "(Not)In to Join Reformulation Rule"; }
 
 bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  // Filter out all nodes that are not (not)in predicates
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
   if (!predicate_node) {
     return _apply_to_inputs(node);
@@ -35,17 +36,28 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   }
 
   const auto in_expression = std::static_pointer_cast<InExpression>(predicate_expression);
+
+  // Do not optimize cases where the in value is anything other than a column (for now)
+  if (in_expression->value()->type != ExpressionType::LQPColumn) {
+    return _apply_to_inputs(node);
+  }
+
+  // Only optimize if the set is a sub-select, and not a static list
   const auto subselect_expression = std::dynamic_pointer_cast<LQPSelectExpression>(in_expression->set());
   if (!subselect_expression) {
     return _apply_to_inputs(node);
   }
 
+  // Only optimize uncorrelated sub-queries
   if (!subselect_expression->arguments.empty()) {
     return _apply_to_inputs(node);
   }
 
+  // Find the top-most projection node to find the field that is checked
+  // (which turns into our join attribute)
   auto right_join_expression = std::shared_ptr<LQPColumnExpression>();
   visit_lqp(subselect_expression->lqp, [&](const auto subselect_node) {
+    // Only walk over nodes that do not change the set of columns in the result
     if (subselect_node->type != LQPNodeType::Predicate && subselect_node->type != LQPNodeType::Validate &&
         subselect_node->type != LQPNodeType::StoredTable && subselect_node->type != LQPNodeType::Sort &&
         subselect_node->type != LQPNodeType::Projection) {
@@ -56,6 +68,8 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
       return LQPVisitation::VisitInputs;
     }
 
+    // Skip cases were more than one column is selected, and do not optimize anything other
+    // then simple column expressions (as opposed to aggregate functions, ...)
     auto subselect_projection_node = std::static_pointer_cast<ProjectionNode>(subselect_node);
     const auto column_expressions = subselect_projection_node->column_expressions();
     if (column_expressions.size() != 1 || column_expressions[0]->type != ExpressionType::LQPColumn) {
@@ -70,10 +84,7 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
     return _apply_to_inputs(node);
   }
 
-  if (in_expression->value()->type != ExpressionType::LQPColumn) {
-    return _apply_to_inputs(node);
-  }
-
+  // Build join node and replace the predicate with it
   auto left_join_expression = std::static_pointer_cast<LQPColumnExpression>(in_expression->value());
   auto join_predicate = std::make_shared<BinaryPredicateExpression>(
       PredicateCondition::Equals, left_join_expression, right_join_expression);
