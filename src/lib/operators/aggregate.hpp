@@ -143,8 +143,6 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   pmr_vector<std::shared_ptr<BaseValueSegment>> _groupby_segments;
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
-
-  std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _result_map_buffer;
 };
 
 }  // namespace opossum
