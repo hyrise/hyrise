@@ -1,17 +1,15 @@
 #pragma once
 
+#include <atomic>
+
 #include "benchmark_config.hpp"
 
 namespace opossum {
 
 struct QueryBenchmarkResult : public Noncopyable {
-  QueryBenchmarkResult() { iteration_durations.reserve(1'000'000); }
+  QueryBenchmarkResult();
 
-  QueryBenchmarkResult(QueryBenchmarkResult&& other) noexcept {
-    num_iterations.store(other.num_iterations);
-    duration = std::move(other.duration);
-    iteration_durations = std::move(other.iteration_durations);
-  }
+  QueryBenchmarkResult(QueryBenchmarkResult&& other) noexcept;
 
   QueryBenchmarkResult& operator=(QueryBenchmarkResult&&) = default;
 
