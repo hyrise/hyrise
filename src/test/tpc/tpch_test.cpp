@@ -20,8 +20,8 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
-#include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_query_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -55,12 +55,13 @@ TEST_P(TPCHTest, Test) {
    */
   const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
-  TpchDbGenerator{scale_factor, 10'000}.generate_and_store();
+  TpchTableGenerator{scale_factor, 10'000}.generate_and_store();
 
   SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
 
-  auto query_generator = TPCHQueryGenerator{use_prepared_statements};
+  // The scale factor passed to the query generator will be ignored as we only use deterministic queries
+  auto query_generator = TPCHQueryGenerator{use_prepared_statements, 1.0f};
   if (use_prepared_statements) {
     // Run the preparation queries
     const auto& sql = query_generator.get_preparation_queries();
@@ -72,7 +73,7 @@ TEST_P(TPCHTest, Test) {
     pipeline.get_result_table();
   }
 
-  const auto query = query_generator.build_query(query_idx);
+  const auto query = query_generator.build_deterministic_query(query_idx);
 
   /**
    * Pick a LQPTranslator, depending on whether we use JIT or not
@@ -117,19 +118,19 @@ TEST_P(TPCHTest, Test) {
 }
 
 INSTANTIATE_TEST_CASE_P(TPCHTestNoJITNoPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false}.selected_queries()),
+                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
                                          testing::ValuesIn({false}),
                                          testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
 INSTANTIATE_TEST_CASE_P(TPCHTestNoJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false}.selected_queries()),
+                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
                                          testing::ValuesIn({false}),
                                          testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #if HYRISE_JIT_SUPPORT
 
 INSTANTIATE_TEST_CASE_P(TPCHTestJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false}.selected_queries()),
+                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
                                          testing::ValuesIn({true}),
                                          testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 

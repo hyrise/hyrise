@@ -50,8 +50,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     _int_int_partly_compressed->execute();
   }
 
-  std::shared_ptr<TableWrapper> load_and_encode_table(const std::string& path) {
-    const auto table = load_table(path, 2);
+  std::shared_ptr<TableWrapper> load_and_encode_table(const std::string& path, const ChunkOffset chunk_size = 2) {
+    const auto table = load_table(path, chunk_size);
 
     auto chunk_encoding_spec = ChunkEncodingSpec{};
     for (const auto& column_definition : table->column_definitions()) {
@@ -78,8 +78,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return load_and_encode_table("resources/test_data/tbl/int_string.tbl");
   }
 
-  std::shared_ptr<TableWrapper> get_int_float_with_null_op() {
-    return load_and_encode_table("resources/test_data/tbl/int_float_with_null.tbl");
+  std::shared_ptr<TableWrapper> get_int_float_with_null_op(const ChunkOffset chunk_size = 2) {
+    return load_and_encode_table("resources/test_data/tbl/int_float_with_null.tbl", chunk_size);
   }
 
   std::shared_ptr<TableWrapper> get_table_op_filtered() {
@@ -678,8 +678,8 @@ TEST_P(OperatorsTableScanTest, MatchesAllExcludesNulls) {
    */
   // Second Chunk of Column 1 has only NULL values
   const auto table_with_null_chunk = load_and_encode_table("resources/test_data/tbl/int_int_int_null.tbl");
-  const auto is_null_scan = create_table_scan(table_with_null_chunk, ColumnID{1}, PredicateCondition::IsNull,
-                                              NullValue{});
+  const auto is_null_scan =
+      create_table_scan(table_with_null_chunk, ColumnID{1}, PredicateCondition::IsNull, NullValue{});
   is_null_scan->execute();
   ASSERT_COLUMN_EQ(is_null_scan->get_output(), ColumnID{0}, {11, 9});
   ASSERT_COLUMN_EQ(is_null_scan->get_output(), ColumnID{1}, {NullValue{}, NullValue{}});
@@ -703,6 +703,23 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
+}
+
+TEST_P(OperatorsTableScanTest, BinaryScanOnNullable) {
+  auto predicates = std::vector<std::tuple<ColumnID, PredicateCondition, AllTypeVariant, std::vector<AllTypeVariant>>>{
+      {ColumnID{0}, PredicateCondition::Equals, 1234, {1234}},
+      {ColumnID{0}, PredicateCondition::NotEquals, 123, {12345, 1234}},
+      {ColumnID{0}, PredicateCondition::GreaterThan, 123, {12345, 1234}},
+      {ColumnID{0}, PredicateCondition::GreaterThanEquals, 124, {12345, 1234}},
+      {ColumnID{0}, PredicateCondition::LessThan, 1235, {123, 1234}},
+      {ColumnID{0}, PredicateCondition::LessThanEquals, 1234, {123, 1234}}};
+
+  const auto table = get_int_float_with_null_op(Chunk::MAX_SIZE);
+  for (const auto& [column_id, predicate_condition, value, expected_values] : predicates) {
+    const auto scan = create_table_scan(table, column_id, predicate_condition, value);
+    scan->execute();
+    ASSERT_COLUMN_EQ(scan->get_output(), column_id, expected_values);
+  }
 }
 
 TEST_P(OperatorsTableScanTest, SetParameters) {

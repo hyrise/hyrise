@@ -5,8 +5,6 @@ set(
     testing_assert.hpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_testrunner.hpp
-    sql/sqlite_testrunner/sqlite_wrapper.cpp
-    sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
 
 set(

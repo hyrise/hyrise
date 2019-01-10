@@ -70,7 +70,7 @@ size_t DictionarySegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-CompressedVectorType DictionarySegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> DictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
