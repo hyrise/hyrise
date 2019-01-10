@@ -126,7 +126,7 @@ void BenchmarkRunner::run() {
 
       if (lqps.empty()) continue;
 
-      auto name = _query_generator->query_names()[query_id];
+      auto name = _query_generator->query_name(query_id);
       boost::replace_all(name, " ", "_");
 
       GraphvizConfig graphviz_config;
@@ -213,7 +213,7 @@ void BenchmarkRunner::_benchmark_individual_queries() {
   for (const auto& query_id : _query_generator->selected_queries()) {
     _warmup_query(query_id);
 
-    const auto& name = _query_generator->query_names()[query_id];
+    const auto& name = _query_generator->query_name(query_id);
     _config.out << "- Benchmarking Query " << name << std::endl;
 
     // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
@@ -270,7 +270,7 @@ void BenchmarkRunner::_warmup_query(const QueryID query_id) {
     return;
   }
 
-  const auto& name = _query_generator->query_names()[query_id];
+  const auto& name = _query_generator->query_name(query_id);
   _config.out << "- Warming up for Query " << name << std::endl;
 
   // The atomic uints are modified by other threads when finishing a query, to keep track of when we can
@@ -386,7 +386,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json benchmarks;
 
   for (const auto& query_id : _query_generator->selected_queries()) {
-    const auto& name = _query_generator->query_names()[query_id];
+    const auto& name = _query_generator->query_name(query_id);
     const auto& query_result = _query_results[query_id];
     Assert(query_result.iteration_durations.size() == query_result.num_iterations,
            "number of iterations and number of iteration durations does not match");

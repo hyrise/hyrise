@@ -113,14 +113,15 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
       return predicate_comparator(position.value(), search_value_id);
     };
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      if (_predicate_condition == PredicateCondition::GreaterThan ||
-          _predicate_condition == PredicateCondition::GreaterThanEquals) {
-        // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
-        // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      } else {
-        // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
+      // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
+      // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
+      // dictionary.size() anyway.
+      if (_predicate_condition == PredicateCondition::Equals ||
+          _predicate_condition == PredicateCondition::LessThanEquals ||
+          _predicate_condition == PredicateCondition::LessThan) {
         _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
+      } else {
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       }
     });
   });
