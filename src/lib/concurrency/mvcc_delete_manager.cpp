@@ -1,8 +1,7 @@
 #include <operators/get_table.hpp>
 #include <operators/validate.hpp>
 #include <operators/table_wrapper.hpp>
-#include <operators/insert.hpp>
-#include <operators/delete.hpp>
+#include <operators/update.hpp>
 #include "mvcc_delete_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "concurrency/transaction_manager.hpp"
@@ -15,6 +14,7 @@ void opossum::MvccDeleteManager::run_logical_delete(const std::string &tableName
 void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName, const opossum::ChunkID chunkID) {
   auto& sm = StorageManager::get();
   const auto table = sm.get_table(tableName);
+  auto chunk = table->get_chunk(chunkID);
 
   // ToDo: Maybe handle this as an edge case: -> Create a new chunk before Re-Insert
   DebugAssert(chunkID < (table->chunk_count() - 1), "MVCC Logical Delete should not be applied on the last/current table-chunk.")
@@ -22,7 +22,7 @@ void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName,
   // Append chunk to temporary table
   const auto table_extract = std::make_shared<Table>(table->column_definitions(), TableType::Data,
                                                           table->max_chunk_size(), table->has_mvcc());
-  table_extract->append_chunk(table->get_chunk(chunkID));
+  table_extract->append_chunk(chunk);
   auto table_wrapper = std::make_shared<TableWrapper>(table_extract);
   table_wrapper->execute();
 
@@ -32,17 +32,20 @@ void opossum::MvccDeleteManager::_delete_logically(const std::string &tableName,
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
 
-  // Re-insert records of temporary table into original table
-  auto insert_op = std::make_shared<Insert>(tableName, validate_table);
-  insert_op->set_transaction_context(transaction_context);
-  insert_op->execute();
+  // Use UPDATE operator to DELETE and RE-INSERT valid records in chunk
+    // Pass validate_table as input twice since data will not be changed.
+  auto update_table = std::make_shared<Update>(tableName, validate_table, validate_table);
+  update_table->set_transaction_context(transaction_context);
+  update_table->execute();
 
-  // Remove records of temporary table from original table
-  auto delete_op = std::make_shared<Delete>(tableName, validate_table);
-  delete_op->set_transaction_context(transaction_context);
-  delete_op->execute();
+  // Check for success
+  if(!update_table->execute_failed()) {
+    transaction_context->commit();
 
-  transaction_context->commit();
+    // Save Commit-ID into logically deleted chunk
+    //chunk... = transaction_context->commit_id();
+
+  }
 }
 
 void opossum::MvccDeleteManager::_delete_physically(const std::string &tableName, const opossum::ChunkID chunkID) {
