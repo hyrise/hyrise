@@ -235,7 +235,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
                                                            predicate_condition, right_column_expression->column_id);
     }
 
-    // Predicate pattern: <column> <binary predicate_condition> <uncorrelated subquery>
+    // Predicate pattern: <column> <binary predicate_condition> <uncorrelated subquery> (and vice versa)
     {
       const auto left_subquery = std::dynamic_pointer_cast<PQPSelectExpression>(left_operand);
       const auto right_subquery = std::dynamic_pointer_cast<PQPSelectExpression>(right_operand);
