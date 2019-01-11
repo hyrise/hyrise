@@ -184,7 +184,7 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
   // those complex queries anyway.
 
   // We can't handle IN (SELECT ... ) and EXISTS because the code below expects a single result to be returned
-  if (std::dynamic_pointer_cast<InExpression>(predicate) | std::dynamic_pointer_cast<ExistsExpression>(predicate)) {
+  if (std::dynamic_pointer_cast<InExpression>(predicate) || std::dynamic_pointer_cast<ExistsExpression>(predicate)) {
     return predicate;
   }
 
