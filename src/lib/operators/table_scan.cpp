@@ -15,6 +15,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
+#include "expression/exists_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/is_null_expression.hpp"
@@ -182,8 +183,10 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
   // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
   // those complex queries anyway.
 
-  // We can't handle IN (SELECT ... ) because the code below expects a single result to be returned
-  if (std::dynamic_pointer_cast<InExpression>(predicate)) return predicate;
+  // We can't handle IN (SELECT ... ) and EXISTS because the code below expects a single result to be returned
+  if (std::dynamic_pointer_cast<InExpression>(predicate) | std::dynamic_pointer_cast<ExistsExpression>(predicate)) {
+    return predicate;
+  }
 
   const auto new_predicate = predicate->deep_copy();
   for (auto& argument : new_predicate->arguments) {
@@ -297,7 +300,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), _predicate);
 }
 
-const std::string& TableScan::impl_description() const { return _impl_description; };
+const std::string& TableScan::impl_description() const { return _impl_description; }
 
 void TableScan::_on_cleanup() { _impl.reset(); }
 
