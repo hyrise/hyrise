@@ -62,7 +62,6 @@ BenchmarkRunner::~BenchmarkRunner() {
 }
 
 void BenchmarkRunner::run() {
-  _config.out << "- Loading/Generating tables" << std::endl;
   _table_generator->generate_and_store();
 
   if (_config.verify) {
