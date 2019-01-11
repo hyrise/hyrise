@@ -16,6 +16,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/in_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
@@ -176,8 +177,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
 std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
     const std::shared_ptr<AbstractExpression>& predicate) {
-  // If the predicate has an uncorrelated subquery on the top level, we resolve that subquery first. That way, we can
-  // use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster.
+  // If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
+  // use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
+  // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
+  // those complex queries anyway.
+
+  // We can't handle IN (SELECT ... ) because the code below expects a single result to be returned
+  if (std::dynamic_pointer_cast<InExpression>(predicate)) return predicate;
 
   const auto new_predicate = predicate->deep_copy();
   for (auto& argument : new_predicate->arguments) {
