@@ -12,7 +12,7 @@ typedef struct
 {
   long      weight;
   char     *text;
-  char      len;
+  long      len;
 }         set_member;
 
 typedef struct
