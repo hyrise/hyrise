@@ -264,13 +264,45 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
     EXPECT_EQ(scan_1->get_output()->get_chunk(i)->column_count(), 2u);
 }
 
-TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
+TEST_P(OperatorsTableScanTest, SingleScan) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
   auto scan = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithSubselect) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+
+  const auto pqp =
+      std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
+                              to_expression(int64_t{1}));
+
+  auto scan = std::make_shared<TableScan>(get_int_float_op(),
+                                          greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                               pqp_select_(pqp, DataType::Int, false)));
+  scan->execute();
+  EXPECT_EQ(scan->impl_description(), "ColumnVsValue");
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, BetweenScanWithSubselect) {
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+
+  const auto pqp =
+      std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
+                              to_expression(int64_t{1}));
+
+  {
+    auto scan = std::make_shared<TableScan>(
+        get_int_float_op(), between_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                     pqp_select_(pqp, DataType::Int, false), to_expression(int{12345})));
+    scan->execute();
+    EXPECT_EQ(scan->impl_description(), "ColumnBetween");
+    EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+  }
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
@@ -767,8 +799,6 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
       TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(
       TableScan{get_int_float_op(), equals_(5, column_a)}.create_impl().get()));
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(
-      TableScan{get_int_float_op(), equals_(column_a, pqp_select_(pqp, DataType::Int, false))}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnVsColumnTableScanImpl*>(
       TableScan{get_int_float_op(), equals_(column_b, column_a)}.create_impl().get()));
   EXPECT_TRUE(dynamic_cast<ColumnLikeTableScanImpl*>(

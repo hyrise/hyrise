@@ -48,6 +48,9 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   std::unique_ptr<AbstractTableScanImpl> create_impl() const;
 
+  // Returns the name of the used implementation
+  const std::string& impl_description() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -60,8 +63,13 @@ class TableScan : public AbstractReadOnlyOperator {
 
   void _on_cleanup() override;
 
+  // Turns top-level uncorrelated subqueries into their value, e.g. `a = (SELECT 123)` becomes `a = 123`. This makes it
+  // easier to avoid using the more expensive ExpressionEvaluatorTableScanImpl.
+  static std::shared_ptr<AbstractExpression> _resolve_uncorrelated_subqueries(
+      const std::shared_ptr<AbstractExpression>& predicate);
+
  private:
-  const std::shared_ptr<AbstractExpression> _predicate;
+  std::shared_ptr<AbstractExpression> _predicate;
 
   std::unique_ptr<AbstractTableScanImpl> _impl;
 
