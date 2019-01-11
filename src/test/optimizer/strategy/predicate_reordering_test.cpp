@@ -34,7 +34,7 @@ namespace opossum {
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    const auto table = load_table("src/test/tables/int_int_int.tbl");
+    const auto table = load_table("resources/test_data/tbl/int_int_int.tbl");
     StorageManager::get().add_table("a", table);
     _rule = std::make_shared<PredicateReorderingRule>();
 
@@ -121,7 +121,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
-  std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float4.tbl", 2);
+  std::shared_ptr<Table> table_a = load_table("resources/test_data/tbl/int_float4.tbl", 2);
   StorageManager::get().add_table("table_a", std::move(table_a));
 
   auto stored_table_node = StoredTableNode::make("table_a");

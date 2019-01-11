@@ -5,8 +5,6 @@ set(
     testing_assert.hpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_testrunner.hpp
-    sql/sqlite_testrunner/sqlite_wrapper.cpp
-    sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
 
 set(
@@ -109,7 +107,7 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    optimizer/lqp_translator_test.cpp
+    logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp

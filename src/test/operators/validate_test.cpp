@@ -24,7 +24,7 @@ namespace opossum {
 class OperatorsValidateTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table = load_table("src/test/tables/validate_input.tbl", 2u);
+    _test_table = load_table("resources/test_data/tbl/validate_input.tbl", 2u);
     set_all_records_visible(*_test_table);
     set_record_invisible_for(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
 
@@ -59,7 +59,7 @@ void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, Co
 TEST_F(OperatorsValidateTest, SimpleValidate) {
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated.tbl", 2u);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
   auto validate = std::make_shared<Validate>(_table_wrapper);
   validate->set_transaction_context(context);
@@ -71,7 +71,8 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 TEST_F(OperatorsValidateTest, ScanValidate) {
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated_scanned.tbl", 2u);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", 2u);
 
   auto a = PQPColumnExpression::from_table(*_test_table, "a");
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, greater_than_equals_(a, 2));
@@ -92,7 +93,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/validate_output_validated.tbl", 2u);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
   // Create a PosList referencing more than one chunk
   auto pos_list = std::make_shared<PosList>();

@@ -11,7 +11,7 @@ namespace opossum {
 class GenerateTableStatisticsTest : public ::testing::Test {};
 
 TEST_F(GenerateTableStatisticsTest, GenerateTableStatisticsUnsampled) {
-  const auto table = load_table("src/test/tables/tpch/sf-0.001/customer.tbl");
+  const auto table = load_table("resources/test_data/tbl/tpch/sf-0.001/customer.tbl");
   const auto table_statistics = generate_table_statistics(*table);
 
   ASSERT_EQ(table_statistics.column_statistics().size(), 8u);

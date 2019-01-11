@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -13,13 +14,12 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPUtilsTest : public ::testing::Test {
+class LQPUtilsTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});

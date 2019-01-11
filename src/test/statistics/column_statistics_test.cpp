@@ -18,7 +18,7 @@ namespace opossum {
 class ColumnStatisticsTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl");
+    _table_with_different_column_types = load_table("resources/test_data/tbl/int_float_double_string.tbl");
     auto table_statistics1 = generate_table_statistics(*_table_with_different_column_types);
     _column_statistics_int = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[0]));
@@ -29,7 +29,7 @@ class ColumnStatisticsTest : public BaseTest {
     _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(
         std::const_pointer_cast<BaseColumnStatistics>(table_statistics1.column_statistics()[3]));
 
-    _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl");
+    _table_uniform_distribution = load_table("resources/test_data/tbl/int_equal_distribution.tbl");
     auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
     _column_statistics_uniform_columns = table_statistics2.column_statistics();
   }

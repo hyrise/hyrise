@@ -4,7 +4,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "expression/parameter_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
