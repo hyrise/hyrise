@@ -25,16 +25,23 @@ namespace opossum {
     void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
         std::optional<AggregateType> current_aggregate_value;
 
+        // initialize previous values with values in first row
+        previous_values.reserve(_groupby_column_ids.size());
+
+        for (const auto column_id : _groupby_column_ids) {
+            previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
+        }
+
         auto chunks = sorted_table->chunks();
         for (const auto& chunk : chunks) {
             size_t chunk_size = chunk->size();
             const auto segments = chunk->segments();
-            for (ChunkOffset offset{0};offset < chunk_size;offset++) {
+            for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
                 std::vector<AllTypeVariant> current_values;
                 current_values.reserve(_groupby_column_ids.size());
 
-                for (size_t index = 0; index < _groupby_column_ids.size(); index++) {
-                    AllTypeVariant current_value = segments[_groupby_column_ids[index]]->operator[](offset);
+                for (const auto column_id : _groupby_column_ids) {
+                    AllTypeVariant current_value = segments[column_id]->operator[](offset);
                     current_values.emplace_back(current_value);
                 }
 
@@ -66,6 +73,22 @@ namespace opossum {
 
     std::shared_ptr<const Table> AggregateSort::_on_execute() {
         const auto input_table = input_table_left();
+
+        // check for invalid aggregates
+        for (const auto& aggregate : _aggregates) {
+            if (!aggregate.column) {
+                if (aggregate.function != AggregateFunction::Count) {
+                    Fail("Aggregate: Asterisk is only valid with COUNT");
+                }
+            } else {
+                DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
+                if (input_table->column_data_type(*aggregate.column) == DataType::String &&
+                    (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
+                    Fail("Aggregate: Cannot calculate SUM or AVG on string column");
+                }
+            }
+        }
+
         //create table with correct schema
         for (const auto column_id : _groupby_column_ids) {
             _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id));
@@ -91,24 +114,11 @@ namespace opossum {
             return result_table;
         }
 
-        //sort by group by columns
-        //TODO for now only first group by column
-        //for (ColumnID column_id : _groupby_column_ids) {
         auto sorted_table = input_table;
-        if (_groupby_column_ids.size() > 0) {
-            Sort sort = Sort(_input_left, _groupby_column_ids[0]);
+        for(const auto column_id : _groupby_column_ids) {
+            Sort sort = Sort(_input_left, column_id);
             sort.execute();
             sorted_table = sort.get_output();
-        }
-        //}
-
-        //*
-        // initialize previous values with values in first row
-        std::vector<AllTypeVariant> previous_values;
-        previous_values.reserve(_groupby_column_ids.size());
-
-        for (const auto column_id : _groupby_column_ids) {
-            previous_values.emplace_back(sorted_table->get_value<int>(column_id, size_t(0u)));
         }
 
         std::vector<std::vector<AllTypeVariant>> aggregate_results(_aggregates.size());
@@ -116,6 +126,9 @@ namespace opossum {
 
         uint64_t aggregate_index = 0;
         for (const auto& aggregate : _aggregates) {
+
+            std::vector<AllTypeVariant> previous_values;
+
             auto data_type = input_table->column_data_type(*aggregate.column);
             resolve_data_type(data_type, [&, aggregate](auto type) {
                 using ColumnDataType = typename decltype(type)::type;
