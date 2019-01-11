@@ -111,7 +111,7 @@ TEST_P(TPCHTest, Test) {
    */
 
   auto expected_table =
-      load_table(std::string("src/test/tables/tpch/test-validation/q") + std::to_string(tpch_idx) + ".tbl");
+      load_table(std::string("resources/test_data/tbl/tpch/test-validation/q") + std::to_string(tpch_idx) + ".tbl");
 
   EXPECT_TABLE_EQ(result_table, expected_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
