@@ -1,7 +1,6 @@
 #pragma once
 
 #include <utility>
-
 #include <boost/iterator/iterator_facade.hpp>
 
 namespace opossum {
@@ -17,10 +16,10 @@ class AbstractCacheImpl {
 
     virtual void increment() = 0;
     virtual bool equal(AbstractIterator const& other) const = 0;
-    virtual KeyValuePair dereference() const = 0;
+    virtual KeyValuePair& dereference() const = 0;
   };
 
-  class ErasedIterator : public boost::iterator_facade<ErasedIterator, KeyValuePair, boost::forward_traversal_tag, KeyValuePair>
+  class ErasedIterator : public boost::iterator_facade<ErasedIterator, KeyValuePair, boost::forward_traversal_tag>
   {
     public:
       ErasedIterator(std::unique_ptr<AbstractIterator> it) : _it(std::move(it)) {}
@@ -32,7 +31,7 @@ class AbstractCacheImpl {
 
       bool equal(ErasedIterator const& other) const { return _it->equal(*other._it); }
 
-      KeyValuePair dereference() const { return _it->dereference(); }
+      KeyValuePair& dereference() const { return _it->dereference(); }
 
       std::unique_ptr<AbstractIterator> _it;
   };

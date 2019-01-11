@@ -22,7 +22,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   class RandomCacheIterator : public AbstractIterator
   {
    public:
-    using vector_iterator = typename std::vector<KeyValuePair>::const_iterator;
+    using vector_iterator = typename std::vector<KeyValuePair>::iterator;
     explicit RandomCacheIterator(vector_iterator p) : _vector_position(p) {}
     ~RandomCacheIterator() {}
 
@@ -40,7 +40,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
       return _vector_position == static_cast<const RandomCacheIterator&>(other)._vector_position;
     }
 
-    KeyValuePair dereference() const {
+    KeyValuePair& dereference() const {
       return *_vector_position;
     }
   };

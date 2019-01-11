@@ -64,7 +64,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
   class LRUKCacheIterator : public AbstractIterator
   {
    public:
-    using map_iterator = typename std::unordered_map<Key, handle_t>::const_iterator;
+    using map_iterator = typename std::unordered_map<Key, handle_t>::iterator;
     explicit LRUKCacheIterator(map_iterator p) : _map_position(p) {}
     ~LRUKCacheIterator() {}
 
@@ -73,6 +73,8 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
     map_iterator _map_position;
+    mutable KeyValuePair _tmp_return_value;
+
 
     void increment() {
       ++_map_position;
@@ -82,8 +84,9 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
       return _map_position == static_cast<const LRUKCacheIterator&>(other)._map_position;
     }
 
-    KeyValuePair dereference() const {
-      return get_value(*_map_position);
+    KeyValuePair& dereference() const {
+      _tmp_return_value = get_value(*_map_position);
+      return _tmp_return_value;
     }
   };
 
@@ -176,12 +179,6 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     auto top = _queue.top();
     _map.erase(top.key);
     _queue.pop();
-  }
-
-  static const std::pair<Key, Value> _get_value(std::pair<Key, handle_t> const& p)  {
-    const handle_t handle = p.second;
-    const entry_t& entry = (*handle);
-    return std::make_pair(p.first, entry.value);
   }
 };
 

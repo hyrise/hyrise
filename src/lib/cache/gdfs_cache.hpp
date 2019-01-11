@@ -46,6 +46,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
     map_iterator _map_position;
+    mutable KeyValuePair _tmp_return_value;
 
     void increment() {
       ++_map_position;
@@ -55,8 +56,9 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
       return _map_position == static_cast<const GDFSCacheIterator&>(other)._map_position;
     }
 
-    KeyValuePair dereference() const {
-      return get_value(*_map_position);
+    KeyValuePair& dereference() const {
+      _tmp_return_value = get_value(*_map_position);
+      return _tmp_return_value;
     }
   };
 
