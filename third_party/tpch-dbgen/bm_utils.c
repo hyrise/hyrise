@@ -231,7 +231,7 @@ pick_str(distribution *s, int c, char *target)
     while (s->list[i].weight < j)
         i++;
     if (!s->list[i].len) s->list[i].len = strlen(s->list[i].text);
-    memcpy(target, s->list[i].text, s->list[i].len);
+    memcpy(target, s->list[i].text, s->list[i].len + 1);
     return(i);
 }
 

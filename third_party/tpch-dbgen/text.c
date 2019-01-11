@@ -253,7 +253,7 @@ next_token:	/* I hate goto's, but can't seem to have parent and child use strtok
 		case 'P':
 			i = pick_str(&prepositions, sd, dest);
 			len = (int)strlen(DIST_MEMBER(&prepositions, i));
-			strcpy((dest + len), " the ");
+			memcpy((dest + len), " the ", 5);
 			len += 5;
 			len += txt_np(dest + len, sd);
 			break;
