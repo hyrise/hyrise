@@ -36,20 +36,19 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
   class GDFSCacheIterator : public AbstractIterator {
    public:
-    using map_iterator = typename CacheMap::iterator;
-    explicit GDFSCacheIterator(map_iterator p) : _map_position(p) {}
-    ~GDFSCacheIterator() {}
+    using IteratorType = typename CacheMap::iterator;
+    explicit GDFSCacheIterator(IteratorType p) : _map_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    map_iterator _map_position;
+    IteratorType _map_position;
     mutable KeyValuePair _tmp_return_value;
 
     void increment() { ++_map_position; }
 
-    bool equal(AbstractIterator const& other) const {
+    bool equal(const AbstractIterator& other) const {
       return _map_position == static_cast<const GDFSCacheIterator&>(other)._map_position;
     }
 
@@ -106,7 +105,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   static const KeyValuePair get_value(const std::pair<Key, Handle>& p) {
     const Handle handle = p.second;
     const GDFSCacheEntry& entry = (*handle);
-    return std::make_pair(p.first, entry.value);
+    return {p.first, entry.value};
   }
 
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }

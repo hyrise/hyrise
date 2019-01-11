@@ -36,20 +36,19 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
 
   class GDSCacheIterator : public AbstractIterator {
    public:
-    using map_iterator = typename std::unordered_map<Key, handle_t>::iterator;
-    explicit GDSCacheIterator(map_iterator p) : _map_position(p) {}
-    ~GDSCacheIterator() {}
+    using IteratorType = typename std::unordered_map<Key, handle_t>::iterator;
+    explicit GDSCacheIterator(IteratorType p) : _map_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    map_iterator _map_position;
+    IteratorType _map_position;
     mutable KeyValuePair _tmp_return_value;
 
     void increment() { ++_map_position; }
 
-    bool equal(AbstractIterator const& other) const {
+    bool equal(const AbstractIterator& other) const {
       return _map_position == static_cast<const GDSCacheIterator&>(other)._map_position;
     }
 
@@ -127,7 +126,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
   static const std::pair<Key, Value> get_value(std::pair<Key, handle_t> const& p) {
     const handle_t handle = p.second;
     const entry_t& entry = (*handle);
-    return std::make_pair(p.first, entry.value);
+    return {p.first, entry.value};
   }
 
   ErasedIterator begin() {

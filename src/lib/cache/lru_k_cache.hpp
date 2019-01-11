@@ -63,20 +63,19 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
 
   class LRUKCacheIterator : public AbstractIterator {
    public:
-    using map_iterator = typename std::unordered_map<Key, handle_t>::iterator;
-    explicit LRUKCacheIterator(map_iterator p) : _map_position(p) {}
-    ~LRUKCacheIterator() {}
+    using IteratorType = typename std::unordered_map<Key, handle_t>::iterator;
+    explicit LRUKCacheIterator(IteratorType p) : _map_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    map_iterator _map_position;
+    IteratorType _map_position;
     mutable KeyValuePair _tmp_return_value;
 
     void increment() { ++_map_position; }
 
-    bool equal(AbstractIterator const& other) const {
+    bool equal(const AbstractIterator& other) const {
       return _map_position == static_cast<const LRUKCacheIterator&>(other)._map_position;
     }
 
@@ -129,7 +128,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
   static const KeyValuePair get_value(const std::pair<Key, handle_t>& p) {
     const handle_t handle = p.second;
     const entry_t& entry = (*handle);
-    return std::make_pair(p.first, entry.value);
+    return {p.first, entry.value};
   }
 
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }

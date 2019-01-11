@@ -21,19 +21,18 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
 
   class RandomCacheIterator : public AbstractIterator {
    public:
-    using vector_iterator = typename std::vector<KeyValuePair>::iterator;
-    explicit RandomCacheIterator(vector_iterator p) : _vector_position(p) {}
-    ~RandomCacheIterator() {}
+    using IteratorType = typename std::vector<KeyValuePair>::iterator;
+    explicit RandomCacheIterator(IteratorType p) : _vector_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    vector_iterator _vector_position;
+    IteratorType _vector_position;
 
     void increment() { ++_vector_position; }
 
-    bool equal(AbstractIterator const& other) const {
+    bool equal(const AbstractIterator& other) const {
       return _vector_position == static_cast<const RandomCacheIterator&>(other)._vector_position;
     }
 

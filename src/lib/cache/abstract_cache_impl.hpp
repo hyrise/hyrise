@@ -13,10 +13,10 @@ class AbstractCacheImpl {
   typedef typename std::pair<Key, Value> KeyValuePair;
 
   struct AbstractIterator {
-    virtual ~AbstractIterator() {}
+    virtual ~AbstractIterator() = default;
 
     virtual void increment() = 0;
-    virtual bool equal(AbstractIterator const& other) const = 0;
+    virtual bool equal(const AbstractIterator& other) const = 0;
     virtual KeyValuePair& dereference() const = 0;
   };
 
@@ -28,9 +28,7 @@ class AbstractCacheImpl {
     friend class boost::iterator_core_access;
 
     void increment() { _it->increment(); }
-
-    bool equal(ErasedIterator const& other) const { return _it->equal(*other._it); }
-
+    bool equal(const ErasedIterator& other) const { return _it->equal(*other._it); }
     KeyValuePair& dereference() const { return _it->dereference(); }
 
     std::unique_ptr<AbstractIterator> _it;

@@ -19,19 +19,18 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
 
   class LRUCacheIterator : public AbstractIterator {
    public:
-    using list_iterator = typename std::list<KeyValuePair>::iterator;
-    explicit LRUCacheIterator(list_iterator p) : _list_position(p) {}
-    ~LRUCacheIterator() {}
+    using IteratorType = typename std::list<KeyValuePair>::iterator;
+    explicit LRUCacheIterator(IteratorType p) : _list_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    list_iterator _list_position;
+    IteratorType _list_position;
 
     void increment() { ++_list_position; }
 
-    bool equal(AbstractIterator const& other) const {
+    bool equal(const AbstractIterator& other) const {
       return _list_position == static_cast<const LRUCacheIterator&>(other)._list_position;
     }
 
