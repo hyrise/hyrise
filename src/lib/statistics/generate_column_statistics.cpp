@@ -13,7 +13,7 @@ namespace opossum {
 template <>
 std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(const Table& table,
                                                                               const ColumnID column_id) {
-  // It would be nice to use string_view here, but the iterables hold copies of the values, not references themselves.
+  // It would be nice to store string_views in the set, but the iterables hold copies of the values, not references.
   // SegmentPosition would have to be changed to `T& _value` and this brings a whole bunch of problems in iterators
   // that create stack copies of the accessed values (e.g., for ReferenceSegments)
 
