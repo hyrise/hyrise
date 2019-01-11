@@ -243,9 +243,9 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 		r_date += s_date;
 
 
-		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 10);
-		memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 10);
-		memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 10);
+		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 11);
+		memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 11);
+		memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 11);
 
 
 		if (julian(r_date) <= CURRENTDATE)
