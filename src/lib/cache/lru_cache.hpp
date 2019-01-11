@@ -17,8 +17,7 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class LRUCacheIterator : public AbstractIterator
-  {
+  class LRUCacheIterator : public AbstractIterator {
    public:
     using list_iterator = typename std::list<KeyValuePair>::iterator;
     explicit LRUCacheIterator(list_iterator p) : _list_position(p) {}
@@ -30,17 +29,13 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
 
     list_iterator _list_position;
 
-    void increment() {
-      ++_list_position;
-    }
+    void increment() { ++_list_position; }
 
     bool equal(AbstractIterator const& other) const {
       return _list_position == static_cast<const LRUCacheIterator&>(other)._list_position;
     }
 
-    KeyValuePair& dereference() const {
-      return *_list_position;
-    }
+    KeyValuePair& dereference() const { return *_list_position; }
   };
 
   explicit LRUCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity) {}

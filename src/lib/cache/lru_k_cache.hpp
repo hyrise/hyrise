@@ -61,8 +61,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class LRUKCacheIterator : public AbstractIterator
-  {
+  class LRUKCacheIterator : public AbstractIterator {
    public:
     using map_iterator = typename std::unordered_map<Key, handle_t>::iterator;
     explicit LRUKCacheIterator(map_iterator p) : _map_position(p) {}
@@ -75,10 +74,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     map_iterator _map_position;
     mutable KeyValuePair _tmp_return_value;
 
-
-    void increment() {
-      ++_map_position;
-    }
+    void increment() { ++_map_position; }
 
     bool equal(AbstractIterator const& other) const {
       return _map_position == static_cast<const LRUKCacheIterator&>(other)._map_position;

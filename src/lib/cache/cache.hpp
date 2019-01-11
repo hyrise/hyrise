@@ -72,13 +72,9 @@ class Cache : public Singleton<Cache<Value, Key>> {
     _impl = std::make_unique<cache_t>(capacity);
   }
 
-  auto begin() {
-    return _impl->begin();
-  }
+  auto begin() { return _impl->begin(); }
 
-  auto end() {
-    return _impl->end();
-  }
+  auto end() { return _impl->end(); }
 
  protected:
   // Underlying cache eviction strategy.

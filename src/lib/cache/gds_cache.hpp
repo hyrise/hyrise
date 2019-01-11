@@ -34,8 +34,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class GDSCacheIterator : public AbstractIterator
-  {
+  class GDSCacheIterator : public AbstractIterator {
    public:
     using map_iterator = typename std::unordered_map<Key, handle_t>::iterator;
     explicit GDSCacheIterator(map_iterator p) : _map_position(p) {}
@@ -48,9 +47,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     map_iterator _map_position;
     mutable KeyValuePair _tmp_return_value;
 
-    void increment() {
-      ++_map_position;
-    }
+    void increment() { ++_map_position; }
 
     bool equal(AbstractIterator const& other) const {
       return _map_position == static_cast<const GDSCacheIterator&>(other)._map_position;
@@ -127,7 +124,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     return (*it->second).priority;
   }
 
-  static const std::pair<Key, Value> get_value(std::pair<Key, handle_t> const& p)  {
+  static const std::pair<Key, Value> get_value(std::pair<Key, handle_t> const& p) {
     const handle_t handle = p.second;
     const entry_t& entry = (*handle);
     return std::make_pair(p.first, entry.value);
@@ -142,7 +139,6 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     auto it = std::make_unique<GDSCacheIterator>(_map.end());
     return ErasedIterator(std::move(it));
   }
-
 
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.

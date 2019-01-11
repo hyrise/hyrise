@@ -19,8 +19,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class RandomCacheIterator : public AbstractIterator
-  {
+  class RandomCacheIterator : public AbstractIterator {
    public:
     using vector_iterator = typename std::vector<KeyValuePair>::iterator;
     explicit RandomCacheIterator(vector_iterator p) : _vector_position(p) {}
@@ -32,17 +31,13 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
 
     vector_iterator _vector_position;
 
-    void increment() {
-      ++_vector_position;
-    }
+    void increment() { ++_vector_position; }
 
     bool equal(AbstractIterator const& other) const {
       return _vector_position == static_cast<const RandomCacheIterator&>(other)._vector_position;
     }
 
-    KeyValuePair& dereference() const {
-      return *_vector_position;
-    }
+    KeyValuePair& dereference() const { return *_vector_position; }
   };
 
   explicit RandomCache(size_t capacity)
