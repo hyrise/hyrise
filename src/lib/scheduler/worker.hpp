@@ -47,7 +47,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void _wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
     auto tasks_completed = [&tasks]() {
       // Reversely iterate through the list of tasks, because unfinished tasks are likely at the end of the list.
-      for (auto it = tasks.rbegin() ; it != tasks.rend() ; ++it) {
+      for (auto it = tasks.rbegin(); it != tasks.rend(); ++it) {
         if (!(*it)->is_done()) {
           return false;
         }
