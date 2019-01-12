@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "abstract_table_generator.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
@@ -24,21 +25,19 @@ extern std::unordered_map<opossum::TpchTable, std::string> tpch_table_names;
  * Wrapper around the official tpch-dbgen tool, making it directly generate opossum::Table instances without having
  * to generate and then load .tbl files.
  *
- * NOT thread safe because the underlying tpch-dbgen is not since it has global data and malloc races.
+ * NOT thread safe because the underlying tpch-dbgen is not (since it has global data and malloc races).
  */
-class TpchDbGenerator final {
+class TpchTableGenerator final : public AbstractTableGenerator {
  public:
-  explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+  // Convenience constructor for creating a TpchTableGenerator out of a benchmarking context
+  explicit TpchTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
-  std::unordered_map<TpchTable, std::shared_ptr<Table>> generate();
+  // Constructor for creating a TpchTableGenerator in a benchmark
+  explicit TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
-  /**
-   * Generate the TPCH tables and store them in the StorageManager
-   */
-  void generate_and_store();
+  std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  private:
   float _scale_factor;
-  size_t _chunk_size;
 };
 }  // namespace opossum

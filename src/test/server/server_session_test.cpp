@@ -114,7 +114,7 @@ TEST_F(ServerSessionTest, SessionPerformsStartup) {
 
   // Expect that the session sends out an authentication response and an initial ReadyForQuery
   EXPECT_CALL(*_connection, send_auth());
-  EXPECT_CALL(*_connection, send_parameter_status(_, _));
+  EXPECT_CALL(*_connection, send_parameter_status(_, _)).Times(2);
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   // Actually run the session: googlemock will record which Connection methods are called in which order
@@ -149,7 +149,7 @@ TEST_F(ServerSessionTest, SessionDeniesSslRequestDuringStartup) {
   EXPECT_CALL(*_connection, receive_startup_packet_body(_));
 
   EXPECT_CALL(*_connection, send_auth());
-  EXPECT_CALL(*_connection, send_parameter_status(_, _));
+  EXPECT_CALL(*_connection, send_parameter_status(_, _)).Times(2);
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   _session->start().wait();

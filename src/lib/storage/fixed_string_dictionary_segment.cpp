@@ -75,7 +75,7 @@ size_t FixedStringDictionarySegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-CompressedVectorType FixedStringDictionarySegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> FixedStringDictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 

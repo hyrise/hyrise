@@ -536,6 +536,8 @@ set(
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
+    utils/check_table_equal.cpp
+    utils/check_table_equal.hpp
     utils/ignore_unused_variable.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
@@ -547,6 +549,8 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/null_streambuf.cpp
+    utils/null_streambuf.hpp
     utils/make_bimap.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
@@ -561,6 +565,8 @@ set(
     utils/singleton.hpp
     utils/string_utils.cpp
     utils/string_utils.hpp
+    utils/sqlite_wrapper.cpp
+    utils/sqlite_wrapper.hpp
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp

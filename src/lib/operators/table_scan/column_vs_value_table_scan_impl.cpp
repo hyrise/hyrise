@@ -97,7 +97,8 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
+      // Matches all, so include all rows except those with NULLs in the result.
+      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -110,6 +111,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
   if (_predicate_condition == PredicateCondition::GreaterThan ||
       _predicate_condition == PredicateCondition::GreaterThanEquals) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
+<<<<<<< HEAD
       // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
       // value is NULL. Thus, we need to check if the value id is lower than the size of the dictionary. We use the
       // same hack as in ColumnBetweenTableScanImpl to get rid of one branch.
@@ -131,6 +133,18 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
         // TODO Broken for NotEquals
         _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
       });
+=======
+      // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
+      // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
+      // dictionary.size() anyway.
+      if (_predicate_condition == PredicateCondition::Equals ||
+          _predicate_condition == PredicateCondition::LessThanEquals ||
+          _predicate_condition == PredicateCondition::LessThan) {
+        _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
+      } else {
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
+      }
+>>>>>>> master
     });
   }
 }

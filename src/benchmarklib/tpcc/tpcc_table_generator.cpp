@@ -16,6 +16,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
+#include "benchmark_table_encoder.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
