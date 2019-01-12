@@ -6,7 +6,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/chunk_statistics/histograms/generic_histogram.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 #include "visualization/lqp_visualizer.hpp"
 

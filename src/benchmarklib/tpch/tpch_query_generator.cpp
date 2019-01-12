@@ -12,22 +12,13 @@ namespace opossum {
 
 TPCHQueryGenerator::TPCHQueryGenerator(bool use_prepared_statements)
     : _use_prepared_statements(use_prepared_statements) {
-  _generate_names();
   _selected_queries.resize(22);
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
 }
 
 TPCHQueryGenerator::TPCHQueryGenerator(bool use_prepared_statements, const std::vector<QueryID>& selected_queries)
     : _use_prepared_statements(use_prepared_statements) {
-  _generate_names();
   _selected_queries = selected_queries;
-}
-
-void TPCHQueryGenerator::_generate_names() {
-  _query_names.reserve(22);
-  for (auto i = 0; i < 22; ++i) {
-    _query_names.emplace_back(std::string("TPC-H ") + std::to_string(i + 1));
-  }
 }
 
 std::string TPCHQueryGenerator::get_preparation_queries() const {
@@ -94,6 +85,13 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
 
   return _build_executable_query(query_id, parameter_values[query_id]);
 }
+
+std::string TPCHQueryGenerator::query_name(const QueryID query_id) const {
+  Assert(query_id < available_query_count(), "query_id out of range");
+  return std::string("TPC-H ") + std::to_string(query_id + 1);
+}
+
+size_t TPCHQueryGenerator::available_query_count() const { return 22u; }
 
 std::string TPCHQueryGenerator::_build_executable_query(const QueryID query_id,
                                                         const std::vector<std::string>& parameter_values) {

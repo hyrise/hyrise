@@ -33,6 +33,9 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   // _max_chunk_size has no meaning if the table is a reference table.
   DebugAssert(type == TableType::Data || !max_chunk_size, "Must not set max_chunk_size for reference tables");
   DebugAssert(!max_chunk_size || *max_chunk_size > 0, "Table must have a chunk size greater than 0.");
+
+  // TODO(moritz) revise
+  _table_statistics2->chunk_statistics_sets.resize(1);
 }
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
@@ -96,9 +99,9 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     append_mutable_chunk();
   }
 
-  DebugAssert(_table_statistics2->chunk_statistics_primary.size() == _chunks.size(),
+  DebugAssert(_table_statistics2->chunk_statistics_sets.front().size() == _chunks.size(),
               "Chunks and corresponding statistics are out of sync");
-  ++_table_statistics2->chunk_statistics_primary.back()->row_count;
+  ++_table_statistics2->chunk_statistics_sets.front().back()->row_count;
   _chunks.back()->append(values);
 }
 
@@ -207,7 +210,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
     });
   }
 
-  _table_statistics2->chunk_statistics_primary.emplace_back(chunk_statistics);
+  _table_statistics2->chunk_statistics_sets.front().emplace_back(chunk_statistics);
 }
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }

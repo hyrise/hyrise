@@ -10,7 +10,9 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path) {
+FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path,
+                                                 const std::unordered_set<std::string>& filename_blacklist,
+                                                 const std::optional<std::unordered_set<std::string>>& query_subset) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   filesystem::path path{query_path};
@@ -18,36 +20,40 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
 
   if (filesystem::is_regular_file(path)) {
     Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
-    _parse_query_file(query_path);
+    _parse_query_file(query_path, query_subset);
   } else {
     auto query_file_paths = std::vector<std::filesystem::path>{};
 
     // Recursively walk through the specified directory and add all files on the way
     for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
-      const auto filename = entry.path().string();
-      if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
-        query_file_paths.emplace_back(filename);
+      if (filesystem::is_regular_file(entry) && is_sql_file(entry.path())) {
+        if (filename_blacklist.find(entry.path().filename()) != filename_blacklist.end()) {
+          continue;
+        }
+        _parse_query_file(entry.path(), query_subset);
       }
-    }
-
-    // Sort the files alphabetically (so the queries are in a deterministic order)
-    std::sort(query_file_paths.begin(), query_file_paths.end(), [&](const auto& lhs, const auto& rhs) {
-      return lhs.filename() < rhs.filename();
-    });
-
-    // Read the queries from the files
-    for (const auto& query_file_path : query_file_paths) {
-      _parse_query_file(query_file_path);
     }
   }
 
-  _selected_queries.resize(_query_names.size());
+  _selected_queries.resize(_queries.size());
   std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
+
+  // Sort queries by name
+  std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_path) {
+std::string FileBasedQueryGenerator::build_query(const QueryID query_id) { return _queries[query_id].sql; }
+
+std::string FileBasedQueryGenerator::query_name(const QueryID query_id) const { return _queries[query_id].name; }
+
+size_t FileBasedQueryGenerator::available_query_count() const { return _queries.size(); }
+
+void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& query_file_path,
+                                                const std::optional<std::unordered_set<std::string>>& query_subset) {
   std::ifstream file(query_file_path);
-  const auto filename = filesystem::path{query_file_path}.stem().string();
+
+  // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."
+  const auto query_name_prefix = query_file_path.stem().string();
 
   std::string content{std::istreambuf_iterator<char>(file), {}};
 
@@ -60,25 +66,30 @@ void FileBasedQueryGenerator::_parse_query_file(const std::string& query_file_pa
   hsql::SQLParser::parse(content, &parse_result);
   Assert(parse_result.isValid(), create_sql_parser_error_message(content, parse_result));
 
-  std::vector<std::string> queries;
+  std::vector<Query> queries_in_file{parse_result.size()};
 
   size_t sql_string_offset{0u};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto query_name = filename + '.' + std::to_string(statement_idx);
+    const auto query_name = query_name_prefix + '.' + std::to_string(statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
-    _query_names.emplace_back(query_name);
-    _queries.emplace_back(statement_string);
+    queries_in_file[statement_idx] = {query_name, statement_string};
   }
 
-  // More convenient names if there is only one query per file
-  if (_queries.size() == 1) {
-    auto& query_name = _query_names[0];
-    query_name.erase(query_name.end() - 2, query_name.end());  // -2 to remove ".0" at end of name
+  // Remove ".0" from the end of the query name if there is only one file
+  if (queries_in_file.size() == 1) {
+    queries_in_file.front().name.erase(queries_in_file.front().name.end() - 2, queries_in_file.front().name.end());
+  }
+
+  /**
+   * Add queries to _queries and _query_names, if query_subset allows it
+   */
+  for (const auto& query : queries_in_file) {
+    if (!query_subset || query_subset->count(query.name)) {
+      _queries.emplace_back(query);
+    }
   }
 }
-
-std::string FileBasedQueryGenerator::build_query(const QueryID query_id) { return _queries[query_id]; }
 
 }  // namespace opossum

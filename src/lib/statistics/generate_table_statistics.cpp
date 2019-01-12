@@ -39,7 +39,7 @@ void generate_table_statistics2(Table& table) {
 
   for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    const auto& chunk_statistics = table.table_statistics2()->chunk_statistics_primary[chunk_id];
+    const auto& chunk_statistics = table.table_statistics2()->chunk_statistics_sets.front()[chunk_id];
 
     const auto bin_count = std::min<size_t>(10, std::max<size_t>(2, chunk->size() / 10));
 
@@ -77,7 +77,10 @@ void generate_table_statistics2(Table& table) {
 }
 
 void generate_compact_table_statistics(TableStatistics2& table_statistics) {
-  Assert(!table_statistics.chunk_statistics_secondary, "Already has compact TableStatistics");std::cout << "generate_table_statistics2():    Compacting..." << std::endl;
+  // TODO(moritz) revise
+  Assert(table_statistics.chunk_statistics_sets.size() == 1, "Already has compact TableStatistics");
+
+  std::cout << "generate_table_statistics2():    Compacting..." << std::endl;
 
   const auto chunk_statistics_compact = std::make_shared<ChunkStatistics2>(table_statistics.row_count());
   chunk_statistics_compact->segment_statistics.resize(table_statistics.column_count());
@@ -93,8 +96,8 @@ void generate_compact_table_statistics(TableStatistics2& table_statistics) {
       if constexpr (!std::is_same_v<ColumnDataType, std::string>) {
         auto histogram_compact = std::shared_ptr<AbstractHistogram<ColumnDataType>>();
 
-        for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics.chunk_statistics_primary.size(); ++chunk_id) {
-          const auto base_segment_statistics = table_statistics.chunk_statistics_primary[chunk_id]->segment_statistics[column_id];
+        for (auto chunk_id = ChunkID{0}; chunk_id < table_statistics.chunk_statistics_sets.front().size(); ++chunk_id) {
+          const auto base_segment_statistics = table_statistics.chunk_statistics_sets.front()[chunk_id]->segment_statistics[column_id];
           const auto segment_statistics = std::dynamic_pointer_cast<SegmentStatistics2<ColumnDataType>>(
           base_segment_statistics);
 
@@ -111,22 +114,25 @@ void generate_compact_table_statistics(TableStatistics2& table_statistics) {
           }
         }
 
+        if (!histogram_compact) {
+          return;
+        }
+
         histogram_compact = histogram::reduce_histogram(*histogram_compact, 2);
 
         if (histogram_compact) {
-          std::cout << "generate_table_statistics2():     Column " << column_id << " compacted to " << histogram_compact->bin_count() << " bins" << std::endl;
+          //std::cout << "generate_table_statistics2():     Column " << column_id << " compacted to " << histogram_compact->bin_count() << " bins" << std::endl;
 
           chunk_statistics_compact->segment_statistics[column_id]->set_statistics_object(histogram_compact);
         }
       } else {
-        std::cout << "generate_table_statistics2():     Skipping string column " << column_id << std::endl;
+        //std::cout << "generate_table_statistics2():     Skipping string column " << column_id << std::endl;
       }
     });
 
   }
 
-  table_statistics.chunk_statistics_secondary.emplace();
-  table_statistics.chunk_statistics_secondary->emplace_back(chunk_statistics_compact);
+  table_statistics.chunk_statistics_sets.emplace_back(ChunkStatistics2Set{chunk_statistics_compact});
 }
 
 }  // namespace opossum

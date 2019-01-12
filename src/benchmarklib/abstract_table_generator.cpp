@@ -66,8 +66,10 @@ void AbstractTableGenerator::generate_and_store() {
    * Add the Tables to the StorageManager
    */
   _benchmark_config->out << "- Adding Tables to StorageManager" << std::endl;
+  auto& storage_manager = StorageManager::get();
   for (auto& [table_name, table_info] : table_info_by_name) {
-    StorageManager::get().add_table(table_name, table_info.table);
+    if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+    storage_manager.add_table(table_name, table_info.table);
   }
 
   metrics.store_duration = metrics_timer.lap();
