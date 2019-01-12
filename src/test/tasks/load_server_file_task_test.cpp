@@ -9,9 +9,7 @@ namespace opossum {
 
 class LoadServerFileTaskTest : public ::testing::Test {
  public:
-  void SetUp() override {
-    int_float_expected = load_table("resources/test_data/tbl/int_float.tbl");
-  }
+  void SetUp() override { int_float_expected = load_table("resources/test_data/tbl/int_float.tbl"); }
 
   std::shared_ptr<Table> int_float_expected;
 };

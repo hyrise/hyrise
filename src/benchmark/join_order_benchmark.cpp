@@ -114,7 +114,8 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  auto query_generator = std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, non_query_file_names, query_subset);
+  auto query_generator =
+      std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, non_query_file_names, query_subset);
 
   BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
 }
