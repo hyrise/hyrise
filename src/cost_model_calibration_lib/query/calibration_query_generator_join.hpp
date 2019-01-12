@@ -22,7 +22,7 @@ struct CalibrationQueryGeneratorJoinConfiguration {
   const double table_ratio;
 };
 
-// So that google test, e.g., prints readable error messages
+// So that google test prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream, const CalibrationQueryGeneratorJoinConfiguration& configuration) {
   const auto reference_column_string = configuration.reference_column ? "true" : "false";
   return stream << "CalibrationQueryGeneratorJoinConfiguration(" << configuration.left_table_name << " - "
