@@ -53,8 +53,8 @@ EqualHeightHistogram<std::string>::EqualHeightHistogram(const std::string& minim
 
   for (BinID bin_id = 0; bin_id < _bin_data.bin_maxima.size(); bin_id++) {
     Assert(_bin_data.bin_distinct_counts[bin_id] > 0, "Cannot have bins with no distinct values.");
-    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-           "Unsupported characters.");
+//    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+//           "Unsupported characters.");
 
     if (bin_id < _bin_data.bin_maxima.size() - 1) {
       Assert(_bin_data.bin_maxima[bin_id] < _bin_data.bin_maxima[bin_id + 1],

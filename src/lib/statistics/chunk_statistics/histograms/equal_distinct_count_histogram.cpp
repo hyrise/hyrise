@@ -63,10 +63,10 @@ EqualDistinctCountHistogram<std::string>::EqualDistinctCountHistogram(
 
   for (BinID bin_id = 0u; bin_id < _bin_data.bin_minima.size(); bin_id++) {
     Assert(_bin_data.bin_heights[bin_id] > 0, "Cannot have empty bins.");
-    Assert(_bin_data.bin_minima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-           "Unsupported characters.");
-    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
-           "Unsupported characters.");
+//    Assert(_bin_data.bin_minima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+//           "Unsupported characters.");
+//    Assert(_bin_data.bin_maxima[bin_id].find_first_not_of(supported_characters) == std::string::npos,
+//           "Unsupported characters.");
     Assert(_bin_data.bin_minima[bin_id] <= _bin_data.bin_maxima[bin_id],
            "Cannot have upper bin edge higher than lower bin edge.");
 
