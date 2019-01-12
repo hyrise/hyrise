@@ -315,7 +315,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     /**
      * After the probe phase left_pos_lists and right_pos_lists contain all pairs of joined rows grouped by
-     * partition. Let p be a partition and r a row. The value of left_pos_lists[p][r] will match right_pos_lists[p][r].
+     * partition. Let p be a partition index and r a row index. The value of left_pos_lists[p][r] will match right_pos_lists[p][r].
      */
 
 
@@ -357,11 +357,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       }
 
       /**
-       * Apply additinoal predicates
+       * Apply additional predicates
        * Table 1, Table 2, left, right
-       * iteraes through left and right and checks if predicate applies, if not, row will be deleted from left & right
+       * Iterates through left and right and checks if predicate applies, if not, row will be deleted from left & right.
+       * left and right contain the joined row ids of the left and right table.
        */
-      // left and right contain the joined row ids of the left and right table.
 
       if (_additional_join_predicates.has_value()) {
         _apply_additional_join_predicates(*left_in_table, *left, *right_in_table, *right,
@@ -373,7 +373,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       // write_output_segments iterates through right and left and creates one segment for every column which is written
       // to output_segments.
-      // soutput_segments is then appended as a chunk ti _output_table
+      // output_segments is then appended as a chunk to _output_table
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
@@ -395,7 +395,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-   * We only accept join predicates where predicate_condition is Equals. Also, prediactes must be linked by AND.
+   * We only accept join predicates where predicate_condition is Equals. Also, predicates must be linked by AND.
    * @param left
    * @param left_rows_to_verify
    * @param right
