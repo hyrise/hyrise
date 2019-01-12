@@ -102,7 +102,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
-        _additional_join_predicates(additional_join_predicates){
+        _additional_join_predicates(additional_join_predicates) {
     if (radix_bits.has_value()) {
       _radix_bits = radix_bits.value();
     } else {
@@ -318,7 +318,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
      * partition. Let p be a partition index and r a row index. The value of left_pos_lists[p][r] will match right_pos_lists[p][r].
      */
 
-
     /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
      *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
@@ -365,7 +364,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       if (_additional_join_predicates.has_value()) {
         _apply_additional_join_predicates(*left_in_table, *left, *right_in_table, *right,
-            _additional_join_predicates.value());
+                                          _additional_join_predicates.value());
       }
 
       // using Segments = pmr_vector<std::shared_ptr<BaseSegment>>
@@ -403,9 +402,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
    * @param join_predicates
    */
   static void _apply_additional_join_predicates(const Table& left, PosList& left_rows_to_verify, const Table& right,
-      PosList& right_rows_to_verify, const std::vector<JoinPredicate>& join_predicates) {
-    DebugAssert(left_rows_to_verify.size() == right_rows_to_verify.size(), "left_rows_to_verify should have the same"
-      " amount of rows as right_rows_to_verify");
+                                                PosList& right_rows_to_verify,
+                                                const std::vector<JoinPredicate>& join_predicates) {
+    DebugAssert(left_rows_to_verify.size() == right_rows_to_verify.size(),
+                "left_rows_to_verify should have the same"
+                " amount of rows as right_rows_to_verify");
 
     if (join_predicates.empty()) {
       return;
@@ -420,16 +421,23 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       const auto& left_row_id = left_rows_to_verify[row_idx];
       const auto& right_row_id = right_rows_to_verify[row_idx];
 
+      bool row_pair_satisfies_predicates = true;
       for (const auto& pred : join_predicates) {
-        DebugAssert(pred.predicateCondition == PredicateCondition::Equals, "Only PredicateCondition::Equals is"
-                                                                           " supported.");
+        DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
+                    "Only PredicateCondition::Equals is"
+                    " supported.");
         const auto& left_segment = *left.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
         const auto& right_segment = *right.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
 
-        if (left_segment[left_row_id.chunk_offset] == right_segment[right_row_id.chunk_offset]) {
-          left_selection.push_back(left_row_id);
-          right_selection.push_back(right_row_id);
+        if (!(left_segment[left_row_id.chunk_offset] == right_segment[right_row_id.chunk_offset])) {
+          row_pair_satisfies_predicates = false;
+          break;
         }
+      }
+
+      if (row_pair_satisfies_predicates) {
+        left_selection.push_back(left_row_id);
+        right_selection.push_back(right_row_id);
       }
     }
 

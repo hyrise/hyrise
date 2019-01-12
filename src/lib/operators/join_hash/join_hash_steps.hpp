@@ -26,7 +26,7 @@ using Hash = size_t;
 This is how elements of the input relations are saved after materialization.
 The original value is used to detect hash collisions.
 */
-template<typename T>
+template <typename T>
 struct PartitionedElement {
   PartitionedElement() : row_id(NULL_ROW_ID), value(T()) {}
 
@@ -38,9 +38,9 @@ struct PartitionedElement {
 
 // Initializing the partition vector takes some time. This is not necessary, because it will be overwritten anyway.
 // The uninitialized_vector behaves like a regular std::vector, but the entries are initially invalid.
-template<typename T>
+template <typename T>
 using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
-    std::vector<PartitionedElement<T>>>;
+                                     std::vector<PartitionedElement<T>>>;
 
 // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
 // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -49,7 +49,7 @@ using SmallPosList = boost::container::small_vector<RowID, 1>;
 
 // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
 // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
-template<typename T>
+template <typename T>
 using HashTable = ska::bytell_hash_map<T, SmallPosList>;
 
 /*
@@ -65,7 +65,7 @@ This struct is used in two phases:
 As the radix clustering might be skipped (when radix_bits == 0), both the materialization as well as the radix
 clustering methods yield RadixContainers.
 */
-template<typename T>
+template <typename T>
 struct RadixContainer {
   std::shared_ptr<Partition<T>> elements;
   std::vector<size_t> partition_offsets;
@@ -86,7 +86,7 @@ inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> 
   return chunk_offsets;
 }
 
-template<typename T, typename HashedType, bool consider_null_values>
+template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
   const std::hash<HashedType> hash_function;
@@ -197,7 +197,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 /*
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
-template<typename LeftType, typename HashedType>
+template <typename LeftType, typename HashedType>
 std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
@@ -222,7 +222,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
     }
 
     jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id,
-                                                    partition_size]() {
+                                                 partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
       // slightly oversize the hash table to avoid unnecessary rebuilds
@@ -255,7 +255,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   return hashtables;
 }
 
-template<typename T, typename HashedType, bool consider_null_values>
+template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::vector<size_t>& chunk_offsets,
                                            std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
@@ -355,7 +355,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   with the values in the hash table. Since Left and Right are hashed using the same hash function, we can reduce the
   number of hash tables that need to be looked into to just 1.
   */
-template<typename RightType, typename HashedType, bool consider_null_values>
+template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode) {
@@ -489,7 +489,7 @@ void probe(const RadixContainer<RightType>& radix_container,
   CurrentScheduler::wait_for_tasks(jobs);
 }
 
-template<typename RightType, typename HashedType>
+template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
                      std::vector<PosList>& pos_lists, const JoinMode mode) {

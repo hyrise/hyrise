@@ -201,7 +201,6 @@ std::shared_ptr<Table> ColumnGenerator::create_table(const TableColumnDefinition
   return table;
 }
 
-
 // we could use this to set visibility of mvcc
 void set_all_records_visible(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
@@ -218,7 +217,7 @@ void set_all_records_visible(Table& table) {
 std::unique_ptr<std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>>>
 ColumnGenerator::generate_two_predicate_join_tables(size_t chunk_size, size_t fact_table_size, size_t fact_factor,
                                                     double probing_factor) {
-  DebugAssert(fact_table_size % fact_factor == 0, "fact factor must be a factor of fact_table_size.")
+  DebugAssert(fact_table_size % fact_factor == 0, "fact factor must be a factor of fact_table_size.");
 
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("t1_a", DataType::Int);
