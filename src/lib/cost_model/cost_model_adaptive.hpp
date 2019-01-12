@@ -34,14 +34,14 @@ struct TableScanModelGroupHash {
   }
 };
 
+using ModelCoefficientsPerGroup = const std::unordered_map<const TableScanModelGroup, const ModelCoefficients, TableScanModelGroupHash>;
+
 /**
  * Regression-based Cost Model
  */
 class CostModelAdaptive : public AbstractCostEstimator {
  public:
-  explicit CostModelAdaptive(
-      const std::unordered_map<const TableScanModelGroup, const std::unordered_map<std::string, float>,
-                               TableScanModelGroupHash>& coefficients);
+  explicit CostModelAdaptive(ModelCoefficientsPerGroup& coefficients);
 
  protected:
   Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;

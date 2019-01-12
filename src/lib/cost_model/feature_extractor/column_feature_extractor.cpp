@@ -69,7 +69,7 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
   return column_features;
 }
 
-std::pair<EncodingType, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment) {
+std::pair<EncodingType, bool> ColumnFeatureExtractor::_get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment) {
   const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
 
   // Dereference ReferenceSegment for encoding feature

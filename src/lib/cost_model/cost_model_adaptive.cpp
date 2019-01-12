@@ -12,8 +12,7 @@
 
 namespace opossum {
 
-CostModelAdaptive::CostModelAdaptive(const std::unordered_map<const TableScanModelGroup, const ModelCoefficients,
-                                                              TableScanModelGroupHash>& all_coefficients)
+CostModelAdaptive::CostModelAdaptive(ModelCoefficientsPerGroup& all_coefficients)
     : _table_scan_models({}) {
   // Initialize all LinearRegression Models
   for (const auto& [group, coefficients] : all_coefficients) {

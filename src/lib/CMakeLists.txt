@@ -30,10 +30,10 @@ set(
     cost_model/cost.hpp
     cost_model/cost_model_adaptive.cpp
     cost_model/cost_model_adaptive.hpp
+    cost_model/cost_model_coefficient_reader.cpp
+    cost_model/cost_model_coefficient_reader.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
-    cost_model/linear_regression_model.cpp
-    cost_model/linear_regression_model.hpp
     cost_model/feature/abstract_features.cpp
     cost_model/feature/abstract_features.hpp
     cost_model/feature/aggregate_features.cpp
@@ -56,6 +56,8 @@ set(
     cost_model/feature/runtime_hardware_features.hpp
     cost_model/feature/table_scan_features.cpp
     cost_model/feature/table_scan_features.hpp
+    cost_model/linear_regression_model.cpp
+    cost_model/linear_regression_model.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
@@ -565,6 +567,8 @@ set(
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
+    utils/check_table_equal.cpp
+    utils/check_table_equal.hpp
     utils/ignore_unused_variable.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
@@ -592,6 +596,8 @@ set(
     utils/singleton.hpp
     utils/string_utils.cpp
     utils/string_utils.hpp
+    utils/sqlite_wrapper.cpp
+    utils/sqlite_wrapper.hpp
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
