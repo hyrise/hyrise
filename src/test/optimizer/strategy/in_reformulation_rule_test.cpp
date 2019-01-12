@@ -15,6 +15,7 @@
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 #include "../../../lib/logical_query_plan/projection_node.hpp"
+#include "../../../lib/logical_query_plan/predicate_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -51,12 +52,10 @@ class InReformulationRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(InReformulationRuleTest, SimpleInToSemiJoin) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM B)
-  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
-
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b)
   // clang-format off
   const auto subselect_lqp =
-      ProjectionNode::make(expression_vector(node_table_b_col_a));
+      ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b);
 
   const auto subselect = lqp_select_(subselect_lqp);
 
@@ -67,9 +66,8 @@ TEST_F(InReformulationRuleTest, SimpleInToSemiJoin) {
   const auto expected_lqp =
       JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
                      node_table_a,
-                     node_table_b);
+                     ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b));
   // clang-format on
-
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
