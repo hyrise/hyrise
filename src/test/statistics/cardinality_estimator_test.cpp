@@ -55,7 +55,8 @@ class CardinalityEstimatorTest : public ::testing::Test {
     chunk_statistics_a_0->segment_statistics.emplace_back(segment_statistics_a_0_b);
 
     table_statistics_a = std::make_shared<TableStatistics2>();
-    table_statistics_a->chunk_statistics_primary.emplace_back(chunk_statistics_a_0);
+    table_statistics_a->chunk_statistics_sets.resize(1);
+    table_statistics_a->chunk_statistics_sets.front().emplace_back(chunk_statistics_a_0);
 
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
     node_a->set_table_statistics2(table_statistics_a);
@@ -85,9 +86,10 @@ class CardinalityEstimatorTest : public ::testing::Test {
     chunk_statistics_b->segment_statistics.emplace_back(segment_statistics_b_b);
 
     const auto table_statistics_b = std::make_shared<TableStatistics2>();
-    table_statistics_b->chunk_statistics_primary.emplace_back(chunk_statistics_b);
-    table_statistics_b->chunk_statistics_primary.emplace_back(chunk_statistics_b);
-    table_statistics_b->chunk_statistics_primary.emplace_back(chunk_statistics_b);
+    table_statistics_b->chunk_statistics_sets.resize(1);
+    table_statistics_b->chunk_statistics_sets.front().emplace_back(chunk_statistics_b);
+    table_statistics_b->chunk_statistics_sets.front().emplace_back(chunk_statistics_b);
+    table_statistics_b->chunk_statistics_sets.front().emplace_back(chunk_statistics_b);
 
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
     node_b->set_table_statistics2(table_statistics_b);
@@ -115,8 +117,9 @@ class CardinalityEstimatorTest : public ::testing::Test {
     chunk_statistics_c->segment_statistics.emplace_back(segment_statistics_c_y);
 
     const auto table_statistics_c = std::make_shared<TableStatistics2>();
-    table_statistics_c->chunk_statistics_primary.emplace_back(chunk_statistics_c);
-    table_statistics_c->chunk_statistics_primary.emplace_back(chunk_statistics_c);
+    table_statistics_c->chunk_statistics_sets.resize(1);
+    table_statistics_c->chunk_statistics_sets.front().emplace_back(chunk_statistics_c);
+    table_statistics_c->chunk_statistics_sets.front().emplace_back(chunk_statistics_c);
 
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
     node_c->set_table_statistics2(table_statistics_c);
@@ -140,9 +143,9 @@ TEST_F(CardinalityEstimatorTest, Alias) {
 
   const auto table_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(table_statistics->chunk_statistics_primary.size(), 1u);
+  ASSERT_EQ(table_statistics->chunk_statistics_sets.front().size(), 1u);
 
-  const auto chunk_statistics = table_statistics->chunk_statistics_primary.at(0);
+  const auto chunk_statistics = table_statistics->chunk_statistics_sets.front().at(0);
 
   EXPECT_EQ(chunk_statistics->row_count, 100u);
   ASSERT_EQ(chunk_statistics->segment_statistics.size(), 2u);
@@ -159,9 +162,9 @@ TEST_F(CardinalityEstimatorTest, Projection) {
 
   const auto table_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(table_statistics->chunk_statistics_primary.size(), 1u);
+  ASSERT_EQ(table_statistics->chunk_statistics_sets.front().size(), 1u);
 
-  const auto chunk_statistics = table_statistics->chunk_statistics_primary.at(0);
+  const auto chunk_statistics = table_statistics->chunk_statistics_sets.front().at(0);
 
   EXPECT_EQ(chunk_statistics->row_count, 100u);
   ASSERT_EQ(chunk_statistics->segment_statistics.size(), 3u);
@@ -179,9 +182,9 @@ TEST_F(CardinalityEstimatorTest, Aggregate) {
 
   const auto table_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(table_statistics->chunk_statistics_primary.size(), 1u);
+  ASSERT_EQ(table_statistics->chunk_statistics_sets.front().size(), 1u);
 
-  const auto chunk_statistics = table_statistics->chunk_statistics_primary.at(0);
+  const auto chunk_statistics = table_statistics->chunk_statistics_sets.front().at(0);
 
   EXPECT_EQ(chunk_statistics->row_count, 100u);
   ASSERT_EQ(chunk_statistics->segment_statistics.size(), 3u);
@@ -199,9 +202,9 @@ TEST_F(CardinalityEstimatorTest, Validate) {
 
   const auto table_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(table_statistics->chunk_statistics_primary.size(), 1u);
+  ASSERT_EQ(table_statistics->chunk_statistics_sets.front().size(), 1u);
 
-  const auto chunk_statistics = table_statistics->chunk_statistics_primary.at(0);
+  const auto chunk_statistics = table_statistics->chunk_statistics_sets.front().at(0);
 
   EXPECT_EQ(chunk_statistics->row_count, 100u - 5u);
   ASSERT_EQ(chunk_statistics->segment_statistics.size(), 2u);
@@ -242,9 +245,9 @@ TEST_F(CardinalityEstimatorTest, SinglePredicate) {
    */
   const auto plan_output_statistics = estimator.estimate_statistics(input_lqp);
   EXPECT_FLOAT_EQ(plan_output_statistics->row_count(), 30.0f);  // Same as above
-  ASSERT_EQ(plan_output_statistics->chunk_statistics_primary.size(), 1u);
+  ASSERT_EQ(plan_output_statistics->chunk_statistics_sets.front().size(), 1u);
 
-  const auto plan_output_statistics_0 = plan_output_statistics->chunk_statistics_primary.at(0);
+  const auto plan_output_statistics_0 = plan_output_statistics->chunk_statistics_sets.front().at(0);
   ASSERT_EQ(plan_output_statistics_0->segment_statistics.size(), 2u);
 
   const auto plan_output_statistics_0_a =
@@ -301,10 +304,10 @@ TEST_F(CardinalityEstimatorTest, ArithmeticEquiInnerJoin) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->chunk_statistics_primary.size(), 6u);
+  ASSERT_EQ(result_statistics->chunk_statistics_sets.front().size(), 6u);
   EXPECT_EQ(result_statistics->row_count(), 6u * 128u);
 
-  for (auto& chunk_statistics : result_statistics->chunk_statistics_primary) {
+  for (auto& chunk_statistics : result_statistics->chunk_statistics_sets.front()) {
     ASSERT_EQ(chunk_statistics->segment_statistics.size(), 4u);
 
     const auto segment_statistics_b_a =
@@ -339,10 +342,10 @@ TEST_F(CardinalityEstimatorTest, CrossJoin) {
 
   const auto result_statistics = estimator.estimate_statistics(input_lqp);
 
-  ASSERT_EQ(result_statistics->chunk_statistics_primary.size(), 6u);
+  ASSERT_EQ(result_statistics->chunk_statistics_sets.front().size(), 6u);
   ASSERT_EQ(result_statistics->row_count(), (32u * 64u) * 6u);
 
-  for (auto& chunk_statistics : result_statistics->chunk_statistics_primary) {
+  for (auto& chunk_statistics : result_statistics->chunk_statistics_sets.front()) {
     ASSERT_EQ(chunk_statistics->segment_statistics.size(), 4u);
 
     const auto segment_statistics_b_a =

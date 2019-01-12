@@ -46,7 +46,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   void generate_mock_statistics(float row_count = 10.0f) {
-    const auto chunk_statistics = table->table_statistics2()->chunk_statistics_primary[0];
+    const auto chunk_statistics = table->table_statistics2()->chunk_statistics_sets.front().front();
     chunk_statistics->row_count = row_count;
 
     chunk_statistics->segment_statistics[0]->set_statistics_object(
