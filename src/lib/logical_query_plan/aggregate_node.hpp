@@ -1,13 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "abstract_lqp_node.hpp"
-#include "lqp_column_reference.hpp"
-#include "types.hpp"
+#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

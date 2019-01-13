@@ -1,14 +1,12 @@
 #pragma once
 
-#include <boost/asio/io_service.hpp>
-#include <boost/thread/future.hpp>
+#include <boost/asio/io_service.hpp> // NEEDEDINCLUDE
 
-#include <memory>
 
-#include "scheduler/current_scheduler.hpp"
-#include "tasks/server/abstract_server_task.hpp"
-#include "then_operator.hpp"
-#include "use_boost_future.hpp"
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "tasks/server/abstract_server_task.hpp" // NEEDEDINCLUDE
+#include "then_operator.hpp" // NEEDEDINCLUDE
+#include "use_boost_future.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

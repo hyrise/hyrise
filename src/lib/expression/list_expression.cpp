@@ -1,9 +1,7 @@
-#include "list_expression.hpp"
+#include "list_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "expression_utils.hpp"
-#include "utils/assert.hpp"
+#include "expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

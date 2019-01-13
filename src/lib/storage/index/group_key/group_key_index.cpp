@@ -1,10 +1,9 @@
-#include "group_key_index.hpp"
+#include "group_key_index.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <vector>
+#include <vector> // NEEDEDINCLUDE
 
-#include "storage/base_dictionary_segment.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "storage/base_dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

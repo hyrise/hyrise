@@ -1,13 +1,11 @@
 #pragma once
 
-#include <type_traits>
 
-#include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables.hpp" // NEEDEDINCLUDE
 
-#include "storage/dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 

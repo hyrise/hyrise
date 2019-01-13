@@ -1,11 +1,7 @@
-#include "binary_predicate_expression.hpp"
+#include "binary_predicate_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "boost/functional/hash.hpp"
-#include "constant_mappings.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "constant_mappings.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

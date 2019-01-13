@@ -1,11 +1,9 @@
 #pragma once
 
-#include <memory>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_single_column_table_scan_impl.hpp" // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
+#include "all_type_variant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

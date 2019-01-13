@@ -1,9 +1,7 @@
 #pragma once
 
-#include "abstract_filter.hpp"
-#include "all_type_variant.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
+#include "abstract_filter.hpp" // NEEDEDINCLUDE
+#include "type_cast.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

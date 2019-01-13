@@ -1,12 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_rule.hpp"
-#include "all_type_variant.hpp"
-#include "types.hpp"
+#include "abstract_rule.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
