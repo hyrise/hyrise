@@ -213,7 +213,7 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) co
         }
       }
     } else {
-      segment_type += "-";
+      segment_type += "--";
     }
   } else {
     Fail("Unknown segment type");
