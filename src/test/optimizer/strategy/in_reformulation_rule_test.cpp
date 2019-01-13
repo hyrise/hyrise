@@ -14,8 +14,6 @@
 #include "optimizer/strategy/in_reformulation_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
-#include "../../../lib/logical_query_plan/projection_node.hpp"
-#include "../../../lib/logical_query_plan/predicate_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
