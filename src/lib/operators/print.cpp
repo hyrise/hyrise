@@ -191,7 +191,6 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) co
         segment_type += "FoR:";
         break;
       }
-      default: { Fail("Unknown encoding type"); }
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
