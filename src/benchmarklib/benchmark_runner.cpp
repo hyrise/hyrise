@@ -1,5 +1,6 @@
 #include <json.hpp>
 
+#include <boost/range/adaptors.hpp>
 #include <random>
 
 #include "cxxopts.hpp"
@@ -432,23 +433,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
-  // Make sure all current encoding types are shown
-  std::vector<std::string> encoding_strings;
-  encoding_strings.reserve(encoding_type_to_string.right.size());
-  for (const auto& encoding : encoding_type_to_string.right) {
-    encoding_strings.emplace_back(encoding.first);
-  }
-
-  const auto encoding_strings_option = boost::algorithm::join(encoding_strings, ", ");
-
-  // Make sure all current compression types are shown
-  std::vector<std::string> compression_strings;
-  compression_strings.reserve(vector_compression_type_to_string.right.size());
-  for (const auto& vector_compression : vector_compression_type_to_string.right) {
-    compression_strings.emplace_back(vector_compression.first);
-  }
-
-  const auto compression_strings_option = boost::algorithm::join(compression_strings, ", ");
+  const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
+  const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
+  const auto compression_strings_option =
+      boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
