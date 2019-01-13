@@ -374,7 +374,7 @@ int Console::_help(const std::string&) {
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
   out("                                               The import type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
-  out("                                               If no table name is specified, the filename without extension is used\n");
+  out("                                               If no table name is specified, the filename without extension is used\n");  // NOLINT
   out(encoding_options + "\n");  // NOLINT
   out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
   out("                                               The export type is chosen by the type of FILEPATH.\n");
@@ -483,7 +483,7 @@ int Console::_load_table(const std::string& args) {
 
   const auto tablename = arguments.size() >= 2 ? arguments[1] : std::string{filepath.stem()};
 
-  out("Loading " + std::string{filepath} + " into table \"" + tablename + "\"\n");
+  out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
   auto& storage_manager = StorageManager::get();
   if (storage_manager.has_table(tablename)) {
