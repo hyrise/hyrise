@@ -108,7 +108,11 @@ Visitor context for the AggregateVisitor.
 */
 template <typename ColumnType, typename AggregateType, typename AggregateKey>
 struct AggregateContext : SegmentVisitorContext {
-  AggregateContext() = default;
+  AggregateContext() {
+    auto allocator = ResultMapAllocator<AggregateKey, AggregateType, ColumnType>{&buffer};
+    results = std::make_shared<typename decltype(results)::element_type>(allocator);
+  }
+
   explicit AggregateContext(const std::shared_ptr<GroupByContext<AggregateKey>>& base_context)
       : groupby_context(base_context) {}
 
@@ -395,8 +399,6 @@ void Aggregate::_aggregate() {
     We choose int8_t for column type and aggregate type because it's small.
     */
     auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>();
-    context->results = std::make_shared<typename decltype(context->results)::element_type>();
-
     _contexts_per_column.push_back(context);
   }
 
@@ -410,8 +412,6 @@ void Aggregate::_aggregate() {
     if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
-      auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&context->buffer};
-      context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
       _contexts_per_column[column_id] = context;
       continue;
     }
@@ -902,8 +902,6 @@ template <typename ColumnDataType, AggregateFunction aggregate_function, typenam
 std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context_impl() const {
   const auto context = std::make_shared<AggregateContext<
       ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType, AggregateKey>>();
-  auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&context->buffer};
-  context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
   return context;
 }
 
