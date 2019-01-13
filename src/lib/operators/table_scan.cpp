@@ -146,8 +146,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             }
           }
 
-          if (pos_list_in->references_single_chunk()) filtered_pos_list->guarantee_single_chunk();
-
           auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, column_id_out, filtered_pos_list);
           out_segments.push_back(ref_segment_out);
         }
