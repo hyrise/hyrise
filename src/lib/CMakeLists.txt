@@ -5,6 +5,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
+dummy.cpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.cpp

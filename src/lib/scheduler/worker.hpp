@@ -1,12 +1,9 @@
 #pragma once
 
-#include <atomic>
-#include <memory>
-#include <thread>
-#include <vector>
+#include <atomic> // NEEDEDINCLUDE
+#include <thread> // NEEDEDINCLUDE
 
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -15,29 +15,29 @@
 
 // clang-format off
 
-#include "../llvm_extensions.hpp"
+#include "../llvm_extensions.hpp" // NEEDEDINCLUDE
 
-#include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfo.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
-#include <map>
+#include "llvm/ADT/SetVector.h" // NEEDEDINCLUDE
+#include "llvm/ADT/SmallVector.h" // NEEDEDINCLUDE
+#include "llvm/Analysis/ConstantFolding.h" // NEEDEDINCLUDE
+#include "llvm/Analysis/InstructionSimplify.h" // NEEDEDINCLUDE
+#include "llvm/Analysis/LoopInfo.h" // NEEDEDINCLUDE
+#include "llvm/IR/CFG.h" // NEEDEDINCLUDE
+#include "llvm/IR/Constants.h" // NEEDEDINCLUDE
+#include "llvm/IR/DebugInfo.h" // NEEDEDINCLUDE
+#include "llvm/IR/DerivedTypes.h" // NEEDEDINCLUDE
+#include "llvm/IR/Function.h" // NEEDEDINCLUDE
+#include "llvm/IR/GlobalVariable.h" // NEEDEDINCLUDE
+#include "llvm/IR/Instructions.h" // NEEDEDINCLUDE
+#include "llvm/IR/IntrinsicInst.h" // NEEDEDINCLUDE
+#include "llvm/IR/LLVMContext.h" // NEEDEDINCLUDE
+#include "llvm/IR/Metadata.h" // NEEDEDINCLUDE
+#include "llvm/IR/Module.h" // NEEDEDINCLUDE
+#include "llvm/Transforms/Utils/BasicBlockUtils.h" // NEEDEDINCLUDE
+#include "llvm/Transforms/Utils/Cloning.h" // NEEDEDINCLUDE
+#include "llvm/Transforms/Utils/Local.h" // NEEDEDINCLUDE
+#include "llvm/Transforms/Utils/ValueMapper.h" // NEEDEDINCLUDE
+#include <map> // NEEDEDINCLUDE
 using namespace llvm;
 
 #pragma clang diagnostic ignored "-Wshadow-all"

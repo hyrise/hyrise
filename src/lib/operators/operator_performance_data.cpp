@@ -1,8 +1,7 @@
-#include "operator_performance_data.hpp"
+#include "operator_performance_data.hpp" // NEEDEDINCLUDE
 
-#include <string>
 
-#include "utils/format_duration.hpp"
+#include "utils/format_duration.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

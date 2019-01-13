@@ -1,11 +1,8 @@
 #pragma once
 
-#include <atomic>
-#include <functional>
-#include <memory>
+#include <atomic> // NEEDEDINCLUDE
 
-#include "types.hpp"
-#include "utils/singleton.hpp"
+#include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 /**
  * MVCC overview

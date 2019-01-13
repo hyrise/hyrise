@@ -1,8 +1,6 @@
 #pragma once
 
-#include <atomic>
-#include <type_traits>
-#include <utility>
+#include <atomic> // NEEDEDINCLUDE
 
 namespace opossum {
 

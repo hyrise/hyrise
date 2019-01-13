@@ -1,8 +1,6 @@
 #pragma once
 
-#include "abstract_join_operator.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "abstract_join_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

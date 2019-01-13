@@ -1,10 +1,7 @@
-#include "task_queue.hpp"
+#include "task_queue.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <utility>
 
-#include "abstract_task.hpp"
-#include "utils/assert.hpp"
+#include "abstract_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

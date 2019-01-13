@@ -1,10 +1,7 @@
 #pragma once
 
-#include <iostream>
-#include <memory>
-#include <vector>
 
-#include "types.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

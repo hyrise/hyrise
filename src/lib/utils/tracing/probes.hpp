@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/sdt.h>
+#include <sys/sdt.h> // NEEDEDINCLUDE
 
 // Systemtap is not available on OS X. The alternative would be dtrace. Actually, systemtap probes are compatible
 // with dtrace probes and the other way round. However, Apple's dtrace implementation differs from the original solaris
@@ -20,7 +20,6 @@ constexpr bool is_valid_name(const char* name) {
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreserved-id-macro"
-#include "provider.hpp"
 
 // Construct the probe definition by provider and probe name. Because TSan has issues and throw false positives, we
 // don't use probes in TSan builds

@@ -1,14 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_join_operator.hpp"
-#include "storage/pos_list.hpp"
-#include "types.hpp"
+#include "abstract_join_operator.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

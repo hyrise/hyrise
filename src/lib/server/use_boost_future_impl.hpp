@@ -1,14 +1,14 @@
 #pragma once
 
-#include <boost/asio/async_result.hpp>
-#include <boost/asio/detail/config.hpp>
-#include <boost/asio/detail/memory.hpp>
-#include <boost/asio/handler_type.hpp>
-#include <boost/system/error_code.hpp>
-#include <boost/system/system_error.hpp>
-#include <boost/thread/future.hpp>
+#include <boost/asio/async_result.hpp> // NEEDEDINCLUDE
+#include <boost/asio/detail/config.hpp> // NEEDEDINCLUDE
+#include <boost/asio/detail/memory.hpp> // NEEDEDINCLUDE
+#include <boost/asio/handler_type.hpp> // NEEDEDINCLUDE
+#include <boost/system/error_code.hpp> // NEEDEDINCLUDE
+#include <boost/system/system_error.hpp> // NEEDEDINCLUDE
+#include <boost/thread/future.hpp> // NEEDEDINCLUDE
 
-#include <boost/asio/detail/push_options.hpp>
+#include <boost/asio/detail/push_options.hpp> // NEEDEDINCLUDE
 
 namespace boost {
 namespace asio {
@@ -126,4 +126,4 @@ struct handler_type<use_boost_future_t<Allocator>, ReturnType(boost::system::err
 }  // namespace asio
 }  // namespace boost
 
-#include <boost/asio/detail/pop_options.hpp>
+#include <boost/asio/detail/pop_options.hpp> // NEEDEDINCLUDE

@@ -1,12 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_join_operator.hpp"
-#include "types.hpp"
+#include "abstract_join_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

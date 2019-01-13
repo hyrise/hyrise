@@ -1,12 +1,9 @@
 #pragma once
 
-#include <stdint.h>
-#include <tbb/concurrent_queue.h>
-#include <array>
-#include <atomic>
-#include <memory>
+#include <tbb/concurrent_queue.h> // NEEDEDINCLUDE
+#include <atomic> // NEEDEDINCLUDE
 
-#include "types.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

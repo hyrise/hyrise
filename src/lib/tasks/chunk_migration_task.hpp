@@ -2,10 +2,8 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <string>
-#include <vector>
 
-#include "scheduler/abstract_task.hpp"
+#include "scheduler/abstract_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -2,12 +2,9 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <chrono>
-#include <memory>
-#include <vector>
 
-#include "utils/pausable_loop_thread.hpp"
-#include "utils/singleton.hpp"
+#include "utils/pausable_loop_thread.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace boost {
 namespace container {

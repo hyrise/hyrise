@@ -1,11 +1,6 @@
-#include "delete_node.hpp"
+#include "delete_node.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <sstream>
-#include <string>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

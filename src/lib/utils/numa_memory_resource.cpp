@@ -1,11 +1,9 @@
-#include "numa_memory_resource.hpp"
+#include "numa_memory_resource.hpp" // NEEDEDINCLUDE
 
-#include <string>
 
 #if HYRISE_NUMA_SUPPORT
 #define NUMA_MEMORY_RESOURCE_ARENA_SIZE 1llu << 30u
 #else
-#include <boost/container/pmr/global_resource.hpp>
 #endif
 
 namespace opossum {

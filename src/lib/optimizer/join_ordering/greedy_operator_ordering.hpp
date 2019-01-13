@@ -1,10 +1,8 @@
 #pragma once
 
-#include <map>
-#include <memory>
 
-#include "abstract_join_ordering_algorithm.hpp"
-#include "join_graph_edge.hpp"
+#include "abstract_join_ordering_algorithm.hpp" // NEEDEDINCLUDE
+#include "join_graph_edge.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

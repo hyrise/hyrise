@@ -1,8 +1,6 @@
-#include "unary_minus_expression.hpp"
+#include "unary_minus_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

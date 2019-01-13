@@ -1,10 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <unordered_map>
-#include <vector>
 
-#include "scheduler/abstract_task.hpp"
+#include "scheduler/abstract_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

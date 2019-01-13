@@ -1,6 +1,6 @@
 #pragma once
 
-#include "variable_length_key_base.hpp"
+#include "variable_length_key_base.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

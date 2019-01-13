@@ -1,28 +1,20 @@
 #pragma once
 
-#include <boost/hana/core/to.hpp>
-#include <boost/hana/ext/boost/mpl/vector.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/prepend.hpp>
-#include <boost/hana/transform.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/zip.hpp>
+#include <boost/hana/ext/boost/mpl/vector.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include <boost/hana/map.hpp> // NEEDEDINCLUDE
+#include <boost/hana/prepend.hpp> // NEEDEDINCLUDE
+#include <boost/hana/zip.hpp> // NEEDEDINCLUDE
 
-#include <boost/mpl/push_front.hpp>
 
-#include <boost/preprocessor/seq/enum.hpp>
-#include <boost/preprocessor/seq/for_each.hpp>
-#include <boost/preprocessor/seq/size.hpp>
-#include <boost/preprocessor/seq/transform.hpp>
+#include <boost/preprocessor/seq/enum.hpp> // NEEDEDINCLUDE
+#include <boost/preprocessor/seq/for_each.hpp> // NEEDEDINCLUDE
+#include <boost/preprocessor/seq/transform.hpp> // NEEDEDINCLUDE
 
-#include <boost/variant.hpp>
+#include <boost/variant.hpp> // NEEDEDINCLUDE
 
-#include <cstdint>
-#include <string>
-#include <vector>
+#include <vector> // NEEDEDINCLUDE
 
-#include "null_value.hpp"
-#include "types.hpp"
+#include "null_value.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,7 +1,5 @@
-#include "viz_record_layout.hpp"
+#include "viz_record_layout.hpp" // NEEDEDINCLUDE
 
-#include <iostream>
-#include <sstream>
 
 namespace opossum {
 

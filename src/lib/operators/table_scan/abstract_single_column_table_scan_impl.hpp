@@ -4,11 +4,11 @@
 #include <unordered_map>
 #include <utility>
 
-#include "abstract_table_scan_impl.hpp"
+#include "abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
 
-#include "storage/abstract_segment_visitor.hpp"
+#include "storage/abstract_segment_visitor.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
+// CHECKINCLUDE #include "types.hpp"
 
 namespace opossum {
 

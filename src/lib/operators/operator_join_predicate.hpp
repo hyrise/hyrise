@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
 
-#include "types.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

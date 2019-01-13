@@ -1,8 +1,7 @@
-#include "create_prepared_plan_node.hpp"
+#include "create_prepared_plan_node.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "storage/prepared_plan.hpp"
+#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

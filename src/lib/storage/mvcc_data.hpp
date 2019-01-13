@@ -1,10 +1,10 @@
 #pragma once
 
-#include <atomic>
-#include <shared_mutex>  // NOLINT lint thinks this is a C header or something
+#include <atomic> // NEEDEDINCLUDE
+#include <shared_mutex>  // NOLINT lint thinks this is a C header or something // NEEDEDINCLUDE
 
-#include "types.hpp"
-#include "utils/copyable_atomic.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
+#include "utils/copyable_atomic.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

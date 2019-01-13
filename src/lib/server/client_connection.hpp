@@ -1,9 +1,8 @@
 #pragma once
 
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/thread/future.hpp>
+#include <boost/asio/ip/tcp.hpp> // NEEDEDINCLUDE
+#include <boost/thread/future.hpp> // NEEDEDINCLUDE
 
-#include <memory>
 
 namespace opossum {
 

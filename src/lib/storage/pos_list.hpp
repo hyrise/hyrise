@@ -1,10 +1,7 @@
 #pragma once
 
-#include <utility>
-#include <vector>
 
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

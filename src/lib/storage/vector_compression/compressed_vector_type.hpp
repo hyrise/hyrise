@@ -1,14 +1,14 @@
 #pragma once
 
-#include <boost/hana/equal.hpp>
-#include <boost/hana/fold.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/value.hpp>
+#include <boost/hana/equal.hpp> // NEEDEDINCLUDE
+#include <boost/hana/fold.hpp> // NEEDEDINCLUDE
+#include <boost/hana/map.hpp> // NEEDEDINCLUDE
+#include <boost/hana/pair.hpp> // NEEDEDINCLUDE
+#include <boost/hana/value.hpp> // NEEDEDINCLUDE
 
-#include <cstdint>
+#include <cstdint> // NEEDEDINCLUDE
 
-#include "utils/enum_constant.hpp"
+#include "utils/enum_constant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,15 +1,9 @@
 #pragma once
 
-#include <llvm/IR/Module.h>
-#include <llvm/IRReader/IRReader.h>
+#include <llvm/IR/Module.h> // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
-#include "types.hpp"
-#include "utils/singleton.hpp"
+#include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

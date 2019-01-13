@@ -1,8 +1,6 @@
 #pragma once
 
-#include <boost/bimap.hpp>
-#include <string>
-#include <unordered_map>
+#include <boost/bimap.hpp> // NEEDEDINCLUDE
 
 namespace opossum {
 

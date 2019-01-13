@@ -1,9 +1,7 @@
 #pragma once
 
-#include <boost/hana/hash.hpp>
-#include <boost/hana/value.hpp>
+#include <boost/hana/hash.hpp> // NEEDEDINCLUDE
 
-#include <type_traits>
 
 namespace opossum {
 

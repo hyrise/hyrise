@@ -1,6 +1,5 @@
-#include <string>
 
-#include "utils/filesystem.hpp"
+#include "utils/filesystem.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

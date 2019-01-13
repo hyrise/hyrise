@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <unordered_map>
 
-#include "types.hpp"
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

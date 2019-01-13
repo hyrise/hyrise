@@ -1,11 +1,8 @@
 #pragma once
 
-#include <array>
-#include <unordered_map>
-#include <vector>
 
-#include "enable_make_for_lqp_node.hpp"
-#include "types.hpp"
+#include "enable_make_for_lqp_node.hpp" // NEEDEDINCLUDE
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

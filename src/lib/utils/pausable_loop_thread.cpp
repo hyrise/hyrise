@@ -1,10 +1,6 @@
-#include "pausable_loop_thread.hpp"
+#include "pausable_loop_thread.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-#include <chrono>
-#include <condition_variable>
-#include <functional>
-#include <mutex>
-#include <thread>
+#include <thread> // NEEDEDINCLUDE
 
 namespace opossum {
 

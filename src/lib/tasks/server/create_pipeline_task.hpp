@@ -1,8 +1,7 @@
 #pragma once
 
-#include <boost/thread/future.hpp>
 
-#include "abstract_server_task.hpp"
+#include "abstract_server_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

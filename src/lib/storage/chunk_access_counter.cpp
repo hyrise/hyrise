@@ -1,4 +1,4 @@
-#include "chunk_access_counter.hpp"
+#include "chunk_access_counter.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cstdint>
 
-#include "oversized_types.hpp"
+#include "oversized_types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

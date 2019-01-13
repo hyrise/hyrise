@@ -1,9 +1,5 @@
-#include <boost/container/pmr/memory_resource.hpp>
-#include <boost/core/no_exceptions_support.hpp>
+#include <boost/container/pmr/memory_resource.hpp> // NEEDEDINCLUDE
 
-#include <cstddef>
-#include <cstdlib>
-#include <iostream>
 
 namespace boost {
 namespace container {

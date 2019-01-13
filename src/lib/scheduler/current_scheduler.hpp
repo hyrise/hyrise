@@ -1,11 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 
-#include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
-#include "worker.hpp"
+#include "utils/tracing/probes.hpp" // NEEDEDINCLUDE
+#include "worker.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

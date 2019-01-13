@@ -1,11 +1,9 @@
 #pragma once
 
-#include <llvm/IR/Function.h>
-#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Transforms/Utils/Cloning.h> // NEEDEDINCLUDE
 
-#include <unordered_map>
 
-#include "jit_runtime_pointer.hpp"
+#include "jit_runtime_pointer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

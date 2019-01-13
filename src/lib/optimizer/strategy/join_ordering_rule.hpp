@@ -1,8 +1,7 @@
 #pragma once
 
-#include <memory>
 
-#include "abstract_rule.hpp"
+#include "abstract_rule.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

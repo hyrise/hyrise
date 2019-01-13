@@ -1,12 +1,6 @@
-#include "insert_node.hpp"
+#include "insert_node.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <vector>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

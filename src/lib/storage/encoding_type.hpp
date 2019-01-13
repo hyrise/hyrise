@@ -1,17 +1,10 @@
 #pragma once
 
-#include <boost/hana/at_key.hpp>
-#include <boost/hana/contains.hpp>
-#include <boost/hana/equal.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
+#include <boost/hana/at_key.hpp> // NEEDEDINCLUDE
 
-#include <cstdint>
 
-#include "all_type_variant.hpp"
-#include "utils/enum_constant.hpp"
+#include "all_type_variant.hpp" // NEEDEDINCLUDE
+#include "utils/enum_constant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
