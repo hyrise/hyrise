@@ -175,6 +175,9 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) co
     segment_type += "ReferS";
   } else if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
     switch (encoded_segment->encoding_type()) {
+      case EncodingType::Unencoded: {
+        Fail("An actual segment should never have this type");
+      }
       case EncodingType::Dictionary: {
         segment_type += "Dic:";
         break;
