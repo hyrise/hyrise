@@ -19,7 +19,7 @@ TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/SingleChunkSingleFloatColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/SingleChunkSingleFloatColumn.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -33,7 +33,7 @@ TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/MultipleChunkSingleFloatColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/MultipleChunkSingleFloatColumn.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -49,7 +49,7 @@ TEST_F(OperatorsImportBinaryTest, StringValueSegment) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringValueSegment.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/StringValueSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -68,7 +68,7 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
 
   StorageManager::get().add_table("table_a", expected_table);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/StringDictionarySegment.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/StringDictionarySegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -88,7 +88,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueSegment.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesValueSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -112,7 +112,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
 
   StorageManager::get().add_table("expected_table", expected_table);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionarySegment.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesDictionarySegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -136,7 +136,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
 
   StorageManager::get().add_table("expected_table", expected_table);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesMixColumn.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -154,7 +154,7 @@ TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30'000);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/TwoColumnsNoValues.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/TwoColumnsNoValues.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -172,7 +172,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsValueSegment) {
   expected_table->append({""});
   expected_table->append({""});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/EmptyStringsValueSegment.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/EmptyStringsValueSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -190,39 +190,41 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionarySegment) {
   expected_table->append({""});
   expected_table->append({""});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/EmptyStringsDictionarySegment.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/EmptyStringsDictionarySegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
 TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("resources/test_data/bin/float.bin", std::string("float_table"));
   importer->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/float.bin", std::string("float_table"));
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("resources/test_data/bin/float.bin", std::string("float_table"));
   importer->execute();
-  auto retriever =
-      std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesMixColumn.bin", std::string("float_table"));
+  auto retriever = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesMixColumn.bin",
+                                                           std::string("float_table"));
   retriever->execute();
-  std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
   EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {
-  auto importer =
-      std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidColumnType.bin", std::string("float_table"));
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/InvalidColumnType.bin",
+                                                          std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/InvalidAttributeVectorWidth.bin",
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/InvalidAttributeVectorWidth.bin",
                                                           std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
 }
@@ -243,7 +245,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesNullValues) {
   expected_table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
   expected_table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesNullValues.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesNullValues.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -265,7 +267,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
   expected_table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
   expected_table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
 
-  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionaryNullValues.bin");
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesDictionaryNullValues.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);

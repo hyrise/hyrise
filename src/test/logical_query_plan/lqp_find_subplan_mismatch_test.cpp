@@ -1,5 +1,4 @@
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -33,7 +32,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LQPFindSubplanMismatchTest : public ::testing::Test {
+class LQPFindSubplanMismatchTest : public BaseTest {
  protected:
   struct QueryNodes {
     std::shared_ptr<ValidateNode> validate_node;
@@ -56,13 +55,11 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
   };
 
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_int.tbl", 2));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);
   }
-
-  void TearDown() override { StorageManager::get().reset(); }
 
   void _init_query_nodes(QueryNodes& query_nodes) const {
     query_nodes.stored_table_node_a = StoredTableNode::make("table_a");

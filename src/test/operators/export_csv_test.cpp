@@ -219,7 +219,7 @@ TEST_F(OperatorsExportCsvTest, NonsensePath) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_with_null.tbl", 4));
   table_wrapper->execute();
 
   auto ex = std::make_shared<ExportCsv>(table_wrapper, test_filename);
@@ -235,7 +235,7 @@ TEST_F(OperatorsExportCsvTest, ExportNumericNullValues) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/string_with_null.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/string_with_null.tbl", 4));
   table_wrapper->execute();
 
   auto ex = std::make_shared<ExportCsv>(table_wrapper, test_filename);
@@ -251,7 +251,7 @@ TEST_F(OperatorsExportCsvTest, ExportStringNullValues) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_with_null.tbl", 4));
   table_wrapper->execute();
 
   auto ex = std::make_shared<ExportCsv>(table_wrapper, test_filename);

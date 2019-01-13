@@ -18,7 +18,13 @@ class MinMaxFilter : public AbstractFilter {
 
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& variant_value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override {
+    // Early exit for NULL variants.
+    if (variant_is_null(variant_value)) {
+      return false;
+    }
+
     const auto value = type_cast_variant<T>(variant_value);
+
     // Operators work as follows: value_from_table <operator> value
     // e.g. OpGreaterThan: value_from_table > value
     // thus we can exclude chunk if value >= _max since then no value from the table can be greater than value

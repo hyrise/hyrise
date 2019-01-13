@@ -24,17 +24,17 @@ namespace opossum {
 class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_float.tbl"));
+    StorageManager::get().add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
     _table_a = std::make_shared<StoredTableNode>("a");
     _a_a = LQPColumnReference(_table_a, ColumnID{0});
     _a_b = LQPColumnReference(_table_a, ColumnID{1});
 
-    StorageManager::get().add_table("b", load_table("src/test/tables/int_float2.tbl"));
+    StorageManager::get().add_table("b", load_table("resources/test_data/tbl/int_float2.tbl"));
     _table_b = std::make_shared<StoredTableNode>("b");
     _b_a = LQPColumnReference(_table_b, ColumnID{0});
     _b_b = LQPColumnReference(_table_b, ColumnID{1});
 
-    StorageManager::get().add_table("c", load_table("src/test/tables/int_float3.tbl"));
+    StorageManager::get().add_table("c", load_table("resources/test_data/tbl/int_float3.tbl"));
     _table_c = std::make_shared<StoredTableNode>("c");
     _c_a = LQPColumnReference(_table_c, ColumnID{0});
     _c_b = LQPColumnReference(_table_c, ColumnID{1});
@@ -60,7 +60,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
     _subselect = lqp_select_(_subselect_lqp, std::make_pair(ParameterID{0}, _a_a));
   }
 
-  std::shared_ptr<ParameterExpression> _parameter_a_a;
+  std::shared_ptr<CorrelatedParameterExpression> _parameter_a_a;
   std::shared_ptr<AbstractLQPNode> _subselect_lqp;
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;

@@ -21,10 +21,10 @@ namespace opossum {
 class OperatorTaskTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _test_table_a);
 
-    _test_table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _test_table_b);
   }
 
@@ -52,7 +52,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up
@@ -71,7 +71,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/joinoperators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up
