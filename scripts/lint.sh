@@ -17,15 +17,15 @@ let "exitcode |= $?"
 # All disabled tests should have an issue number
 output=$(grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/')
 if [ ! -z "$output" ]; then
-	echo "$output"
-	exitcode=1
+  echo "$output"
+  exitcode=1
 fi
 
 # The singleton pattern should not be manually implemented
 output=$(grep -rn 'static[^:]*instance;' --exclude singleton.hpp src | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Singletons should not be implemented manually. Have a look at src\/lib\/utils\/singleton.hpp/')
 if [ ! -z "$output" ]; then
-	echo "$output"
-	exitcode=1
+  echo "$output"
+  exitcode=1
 fi
 
 # Check for included cpp files. You would think that this is not necessary, but history proves you wrong.
@@ -35,24 +35,24 @@ namecheck=$(find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | xargs -0 g
 let "exitcode |= ! $?"
 while IFS= read -r line
 do
-	if [ ! -z "$line" ]; then
-		echo $line | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/Include of cpp file:/' | tr '\n' ' '
-		echo $line | sed 's/\(:[^:]*:\)/\1 /'
-	fi
+  if [ ! -z "$line" ]; then
+      echo $line | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/Include of cpp file:/' | tr '\n' ' '
+      echo $line | sed 's/\(:[^:]*:\)/\1 /'
+  fi
 done <<< "$namecheck"
 
 for dir in src/*
 do
-	for file in $(find $dir -name *.cpp -o -name *.hpp)
-	do
-		if grep $(basename $file) $dir/CMakeLists.txt | grep -v '#' > /dev/null
-		then
-			continue
-		else
-			echo $file not found in $dir/CMakeLists.txt
-			exitcode=1
-		fi
-	done
+  for file in $(find $dir -name *.cpp -o -name *.hpp)
+  do
+      if grep $(basename $file) $dir/CMakeLists.txt | grep -v '#' > /dev/null
+      then
+          continue
+      else
+          echo $file not found in $dir/CMakeLists.txt
+          exitcode=1
+      fi
+  done
 done
 
 # Check if all probes are defined in provider.d
@@ -61,6 +61,20 @@ for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provide
     if [ $? -ne 0 ]; then
         echo "Probe $probe is not defined in provider.d"
         exitcode=1
+    fi
+done
+
+# Check that each cpp file has its hpp file included (if it exists)
+for cppfile in $(find src -name *.cpp)
+do
+    hppfile=${cppfile/.cpp/.hpp}
+    if [ -f $hppfile ]; then
+        hppfilebase=$(basename $hppfile)
+        grep "#include \"$hppfilebase\"" $cppfile > /dev/null
+        if [ $? -ne 0 ]; then
+            echo "Header $hppfilebase is not included in $cppfile"
+            exitcode=1
+        fi
     fi
 done
 
