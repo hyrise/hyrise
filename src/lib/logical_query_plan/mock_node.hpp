@@ -1,13 +1,9 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include "boost/variant.hpp"
 
-#include "abstract_lqp_node.hpp"
-#include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
+#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp" // NEEDEDINCLUDE
+#include "lqp_column_reference.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

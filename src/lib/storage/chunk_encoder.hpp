@@ -1,16 +1,10 @@
 #pragma once
 
-#include <map>
-#include <memory>
-#include <optional>
-#include <utility>
-#include <vector>
+#include <vector> // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
 
-#include "storage/encoding_type.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
+#include "storage/encoding_type.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/vector_compression.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,14 +1,9 @@
 #pragma once
 
-#include <memory>
-#include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
+#include <numeric> // NEEDEDINCLUDE
 
-#include "abstract_histogram.hpp"
-#include "histogram_utils.hpp"
-#include "types.hpp"
+#include "abstract_histogram.hpp" // NEEDEDINCLUDE
+#include "histogram_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

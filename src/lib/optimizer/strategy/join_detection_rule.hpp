@@ -1,13 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "abstract_rule.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
-#include "types.hpp"
+#include "abstract_rule.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_rule.hpp"
-#include "storage/index/index_info.hpp"
-#include "types.hpp"
+#include "abstract_rule.hpp" // NEEDEDINCLUDE
+#include "storage/index/index_info.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

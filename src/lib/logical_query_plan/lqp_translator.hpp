@@ -1,11 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <unordered_map>
 
-#include "abstract_lqp_node.hpp"
-#include "all_type_variant.hpp"
-#include "operators/abstract_operator.hpp"
+#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

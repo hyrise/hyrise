@@ -1,13 +1,10 @@
 #pragma once
 
-#include <array>
 
-#include "storage/vector_compression/base_vector_compressor.hpp"
+#include "storage/vector_compression/base_vector_compressor.hpp" // NEEDEDINCLUDE
 
-#include "oversized_types.hpp"
-#include "simd_bp128_packing.hpp"
+#include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
 
 namespace opossum {
 

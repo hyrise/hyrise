@@ -1,13 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "import_export/csv_writer.hpp"
-#include "storage/abstract_segment_visitor.hpp"
-#include "utils/assert.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,15 +1,8 @@
-#include "lqp_visualizer.hpp"
+#include "lqp_visualizer.hpp" // NEEDEDINCLUDE
 
-#include <boost/algorithm/string.hpp>
-#include <iomanip>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "logical_query_plan/projection_node.hpp"
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

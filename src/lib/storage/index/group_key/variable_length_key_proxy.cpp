@@ -1,10 +1,7 @@
-#include "variable_length_key_proxy.hpp"
+#include "variable_length_key_proxy.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <ostream>
 
-#include "utils/assert.hpp"
-#include "variable_length_key.hpp"
+#include "variable_length_key.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,14 +1,10 @@
 #pragma once
 
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Verifier.h>
 
-#include <stack>
 
-#include "jit_compiler.hpp"
-#include "jit_repository.hpp"
-#include "jit_runtime_pointer.hpp"
-#include "llvm_extensions.hpp"
+#include "jit_compiler.hpp" // NEEDEDINCLUDE
+#include "jit_repository.hpp" // NEEDEDINCLUDE
+#include "llvm_extensions.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

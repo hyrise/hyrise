@@ -1,12 +1,8 @@
-#include "function_expression.hpp"
 
-#include <sstream>
 
-#include "boost/functional/hash.hpp"
 
-#include "constant_mappings.hpp"
-#include "expression_utils.hpp"
-#include "utils/assert.hpp"
+#include "constant_mappings.hpp" // NEEDEDINCLUDE
+#include "expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

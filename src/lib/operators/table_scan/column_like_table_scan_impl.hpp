@@ -1,17 +1,9 @@
 #pragma once
 
-#include <map>
-#include <memory>
-#include <regex>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_single_column_table_scan_impl.hpp"
-#include "boost/variant.hpp"
-#include "expression/evaluation/like_matcher.hpp"
+#include "abstract_single_column_table_scan_impl.hpp" // NEEDEDINCLUDE
+#include "expression/evaluation/like_matcher.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
 
 namespace opossum {
 

@@ -1,12 +1,6 @@
-#include "dummy_table_node.hpp"
+#include "dummy_table_node.hpp" // NEEDEDINCLUDE
 
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "expression/value_expression.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 

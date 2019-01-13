@@ -1,15 +1,9 @@
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_single_column_table_scan_impl.hpp" // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "all_type_variant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

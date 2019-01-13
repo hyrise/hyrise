@@ -1,8 +1,6 @@
 #pragma once
 
-#include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
-#include "types.hpp"
+#include "constant_mappings.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

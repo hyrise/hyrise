@@ -1,13 +1,10 @@
 #pragma once
 
-#include <functional>
-#include <memory>
-#include <unordered_map>
-#include <unordered_set>
+#include <unordered_set> // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "expression_precedence.hpp"
-#include "types.hpp"
+#include "all_type_variant.hpp" // NEEDEDINCLUDE
+#include "expression_precedence.hpp" // NEEDEDINCLUDE
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

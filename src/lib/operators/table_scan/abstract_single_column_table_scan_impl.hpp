@@ -1,14 +1,10 @@
 #pragma once
 
-#include <memory>
-#include <unordered_map>
-#include <utility>
 
 #include "abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
 
 #include "storage/abstract_segment_visitor.hpp" // NEEDEDINCLUDE
 
-// CHECKINCLUDE #include "types.hpp"
 
 namespace opossum {
 

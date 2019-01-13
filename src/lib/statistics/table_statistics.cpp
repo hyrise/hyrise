@@ -1,10 +1,7 @@
-#include "table_statistics.hpp"
+#include "table_statistics.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "all_parameter_variant.hpp"
-#include "all_type_variant.hpp"
-#include "base_column_statistics.hpp"
+#include "base_column_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

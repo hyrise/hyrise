@@ -1,10 +1,8 @@
 #pragma once
 
-#include "abstract_expression.hpp"
+#include "abstract_expression.hpp" // NEEDEDINCLUDE
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
-#include "types.hpp"
+#include "logical_query_plan/lqp_column_reference.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

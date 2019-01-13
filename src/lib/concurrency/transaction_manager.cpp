@@ -1,10 +1,8 @@
-#include "transaction_manager.hpp"
+#include "transaction_manager.hpp" // NEEDEDINCLUDE
 
-#include <memory>
 
-#include "commit_context.hpp"
-#include "transaction_context.hpp"
-#include "utils/assert.hpp"
+#include "commit_context.hpp" // NEEDEDINCLUDE
+#include "transaction_context.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

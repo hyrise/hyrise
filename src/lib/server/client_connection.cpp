@@ -1,10 +1,9 @@
-#include "client_connection.hpp"
+#include "client_connection.hpp" // NEEDEDINCLUDE
 
-#include <boost/asio.hpp>
 
-#include "postgres_wire_handler.hpp"
-#include "then_operator.hpp"
-#include "use_boost_future.hpp"
+#include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
+#include "then_operator.hpp" // NEEDEDINCLUDE
+#include "use_boost_future.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

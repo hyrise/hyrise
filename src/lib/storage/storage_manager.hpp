@@ -1,15 +1,10 @@
 #pragma once
 
-#include <iostream>
-#include <map>
-#include <memory>
-#include <string>
-#include <vector>
+#include <map> // NEEDEDINCLUDE
 
-#include "lqp_view.hpp"
-#include "prepared_plan.hpp"
-#include "types.hpp"
-#include "utils/singleton.hpp"
+#include "lqp_view.hpp" // NEEDEDINCLUDE
+#include "prepared_plan.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

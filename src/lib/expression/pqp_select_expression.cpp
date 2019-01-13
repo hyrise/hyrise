@@ -1,10 +1,7 @@
-#include "pqp_select_expression.hpp"
+#include "pqp_select_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "operators/abstract_operator.hpp"
-#include "utils/assert.hpp"
+#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

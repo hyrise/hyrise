@@ -1,16 +1,8 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
-#include <iomanip>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "expression/abstract_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "statistics/table_statistics.hpp"
-#include "visualization/abstract_visualizer.hpp"
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

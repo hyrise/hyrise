@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
 
-#include "abstract_filter.hpp"
+#include "abstract_filter.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,13 +1,9 @@
 #pragma once
 
-#include <boost/hana/contains.hpp>
-#include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
-#include <memory>
+#include <boost/hana/tuple.hpp> // NEEDEDINCLUDE
 
-#include "fixed_size_byte_aligned_decompressor.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
-#include "types.hpp"
+#include "fixed_size_byte_aligned_decompressor.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/base_compressed_vector.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
