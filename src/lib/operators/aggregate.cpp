@@ -528,46 +528,6 @@ void Aggregate::_aggregate() {
     }
   }
 
-  // if (show) {
-  //   for (auto col_context : _contexts_per_column) {
-  //     auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
-  //     std::cout << "Result size: " << context->results->size() << std::endl;
-  //   }
-  // }
-
-  // const auto end_next_buffer_size = result_map_buffer.next_buffer_size();
-  // // std::cout << "Next buffer size start: " << start_next_buffer_size << std::endl;
-  // // std::cout << "Next buffer size end: " << end_next_buffer_size << std::endl;
-  // if (show) {
-  //   std::cout << "Buffer doubled X times: " << log(end_next_buffer_size) / log(2) - log(start_next_buffer_size) / log(2) << std::endl;
-  // }
-
-  // if (show) {
-  //   for (const auto& aggregate : _aggregates) {
-  //     switch (aggregate.function) {
-  //       case AggregateFunction::Min:
-  //         std::cout << "Min" << std::endl;
-  //         break;
-  //       case AggregateFunction::Max:
-  //         std::cout << "Max" << std::endl;
-  //         break;
-  //       case AggregateFunction::Sum:
-  //         std::cout << "Sum" << std::endl;
-  //         break;
-  //       case AggregateFunction::Avg:
-  //         std::cout << "Avg" << std::endl;
-  //         break;
-  //       case AggregateFunction::Count:
-  //         std::cout << "Count" << std::endl;
-  //         break;
-  //       case AggregateFunction::CountDistinct:
-  //         std::cout << "CountDistinct" << std::endl;
-  //         break;
-  //     }
-  //   }
-  // }
-
-
   // add group by columns
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
@@ -613,7 +573,6 @@ void Aggregate::_aggregate() {
 
     ++column_index;
   }
-  // _contexts_per_column.clear();
 }
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
@@ -848,22 +807,34 @@ std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context(cons
     using ColumnDataType = typename decltype(type)::type;
     switch (function) {
       case AggregateFunction::Min:
-        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType, AggregateKey>>();
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType,
+            AggregateKey>>();
         break;
       case AggregateFunction::Max:
-        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType, AggregateKey>>();
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType,
+            AggregateKey>>();
         break;
       case AggregateFunction::Sum:
-        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType, AggregateKey>>();
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType,
+            AggregateKey>>();
         break;
       case AggregateFunction::Avg:
-        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType, AggregateKey>>();
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType,
+            AggregateKey>>();
         break;
       case AggregateFunction::Count:
-        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType, AggregateKey>>();
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType,
+            AggregateKey>>();
         break;
       case AggregateFunction::CountDistinct:
-        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType, AggregateKey>>();
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType,
+            AggregateKey>>();
         break;
     }
   });

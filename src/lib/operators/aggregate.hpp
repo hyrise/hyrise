@@ -61,10 +61,13 @@ struct AggregateResult {
 };
 
 template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
-using ResultMapAllocator = PolymorphicAllocator<std::pair<const AggregateKey, AggregateResult<AggregateType, ColumnDataType>>>;
+using ResultMapAllocator =
+    PolymorphicAllocator<std::pair<const AggregateKey, AggregateResult<AggregateType, ColumnDataType>>>;
 
 template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
-using AggregateResultMap = std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnDataType>, std::hash<AggregateKey>, std::equal_to<AggregateKey>, ResultMapAllocator<AggregateKey, AggregateType, ColumnDataType>>;
+using AggregateResultMap =
+    std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnDataType>, std::hash<AggregateKey>,
+                       std::equal_to<AggregateKey>, ResultMapAllocator<AggregateKey, AggregateType, ColumnDataType>>;
 
 /*
 The key type that is used for the aggregation map.
