@@ -131,9 +131,6 @@ class Aggregate : public AbstractReadOnlyOperator {
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const AggregateFunction function) const;
 
-  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
-  std::shared_ptr<SegmentVisitorContext> _create_aggregate_context_impl() const;
-
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 

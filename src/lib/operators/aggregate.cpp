@@ -419,34 +419,6 @@ void Aggregate::_aggregate() {
     _contexts_per_column[column_id] = _create_aggregate_context<AggregateKey>(data_type, aggregate.function);
   }
 
-  // bookmark
-  //
-  // auto estimate = size_t{0};
-  // for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-  //   estimate += keys_per_chunk[chunk_id].size();
-  // }
-  // // estimate /= 4;
-  // // auto show = estimate > 100 ? true : false;
-  // // if (show) {
-  // //   std::cout << "Estimate: " << estimate << std::endl;
-  // // }
-
-  // auto needed_size = aligned_size<std::pair<const AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>>>() * size_t{estimate} * _contexts_per_column.size();
-  // auto result_map_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
-  // // _result_map_buffer = new boost::container::pmr::monotonic_buffer_resource(1'000'000);
-  // auto allocator = ResultMapAllocator<AggregateKey, DistinctAggregateType, DistinctColumnType>{&result_map_buffer};
-  // // allocator.allocate(1);  // Make sure that the buffer is initialized
-  // // const auto start_next_buffer_size = result_map_buffer.next_buffer_size();
-
-  // for (auto col_context : _contexts_per_column) {
-  //   auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType, AggregateKey>>(col_context);
-  //   // context->results = std::make_pair(std::make_shared<typename decltype(context->results.first)::element_type>(allocator), result_map_buffer);
-  //   context->results = std::make_shared<typename decltype(context->results)::element_type>(allocator);
-  //   context->results->reserve(estimate);
-  // }
-  //
-  // bookmark
-
   // Process Chunks and perform aggregations
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     auto chunk_in = input_table->get_chunk(chunk_id);
@@ -876,32 +848,25 @@ std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context(cons
     using ColumnDataType = typename decltype(type)::type;
     switch (function) {
       case AggregateFunction::Min:
-        context = _create_aggregate_context_impl<ColumnDataType, AggregateFunction::Min, AggregateKey>();
+        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType, AggregateKey>>();
         break;
       case AggregateFunction::Max:
-        context = _create_aggregate_context_impl<ColumnDataType, AggregateFunction::Max, AggregateKey>();
+        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType, AggregateKey>>();
         break;
       case AggregateFunction::Sum:
-        context = _create_aggregate_context_impl<ColumnDataType, AggregateFunction::Sum, AggregateKey>();
+        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType, AggregateKey>>();
         break;
       case AggregateFunction::Avg:
-        context = _create_aggregate_context_impl<ColumnDataType, AggregateFunction::Avg, AggregateKey>();
+        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType, AggregateKey>>();
         break;
       case AggregateFunction::Count:
-        context = _create_aggregate_context_impl<ColumnDataType, AggregateFunction::Count, AggregateKey>();
+        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType, AggregateKey>>();
         break;
       case AggregateFunction::CountDistinct:
-        context = _create_aggregate_context_impl<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>();
+        context = std::make_shared<AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType, AggregateKey>>();
         break;
     }
   });
-  return context;
-}
-
-template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
-std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context_impl() const {
-  const auto context = std::make_shared<AggregateContext<
-      ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType, AggregateKey>>();
   return context;
 }
 
