@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include <boost/algorithm/string.hpp>
 #include <cxxopts.hpp>
 
@@ -16,16 +18,26 @@
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace opossum;  // NOLINT
+/**
+ * The Join Order Benchmark was introduced by Leis et al. "How good are query optimizers, really?".
+ * It runs on an IMDB database from ~2013 that gets downloaded if necessary as part of running this benchmark.
+ * Its 113 queries are obtained from the "third_party/join-order-benchmark" submodule
+ */
+
+using namespace opossum;               // NOLINT
+using namespace std::string_literals;  // NOLINT
 
 int main(int argc, char* argv[]) {
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Join Order Benchmark");
+
+  const auto DEFAULT_TABLE_PATH = "imdb_data";
+  const auto DEFAULT_QUERY_PATH = "third_party/join-order-benchmark";
 
   // clang-format off
   cli_options.add_options()
-      ("table_path", "Directory containing the Tables", cxxopts::value<std::string>()->default_value("")) // NOLINT
-      ("query_path", "Directory/file containing the queries", cxxopts::value<std::string>()->default_value("")) // NOLINT
-      ("queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+  ("table_path", "Directory containing the Tables", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
+  ("query_path", "Directory/file containing the queries", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
+  ("queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
@@ -37,8 +49,8 @@ int main(int argc, char* argv[]) {
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    table_path = json_config.value("table_path", "");
-    query_path = json_config.value("query_path", "");
+    table_path = json_config.value("table_path", DEFAULT_TABLE_PATH);
+    query_path = json_config.value("query_path", DEFAULT_QUERY_PATH);
     queries_str = json_config.value("queries", "all");
 
     benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
@@ -67,6 +79,18 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  /**
+   * Use a Python script to download and unzip the IMDB. We do this in Python and not in C++ because downloading and
+   * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
+   */
+  const auto setup_imdb_command = "python3 scripts/setup_imdb.py "s + table_path;
+  const auto setup_imdb_return_code = system(setup_imdb_command.c_str());
+  Assert(setup_imdb_return_code == 0, "setup_imdb.py failed. Did you run the benchmark from the project root dir?");
+
+  // The join-order-benchmark ships with these two .sql scripts, but we do not want to run them as part of the benchmark
+  // as they do not contains actual queries
+  const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
+
   benchmark_config->out << "- Benchmarking queries from " << query_path << std::endl;
   benchmark_config->out << "- Running on tables from " << table_path << std::endl;
 
@@ -87,14 +111,11 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // Ignore no .sql files in the directory for now (TODO(anybody): add CLI option if required)
-  const auto query_filename_blacklist = std::unordered_set<std::string>{};
-
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
   auto query_generator =
-      std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, query_filename_blacklist, query_subset);
+      std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, non_query_file_names, query_subset);
 
   BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
 }

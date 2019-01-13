@@ -7,7 +7,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
                                  const Duration& max_duration, const Duration& warmup_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const uint32_t cores, const uint32_t clients, const bool enable_visualization,
-                                 const bool cache_binary_tables, std::ostream& out)
+                                 const bool verify, const bool cache_binary_tables, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
@@ -21,6 +21,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
       cores(cores),
       clients(clients),
       enable_visualization(enable_visualization),
+      verify(verify),
       cache_binary_tables(cache_binary_tables),
       out(out) {}
 

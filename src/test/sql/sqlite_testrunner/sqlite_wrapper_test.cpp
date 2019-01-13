@@ -2,9 +2,9 @@
 
 #include "gtest/gtest.h"
 
-#include "sqlite_wrapper.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
+#include "utils/sqlite_wrapper.hpp"
 
 namespace opossum {
 

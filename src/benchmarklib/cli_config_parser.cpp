@@ -121,6 +121,12 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
+  const auto verify = json_config.value("verify", default_config.verify);
+  if (verify) {
+    out << "- Automatically verifying results with SQLite. This will make the performance numbers invalid."
+        << std::endl;
+  }
+
   const auto cache_binary_tables = json_config.value("cache_binary_tables", false);
   if (cache_binary_tables) {
     out << "- Caching tables as binary files" << std::endl;
@@ -141,6 +147,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
                          cores,
                          clients,
                          enable_visualization,
+                         verify,
                          cache_binary_tables,
                          out};
 }
@@ -166,6 +173,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
+  json_config.emplace("verify", parse_result["verify"].as<bool>());
   json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
 
   return json_config;
