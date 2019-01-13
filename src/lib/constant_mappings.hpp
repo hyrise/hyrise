@@ -1,12 +1,17 @@
 #include <boost/bimap.hpp> // NEEDEDINCLUDE
+#include <unordered_map>
 
 #include "sql/SelectStatement.h" // NEEDEDINCLUDE
-
-#include "expression/function_expression.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
+enum class PredicateCondition;
+enum class OrderByMode;
+enum class JoinMode;
+enum class UnionMode;
 enum class EncodingType : uint8_t;
+enum class FunctionType;
 enum class VectorCompressionType : uint8_t;
 enum class AggregateFunction;
 enum class ExpressionType;

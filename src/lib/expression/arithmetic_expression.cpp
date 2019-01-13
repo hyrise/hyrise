@@ -1,6 +1,5 @@
 #include "arithmetic_expression.hpp" // NEEDEDINCLUDE
 
-
 #include "expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

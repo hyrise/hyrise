@@ -1,8 +1,8 @@
 #pragma once
 
 #include <cmath> // NEEDEDINCLUDE
-
 #include <optional> // NEEDEDINCLUDE
+#include <string>
 
 namespace opossum {
 

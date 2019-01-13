@@ -25,9 +25,8 @@ constexpr bool is_valid_name(const char* name) {
 // don't use probes in TSan builds
 #if defined(__has_feature)
 #if !__has_feature(thread_sanitizer)
-#define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
-  static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
-  provider##_##probe(__VA_ARGS__);
+// TODO reenable
+#define BUILD_PROBE_NAME(provider, probe, ...) 
 #else
 #define BUILD_PROBE_NAME(provider, probe, ...)
 #endif

@@ -1,6 +1,6 @@
 #include "delete_node.hpp" // NEEDEDINCLUDE
 
-
+#include <sstream>
 
 namespace opossum {
 

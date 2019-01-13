@@ -11,6 +11,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "expression/function_expression.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"

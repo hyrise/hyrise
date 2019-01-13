@@ -2,7 +2,6 @@
 
 #include "boost/algorithm/string/replace.hpp" // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 LikeMatcher::LikeMatcher(const std::string& pattern) { _pattern_variant = pattern_string_to_pattern_variant(pattern); }

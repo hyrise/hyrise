@@ -1,4 +1,6 @@
+#include "format_duration.hpp"
 
+#include <sstream>
 
 #include "utils/assert.hpp" // NEEDEDINCLUDE
 

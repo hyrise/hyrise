@@ -1,6 +1,6 @@
 #include "insert_node.hpp" // NEEDEDINCLUDE
 
-
+#include <sstream>
 
 namespace opossum {
 
