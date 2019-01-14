@@ -39,7 +39,6 @@ namespace opossum {
             size_t chunk_size = chunk->size();
             const auto segments = chunk->segments();
             for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
-                value_count++;
                 std::vector<AllTypeVariant> current_values;
                 current_values.reserve(_groupby_column_ids.size());
 
@@ -52,9 +51,13 @@ namespace opossum {
                     const ColumnType new_value = type_cast_variant<ColumnType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
                     //const AggregateType old_value = type_cast_variant<AggregateType>(current_aggregate_value);
                     aggregate_function(new_value, current_aggregate_value);
+                    value_count++;
                 } else {
                     if constexpr (function == AggregateFunction::Count) {
                         current_aggregate_value = value_count;
+                    }
+                    if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
+                        current_aggregate_value = *current_aggregate_value / value_count;
                     }
                     aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
                     if (aggregate_index == 0) {
@@ -65,10 +68,16 @@ namespace opossum {
 
                     previous_values = current_values;
                     current_aggregate_value = type_cast_variant<AggregateType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
-                    value_count = 1;
+                    value_count = 1u;
                 }
 
             }
+        }
+        if constexpr (function == AggregateFunction::Count) {
+            current_aggregate_value = value_count;
+        }
+        if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
+            current_aggregate_value = *current_aggregate_value / value_count;
         }
         aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
         if (aggregate_index == 0) {
