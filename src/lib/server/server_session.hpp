@@ -1,13 +1,13 @@
 #pragma once
 
-
-
 #include "client_connection.hpp" // NEEDEDINCLUDE
-#include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
-#include "sql/sql_pipeline.hpp" // NEEDEDINCLUDE
 #include "task_runner.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class AbstractOperator;
+class SQLPipeline;
+class TransactionContext;
 
 template <typename TConnection, typename TTaskRunner>
 class ServerSessionImpl : public std::enable_shared_from_this<ServerSessionImpl<TConnection, TTaskRunner>> {

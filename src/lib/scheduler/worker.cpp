@@ -1,5 +1,4 @@
-
-
+#include "worker.hpp"
 
 #include "abstract_scheduler.hpp" // NEEDEDINCLUDE
 #include "abstract_task.hpp" // NEEDEDINCLUDE

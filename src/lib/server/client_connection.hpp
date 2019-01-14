@@ -3,7 +3,6 @@
 #include <boost/asio/ip/tcp.hpp> // NEEDEDINCLUDE
 #include <boost/thread/future.hpp> // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 using ByteBuffer = std::vector<char>;

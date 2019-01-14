@@ -1,6 +1,5 @@
 #include "client_connection.hpp" // NEEDEDINCLUDE
 
-
 #include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
 #include "then_operator.hpp" // NEEDEDINCLUDE
 #include "use_boost_future.hpp" // NEEDEDINCLUDE

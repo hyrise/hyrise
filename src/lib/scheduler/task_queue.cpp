@@ -1,6 +1,5 @@
 #include "task_queue.hpp" // NEEDEDINCLUDE
 
-
 #include "abstract_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

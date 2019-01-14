@@ -1,7 +1,5 @@
 #include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) {

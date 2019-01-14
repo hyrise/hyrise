@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "server/client_connection.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp" // NEEDEDINCLUDE
 
