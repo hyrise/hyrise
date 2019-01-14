@@ -13,11 +13,11 @@ class AbstractLQPNode;
 // Does not currently optimize:
 //    - Sub-selects with more than 1 correlated parameter
 //    - In values that are not column references.
-//    - Sub-selects which produce anything other than a column reference
+//    - Sub-selects, which produce anything other than a column reference
 //    - Correlated sub-selects where the correlated parameter:
 //        - is used more than once
 //        - is used outside predicates
-//        - is used in predicates at a point where it cannot be pulled up to the top of the sub-select (e.g. below
+//        - is used in predicates at a point where it cannot be pulled up to the top of the sub-select (e.g., below
 //          joins, limits, etc.)
 
 class InReformulationRule : public AbstractRule {
