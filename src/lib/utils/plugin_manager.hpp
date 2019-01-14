@@ -1,12 +1,7 @@
 #pragma once
 
-#include <unordered_map>
 
-#include "types.hpp"
-#include "utils/abstract_plugin.hpp"
-#include "utils/filesystem.hpp"
-#include "utils/singleton.hpp"
-#include "utils/string_utils.hpp"
+#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

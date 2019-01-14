@@ -1,15 +1,9 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+#include <string> // NEEDEDINCLUDE
+#include <vector> // NEEDEDINCLUDE
 
-#include "fixed_string.hpp"
-#include "fixed_string_vector_iterator.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "fixed_string_vector_iterator.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

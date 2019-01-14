@@ -1,18 +1,9 @@
-#include "adaptive_radix_tree_index.hpp"
 
-#include <algorithm>
-#include <iterator>
-#include <limits>
-#include <memory>
-#include <utility>
-#include <vector>
+#include <vector> // NEEDEDINCLUDE
 
-#include "adaptive_radix_tree_nodes.hpp"
-#include "storage/base_dictionary_segment.hpp"
-#include "storage/index/base_index.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "adaptive_radix_tree_nodes.hpp" // NEEDEDINCLUDE
+#include "storage/base_dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

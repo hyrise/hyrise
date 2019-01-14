@@ -1,19 +1,10 @@
-#include "worker.hpp"
 
-#include <pthread.h>
-#include <sched.h>
-#include <unistd.h>
 
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <thread>
-#include <vector>
 
-#include "abstract_scheduler.hpp"
-#include "abstract_task.hpp"
-#include "current_scheduler.hpp"
-#include "task_queue.hpp"
+#include "abstract_scheduler.hpp" // NEEDEDINCLUDE
+#include "abstract_task.hpp" // NEEDEDINCLUDE
+#include "current_scheduler.hpp" // NEEDEDINCLUDE
+#include "task_queue.hpp" // NEEDEDINCLUDE
 
 namespace {
 

@@ -1,19 +1,12 @@
-#include "node_queue_scheduler.hpp"
+#include "node_queue_scheduler.hpp" // NEEDEDINCLUDE
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "abstract_task.hpp"
-#include "current_scheduler.hpp"
-#include "task_queue.hpp"
-#include "topology.hpp"
-#include "worker.hpp"
+#include "abstract_task.hpp" // NEEDEDINCLUDE
+#include "task_queue.hpp" // NEEDEDINCLUDE
+#include "topology.hpp" // NEEDEDINCLUDE
+#include "worker.hpp" // NEEDEDINCLUDE
 
-#include "uid_allocator.hpp"
-#include "utils/assert.hpp"
+#include "uid_allocator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

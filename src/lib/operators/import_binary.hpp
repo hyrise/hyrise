@@ -1,17 +1,9 @@
 #pragma once
 
-#include <fstream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "import_export/binary.hpp"
-#include "storage/base_segment.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/value_segment.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "storage/dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

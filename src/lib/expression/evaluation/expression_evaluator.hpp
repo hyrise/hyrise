@@ -1,16 +1,10 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 
-#include "boost/variant.hpp"
 
-#include "all_type_variant.hpp"
-#include "expression/logical_expression.hpp"
-#include "expression/pqp_select_expression.hpp"
-#include "expression_result.hpp"
-#include "null_value.hpp"
-#include "types.hpp"
+#include "expression/logical_expression.hpp" // NEEDEDINCLUDE
+#include "expression/pqp_select_expression.hpp" // NEEDEDINCLUDE
+#include "expression_result.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

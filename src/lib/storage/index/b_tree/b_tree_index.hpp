@@ -1,10 +1,7 @@
 #pragma once
 
-#include "all_type_variant.hpp"
-#include "b_tree_index_impl.hpp"
-#include "storage/base_segment.hpp"
-#include "storage/index/base_index.hpp"
-#include "types.hpp"
+#include "b_tree_index_impl.hpp" // NEEDEDINCLUDE
+#include "storage/index/base_index.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

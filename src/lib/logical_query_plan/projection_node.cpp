@@ -1,12 +1,8 @@
-#include "projection_node.hpp"
 
-#include <sstream>
 
-#include "expression/expression_utils.hpp"
-#include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

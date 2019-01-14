@@ -1,19 +1,12 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <cstdlib>
-#include <functional>
-#include <memory>
-#include <string>
-#include <utility>
+#include <algorithm> // NEEDEDINCLUDE
+#include <string> // NEEDEDINCLUDE
 
-#include "csv_meta.hpp"
-#include "storage/base_segment.hpp"
-#include "storage/value_segment.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "csv_meta.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

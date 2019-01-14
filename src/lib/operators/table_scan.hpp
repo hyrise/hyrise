@@ -1,16 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "all_parameter_variant.hpp"
-#include "expression/abstract_expression.hpp"
-#include "table_scan/abstract_table_scan_impl.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "table_scan/abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,17 +1,12 @@
-#include "update.hpp"
+#include "update.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
+// CHECKINCLUDE #include <memory>
 #include <vector>
 
-#include "concurrency/transaction_context.hpp"
-#include "delete.hpp"
-#include "insert.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
-#include "table_wrapper.hpp"
-#include "utils/assert.hpp"
+#include "delete.hpp" // NEEDEDINCLUDE
+#include "insert.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

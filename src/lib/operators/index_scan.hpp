@@ -1,13 +1,9 @@
 #pragma once
 
-#include <memory>
 
-#include "abstract_read_only_operator.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "storage/index/segment_index_type.hpp"
-#include "storage/pos_list.hpp"
-#include "types.hpp"
+#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

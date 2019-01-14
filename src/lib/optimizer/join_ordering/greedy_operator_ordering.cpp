@@ -1,14 +1,8 @@
-#include "greedy_operator_ordering.hpp"
+#include "greedy_operator_ordering.hpp" // NEEDEDINCLUDE
 
-#include <numeric>
-#include <unordered_map>
-#include <unordered_set>
 
-#include "join_graph.hpp"
-#include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
-#include "utils/timer.hpp"
+#include "join_graph.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

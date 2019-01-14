@@ -1,19 +1,9 @@
-#include "export_csv.hpp"
+#include "export_csv.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "json.hpp"
 
-#include "import_export/csv_meta.hpp"
-#include "import_export/csv_writer.hpp"
-#include "storage/materialize.hpp"
-#include "storage/reference_segment.hpp"
+#include "import_export/csv_writer.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 

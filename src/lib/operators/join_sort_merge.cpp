@@ -1,20 +1,7 @@
-#include "join_sort_merge.hpp"
+#include "join_sort_merge.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <map>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
-#include "join_sort_merge/radix_cluster_sort.hpp"
-#include "resolve_type.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/abstract_segment_visitor.hpp"
-#include "storage/reference_segment.hpp"
+#include "join_sort_merge/radix_cluster_sort.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

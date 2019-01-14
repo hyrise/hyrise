@@ -1,17 +1,8 @@
-#include "print.hpp"
+#include "print.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <iomanip>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
+#include <iomanip> // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "operators/table_wrapper.hpp"
-#include "storage/base_segment.hpp"
-#include "type_cast.hpp"
-#include "utils/performance_warning.hpp"
+#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

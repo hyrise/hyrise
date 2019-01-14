@@ -1,13 +1,7 @@
-#include "fixed_string.hpp"
+#include "fixed_string.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
+#include <string> // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 
