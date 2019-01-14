@@ -1,18 +1,10 @@
 #pragma once
 
-<<<<<<< HEAD
-#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"  // NEEDEDINCLUDE
-#include "storage/frame_of_reference/frame_of_reference_iterable.hpp"  // NEEDEDINCLUDE
-#include "storage/run_length_segment/run_length_segment_iterable.hpp"  // NEEDEDINCLUDE
-#include "storage/segment_iterables/any_segment_iterable.hpp"          // NEEDEDINCLUDE
-#include "storage/value_segment/value_segment_iterable.hpp"            // NEEDEDINCLUDE
-=======
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
->>>>>>> ce77f37614840783e89195e6f697d89996ccd226
 
 namespace opossum {
 
