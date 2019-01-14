@@ -14,82 +14,39 @@
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
+#include "lib/lz4hc.h"
+
 namespace opossum {
 
 class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::LZ4>;
-  static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
+  static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
   std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+    // TODO what happens here?
     const auto alloc = value_segment->values().get_allocator();
 
-    static constexpr auto block_size = LZ4Segment<T>::block_size;
+    const auto input_size = static_cast<int>(value_segment->size());
 
-    const auto size = value_segment->size();
+    // calculate output size
+    auto output_size = LZ4_compressBound(input_size);
 
-    // Ceiling of integer division
-    const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
+    // create output buffer
+    std::vector<char> compressed_data(static_cast<size_t>(output_size));
 
-    const auto num_blocks = div_ceil(size, block_size);
+    // use the HC (high compression) compress method
+    const int compressed_result = LZ4_compress_HC(static_cast<char*>(value_segment->data()), compressed_data.data(),
+                                                  input_size, output_size, LZ4HC_CLEVEL_MAX);
 
-    // holds the minimum of each block
-    auto block_minima = pmr_vector<T>{alloc};
-    block_minima.reserve(num_blocks);
+    if (compressed_result <= 0) {
+      // something went wrong
+      throw std::runtime_error("LZ4 compression failed");
+    }
 
-    // holds the uncompressed offset values
-    auto offset_values = pmr_vector<uint32_t>{alloc};
-    offset_values.reserve(size);
-
-    // holds whether a segment value is null
-    auto null_values = pmr_vector<bool>{alloc};
-    null_values.reserve(size);
-
-    // used as optional input for the compression of the offset values
-    auto max_offset = uint32_t{0u};
-
-    auto iterable = ValueSegmentIterable<T>{*value_segment};
-    iterable.with_iterators([&](auto segment_it, auto segment_end) {
-      // a temporary storage to hold the values of one block
-      auto current_value_block = std::array<T, block_size>{};
-
-      while (segment_it != segment_end) {
-        auto value_block_it = current_value_block.begin();
-        for (; value_block_it != current_value_block.end() && segment_it != segment_end;
-             ++value_block_it, ++segment_it) {
-          const auto segment_value = *segment_it;
-
-          *value_block_it = segment_value.is_null() ? T{0u} : segment_value.value();
-          null_values.push_back(segment_value.is_null());
-        }
-
-        // The last value block might not be filled completely
-        const auto this_value_block_end = value_block_it;
-
-        const auto [min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);  // NOLINT
-
-        // Make sure that the largest offset fits into uint32_t (required for vector compression.)
-        Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),
-               "Value range in block must fit into uint32_t.");
-
-        const auto minimum = *min_it;
-        block_minima.push_back(minimum);
-
-        value_block_it = current_value_block.begin();
-        for (; value_block_it != this_value_block_end; ++value_block_it) {
-          const auto value = *value_block_it;
-          const auto offset = static_cast<uint32_t>(value - minimum);
-          offset_values.push_back(offset);
-          max_offset = std::max(max_offset, offset);
-        }
-      }
-    });
-
-    auto compressed_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_offset});
-
-    return std::allocate_shared<LZ4Segment<T>>(alloc, std::move(block_minima), std::move(null_values),
-                                                            std::move(compressed_offset_values));
+    // create lz4 segment
+    return std::allocate_shared<LZ4Segment<T>>(alloc, input_size, output_size, std::move(compressed_data));
   }
 };
 
