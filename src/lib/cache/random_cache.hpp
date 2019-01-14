@@ -22,21 +22,21 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   class Iterator : public AbstractIterator {
    public:
     using IteratorType = typename std::vector<KeyValuePair>::iterator;
-    explicit Iterator(IteratorType p) : _vector_position(p) {}
+    explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    IteratorType _vector_position;
+    IteratorType _wrapped_iterator;
 
-    void increment() { ++_vector_position; }
+    void increment() { ++_wrapped_iterator; }
 
     bool equal(const AbstractIterator& other) const {
-      return _vector_position == static_cast<const Iterator&>(other)._vector_position;
+      return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
     }
 
-    KeyValuePair& dereference() const { return *_vector_position; }
+    KeyValuePair& dereference() const { return *_wrapped_iterator; }
   };
 
   explicit RandomCache(size_t capacity)

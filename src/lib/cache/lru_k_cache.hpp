@@ -64,23 +64,23 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
   class Iterator : public AbstractIterator {
    public:
     using IteratorType = typename std::unordered_map<Key, handle_t>::iterator;
-    explicit Iterator(IteratorType p) : _map_position(p) {}
+    explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    IteratorType _map_position;
+    IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
 
-    void increment() { ++_map_position; }
+    void increment() { ++_wrapped_iterator; }
 
     bool equal(const AbstractIterator& other) const {
-      return _map_position == static_cast<const Iterator&>(other)._map_position;
+      return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
     }
 
     KeyValuePair& dereference() const {
-      _tmp_return_value = get_value(*_map_position);
+      _tmp_return_value = get_value(*_wrapped_iterator);
       return _tmp_return_value;
     }
   };

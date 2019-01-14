@@ -37,23 +37,23 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   class Iterator : public AbstractIterator {
    public:
     using IteratorType = typename CacheMap::iterator;
-    explicit Iterator(IteratorType p) : _map_position(p) {}
+    explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
 
    private:
     friend class boost::iterator_core_access;
     friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-    IteratorType _map_position;
+    IteratorType _wrapped_iterator;
     mutable KeyValuePair _tmp_return_value;
 
-    void increment() { ++_map_position; }
+    void increment() { ++_wrapped_iterator; }
 
     bool equal(const AbstractIterator& other) const {
-      return _map_position == static_cast<const Iterator&>(other)._map_position;
+      return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
     }
 
     KeyValuePair& dereference() const {
-      const auto iter_value = *_map_position;
+      const auto iter_value = *_wrapped_iterator;
       _tmp_return_value = {iter_value.first, (*iter_value.second).value};
       return _tmp_return_value;
     }
