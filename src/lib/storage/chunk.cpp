@@ -27,7 +27,6 @@ Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_dat
   for (const auto& segment : segments) {
     Assert(segment->size() == chunk_size, "Segments don't have the same length");
   }
-  std::cout << "Chunk constructed. " << std::endl;
 #endif
 
   if (alloc) _alloc = *alloc;
