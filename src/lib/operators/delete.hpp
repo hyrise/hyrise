@@ -1,10 +1,10 @@
 #pragma once
 
-
 #include "abstract_read_write_operator.hpp" // NEEDEDINCLUDE
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+struct PosList;
 
 /**
  * Operator that deletes a number of rows from one table.

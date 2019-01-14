@@ -1,12 +1,12 @@
 #pragma once
 
 #include "abstract_join_operator.hpp" // NEEDEDINCLUDE
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp"
 
 namespace opossum {
 
 class JoinIndex;
+struct PosList;
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:

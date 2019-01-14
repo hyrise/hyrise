@@ -1,12 +1,11 @@
 #pragma once
 
-
 #include "abstract_rule.hpp" // NEEDEDINCLUDE
-#include "storage/index/index_info.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
 class AbstractLQPNode;
+struct IndexInfo;
 class PredicateNode;
 
 /**

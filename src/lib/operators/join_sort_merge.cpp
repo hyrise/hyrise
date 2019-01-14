@@ -1,6 +1,5 @@
 #include "join_sort_merge.hpp" // NEEDEDINCLUDE
 
-
 #include "join_sort_merge/radix_cluster_sort.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

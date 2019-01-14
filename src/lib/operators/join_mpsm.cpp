@@ -1,8 +1,6 @@
 #include "join_mpsm.hpp" // NEEDEDINCLUDE
 
-
 #include "join_mpsm/radix_cluster_sort_numa.hpp" // NEEDEDINCLUDE
-
 
 // A cluster is a chunk of values which agree on their last bits
 STRONG_TYPEDEF(uint32_t, ClusterID);

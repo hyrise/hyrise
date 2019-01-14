@@ -1,4 +1,5 @@
 #include "predicate_placement_rule.hpp" // NEEDEDINCLUDE
+
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/logical_plan_root_node.hpp" // NEEDEDINCLUDE
@@ -21,7 +22,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
 }
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
-                                                  const LQPInputSide input_side,
+                                                  const LQPInputSide& input_side,
                                                   std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) {
   const auto input_node = current_node->input(input_side);
   if (!input_node) return;  // Allow calling without checks
@@ -100,7 +101,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 }
 
 std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_traversal(
-    const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
+    const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide& input_side) {
   if (!current_node) return {};
   const auto input_node = current_node->input(input_side);
   if (!input_node) return {};
@@ -167,7 +168,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   Fail("GCC thinks this is reachable");
 }
 
-void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide input_side,
+void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide& input_side,
                                            const std::vector<std::shared_ptr<PredicateNode>>& predicate_nodes) {
   // First node gets inserted on the @param input_side, all others on the left side of their output.
   auto current_node = node;

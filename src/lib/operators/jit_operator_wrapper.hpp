@@ -1,13 +1,13 @@
 #pragma once
 
-
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
-#include "jit_operator/operators/abstract_jittable_sink.hpp" // NEEDEDINCLUDE
-#include "jit_operator/operators/jit_read_tuples.hpp" // NEEDEDINCLUDE
 #include "operators/jit_operator/specialization/jit_code_specializer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
+class AbstractJittable;
+class AbstractJittableSink;
+class JitReadTuples;
 enum class JitExecutionMode { Interpret, Compile };
 
 /* The JitOperatorWrapper wraps a number of jittable operators and exposes them through Hyrise's default

@@ -2,7 +2,6 @@
 
 #include <unordered_map> // NEEDEDINCLUDE
 
-#include "expression/abstract_predicate_expression.hpp" // NEEDEDINCLUDE
 #include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
 #include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 #include "expression/exists_expression.hpp" // NEEDEDINCLUDE
@@ -10,11 +9,9 @@
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

@@ -1,16 +1,17 @@
 #pragma once
 
-#include <boost/container/scoped_allocator.hpp> // NEEDEDINCLUDE
-
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 #include "expression/aggregate_expression.hpp" // NEEDEDINCLUDE
-#include "storage/abstract_segment_visitor.hpp" // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
 template <typename AggregateKey>
 struct GroupByContext;
+struct PosList;
+class BaseSegment;
+class SegmentVisitorContext;
+class BaseValueSegment;
 
 /**
  * Aggregates are defined by the column (ColumnID for Operators, LQPColumnReference in LQP) they operate on and the aggregate

@@ -1,11 +1,10 @@
 #pragma once
 
-
 #include "abstract_rule.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
+class AbstractExpression;
 class AbstractLQPNode;
 
 /**

@@ -1,6 +1,5 @@
 #include "sort.hpp" // NEEDEDINCLUDE
 
-
 #include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

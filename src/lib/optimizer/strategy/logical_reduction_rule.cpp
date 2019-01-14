@@ -1,7 +1,5 @@
 #include "logical_reduction_rule.hpp" // NEEDEDINCLUDE
 
-#include <functional> // NEEDEDINCLUDE
-
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/predicate_node.hpp"

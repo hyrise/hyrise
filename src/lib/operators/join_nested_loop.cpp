@@ -1,9 +1,7 @@
 #include "join_nested_loop.hpp" // NEEDEDINCLUDE
 
-
 #include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 #include "type_comparison.hpp" // NEEDEDINCLUDE
-#include "utils/ignore_unused_variable.hpp" // NEEDEDINCLUDE
 
 namespace {
 using namespace opossum;  // NOLINT
@@ -117,10 +115,6 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                       chunk_id_left_copy, chunk_id_right_copy, params_copy);
             });
           } else {
-            // gcc complains without these
-            ignore_unused_variable(right_end);
-            ignore_unused_variable(left_end);
-
             Fail("Cannot join String with non-String column");
           }
         });

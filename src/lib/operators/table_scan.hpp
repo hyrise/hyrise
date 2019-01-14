@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 #include "table_scan/abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
 

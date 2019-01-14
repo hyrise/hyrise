@@ -1,9 +1,7 @@
 #include "join_hash.hpp" // NEEDEDINCLUDE
 
-
 #include "join_hash/join_hash_steps.hpp" // NEEDEDINCLUDE
 #include "join_hash/join_hash_traits.hpp" // NEEDEDINCLUDE
-#include "utils/timer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -168,8 +166,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Save chunk offsets into the input relation.
     const auto left_chunk_offsets = determine_chunk_offsets(left_in_table);
     const auto right_chunk_offsets = determine_chunk_offsets(right_in_table);
-
-    Timer performance_timer;
 
     // Containers used to store histograms for (potentially subsequent) radix
     // partitioning phase (in cases _radix_bits > 0). Created during materialization phase.

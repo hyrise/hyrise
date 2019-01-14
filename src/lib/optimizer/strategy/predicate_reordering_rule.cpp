@@ -1,6 +1,5 @@
 #include "predicate_reordering_rule.hpp" // NEEDEDINCLUDE
 
-
 #include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 

@@ -1,6 +1,5 @@
 #include "table_wrapper.hpp" // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 TableWrapper::TableWrapper(const std::shared_ptr<const Table>& table)

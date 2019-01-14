@@ -6,13 +6,9 @@
 #include <stack> // NEEDEDINCLUDE
 
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
-
-#include "join_graph_edge.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -141,7 +137,7 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
   return {parse_result_left.base_node, or_predicate};
 }
 
-bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
+bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType& node_type) const {
   return node_type != LQPNodeType::Join && node_type != LQPNodeType::Union && node_type != LQPNodeType::Predicate;
 }
 

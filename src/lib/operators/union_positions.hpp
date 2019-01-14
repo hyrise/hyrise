@@ -1,10 +1,10 @@
 #pragma once
 
-
 #include "operators/abstract_read_only_operator.hpp" // NEEDEDINCLUDE
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+struct PosList;
 
 /**
  * ## Purpose

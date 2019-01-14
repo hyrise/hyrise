@@ -1,6 +1,5 @@
 #include "product.hpp" // NEEDEDINCLUDE
 
-
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

@@ -1,6 +1,5 @@
 #include "dp_ccp.hpp" // NEEDEDINCLUDE
 
-
 #include "cost_model/abstract_cost_estimator.hpp" // NEEDEDINCLUDE
 #include "enumerate_ccp.hpp" // NEEDEDINCLUDE
 #include "join_graph.hpp" // NEEDEDINCLUDE

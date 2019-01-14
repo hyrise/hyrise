@@ -1,6 +1,5 @@
 #include "index_scan.hpp" // NEEDEDINCLUDE
 
-
 #include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
 #include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 

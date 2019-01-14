@@ -3,7 +3,6 @@
 #include <iostream> // NEEDEDINCLUDE
 
 #include "boost/dynamic_bitset.hpp" // NEEDEDINCLUDE
-#include "boost/functional/hash.hpp" // NEEDEDINCLUDE
 
 #include "utils/assert.hpp" // NEEDEDINCLUDE
 

@@ -2,18 +2,10 @@
 
 #include <unordered_map> // NEEDEDINCLUDE
 
-#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/abstract_lqp_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/dummy_table_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/insert_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/sort_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/update_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
@@ -73,7 +65,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
 
       const auto& right_input_expressions = update_node->right_input()->column_expressions();
       consumed_columns.insert(right_input_expressions.begin(), right_input_expressions.end());
-    } else if (const auto insert_node = std::dynamic_pointer_cast<UpdateNode>(node)) {
+    } else if (const auto insert_node = std::dynamic_pointer_cast<UpdateNode>(node)) {  // TODO this looks broken
       const auto& expressions = insert_node->right_input()->column_expressions();
       consumed_columns.insert(expressions.begin(), expressions.end());
     }

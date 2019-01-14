@@ -6,6 +6,7 @@
 #include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE
 #include "statistics/chunk_statistics/chunk_statistics.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

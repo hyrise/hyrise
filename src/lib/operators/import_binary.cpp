@@ -1,6 +1,5 @@
 #include "import_binary.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-
 #include <fstream> // NEEDEDINCLUDE
 #include <numeric> // NEEDEDINCLUDE
 #include <vector> // NEEDEDINCLUDE

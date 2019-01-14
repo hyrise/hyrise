@@ -1,6 +1,5 @@
 #include "validate.hpp" // NEEDEDINCLUDE
 
-
 #include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 

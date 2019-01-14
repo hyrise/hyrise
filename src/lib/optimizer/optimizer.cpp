@@ -1,6 +1,5 @@
 #include "optimizer.hpp" // NEEDEDINCLUDE
 
-
 #include "cost_model/cost_model_logical.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE

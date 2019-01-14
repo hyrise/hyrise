@@ -1,13 +1,12 @@
 #pragma once
 
-
 #include "all_parameter_variant.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
 class AbstractExpression;
 class AbstractLPQNode;
+class Table;
 
 // Predicate in a representation so that scan operators (TableScan, IndexScan) can use is. That is, it only
 // consists of columns, values, a predicate condition and no nesting.

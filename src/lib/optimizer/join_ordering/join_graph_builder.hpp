@@ -1,12 +1,12 @@
 #pragma once
 
-
 #include "join_graph.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
 class AbstractLQPNode;
+class UnionNode;
+enum class LQPNodeType;
 
 /**
  * Turns an LQP into a JoinGraph.
@@ -74,7 +74,7 @@ class JoinGraphBuilder final {
    * Returns whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that
    * aren't Predicates, Joins or Unions.
    */
-  bool _lqp_node_type_is_vertex(const LQPNodeType node_type) const;
+  bool _lqp_node_type_is_vertex(const LQPNodeType& node_type) const;
 
   /**
    * Lookup which vertices an expression references

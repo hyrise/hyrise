@@ -3,9 +3,10 @@
 #include <unordered_set> // NEEDEDINCLUDE
 
 #include "join_graph_edge.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class AbstractLQPNode;
 
 /**
  * A JoinGraph contains
