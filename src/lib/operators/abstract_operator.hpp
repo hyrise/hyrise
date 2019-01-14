@@ -3,6 +3,8 @@
 #include "all_parameter_variant.hpp" // NEEDEDINCLUDE
 #include "operator_performance_data.hpp" // NEEDEDINCLUDE
 
+#include <unordered_map>
+
 namespace opossum {
 
 class OperatorTask;

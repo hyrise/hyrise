@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "client_connection.hpp" // NEEDEDINCLUDE
 #include "task_runner.hpp" // NEEDEDINCLUDE
 

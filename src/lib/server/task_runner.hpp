@@ -1,14 +1,10 @@
 #pragma once
 
+#include <boost/asio/io_service.hpp>
+
 #include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
 #include "then_operator.hpp" // NEEDEDINCLUDE
 #include "use_boost_future.hpp" // NEEDEDINCLUDE
-
-namespace boost{
-  namespace asio {
-    class io_service;
-  }
-}
 
 namespace opossum {
 

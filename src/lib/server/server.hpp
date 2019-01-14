@@ -1,12 +1,7 @@
 #pragma once
 
 #include <boost/asio/ip/tcp.hpp> // NEEDEDINCLUDE
-
-namespace boost{
-	namespace asio {
-		class io_service;
-	}
-}
+#include <boost/asio/io_service.hpp> // NEEDEDINCLUDE
 
 namespace opossum {
 
