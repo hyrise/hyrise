@@ -83,4 +83,4 @@ auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 }  // namespace opossum
 
-#include "create_iterable_from_segment.ipp" // NEEDEDINCLUDE
+#include "create_iterable_from_segment.ipp"
