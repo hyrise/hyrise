@@ -18,12 +18,12 @@ LZ4Segment<T>::LZ4Segment(const int decompressed_size, const int max_compressed_
       _compressed_data{std::move(compressed_data)} {}
 
 template <typename T>
-const int LZ4Segment<T>::decompressed_size() const {
+int LZ4Segment<T>::decompressed_size() const {
   return _decompressed_size;
 }
 
 template <typename T>
-const int LZ4Segment<T>::max_compressed_size() const {
+int LZ4Segment<T>::max_compressed_size() const {
   return _max_compressed_size;
 }
 
@@ -38,14 +38,14 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
   PerformanceWarning("LZ4::operator[]: decompressing the whole LZ4 segment");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
-  const auto& decompressed_segment = decompress();
+  auto decompressed_segment = decompress();
   return AllTypeVariant{decompressed_segment[chunk_offset]};
 }
 
 template <typename T>
 const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   PerformanceWarning("LZ4::get_typed_value: decompressing the whole LZ4 segment");
-  const auto& decompressed_segment = decompress();
+  auto decompressed_segment = decompress();
   return decompressed_segment[chunk_offset];
 }
 
@@ -55,11 +55,11 @@ size_t LZ4Segment<T>::size() const {
 }
 
 template <typename T>
-std::vector<T>& LZ4Segment<T>::decompress() const {
-  std::vector<T> decompressed_data(_decompressed_size);
-  int compressed_size = static_cast<int>(_compressed_data.size());
-  const int decompressed_result = LZ4_decompress_safe(_compressed_data.data(),
-                                                      static_cast<char*>(decompressed_data.data()),
+std::shared_ptr<std::vector<T>> LZ4Segment<T>::decompress() const {
+  auto decompressed_data = std::make_shared<std::vector<T>>(_decompressed_size);
+  int compressed_size = static_cast<int>(_compressed_data->size());
+  const int decompressed_result = LZ4_decompress_safe(_compressed_data->data(),
+                                                      reinterpret_cast<char*>(decompressed_data->data()),
                                                       compressed_size, _decompressed_size);
   if (decompressed_result <= 0) {
     throw std::runtime_error("LZ4 decompression failed");

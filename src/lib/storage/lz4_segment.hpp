@@ -39,7 +39,7 @@ class LZ4Segment : public BaseEncodedSegment {
 
   size_t size() const final;
 
-  std::vector<T>& decompress() const;
+  std::shared_ptr<std::vector<T>> decompress() const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
