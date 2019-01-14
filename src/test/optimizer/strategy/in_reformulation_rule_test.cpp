@@ -15,6 +15,7 @@
 #include "optimizer/strategy/in_reformulation_rule.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
+#include "../../../lib/expression/expression_functional.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -72,7 +73,7 @@ TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(InReformulationRuleTest, UncorrelatedInToAntiJoin) {
+TEST_F(InReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b)
   // clang-format off
   const auto subselect_lqp =
@@ -126,7 +127,7 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
 }
 
 // We cannot use an anti join here, because it does not preserve the columns from the right sub-tree.
-TEST_F(InReformulationRuleTest, SimpleCorrelatedInToAntiJoin) {
+TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithLessThanPredicateToInnerJoin) {
   // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.a < a.a)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
