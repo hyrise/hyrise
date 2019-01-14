@@ -18,8 +18,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    // TODO decompress segment
-    auto decompressed_segment = _segment;
+    auto decompressed_segment = _segment.decompress();
     // alias the data type of the constant iterator over the decompressed data
     using ValueIteratorT = decltype(decompressed_segment.cbegin());
 
@@ -34,9 +33,7 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     // for now we also decompress the whole segment instead of having an actual point access
-
-    // TODO decompress segment
-    auto decompressed_segment = _segment;
+    auto decompressed_segment = _segment.decompress();
     // alias the data type of the constant iterator over the decompressed data
     using ValueIteratorT = decltype(decompressed_segment.cbegin());
 
