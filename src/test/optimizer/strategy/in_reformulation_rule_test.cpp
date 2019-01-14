@@ -5,6 +5,7 @@
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -71,32 +72,34 @@ TEST_F(InReformulationRuleTest, SimpleInToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(InReformulationRuleTest, CorrelatedInToSemiJoin) {
+TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a = a.a)
-  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
   // clang-format off
   const auto subselect_lqp =
       ProjectionNode::make(expression_vector(node_table_b_col_a),
-          PredicateNode::make(equals_(node_table_b_col_a, parameter),
+          PredicateNode::make(equals_(node_table_b_col_b, parameter),
               node_table_b));
 
-  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_a));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_b));
 
   const auto input_lqp =
       PredicateNode::make(in_(node_table_a_col_a, subselect),
                           node_table_a);
 
   const auto expected_lqp =
-      PredicateNode::make(equals_(node_table_a_col_a, node_table_b_col_a),
-                          JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
-                                         node_table_a,
-                                         ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b)));
+      AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
+                          ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
+                                               PredicateNode::make(equals_(node_table_b_col_b, node_table_a_col_b),
+                                                                   JoinNode::make(JoinMode::Inner,
+                                                                                  equals_(node_table_a_col_a,
+                                                                                          node_table_b_col_a),
+                                                                                  node_table_a,
+                                                                                  node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  actual_lqp->print();
   std::cout << std::endl;
-  expected_lqp->print();
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
