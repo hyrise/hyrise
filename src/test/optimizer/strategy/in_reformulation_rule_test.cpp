@@ -96,7 +96,7 @@ TEST_F(InReformulationRuleTest, UncorrelatedNotInToAntiJoin) {
 }
 
 TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
-  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.a = a.a)
+  // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b WHERE b.b = a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
   // clang-format off
@@ -128,7 +128,7 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
 
 // We cannot use an anti join here, because it does not preserve the columns from the right sub-tree.
 TEST_F(InReformulationRuleTest, SimpleCorrelatedNotInWithLessThanPredicateToInnerJoin) {
-  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.a < a.a)
+  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.b < a.b)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
   // clang-format off
