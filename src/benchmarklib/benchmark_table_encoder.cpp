@@ -1,5 +1,8 @@
 #include "benchmark_table_encoder.hpp"
 
+#include <atomic>
+#include <thread>
+
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
 #include "resolve_type.hpp"
@@ -77,7 +80,7 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 namespace opossum {
 
 bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
-                                   const EncodingConfig& encoding_config, std::ostream& out) {
+                                   const EncodingConfig& encoding_config) {
   /**
    * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
    */
@@ -116,10 +119,10 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
-      out << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      out << data_type_to_string.left.at(column_data_type) << " cannot be encoded as ";
-      out << encoding_type_to_string.left.at(encoding_config.default_encoding_spec.encoding_type) << " and is ";
-      out << "left Unencoded." << std::endl;
+      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
+      std::cout << data_type_to_string.left.at(column_data_type) << " cannot be encoded as ";
+      std::cout << encoding_type_to_string.left.at(encoding_config.default_encoding_spec.encoding_type) << " and is ";
+      std::cout << "left Unencoded." << std::endl;
       chunk_encoding_spec.push_back(EncodingType::Unencoded);
     }
   }
@@ -127,15 +130,32 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   /**
    * 2. Actually encode chunks
    */
-  auto encoding_performed = false;
+  auto encoding_performed = std::atomic<bool>{false};
   const auto column_data_types = table->column_data_types();
 
-  for (const auto& chunk : table->chunks()) {
-    if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
-      ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
-      encoding_performed = true;
-    }
+  // Encode chunks in parallel, using `hardware_concurrency + 1` worker
+  // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
+  auto next_chunk = std::atomic_uint{0};
+  auto threads = std::vector<std::thread>{};
+
+  for (auto thread_id = 0u;
+       thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
+       ++thread_id) {
+    threads.emplace_back([&] {
+      while (true) {
+        auto my_chunk = next_chunk++;
+        if (my_chunk >= table->chunk_count()) return;
+
+        const auto& chunk = table->get_chunk(ChunkID{my_chunk});
+        if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
+          ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
+          encoding_performed = true;
+        }
+      }
+    });
   }
+
+  for (auto& thread : threads) thread.join();
 
   return encoding_performed;
 }
