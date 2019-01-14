@@ -1,4 +1,4 @@
-#include "pausable_loop_thread.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "pausable_loop_thread.hpp" // NEEDEDINCLUDE
 
 #include <thread> // NEEDEDINCLUDE
 

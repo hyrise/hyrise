@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map> // NEEDEDINCLUDE
 #include <unordered_set> // NEEDEDINCLUDE
 
 #include "all_type_variant.hpp" // NEEDEDINCLUDE

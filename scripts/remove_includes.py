@@ -64,7 +64,7 @@ for (dirpath, dirnames, filenames) in os.walk('src/lib'):
 
                     user_includes.add(include.split('/')[-1])
                     user_includes_full.add(include)
-                if line.startswith('#include <'):
+                if line.startswith('#include <' and not 'NEEDEDINCLUDE' in line):
                     include = line[10:line.find('>')]
                     system_includes.add(include)
         files += [{'path' : path, 'user_includes' : user_includes, 'user_includes_full' : user_includes_full, 'system_includes' : system_includes}]

@@ -1,6 +1,6 @@
 #pragma once
 
-// CHECKINCLUDE #include <memory>
+#include <array>
 #include <numeric> // NEEDEDINCLUDE
 #include <utility>
 
