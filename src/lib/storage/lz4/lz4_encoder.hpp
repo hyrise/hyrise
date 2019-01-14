@@ -37,7 +37,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     std::vector<char> compressed_data(static_cast<size_t>(output_size));
 
     // use the HC (high compression) compress method
-    const int compressed_result = LZ4_compress_HC(static_cast<char*>(value_segment->data()), compressed_data.data(),
+    const int compressed_result = LZ4_compress_HC(reinterpret_cast<char*>(value_segment->data()), compressed_data.data(),
                                                   input_size, output_size, LZ4HC_CLEVEL_MAX);
 
     if (compressed_result <= 0) {

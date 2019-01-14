@@ -39,14 +39,14 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   auto decompressed_segment = decompress();
-  return AllTypeVariant{decompressed_segment[chunk_offset]};
+  return AllTypeVariant{(*decompressed_segment)[chunk_offset]};
 }
 
 template <typename T>
 const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   PerformanceWarning("LZ4::get_typed_value: decompressing the whole LZ4 segment");
   auto decompressed_segment = decompress();
-  return decompressed_segment[chunk_offset];
+  return (*decompressed_segment)[chunk_offset];
 }
 
 template <typename T>
