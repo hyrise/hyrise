@@ -99,7 +99,6 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
                                                                                   node_table_b))));
   // clang-format on
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  std::cout << std::endl;
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
