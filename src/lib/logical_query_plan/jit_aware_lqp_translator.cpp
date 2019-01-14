@@ -1,10 +1,6 @@
 #include "jit_aware_lqp_translator.hpp" // NEEDEDINCLUDE
 
 #if HYRISE_JIT_SUPPORT
-
-#include <boost/range/adaptors.hpp> // NEEDEDINCLUDE
-#include <boost/range/combine.hpp> // NEEDEDINCLUDE
-
 #include <queue> // NEEDEDINCLUDE
 #include <unordered_set> // NEEDEDINCLUDE
 
@@ -25,6 +21,7 @@
 #include "operators/jit_operator/operators/jit_read_tuples.hpp" // NEEDEDINCLUDE
 #include "operators/jit_operator/operators/jit_validate.hpp" // NEEDEDINCLUDE
 #include "operators/jit_operator/operators/jit_write_tuples.hpp" // NEEDEDINCLUDE
+#include "operators/jit_operator_wrapper.hpp" // NEEDEDINCLUDE
 #include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "types.hpp" // NEEDEDINCLUDE

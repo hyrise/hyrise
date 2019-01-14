@@ -1,11 +1,5 @@
 #include "lqp_translator.hpp" // NEEDEDINCLUDE
 
-#include <iostream> // NEEDEDINCLUDE
-#include <memory> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
-
-#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
 #include "aggregate_node.hpp" // NEEDEDINCLUDE
 #include "alias_node.hpp" // NEEDEDINCLUDE
 #include "create_prepared_plan_node.hpp" // NEEDEDINCLUDE
@@ -14,15 +8,8 @@
 #include "delete_node.hpp" // NEEDEDINCLUDE
 #include "drop_table_node.hpp" // NEEDEDINCLUDE
 #include "drop_view_node.hpp" // NEEDEDINCLUDE
-#include "dummy_table_node.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/between_expression.hpp" // NEEDEDINCLUDE
 #include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "expression/is_null_expression.hpp" // NEEDEDINCLUDE
-#include "expression/list_expression.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
 #include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
 #include "expression/pqp_select_expression.hpp" // NEEDEDINCLUDE
@@ -47,7 +34,6 @@
 #include "operators/maintenance/show_columns.hpp" // NEEDEDINCLUDE
 #include "operators/maintenance/show_tables.hpp" // NEEDEDINCLUDE
 #include "operators/operator_join_predicate.hpp" // NEEDEDINCLUDE
-#include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE
 #include "operators/product.hpp" // NEEDEDINCLUDE
 #include "operators/projection.hpp" // NEEDEDINCLUDE
 #include "operators/sort.hpp" // NEEDEDINCLUDE
@@ -64,7 +50,6 @@
 #include "stored_table_node.hpp" // NEEDEDINCLUDE
 #include "union_node.hpp" // NEEDEDINCLUDE
 #include "update_node.hpp" // NEEDEDINCLUDE
-#include "validate_node.hpp" // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 
@@ -99,7 +84,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
-    LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
+    const LQPNodeType& type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // clang-format off
     case LQPNodeType::Alias:              return _translate_alias_node(node);

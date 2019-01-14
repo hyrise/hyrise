@@ -16,9 +16,9 @@
 #include "logical_query_plan/sort_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/update_node.hpp" // NEEDEDINCLUDE
 
-using namespace opossum::expression_functional;  // NOLINT
-
 namespace opossum {
+
+using namespace opossum::expression_functional;  // NOLINT
 
 std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 

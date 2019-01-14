@@ -1,8 +1,7 @@
 #include "query_response_builder.hpp" // NEEDEDINCLUDE
 
+#include "operators/abstract_operator.hpp"
 #include "sql/sql_pipeline.hpp" // NEEDEDINCLUDE
-
-
 #include "then_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

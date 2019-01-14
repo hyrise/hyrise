@@ -1,9 +1,7 @@
 #include "server_session.hpp" // NEEDEDINCLUDE
 
-
-
-
 #include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_operator.hpp"
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "tasks/server/bind_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
 #include "tasks/server/create_pipeline_task.hpp" // NEEDEDINCLUDE

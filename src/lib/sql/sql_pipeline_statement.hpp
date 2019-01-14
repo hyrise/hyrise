@@ -1,11 +1,16 @@
 #pragma once
 
+#include <chrono>
 
 #include "SQLParserResult.h" // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
-#include "optimizer/optimizer.hpp" // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
+
+class OperatorTask;
+class Optimizer;
+class Table;
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {

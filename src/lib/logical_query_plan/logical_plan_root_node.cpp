@@ -1,7 +1,5 @@
 #include "logical_plan_root_node.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLQPNode(LQPNodeType::Root) {}

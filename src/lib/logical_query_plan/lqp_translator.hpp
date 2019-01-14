@@ -1,10 +1,12 @@
 #pragma once
 
-#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
 namespace opossum {
 
+class AbstractLQPNode;
 class AbstractOperator;
 class TransactionContext;
 class AbstractExpression;
@@ -12,6 +14,7 @@ class PredicateNode;
 class TableScan;
 struct OperatorScanPredicate;
 struct OperatorJoinPredicate;
+enum class LQPNodeType;
 
 /**
  * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
@@ -24,7 +27,7 @@ class LQPTranslator {
   virtual std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
  private:
-  std::shared_ptr<AbstractOperator> _translate_by_node_type(LQPNodeType type,
+  std::shared_ptr<AbstractOperator> _translate_by_node_type(const LQPNodeType& type,
                                                             const std::shared_ptr<AbstractLQPNode>& node) const;
 
   std::shared_ptr<AbstractOperator> _translate_stored_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
