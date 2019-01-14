@@ -50,7 +50,7 @@ class InReformulationRuleTest : public StrategyBaseTest {
   LQPColumnReference node_table_a_col_a, node_table_a_col_b, node_table_b_col_a, node_table_b_col_b;
 };
 
-TEST_F(InReformulationRuleTest, SimpleInToSemiJoin) {
+TEST_F(InReformulationRuleTest, UncorrelatedInToSemiJoin) {
   // SELECT * FROM a WHERE a.a IN (SELECT b.a FROM b)
   // clang-format off
   const auto subselect_lqp =
@@ -64,6 +64,28 @@ TEST_F(InReformulationRuleTest, SimpleInToSemiJoin) {
 
   const auto expected_lqp =
       JoinNode::make(JoinMode::Semi, equals_(node_table_a_col_a, node_table_b_col_a),
+                     node_table_a,
+                     ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b));
+  // clang-format on
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(InReformulationRuleTest, UncorrelatedInToAntiJoin) {
+  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b)
+  // clang-format off
+  const auto subselect_lqp =
+      ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b);
+
+  const auto subselect = lqp_select_(subselect_lqp);
+
+  const auto input_lqp =
+      PredicateNode::make(not_in_(node_table_a_col_a, subselect),
+                          node_table_a);
+
+  const auto expected_lqp =
+      JoinNode::make(JoinMode::Anti, equals_(node_table_a_col_a, node_table_b_col_a),
                      node_table_a,
                      ProjectionNode::make(expression_vector(node_table_b_col_a), node_table_b));
   // clang-format on
