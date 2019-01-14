@@ -5,15 +5,15 @@
 
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "benchmark/benchmark.h"
+#include "concurrency/transaction_context.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/validate.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
-#include "concurrency/transaction_context.hpp"
 
 namespace {
 
@@ -23,7 +23,7 @@ const size_t SCALE_FACTOR = 6;
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
-  for (int &i : clear) {
+  for (int& i : clear) {
     i += 1;
   }
   clear.resize(0);
@@ -64,9 +64,8 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
 }
 
 void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>& left,
-                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                                            const std::vector<JoinPredicate>& join_predicates) {
-
+                                  const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                                  const std::vector<JoinPredicate>& join_predicates) {
   const std::vector<JoinPredicate> additional_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
   // execute join for the first join predicate
@@ -75,17 +74,17 @@ void execute_multi_predicate_join(const std::shared_ptr<const AbstractOperator>&
       std::optional<std::vector<JoinPredicate>>(additional_predicates));
   latest_operator->execute();
 
-   // Print::print(left);
-   // Print::print(right);
-   // Print::print(latest_operator);
+  // Print::print(left);
+  // Print::print(right);
+  // Print::print(latest_operator);
 
-    // Print::print(latest_operator);
-    // std::cout << "Row count after " << index + 1 << " predicate: "
-    //           << latest_operator->get_output()->row_count() << std::endl;
+  // Print::print(latest_operator);
+  // std::cout << "Row count after " << index + 1 << " predicate: "
+  //           << latest_operator->get_output()->row_count() << std::endl;
 }
 
 void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, size_t fact_table_size,
-                                            size_t fact_factor, double probing_factor, bool with_scan) {
+                                  size_t fact_factor, double probing_factor, bool with_scan) {
   ColumnGenerator gen;
 
   const auto join_pair =
@@ -105,8 +104,8 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
 
   clear_cache();
 
-//  Print::print(table_wrapper_left);
-//  Print::print(table_wrapper_right);
+  //  Print::print(table_wrapper_left);
+  //  Print::print(table_wrapper_right);
 
   /*
   // validate needs a transaction context. This is taken from test/operators/validate_test.cpp:60
