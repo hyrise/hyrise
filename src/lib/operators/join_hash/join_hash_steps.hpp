@@ -350,6 +350,12 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   return radix_output;
 }
 
+
+inline AllTypeVariant _get_value(const Table& table, const RowID row_id, const ColumnID& column_id) {
+  const auto& segment = *table.get_chunk(row_id.chunk_id)->segments()[column_id];
+  return segment[row_id.chunk_offset];
+}
+
 inline bool _fulfills_join_predicates(const Table& left, const Table& right, const RowID left_row_id,
     const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
   if (join_predicates.empty()) {
@@ -360,10 +366,32 @@ inline bool _fulfills_join_predicates(const Table& left, const Table& right, con
     DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
                 "Only PredicateCondition::Equals is"
                 " supported.");
-    const auto& left_segment = *left.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
-    const auto& right_segment = *right.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
+    const auto left_value = _get_value(left, left_row_id, pred.column_id_pair.first);
+    const auto right_value = _get_value(right, right_row_id, pred.column_id_pair.second);
 
-    if (left_segment[left_row_id.chunk_offset] != right_segment[right_row_id.chunk_offset]) {
+    if (left_value != right_value) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+inline bool _fulfills_join_predicates(const Table& left, const std::vector<AllTypeVariant> right,
+                                      const RowID left_row_id, const std::vector<JoinPredicate>& join_predicates) {
+  if (join_predicates.empty()) {
+    return true;
+  }
+
+  for (size_t pred_idx = 0; pred_idx < join_predicates.size(); ++pred_idx) {
+    const auto& pred = join_predicates[pred_idx];
+    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
+                "Only PredicateCondition::Equals is"
+                " supported.");
+    const auto left_value = _get_value(left, left_row_id, pred.column_id_pair.first);
+    const auto& right_value = right[pred_idx];
+
+    if (left_value != right_value) {
       return false;
     }
   }
@@ -429,6 +457,12 @@ void probe(const RadixContainer<RightType>& radix_container,
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
+          std::vector<AllTypeVariant> selected_row_data(additional_join_predicates.size());
+
+          for (size_t pred_idx = 0; pred_idx < additional_join_predicates.size(); ++pred_idx) {
+            selected_row_data[pred_idx] = _get_value(right, row.row_id, additional_join_predicates[pred_idx].column_id_pair.second);
+          }
+
 
           if (mode == JoinMode::Inner && row.row_id == NULL_ROW_ID) {
             // From previous joins, we could potentially have NULL values that do not refer to
@@ -446,7 +480,7 @@ void probe(const RadixContainer<RightType>& radix_container,
             // we need to the check the NULL bit vector here because a NULL value (represented
             // as a zero) yields the same rows as an actual zero value.
             // For inner joins, we skip NULL values and output them for outer joins.
-            // Note, if the materialization/radix partitioning phase did not explicitely consider
+            // Note, if the materialization/radix partitioning phase did not explicitly consider
             // NULL values, they will not be handed to the probe function.
             if constexpr (consider_null_values) {
               if ((*radix_container.null_value_bitvector)[partition_offset]) {
@@ -464,7 +498,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 
               // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
 
-              if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
+              //if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
+              if (_fulfills_join_predicates(left, selected_row_data, row_id, additional_join_predicates)) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
               }
