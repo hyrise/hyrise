@@ -1,10 +1,10 @@
 #pragma once
 
-#include "storage/dictionary_segment/dictionary_segment_iterable.hpp" // NEEDEDINCLUDE
-#include "storage/frame_of_reference/frame_of_reference_iterable.hpp" // NEEDEDINCLUDE
-#include "storage/run_length_segment/run_length_segment_iterable.hpp" // NEEDEDINCLUDE
-#include "storage/value_segment/value_segment_iterable.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterables/any_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/dictionary_segment/dictionary_segment_iterable.hpp"  // NEEDEDINCLUDE
+#include "storage/frame_of_reference/frame_of_reference_iterable.hpp"  // NEEDEDINCLUDE
+#include "storage/run_length_segment/run_length_segment_iterable.hpp"  // NEEDEDINCLUDE
+#include "storage/segment_iterables/any_segment_iterable.hpp"          // NEEDEDINCLUDE
+#include "storage/value_segment/value_segment_iterable.hpp"            // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -30,45 +30,45 @@ class ReferenceSegmentIterable;
 template <typename T>
 auto create_iterable_from_segment(const ValueSegment<T>& segment) {
   if constexpr (HYRISE_DEBUG) {
-  	return create_any_segment_iterable<T>(segment);
+    return create_any_segment_iterable<T>(segment);
   } else {
-  	return ValueSegmentIterable<T>{segment};
+    return ValueSegmentIterable<T>{segment};
   }
 }
 
 template <typename T>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
   if constexpr (HYRISE_DEBUG) {
-  	return create_any_segment_iterable<T>(segment);
+    return create_any_segment_iterable<T>(segment);
   } else {
-  	return DictionarySegmentIterable<T, pmr_vector<T>>{segment};
+    return DictionarySegmentIterable<T, pmr_vector<T>>{segment};
   }
 }
 
 template <typename T>
 auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
   if constexpr (HYRISE_DEBUG) {
-  	return create_any_segment_iterable<T>(segment);
+    return create_any_segment_iterable<T>(segment);
   } else {
-  	return RunLengthSegmentIterable<T>{segment};
+    return RunLengthSegmentIterable<T>{segment};
   }
 }
 
 template <typename T>
 auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
   if constexpr (HYRISE_DEBUG) {
-  	return create_any_segment_iterable<T>(segment);
+    return create_any_segment_iterable<T>(segment);
   } else {
-  	return DictionarySegmentIterable<T, FixedStringVector>{segment};
+    return DictionarySegmentIterable<T, FixedStringVector>{segment};
   }
 }
 
 template <typename T>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
   if constexpr (HYRISE_DEBUG) {
-  	return create_any_segment_iterable<T>(segment);
+    return create_any_segment_iterable<T>(segment);
   } else {
-  	return FrameOfReferenceIterable<T>{segment};
+    return FrameOfReferenceIterable<T>{segment};
   }
 }
 
@@ -83,4 +83,4 @@ auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 }  // namespace opossum
 
-#include "create_iterable_from_segment.ipp" // NEEDEDINCLUDE
+#include "create_iterable_from_segment.ipp"  // NEEDEDINCLUDE
