@@ -20,11 +20,11 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
   void _on_with_iterators(const Functor& functor) const {
     auto decompressed_segment = _segment.decompress();
     // alias the data type of the constant iterator over the decompressed data
-    using ValueIteratorT = decltype(decompressed_segment.cbegin());
+    using ValueIteratorT = decltype(decompressed_segment->cbegin());
 
     // create iterator instances for the begin and end
-    auto begin = Iterator<ValueIteratorT>{decompressed_segment.cbegin()};
-    auto end = Iterator<ValueIteratorT>{decompressed_segment.cend()};
+    auto begin = Iterator<ValueIteratorT>{decompressed_segment->cbegin()};
+    auto end = Iterator<ValueIteratorT>{decompressed_segment->cend()};
 
     // call the functor on the iterators (until the begin iterator equals the end iterator)
     functor(begin, end);
@@ -35,12 +35,13 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
     // for now we also decompress the whole segment instead of having an actual point access
     auto decompressed_segment = _segment.decompress();
     // alias the data type of the constant iterator over the decompressed data
-    using ValueIteratorT = decltype(decompressed_segment.cbegin());
+    using ValueIteratorT = decltype(decompressed_segment->cbegin());
 
     // create point access iterator instances for the begin and end
-    auto begin = PointAccessIterator<ValueIteratorT>{decompressed_segment.cbegin(), position_filter->cbegin(),
+    auto begin = PointAccessIterator<ValueIteratorT>{decompressed_segment->cbegin(), position_filter->cbegin(),
                                                      position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIteratorT>{position_filter->cbegin(), position_filter->cend()};
+    auto end = PointAccessIterator<ValueIteratorT>{decompressed_segment->cend(), position_filter->cbegin(),
+                                                   position_filter->cend()};
 
     // call the functor on the iterators (until the begin iterator equals the end iterator)
     functor(begin, end);
@@ -97,10 +98,10 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
                                                              std::move(position_filter_it)},
         _data_it{data_it} {}
 
-    // End Iterator
-    explicit PointAccessIterator(const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
-        : PointAccessIterator{nullptr, std::move(position_filter_begin), std::move(position_filter_it)} {}
+//    // End Iterator
+//    explicit PointAccessIterator(const PosList::const_iterator position_filter_begin,
+//                                 PosList::const_iterator position_filter_it)
+//        : PointAccessIterator{nullptr, std::move(position_filter_begin), std::move(position_filter_it)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
