@@ -1,10 +1,11 @@
 #pragma once
 
-
-#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
 #include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class AbstractExpression;
+class AbstractOperator;
 
 class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractOperator>>> {
  public:

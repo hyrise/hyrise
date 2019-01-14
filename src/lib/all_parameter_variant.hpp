@@ -1,8 +1,10 @@
 #pragma once
 
+#include <boost/hana/pair.hpp>
+#include <boost/hana/type.hpp>
 
-#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_column_reference.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 
 namespace opossum {
 

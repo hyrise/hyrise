@@ -2,6 +2,7 @@
 
 #include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
 #include "expression/evaluation/expression_result.hpp"
+#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"

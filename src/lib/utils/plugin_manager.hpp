@@ -1,9 +1,12 @@
 #pragma once
 
+#include <string>
 
-#include "utils/abstract_plugin.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp"
 
 namespace opossum {
+
+class AbstractPlugin;
 
 using PluginHandle = void*;
 using PluginName = std::string;

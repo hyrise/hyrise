@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/preprocessor/stringize.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include <iostream> // NEEDEDINCLUDE
 #include <string> // NEEDEDINCLUDE
 
 #include "utils/string_utils.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
@@ -29,22 +28,14 @@ class PerformanceWarningDisabler;
 
 class PerformanceWarningClass {
  public:
-  explicit PerformanceWarningClass(const std::string& text) {
-    if (_disabled) return;
-    std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n"
-              << std::endl;
-  }
+  explicit PerformanceWarningClass(const std::string& text);
 
  protected:
   static bool _disabled;
 
-  static bool disable() {
-    bool previous = _disabled;
-    _disabled = true;
-    return previous;
-  }
+  static bool disable();
 
-  static void enable() { _disabled = false; }
+  static void enable();
 
   friend class PerformanceWarningDisabler;
 };

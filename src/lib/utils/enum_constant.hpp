@@ -1,8 +1,5 @@
 #pragma once
 
-#include <boost/hana/hash.hpp> // NEEDEDINCLUDE
-
-
 namespace opossum {
 
 /**

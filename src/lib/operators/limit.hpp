@@ -3,6 +3,8 @@
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+class AbstractExpression;
+
 // operator to limit the input to n rows
 class Limit : public AbstractReadOnlyOperator {
  public:

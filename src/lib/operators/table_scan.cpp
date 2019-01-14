@@ -2,6 +2,7 @@
 
 #include "expression/between_expression.hpp" // NEEDEDINCLUDE
 #include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/is_null_expression.hpp" // NEEDEDINCLUDE
 #include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE

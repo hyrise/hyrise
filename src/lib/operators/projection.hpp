@@ -3,6 +3,7 @@
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+class AbstractExpression;
 
 /**
  * Operator to evaluate Expressions (except for AggregateExpressions)

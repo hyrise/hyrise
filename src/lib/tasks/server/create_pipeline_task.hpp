@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "abstract_server_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

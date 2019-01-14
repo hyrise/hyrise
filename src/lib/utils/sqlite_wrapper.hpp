@@ -1,9 +1,9 @@
 #pragma once
 
-#include <sqlite3.h> // NEEDEDINCLUDE
-
-
 #include "storage/table.hpp" // NEEDEDINCLUDE
+
+class sqlite3_stmt;
+class sqlite3;
 
 namespace opossum {
 

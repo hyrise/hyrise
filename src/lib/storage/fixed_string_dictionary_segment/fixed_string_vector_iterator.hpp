@@ -1,6 +1,8 @@
 #pragma once
 
+#include <boost/iterator/iterator_facade.hpp>
 #include <string> // NEEDEDINCLUDE
+#include <string.h> // NEEDEDINCLUDE
 
 #include "fixed_string.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 

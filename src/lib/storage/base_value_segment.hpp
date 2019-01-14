@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_segment.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_concurrent_vector.hpp"
 
 namespace opossum {
 

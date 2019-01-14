@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "storage/chunk.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

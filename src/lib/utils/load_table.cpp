@@ -1,3 +1,4 @@
+#include "load_table.hpp"
 
 #include <fstream> // NEEDEDINCLUDE
 

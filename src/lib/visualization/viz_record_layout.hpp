@@ -1,7 +1,6 @@
 #pragma once
 
-
-#include "boost/variant.hpp" // NEEDEDINCLUDE
+#include <boost/variant.hpp> // NEEDEDINCLUDE
 
 namespace opossum {
 

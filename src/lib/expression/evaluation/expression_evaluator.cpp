@@ -14,6 +14,7 @@
 #include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
 #include "expression/case_expression.hpp" // NEEDEDINCLUDE
 #include "expression/cast_expression.hpp" // NEEDEDINCLUDE
+#include "expression/correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 #include "expression/evaluation/expression_result.hpp" // NEEDEDINCLUDE
 #include "expression/exists_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE

@@ -1,5 +1,7 @@
 #include "get_table.hpp" // NEEDEDINCLUDE
 
+#include <unordered_set>
+
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp"
 

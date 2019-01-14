@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic> // NEEDEDINCLUDE
+#include <boost/circular_buffer.hpp> // NEEDEDINCLUDE
 
 #include "types.hpp" // NEEDEDINCLUDE
 
@@ -38,7 +39,7 @@ struct ChunkAccessCounter {
  private:
   const size_t _capacity = 100;
   std::atomic<std::uint64_t> _counter{0};
-  pmr_ring_buffer<uint64_t> _history;
+  boost::circular_buffer<uint64_t, PolymorphicAllocator<uint64_t>> _history;
 };
 
 }  // namespace opossum

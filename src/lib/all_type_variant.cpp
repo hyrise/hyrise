@@ -1,8 +1,5 @@
 #include "all_type_variant.hpp" // NEEDEDINCLUDE
 
-
-
-
 namespace opossum {
 
 bool is_floating_point_data_type(const DataType data_type) {

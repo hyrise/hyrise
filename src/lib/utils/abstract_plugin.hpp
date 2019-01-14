@@ -1,8 +1,5 @@
 #pragma once
 
-#include <iostream> // NEEDEDINCLUDE
-
-
 namespace opossum {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid

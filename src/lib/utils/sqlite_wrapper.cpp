@@ -1,8 +1,8 @@
 #include "sqlite_wrapper.hpp" // NEEDEDINCLUDE
 
-
 #include <fstream> // NEEDEDINCLUDE
 #include <iomanip> // NEEDEDINCLUDE
+#include <sqlite3.h> // NEEDEDINCLUDE
 
 #include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
 

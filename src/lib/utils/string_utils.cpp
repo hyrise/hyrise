@@ -1,7 +1,7 @@
+#include "string_utils.hpp" // NEEDEDINCLUDE
+
 #include <boost/algorithm/string/split.hpp> // NEEDEDINCLUDE
 #include <boost/algorithm/string/trim_all.hpp> // NEEDEDINCLUDE
-
-#include "string_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

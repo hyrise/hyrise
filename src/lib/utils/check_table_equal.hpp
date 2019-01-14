@@ -1,8 +1,10 @@
 #pragma once
 
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include <memory>
 
 namespace opossum {
+
+class Table;
 
 /**
  * Indicates whether the comparison of two tables should happen order sensitive (Yes) or whether it should just be

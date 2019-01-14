@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "scheduler/abstract_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

@@ -1,5 +1,8 @@
 #include "commit_context.hpp" // NEEDEDINCLUDE
 
+#include <atomic>
+#include <memory>
+
 namespace opossum {
 
 CommitContext::CommitContext(const CommitID commit_id) : _commit_id{commit_id}, _pending{false} {}

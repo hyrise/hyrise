@@ -2,7 +2,6 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-
 #include "scheduler/abstract_task.hpp" // NEEDEDINCLUDE
 #include "storage/numa_placement_manager.hpp" // NEEDEDINCLUDE
 

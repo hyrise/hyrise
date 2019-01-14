@@ -5,6 +5,7 @@
 
 namespace opossum {
 
+class AbstractExpression;
 class Table;
 
 class TableScan : public AbstractReadOnlyOperator {

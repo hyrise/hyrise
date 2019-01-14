@@ -1,5 +1,6 @@
 #include "cost_model_logical.hpp" // NEEDEDINCLUDE
 
+#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE

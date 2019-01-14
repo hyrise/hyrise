@@ -4,6 +4,7 @@
 #include <queue> // NEEDEDINCLUDE
 #include <sstream> // NEEDEDINCLUDE
 
+#include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 #include "expression_functional.hpp" // NEEDEDINCLUDE
 #include "logical_expression.hpp" // NEEDEDINCLUDE
 #include "lqp_column_expression.hpp" // NEEDEDINCLUDE

@@ -1,10 +1,11 @@
 #pragma once
 
-
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"
 #include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class AbstractLQPNode;
 
 class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractLQPNode>>> {
  public:

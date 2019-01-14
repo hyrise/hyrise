@@ -1,10 +1,10 @@
 #pragma once
 
-
-#include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
 #include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+class AbstractLQPNode;
+class JoinGraph;
 
 class JoinGraphVisualizer : public AbstractVisualizer<std::vector<JoinGraph>> {
  public:

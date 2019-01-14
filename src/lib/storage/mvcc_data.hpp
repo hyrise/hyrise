@@ -4,6 +4,7 @@
 
 #include "types.hpp" // NEEDEDINCLUDE
 #include "utils/copyable_atomic.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_concurrent_vector.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

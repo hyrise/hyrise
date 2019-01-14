@@ -1,3 +1,5 @@
+#pragma once
+
 #include <atomic> // NEEDEDINCLUDE
 #include <condition_variable> // NEEDEDINCLUDE
 #include <functional> // NEEDEDINCLUDE

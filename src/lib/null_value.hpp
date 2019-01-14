@@ -1,10 +1,8 @@
 #pragma once
 
-#if !defined(BOOST_NO_IOSTREAM)
 #include <iosfwd>  // for std::basic_ostream forward declare // NEEDEDINCLUDE
-#include "boost/detail/templated_streams.hpp" // NEEDEDINCLUDE
-#endif  // BOOST_NO_IOSTREAM
 
+#include "boost/detail/templated_streams.hpp" // NEEDEDINCLUDE
 #include "boost/mpl/bool.hpp" // NEEDEDINCLUDE
 #include "boost/type_traits/is_stateless.hpp" // NEEDEDINCLUDE
 
