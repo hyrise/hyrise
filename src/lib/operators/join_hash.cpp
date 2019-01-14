@@ -301,13 +301,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     The workers for each radix partition P should be scheduled on the same node as the input data:
     leftP, rightP and hashtableP.
     */
+    const auto& join_pred_vector = _additional_join_predicates.has_value() ? _additional_join_predicates.value() : std::vector<JoinPredicate>{};
     if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
       probe_semi_anti<RightType, HashedType>(radix_right, hashtables, right_pos_lists, _mode);
     } else {
       if (_mode == JoinMode::Left || _mode == JoinMode::Right) {
-        probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+        probe<RightType, HashedType, true>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode, *left_in_table, *right_in_table, join_pred_vector);
       } else {
-        probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode);
+        probe<RightType, HashedType, false>(radix_right, hashtables, left_pos_lists, right_pos_lists, _mode, *left_in_table, *right_in_table, join_pred_vector);
       }
     }
 
@@ -362,10 +363,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
        * left and right contain the joined row ids of the left and right table.
        */
 
-      if (_additional_join_predicates.has_value()) {
+      /*if (_additional_join_predicates.has_value()) {
         _apply_additional_join_predicates(*left_in_table, *left, *right_in_table, *right,
                                           _additional_join_predicates.value());
-      }
+      }*/
 
       // using Segments = pmr_vector<std::shared_ptr<BaseSegment>>
       Segments output_segments;

@@ -350,6 +350,28 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   return radix_output;
 }
 
+inline bool _fulfills_join_predicates(const Table& left, const Table& right, const RowID left_row_id,
+    const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
+  if (join_predicates.empty()) {
+    return true;
+  }
+
+  for (const auto& pred : join_predicates) {
+    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
+                "Only PredicateCondition::Equals is"
+                " supported.");
+    const auto& left_segment = *left.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
+    const auto& right_segment = *right.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
+
+    if (left_segment[left_row_id.chunk_offset] != right_segment[right_row_id.chunk_offset]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
 /*
   In the probe phase we take all partitions from the right partition, iterate over them and compare each join candidate
   with the values in the hash table. Since Left and Right are hashed using the same hash function, we can reduce the
@@ -358,7 +380,10 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
-           std::vector<PosList>& pos_lists_right, const JoinMode mode) {
+           std::vector<PosList>& pos_lists_right, const JoinMode mode,
+           const Table& left,
+           const Table& right,
+           const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
 
@@ -436,8 +461,13 @@ void probe(const RadixContainer<RightType>& radix_container,
 
             // If NULL values are discarded, the matching row pairs will be written to the result pos lists.
             for (const auto& row_id : matching_rows) {
-              pos_list_left_local.emplace_back(row_id);
-              pos_list_right_local.emplace_back(row.row_id);
+
+              // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
+
+              if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
+                pos_list_left_local.emplace_back(row_id);
+                pos_list_right_local.emplace_back(row.row_id);
+              }
             }
           } else {
             // We have not found matching items. Only continue for non-equi join modes.
