@@ -17,10 +17,10 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class LRUCacheIterator : public AbstractIterator {
+  class Iterator : public AbstractIterator {
    public:
     using IteratorType = typename std::list<KeyValuePair>::iterator;
-    explicit LRUCacheIterator(IteratorType p) : _list_position(p) {}
+    explicit Iterator(IteratorType p) : _list_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
@@ -31,7 +31,7 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
     void increment() { ++_list_position; }
 
     bool equal(const AbstractIterator& other) const {
-      return _list_position == static_cast<const LRUCacheIterator&>(other)._list_position;
+      return _list_position == static_cast<const Iterator&>(other)._list_position;
     }
 
     KeyValuePair& dereference() const { return *_list_position; }
@@ -85,12 +85,12 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
   }
 
   ErasedIterator begin() {
-    auto it = std::make_unique<LRUCacheIterator>(_list.begin());
+    auto it = std::make_unique<Iterator>(_list.begin());
     return ErasedIterator(std::move(it));
   }
 
   ErasedIterator end() {
-    auto it = std::make_unique<LRUCacheIterator>(_list.end());
+    auto it = std::make_unique<Iterator>(_list.end());
     return ErasedIterator(std::move(it));
   }
 

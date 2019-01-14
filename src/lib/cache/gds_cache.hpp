@@ -27,17 +27,17 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     bool operator<(const GDSCacheEntry& other) const { return priority > other.priority; }
   };
 
-  typedef GDSCacheEntry entry_t;
-  typedef typename boost::heap::fibonacci_heap<entry_t>::handle_type handle_t;
+  using entry_t = GDSCacheEntry;
+  using handle_t = typename boost::heap::fibonacci_heap<entry_t>::handle_type;
 
   using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class GDSCacheIterator : public AbstractIterator {
+  class Iterator : public AbstractIterator {
    public:
     using IteratorType = typename std::unordered_map<Key, handle_t>::iterator;
-    explicit GDSCacheIterator(IteratorType p) : _map_position(p) {}
+    explicit Iterator(IteratorType p) : _map_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
@@ -49,7 +49,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     void increment() { ++_map_position; }
 
     bool equal(const AbstractIterator& other) const {
-      return _map_position == static_cast<const GDSCacheIterator&>(other)._map_position;
+      return _map_position == static_cast<const Iterator&>(other)._map_position;
     }
 
     KeyValuePair& dereference() const {
@@ -130,12 +130,12 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
   }
 
   ErasedIterator begin() {
-    auto it = std::make_unique<GDSCacheIterator>(_map.begin());
+    auto it = std::make_unique<Iterator>(_map.begin());
     return ErasedIterator(std::move(it));
   }
 
   ErasedIterator end() {
-    auto it = std::make_unique<GDSCacheIterator>(_map.end());
+    auto it = std::make_unique<Iterator>(_map.end());
     return ErasedIterator(std::move(it));
   }
 

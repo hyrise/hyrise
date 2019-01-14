@@ -10,7 +10,7 @@ namespace opossum {
 template <typename Key, typename Value>
 class AbstractCacheImpl {
  public:
-  typedef typename std::pair<Key, Value> KeyValuePair;
+  using KeyValuePair = typename std::pair<Key, Value>;
 
   struct AbstractIterator {
     virtual ~AbstractIterator() = default;

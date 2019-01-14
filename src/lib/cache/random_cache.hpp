@@ -19,10 +19,10 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
   using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 
-  class RandomCacheIterator : public AbstractIterator {
+  class Iterator : public AbstractIterator {
    public:
     using IteratorType = typename std::vector<KeyValuePair>::iterator;
-    explicit RandomCacheIterator(IteratorType p) : _vector_position(p) {}
+    explicit Iterator(IteratorType p) : _vector_position(p) {}
 
    private:
     friend class boost::iterator_core_access;
@@ -33,7 +33,7 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
     void increment() { ++_vector_position; }
 
     bool equal(const AbstractIterator& other) const {
-      return _vector_position == static_cast<const RandomCacheIterator&>(other)._vector_position;
+      return _vector_position == static_cast<const Iterator&>(other)._vector_position;
     }
 
     KeyValuePair& dereference() const { return *_vector_position; }
@@ -93,12 +93,12 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   }
 
   ErasedIterator begin() {
-    auto it = std::make_unique<RandomCacheIterator>(_list.begin());
+    auto it = std::make_unique<Iterator>(_list.begin());
     return ErasedIterator(std::move(it));
   }
 
   ErasedIterator end() {
-    auto it = std::make_unique<RandomCacheIterator>(_list.end());
+    auto it = std::make_unique<Iterator>(_list.end());
     return ErasedIterator(std::move(it));
   }
 
