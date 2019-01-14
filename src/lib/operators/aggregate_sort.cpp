@@ -24,8 +24,6 @@ namespace opossum {
 
     template<typename ColumnType, typename AggregateType, AggregateFunction function>
     void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
-        std::optional<AggregateType> current_aggregate_value;
-
         // initialize previous values with values in first row
         previous_values.reserve(_groupby_column_ids.size());
 
@@ -33,7 +31,11 @@ namespace opossum {
             previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
         }
 
+        std::optional<AggregateType> current_aggregate_value;
         uint64_t value_count = 0u;
+
+        std::unordered_set<ColumnType> unique_values;
+
         auto chunks = sorted_table->chunks();
         for (const auto& chunk : chunks) {
             size_t chunk_size = chunk->size();
@@ -47,17 +49,24 @@ namespace opossum {
                     current_values.emplace_back(current_value);
                 }
 
+                const auto new_value_uncasted = segments[*_aggregates[aggregate_index].column]->operator[](offset);
                 if (current_values == previous_values) {
-                    const ColumnType new_value = type_cast_variant<ColumnType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
+                    const ColumnType new_value = type_cast_variant<ColumnType>(new_value_uncasted);
                     //const AggregateType old_value = type_cast_variant<AggregateType>(current_aggregate_value);
                     aggregate_function(new_value, current_aggregate_value);
                     value_count++;
+                    if constexpr (function == AggregateFunction::CountDistinct) {
+                        unique_values.insert(new_value);
+                    }
                 } else {
                     if constexpr (function == AggregateFunction::Count) {
                         current_aggregate_value = value_count;
                     }
                     if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
                         current_aggregate_value = *current_aggregate_value / value_count;
+                    }
+                    if constexpr (function == AggregateFunction::CountDistinct) {
+                        current_aggregate_value = unique_values.size();
                     }
                     aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
                     if (aggregate_index == 0) {
@@ -67,8 +76,12 @@ namespace opossum {
                     }
 
                     previous_values = current_values;
-                    current_aggregate_value = type_cast_variant<AggregateType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
+                    current_aggregate_value = type_cast_variant<AggregateType>(new_value_uncasted);
                     value_count = 1u;
+                    if constexpr (function == AggregateFunction::CountDistinct) {
+                        const ColumnType new_value = type_cast_variant<ColumnType>(new_value_uncasted);
+                        unique_values = {new_value};
+                    }
                 }
 
             }
@@ -79,6 +92,9 @@ namespace opossum {
         if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
             current_aggregate_value = *current_aggregate_value / value_count;
         }
+        if constexpr (function == AggregateFunction::CountDistinct) {
+            current_aggregate_value = unique_values.size();
+        }
         aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
         if (aggregate_index == 0) {
             for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
@@ -86,6 +102,7 @@ namespace opossum {
             }
         }
     }
+
 
     std::shared_ptr<const Table> AggregateSort::_on_execute() {
         const auto input_table = input_table_left();
@@ -141,6 +158,39 @@ namespace opossum {
 
         std::vector<std::vector<AllTypeVariant>> aggregate_results(_aggregates.size());
         std::vector<std::vector<AllTypeVariant>> groupby_keys(_groupby_column_ids.size());
+
+        if(_aggregates.empty()){
+            std::vector<AllTypeVariant> previous_values;
+            previous_values.reserve(_groupby_column_ids.size());
+
+            for (const auto column_id : _groupby_column_ids) {
+                previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
+            }
+
+            auto chunks = sorted_table->chunks();
+            for (const auto& chunk : chunks) {
+                size_t chunk_size = chunk->size();
+                const auto segments = chunk->segments();
+                for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
+                    std::vector<AllTypeVariant> current_values;
+                    current_values.reserve(_groupby_column_ids.size());
+
+                    for (const auto column_id : _groupby_column_ids) {
+                        AllTypeVariant current_value = segments[column_id]->operator[](offset);
+                        current_values.emplace_back(current_value);
+                    }
+                    if (current_values != previous_values) {
+                        for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
+                                groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
+                        }
+                        previous_values = current_values;
+                    }
+                }
+            }
+            for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
+                groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
+            }
+        }
 
         uint64_t aggregate_index = 0;
         for (const auto& aggregate : _aggregates) {
