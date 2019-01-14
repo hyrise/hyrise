@@ -1,24 +1,19 @@
-#include "optimizer.hpp"
+#include "optimizer.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <unordered_set>
 
-#include "cost_model/cost_model_logical.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "optimizer/strategy/predicate_placement_rule.hpp"
-#include "strategy/chunk_pruning_rule.hpp"
-#include "strategy/column_pruning_rule.hpp"
-#include "strategy/constant_calculation_rule.hpp"
-#include "strategy/exists_reformulation_rule.hpp"
-#include "strategy/index_scan_rule.hpp"
-#include "strategy/join_detection_rule.hpp"
-#include "strategy/join_ordering_rule.hpp"
-#include "strategy/logical_reduction_rule.hpp"
-#include "strategy/predicate_reordering_rule.hpp"
-#include "utils/performance_warning.hpp"
+#include "cost_model/cost_model_logical.hpp" // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/logical_plan_root_node.hpp" // NEEDEDINCLUDE
+#include "optimizer/strategy/predicate_placement_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/chunk_pruning_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/column_pruning_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/constant_calculation_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/exists_reformulation_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/index_scan_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/join_ordering_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/logical_reduction_rule.hpp" // NEEDEDINCLUDE
+#include "strategy/predicate_reordering_rule.hpp" // NEEDEDINCLUDE
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS

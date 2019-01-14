@@ -1,8 +1,6 @@
-#include "pqp_column_expression.hpp"
+#include "pqp_column_expression.hpp" // NEEDEDINCLUDE
 
-#include "boost/functional/hash.hpp"
 
-#include "storage/table.hpp"
 
 namespace opossum {
 

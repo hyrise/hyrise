@@ -2,16 +2,14 @@
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wall"
-#include <btree_map.h>
+#include <btree_map.h> // NEEDEDINCLUDE
 #pragma clang diagnostic pop
 #elif __GNUC__
 #pragma GCC system_header
-#include <btree_map.h>
+#include <btree_map.h> // NEEDEDINCLUDE
 #endif
 
-#include "all_type_variant.hpp"
-#include "storage/base_segment.hpp"
-#include "types.hpp"
+#include "storage/base_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

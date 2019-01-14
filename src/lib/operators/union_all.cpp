@@ -1,11 +1,6 @@
-#include "union_all.hpp"
+#include "union_all.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,

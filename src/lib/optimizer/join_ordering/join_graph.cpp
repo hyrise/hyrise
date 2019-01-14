@@ -1,8 +1,6 @@
-#include "join_graph.hpp"
 
-#include "utils/assert.hpp"
 
-#include "join_graph_builder.hpp"
+#include "join_graph_builder.hpp" // NEEDEDINCLUDE
 
 namespace {
 

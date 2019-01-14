@@ -1,13 +1,9 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graphviz.hpp>
-#include <string>
-#include <unordered_map>
-#include <utility>
+#include <boost/algorithm/string.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include <boost/graph/graphviz.hpp> // NEEDEDINCLUDE
+#include <string> // NEEDEDINCLUDE
 
-#include "operators/print.hpp"
 
 namespace opossum {
 

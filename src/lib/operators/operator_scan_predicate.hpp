@@ -1,11 +1,8 @@
 #pragma once
 
-#include <optional>
 
-#include "all_parameter_variant.hpp"
-#include "all_type_variant.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

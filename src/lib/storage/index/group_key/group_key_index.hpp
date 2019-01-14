@@ -1,13 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <numeric>
-#include <utility>
-#include <vector>
 
-#include "storage/index/base_index.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "storage/index/base_index.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

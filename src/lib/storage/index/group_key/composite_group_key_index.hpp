@@ -1,13 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "storage/index/base_index.hpp"
-#include "types.hpp"
-#include "variable_length_key_store.hpp"
+#include "storage/index/base_index.hpp" // NEEDEDINCLUDE
+#include "variable_length_key_store.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

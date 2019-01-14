@@ -1,27 +1,14 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h>
-#include <boost/container/pmr/memory_resource.hpp>
 
 // the linter wants this to be above everything else
-#include <shared_mutex>
 
-#include <algorithm>
-#include <atomic>
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "index/segment_index_type.hpp"
+#include "index/segment_index_type.hpp" // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "chunk_access_counter.hpp"
-#include "mvcc_data.hpp"
-#include "table_column_definition.hpp"
-#include "types.hpp"
-#include "utils/copyable_atomic.hpp"
-#include "utils/scoped_locking_ptr.hpp"
+#include "chunk_access_counter.hpp" // NEEDEDINCLUDE
+#include "mvcc_data.hpp" // NEEDEDINCLUDE
+#include "utils/scoped_locking_ptr.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

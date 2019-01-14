@@ -1,16 +1,11 @@
 #pragma once
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/thread/future.hpp>
 
-#include <memory>
 
-#include "client_connection.hpp"
-#include "postgres_wire_handler.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "task_runner.hpp"
-#include "types.hpp"
+#include "client_connection.hpp" // NEEDEDINCLUDE
+#include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline.hpp" // NEEDEDINCLUDE
+#include "task_runner.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

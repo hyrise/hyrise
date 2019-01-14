@@ -1,14 +1,9 @@
 #pragma once
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include <boost/container/scoped_allocator.hpp>
-#include <unordered_set>
+#include <boost/container/pmr/monotonic_buffer_resource.hpp> // NEEDEDINCLUDE
 
-#include "base_column_statistics.hpp"
-#include "column_statistics.hpp"
-#include "resolve_type.hpp"
-#include "storage/segment_iterate.hpp"
-#include "storage/table.hpp"
+#include "column_statistics.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

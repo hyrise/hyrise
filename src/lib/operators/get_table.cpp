@@ -1,14 +1,7 @@
-#include "get_table.hpp"
+#include "get_table.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_set>
-#include <vector>
 
-#include "storage/storage_manager.hpp"
-#include "types.hpp"
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

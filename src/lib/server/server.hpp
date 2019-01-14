@@ -1,9 +1,7 @@
 #pragma once
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ip/tcp.hpp> // NEEDEDINCLUDE
 
-#include "server_session.hpp"
 
 namespace opossum {
 

@@ -1,17 +1,8 @@
 #pragma once
 
-#include <cstdint>
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "expression/abstract_expression.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

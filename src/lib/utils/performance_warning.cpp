@@ -1,4 +1,4 @@
-#include "performance_warning.hpp"
+#include "performance_warning.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

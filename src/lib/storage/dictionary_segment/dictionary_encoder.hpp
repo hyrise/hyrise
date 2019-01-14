@@ -1,19 +1,9 @@
 #pragma once
 
-#include <algorithm>
-#include <limits>
-#include <memory>
 
-#include "storage/base_segment_encoder.hpp"
+#include "storage/base_segment_encoder.hpp" // NEEDEDINCLUDE
 
-#include "storage/dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
 
-#include "storage/vector_compression/vector_compression.hpp"
-#include "types.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

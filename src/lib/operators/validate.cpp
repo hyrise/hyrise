@@ -1,13 +1,8 @@
-#include "validate.hpp"
+#include "validate.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "concurrency/transaction_context.hpp"
-#include "storage/reference_segment.hpp"
-#include "utils/assert.hpp"
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

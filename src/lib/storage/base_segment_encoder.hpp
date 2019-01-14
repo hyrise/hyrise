@@ -1,19 +1,9 @@
 #pragma once
 
-#include <boost/hana/type.hpp>
 
-#include <memory>
-#include <type_traits>
 
-#include "storage/base_encoded_segment.hpp"
-#include "storage/base_value_segment.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
 
-#include "all_type_variant.hpp"
-#include "resolve_type.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

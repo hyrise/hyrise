@@ -1,29 +1,26 @@
 #pragma once
 
-#include <memory>
 
-#include "abstract_expression.hpp"
-#include "aggregate_expression.hpp"
-#include "arithmetic_expression.hpp"
-#include "between_expression.hpp"
-#include "binary_predicate_expression.hpp"
-#include "case_expression.hpp"
-#include "cast_expression.hpp"
-#include "correlated_parameter_expression.hpp"
-#include "exists_expression.hpp"
-#include "extract_expression.hpp"
-#include "function_expression.hpp"
-#include "in_expression.hpp"
-#include "is_null_expression.hpp"
-#include "list_expression.hpp"
-#include "logical_expression.hpp"
-#include "lqp_column_expression.hpp"
-#include "lqp_select_expression.hpp"
-#include "placeholder_expression.hpp"
-#include "pqp_column_expression.hpp"
-#include "pqp_select_expression.hpp"
-#include "unary_minus_expression.hpp"
-#include "value_expression.hpp"
+#include "aggregate_expression.hpp" // NEEDEDINCLUDE
+#include "arithmetic_expression.hpp" // NEEDEDINCLUDE
+#include "between_expression.hpp" // NEEDEDINCLUDE
+#include "binary_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "case_expression.hpp" // NEEDEDINCLUDE
+#include "cast_expression.hpp" // NEEDEDINCLUDE
+#include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
+#include "exists_expression.hpp" // NEEDEDINCLUDE
+#include "extract_expression.hpp" // NEEDEDINCLUDE
+#include "in_expression.hpp" // NEEDEDINCLUDE
+#include "is_null_expression.hpp" // NEEDEDINCLUDE
+#include "list_expression.hpp" // NEEDEDINCLUDE
+#include "logical_expression.hpp" // NEEDEDINCLUDE
+#include "lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "lqp_select_expression.hpp" // NEEDEDINCLUDE
+#include "placeholder_expression.hpp" // NEEDEDINCLUDE
+#include "pqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "pqp_select_expression.hpp" // NEEDEDINCLUDE
+#include "unary_minus_expression.hpp" // NEEDEDINCLUDE
+#include "value_expression.hpp" // NEEDEDINCLUDE
 
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate.

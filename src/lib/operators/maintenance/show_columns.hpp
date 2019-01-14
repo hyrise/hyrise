@@ -1,10 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "operators/abstract_read_only_operator.hpp"
+#include "operators/abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

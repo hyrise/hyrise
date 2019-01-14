@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
 
-#include "abstract_lqp_node.hpp"
+#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

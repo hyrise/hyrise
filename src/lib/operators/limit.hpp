@@ -1,11 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "expression/abstract_expression.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 // operator to limit the input to n rows

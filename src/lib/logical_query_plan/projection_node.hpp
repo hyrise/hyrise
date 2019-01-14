@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vector>
 
-#include "abstract_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
+#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

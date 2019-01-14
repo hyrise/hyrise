@@ -1,16 +1,7 @@
 #pragma once
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "types.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

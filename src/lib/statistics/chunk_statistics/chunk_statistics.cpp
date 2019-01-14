@@ -1,6 +1,5 @@
-#include "chunk_statistics.hpp"
+#include "chunk_statistics.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

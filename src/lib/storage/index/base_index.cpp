@@ -1,12 +1,9 @@
-#include "base_index.hpp"
 
-#include <memory>
-#include <vector>
 
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp" // NEEDEDINCLUDE
+#include "storage/index/b_tree/b_tree_index.hpp" // NEEDEDINCLUDE
+#include "storage/index/group_key/composite_group_key_index.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/index/group_key/group_key_index.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

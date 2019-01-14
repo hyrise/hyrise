@@ -1,26 +1,11 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/container/scoped_allocator.hpp>
-#include <boost/functional/hash.hpp>
-#include <functional>
-#include <limits>
-#include <memory>
-#include <optional>
-#include <set>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
+#include <boost/container/scoped_allocator.hpp> // NEEDEDINCLUDE
 
-#include "abstract_read_only_operator.hpp"
-#include "expression/aggregate_expression.hpp"
-#include "resolve_type.hpp"
-#include "storage/abstract_segment_visitor.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "expression/aggregate_expression.hpp" // NEEDEDINCLUDE
+#include "storage/abstract_segment_visitor.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

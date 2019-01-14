@@ -1,9 +1,8 @@
 #pragma once
 
-#include <utility>
 
-#include "storage/segment_iterables.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
+#include "storage/segment_iterables.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,10 +1,9 @@
-#include "join_graph_visualizer.hpp"
+#include "join_graph_visualizer.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "viz_record_layout.hpp"
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
+#include "viz_record_layout.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

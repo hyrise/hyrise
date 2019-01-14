@@ -1,12 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_histogram.hpp"
-#include "types.hpp"
+#include "abstract_histogram.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

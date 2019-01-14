@@ -1,22 +1,9 @@
-#include "join_node.hpp"
 
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "constant_mappings.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "operators/operator_join_predicate.hpp"
-#include "statistics/table_statistics.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "constant_mappings.hpp" // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "operators/operator_join_predicate.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

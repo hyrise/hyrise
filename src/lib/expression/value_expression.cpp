@@ -1,9 +1,7 @@
-#include "value_expression.hpp"
+#include "value_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "boost/functional/hash.hpp"
-#include "resolve_type.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

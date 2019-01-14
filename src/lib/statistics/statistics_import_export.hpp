@@ -1,10 +1,9 @@
 #pragma once
 
-#include <iostream>
 
-#include "json.hpp"
+#include "json.hpp" // NEEDEDINCLUDE
 
-#include "table_statistics.hpp"
+#include "table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

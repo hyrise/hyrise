@@ -1,13 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
 
-#include "all_type_variant.hpp"
-#include "base_column_statistics.hpp"
-#include "resolve_type.hpp"
+#include "base_column_statistics.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

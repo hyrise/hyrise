@@ -1,11 +1,7 @@
-#include "drop_view.hpp"
+#include "drop_view.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "storage/storage_manager.hpp"
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

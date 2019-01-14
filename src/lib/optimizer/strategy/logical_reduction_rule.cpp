@@ -1,14 +1,9 @@
-#include "logical_reduction_rule.hpp"
+#include "logical_reduction_rule.hpp" // NEEDEDINCLUDE
 
-#include <functional>
-#include <unordered_set>
+#include <functional> // NEEDEDINCLUDE
 
-#include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
+#include "expression/expression_functional.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,4 +1,4 @@
-#include "segment_accessor.hpp"
+#include "segment_accessor.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

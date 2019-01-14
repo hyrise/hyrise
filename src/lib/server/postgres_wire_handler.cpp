@@ -1,11 +1,6 @@
-#include "postgres_wire_handler.hpp"
+#include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
 
-#include <iostream>
-#include <iterator>
 
-#include "sql/sql_pipeline.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 

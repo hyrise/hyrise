@@ -1,8 +1,7 @@
 #pragma once
 
-#include <memory>
 
-#include "storage/segment_iterables/base_segment_iterators.hpp"
+#include "storage/segment_iterables/base_segment_iterators.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

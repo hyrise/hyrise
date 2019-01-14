@@ -1,18 +1,18 @@
-#include "join_graph_builder.hpp"
+#include "join_graph_builder.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <numeric>
-#include <queue>
-#include <stack>
+#include <algorithm> // NEEDEDINCLUDE
+#include <numeric> // NEEDEDINCLUDE
+#include <queue> // NEEDEDINCLUDE
+#include <stack> // NEEDEDINCLUDE
 
-#include "expression/expression_functional.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/union_node.hpp"
-#include "utils/assert.hpp"
+#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
+#include "utils/assert.hpp" // NEEDEDINCLUDE
 
-#include "join_graph_edge.hpp"
+#include "join_graph_edge.hpp" // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

@@ -1,13 +1,5 @@
-#include <algorithm>
-#include <cstring>
-#include <map>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "column_materializer.hpp"
-#include "resolve_type.hpp"
+#include "column_materializer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

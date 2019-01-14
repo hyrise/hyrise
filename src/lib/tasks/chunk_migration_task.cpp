@@ -1,12 +1,9 @@
-#include "chunk_migration_task.hpp"
+#include "chunk_migration_task.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "scheduler/topology.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 #if HYRISE_NUMA_SUPPORT
 

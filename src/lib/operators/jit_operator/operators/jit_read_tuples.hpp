@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../jit_types.hpp"
-#include "abstract_jittable.hpp"
-#include "storage/chunk.hpp"
-#include "storage/table.hpp"
+#include "abstract_jittable.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

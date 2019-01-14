@@ -1,8 +1,6 @@
-#include "is_null_expression.hpp"
+#include "is_null_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

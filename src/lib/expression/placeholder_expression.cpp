@@ -1,12 +1,7 @@
-#include "placeholder_expression.hpp"
+#include "placeholder_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
-#include <string>
-#include <type_traits>
 
-#include "boost/functional/hash.hpp"
 
-#include "resolve_type.hpp"
 
 namespace opossum {
 

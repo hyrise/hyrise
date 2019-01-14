@@ -2,10 +2,9 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <chrono>
 
-#include "scheduler/abstract_task.hpp"
-#include "storage/numa_placement_manager.hpp"
+#include "scheduler/abstract_task.hpp" // NEEDEDINCLUDE
+#include "storage/numa_placement_manager.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

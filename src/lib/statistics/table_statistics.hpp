@@ -1,11 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 
-#include "all_parameter_variant.hpp"
-#include "all_type_variant.hpp"
-#include "types.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

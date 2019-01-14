@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <unordered_set>
 
-#include "table_statistics.hpp"
+#include "table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

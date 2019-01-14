@@ -1,9 +1,8 @@
 #pragma once
 
-#include "sql/SQLStatement.h"
 
-#include "server/client_connection.hpp"
-#include "storage/table.hpp"
+#include "server/client_connection.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,10 +1,7 @@
 #pragma once
 
-#include <optional>
 
-#include "resolve_type.hpp"
-#include "storage/base_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
+#include "storage/create_iterable_from_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

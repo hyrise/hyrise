@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_read_write_operator.hpp"
-#include "storage/pos_list.hpp"
-#include "utils/assert.hpp"
+#include "abstract_read_write_operator.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

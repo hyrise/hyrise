@@ -1,20 +1,10 @@
-#include "constant_mappings.hpp"
 
-#include <boost/bimap.hpp>
-#include <boost/hana/fold.hpp>
 
-#include <string>
-#include <unordered_map>
 
-#include "sql/Expr.h"
-#include "sql/SelectStatement.h"
 
-#include "expression/abstract_expression.hpp"
-#include "expression/aggregate_expression.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/table.hpp"
-#include "storage/vector_compression/vector_compression.hpp"
-#include "utils/make_bimap.hpp"
+#include "expression/aggregate_expression.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "utils/make_bimap.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

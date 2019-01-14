@@ -1,22 +1,9 @@
-#include "constant_calculation_rule.hpp"
+#include "constant_calculation_rule.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "constant_mappings.hpp"
-#include "expression/abstract_expression.hpp"
-#include "expression/abstract_predicate_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/value_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "resolve_type.hpp"
+#include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
+#include "expression/value_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

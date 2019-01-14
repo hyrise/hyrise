@@ -1,12 +1,8 @@
-#include "correlated_parameter_expression.hpp"
+#include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
-#include <string>
-#include <type_traits>
 
-#include "boost/functional/hash.hpp"
 
-#include "resolve_type.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,17 +1,14 @@
 #pragma once
 
-#include <string>
-#include <vector>
 
-#include "cqf16.hpp"
-#include "cqf2.hpp"
-#include "cqf32.hpp"
-#include "cqf4.hpp"
-#include "cqf8.hpp"
-#include "types.hpp"
+#include "cqf16.hpp" // NEEDEDINCLUDE
+#include "cqf2.hpp" // NEEDEDINCLUDE
+#include "cqf32.hpp" // NEEDEDINCLUDE
+#include "cqf4.hpp" // NEEDEDINCLUDE
+#include "cqf8.hpp" // NEEDEDINCLUDE
 
-#include "abstract_filter.hpp"
-#include "storage/base_segment.hpp"
+#include "abstract_filter.hpp" // NEEDEDINCLUDE
+#include "storage/base_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

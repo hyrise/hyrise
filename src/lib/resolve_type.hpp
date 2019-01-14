@@ -1,19 +1,9 @@
 #pragma once
 
-#include <boost/hana/contains.hpp>
-#include <boost/hana/equal.hpp>
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/size.hpp>
-#include <functional>
-#include <memory>
-#include <string>
-#include <utility>
+#include <boost/hana/for_each.hpp> // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/value_segment.hpp"
-#include "utils/assert.hpp"
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/resolve_encoded_segment_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

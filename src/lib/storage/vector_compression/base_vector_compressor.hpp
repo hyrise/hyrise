@@ -1,11 +1,8 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
 
-#include "vector_compression.hpp"
+#include "vector_compression.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
 
 namespace opossum {
 

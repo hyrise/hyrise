@@ -1,10 +1,7 @@
 #pragma once
 
-#include <algorithm>
-#include <atomic>
-#include <memory>
 
-#include "chunk.hpp"
+#include "chunk.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

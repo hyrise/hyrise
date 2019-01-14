@@ -1,12 +1,8 @@
 #pragma once
 
-#include <optional>
 
-#include "boost/variant.hpp"
 
-#include "abstract_expression.hpp"
-#include "resolve_type.hpp"
-#include "types.hpp"
+#include "abstract_expression.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

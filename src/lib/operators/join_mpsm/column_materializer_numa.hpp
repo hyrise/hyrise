@@ -1,17 +1,8 @@
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "scheduler/topology.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
-#include "types.hpp"
-#include "utils/numa_memory_resource.hpp"
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
+#include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

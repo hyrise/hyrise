@@ -1,12 +1,7 @@
-#include "operator_scan_predicate.hpp"
+#include "operator_scan_predicate.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "expression/abstract_predicate_expression.hpp"
-#include "expression/expression_functional.hpp"
-#include "expression/value_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/abstract_lqp_node.hpp" // NEEDEDINCLUDE
 
 namespace {
 

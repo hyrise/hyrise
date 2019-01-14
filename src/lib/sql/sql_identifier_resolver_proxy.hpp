@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 
-#include "expression/abstract_expression.hpp"
+#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,20 +1,14 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <queue>
-#include <set>
-#include <unordered_set>
+#include <queue> // NEEDEDINCLUDE
 
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/alias_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/limit_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/sort_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/update_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

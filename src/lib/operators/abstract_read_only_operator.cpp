@@ -1,8 +1,6 @@
-#include "abstract_read_only_operator.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
-#include <memory>
 
-#include "storage/table.hpp"
 
 namespace opossum {
 

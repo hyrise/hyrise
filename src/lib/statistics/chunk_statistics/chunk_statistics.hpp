@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <vector>
 
-#include "all_type_variant.hpp"
-#include "types.hpp"
 
-#include "segment_statistics.hpp"
+#include "segment_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

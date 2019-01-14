@@ -1,15 +1,8 @@
 #pragma once
 
-#include <limits>
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "statistics/chunk_statistics/abstract_filter.hpp"
-#include "storage/base_segment.hpp"
-#include "types.hpp"
+#include "statistics/chunk_statistics/abstract_filter.hpp" // NEEDEDINCLUDE
+#include "storage/base_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

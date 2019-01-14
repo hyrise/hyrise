@@ -1,17 +1,6 @@
-#include "table.hpp"
 
-#include <algorithm>
-#include <limits>
-#include <memory>
-#include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "resolve_type.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
-#include "value_segment.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,10 +1,6 @@
-#include "abstract_join_operator.hpp"
+#include "abstract_join_operator.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
 
-#include "constant_mappings.hpp"
 
 namespace opossum {
 

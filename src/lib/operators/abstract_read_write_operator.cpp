@@ -1,7 +1,5 @@
-#include "abstract_read_write_operator.hpp"
+#include "abstract_read_write_operator.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <vector>
 
 namespace opossum {
 

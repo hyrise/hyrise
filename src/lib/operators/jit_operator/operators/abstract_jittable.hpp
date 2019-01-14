@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vector>
 
-#include "operators/jit_operator/jit_types.hpp"
+#include "operators/jit_operator/jit_types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

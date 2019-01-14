@@ -1,23 +1,8 @@
-#include "join_mpsm.hpp"
+#include "join_mpsm.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <map>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
-#include "join_mpsm/radix_cluster_sort_numa.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "scheduler/topology.hpp"
-#include "storage/abstract_segment_visitor.hpp"
-#include "storage/dictionary_segment.hpp"
+#include "join_mpsm/radix_cluster_sort_numa.hpp" // NEEDEDINCLUDE
 
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
 
 // A cluster is a chunk of values which agree on their last bits
 STRONG_TYPEDEF(uint32_t, ClusterID);

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <unordered_map>
-#include <vector>
+#include <memory> // NEEDEDINCLUDE
+#include <vector> // NEEDEDINCLUDE
 
-#include "expression/abstract_expression.hpp"
-#include "sql_identifier.hpp"
+#include "sql_identifier.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

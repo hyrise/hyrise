@@ -1,4 +1,4 @@
-#include "expression_functional.hpp"
+#include "expression_functional.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
