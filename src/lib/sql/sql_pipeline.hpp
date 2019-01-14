@@ -1,11 +1,11 @@
 #pragma once
 
-
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "scheduler/operator_task.hpp" // NEEDEDINCLUDE
 #include "sql/sql_pipeline_statement.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class OperatorTask;
+class TransactionContext;
 
 // Holds relevant information about the execution of an SQLPipeline.
 struct SQLPipelineMetrics {

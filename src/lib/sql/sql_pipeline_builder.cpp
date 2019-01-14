@@ -1,3 +1,4 @@
+#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
 #include "sql_pipeline_builder.hpp" // NEEDEDINCLUDE
 #include "utils/tracing/probes.hpp" // NEEDEDINCLUDE
 #include "optimizer/optimizer.hpp"

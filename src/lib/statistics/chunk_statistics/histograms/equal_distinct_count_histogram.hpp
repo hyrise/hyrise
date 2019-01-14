@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "abstract_histogram.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

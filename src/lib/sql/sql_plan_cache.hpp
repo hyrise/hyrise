@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "cache/cache.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

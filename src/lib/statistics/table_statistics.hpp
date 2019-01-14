@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "all_parameter_variant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

@@ -1,7 +1,6 @@
 #include "sql_identifier_resolver.hpp" // NEEDEDINCLUDE
 
-#include "sql_identifier_resolver_proxy.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

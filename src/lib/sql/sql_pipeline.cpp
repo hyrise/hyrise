@@ -1,8 +1,8 @@
 #include "sql_pipeline.hpp" // NEEDEDINCLUDE
 
 #include <boost/algorithm/string.hpp> // NEEDEDINCLUDE // NEEDEDINCLUDE
-
-#include <algorithm> // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include <SQLParser.h> // NEEDEDINCLUDE
 
 #include "create_sql_parser_error_message.hpp" // NEEDEDINCLUDE
 #include "utils/format_duration.hpp" // NEEDEDINCLUDE

@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "cqf16.hpp" // NEEDEDINCLUDE
 #include "cqf2.hpp" // NEEDEDINCLUDE
 #include "cqf32.hpp" // NEEDEDINCLUDE
@@ -8,9 +7,10 @@
 #include "cqf8.hpp" // NEEDEDINCLUDE
 
 #include "abstract_filter.hpp" // NEEDEDINCLUDE
-#include "storage/base_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class BaseSegment;
 
 /* Counting Quotient Filters allow you to keep track of which values are present in a segment and how often. Filters
 work approximately. If a membership query yields a positive result, the value is probably present but there is

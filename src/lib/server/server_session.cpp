@@ -1,5 +1,6 @@
 #include "server_session.hpp" // NEEDEDINCLUDE
 
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 #include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
 #include "operators/abstract_operator.hpp"
 #include "postgres_wire_handler.hpp" // NEEDEDINCLUDE

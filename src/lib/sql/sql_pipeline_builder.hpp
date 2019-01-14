@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "sql_pipeline.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

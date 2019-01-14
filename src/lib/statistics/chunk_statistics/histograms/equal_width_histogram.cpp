@@ -1,7 +1,5 @@
 #include "equal_width_histogram.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 using namespace opossum::histogram;  // NOLINT

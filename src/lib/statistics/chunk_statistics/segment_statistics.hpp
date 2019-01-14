@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "abstract_filter.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

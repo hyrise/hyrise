@@ -1,27 +1,15 @@
 #include "sql_translator.hpp" // NEEDEDINCLUDE
 
-#include <algorithm> // NEEDEDINCLUDE
-#include <memory> // NEEDEDINCLUDE
-#include <optional> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
-#include <unordered_map> // NEEDEDINCLUDE
-#include <unordered_set> // NEEDEDINCLUDE
-#include <utility> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
-
-#include "constant_mappings.hpp" // NEEDEDINCLUDE
 #include "create_sql_parser_error_message.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/aggregate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/arithmetic_expression.hpp" // NEEDEDINCLUDE
 #include "expression/between_expression.hpp" // NEEDEDINCLUDE
+#include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
 #include "expression/case_expression.hpp" // NEEDEDINCLUDE
 #include "expression/cast_expression.hpp" // NEEDEDINCLUDE
 #include "expression/exists_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "expression/extract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/in_expression.hpp" // NEEDEDINCLUDE
 #include "expression/is_null_expression.hpp" // NEEDEDINCLUDE
 #include "expression/list_expression.hpp" // NEEDEDINCLUDE
@@ -54,6 +42,9 @@
 #include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/update_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/validate_node.hpp" // NEEDEDINCLUDE
+#include "parameter_id_allocator.hpp"
+#include "sql_identifier_resolver.hpp"
+#include "sql_identifier_resolver_proxy.hpp"
 #include "storage/lqp_view.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp" // NEEDEDINCLUDE

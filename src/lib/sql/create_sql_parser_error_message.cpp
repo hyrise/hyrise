@@ -1,5 +1,5 @@
 #include "create_sql_parser_error_message.hpp" // NEEDEDINCLUDE
-
+#include <SQLParser.h> // NEEDEDINCLUDE
 
 #include "boost/algorithm/string/classification.hpp" // NEEDEDINCLUDE
 #include "boost/algorithm/string/split.hpp" // NEEDEDINCLUDE

@@ -1,10 +1,13 @@
 #pragma once
 
+#include <memory>
+#include <vector>
 
-
-#include "segment_statistics.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 
 namespace opossum {
+
+class SegmentStatistics;
 
 /**
  * Container class that holds objects with statistical information about a chunk.

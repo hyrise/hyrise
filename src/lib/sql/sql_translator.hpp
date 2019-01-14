@@ -1,17 +1,18 @@
 #pragma once
 
-
 #include "SQLParser.h" // NEEDEDINCLUDE
 
-#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
-#include "parameter_id_allocator.hpp" // NEEDEDINCLUDE
-#include "sql_identifier_resolver.hpp" // NEEDEDINCLUDE
-#include "sql_identifier_resolver_proxy.hpp" // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 
+class AbstractExpression;
+class AbstractLQPNode;
 class AggregateNode;
 class LQPSelectExpression;
+class ParameterIDAllocator;
+class SQLIdentifierResolver;
+class SQLIdentifierResolverProxy;
 
 /**
  * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.

@@ -1,8 +1,7 @@
 #include "histogram_utils.hpp" // NEEDEDINCLUDE
 
-#include <cmath> // NEEDEDINCLUDE
-
 #include <algorithm> // NEEDEDINCLUDE
+#include <cmath> // NEEDEDINCLUDE
 #include <limits> // NEEDEDINCLUDE
 #include <string> // NEEDEDINCLUDE
 #include <utility> // NEEDEDINCLUDE

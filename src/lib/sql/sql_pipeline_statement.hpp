@@ -2,15 +2,21 @@
 
 #include <chrono>
 
-#include "SQLParserResult.h" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
 #include "types.hpp"
+
+namespace hsql {
+  class SQLParserResult;
+}
 
 namespace opossum {
 
+class AbstractLQPNode;
+class AbstractOperator;
+class LQPTranslator;
 class OperatorTask;
 class Optimizer;
 class Table;
+class TransactionContext;
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {

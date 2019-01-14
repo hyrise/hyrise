@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

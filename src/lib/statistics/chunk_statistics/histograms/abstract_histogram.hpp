@@ -1,10 +1,10 @@
 #pragma once
 
-
 #include "statistics/chunk_statistics/abstract_filter.hpp" // NEEDEDINCLUDE
-#include "storage/base_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class BaseSegment;
 
 using BinID = size_t;
 constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};

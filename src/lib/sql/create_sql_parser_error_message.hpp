@@ -1,7 +1,10 @@
 #pragma once
 
+#include <string>
 
-#include "SQLParser.h" // NEEDEDINCLUDE
+namespace hsql {
+	class SQLParserResult;
+}
 
 namespace opossum {
 
