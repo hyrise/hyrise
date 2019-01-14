@@ -1,8 +1,7 @@
 #pragma once
 
-
-
 #include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
+#include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
 

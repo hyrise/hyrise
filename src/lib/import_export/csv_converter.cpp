@@ -1,6 +1,5 @@
 #include "csv_converter.hpp" // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {

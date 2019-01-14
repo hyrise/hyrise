@@ -1,6 +1,5 @@
 #include "pqp_select_expression.hpp" // NEEDEDINCLUDE
 
-
 #include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

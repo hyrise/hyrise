@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_non_query_node.hpp" // NEEDEDINCLUDE
+#include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
 

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "abstract_expression.hpp"
-#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class Table;
 
 /**
  * Wraps a ColumnID and its associated data_type/nullability/column_name

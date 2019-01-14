@@ -3,13 +3,12 @@
 #include <array>
 #include <unordered_map>
 
-#include "enable_make_for_lqp_node.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_expression.hpp"
 #include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
 class AbstractExpression;
+class AbstractLQPNode;
 class TableStatistics;
 
 enum class LQPNodeType {

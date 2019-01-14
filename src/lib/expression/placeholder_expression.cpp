@@ -1,6 +1,6 @@
 #include "placeholder_expression.hpp" // NEEDEDINCLUDE
 
-#include "boost/functional/hash.hpp" // NEEDEDINCLUDE
+#include <boost/functional/hash.hpp> // NEEDEDINCLUDE
 #include <sstream>
 
 namespace opossum {

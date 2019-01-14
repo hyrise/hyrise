@@ -1,8 +1,9 @@
 #pragma once
 
+#include <string>
 
-#include "json.hpp" // NEEDEDINCLUDE
-#include "storage/chunk.hpp" // NEEDEDINCLUDE
+#include "json.hpp" // NEEDEDINCLUDE  // TODO <>?
+#include "types.hpp"
 
 namespace opossum {
 

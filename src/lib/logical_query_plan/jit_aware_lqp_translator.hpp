@@ -1,5 +1,6 @@
 #pragma once
 
+#include "enable_make_for_lqp_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
 
 #if HYRISE_JIT_SUPPORT

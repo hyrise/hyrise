@@ -1,10 +1,11 @@
 #pragma once
 
-
 #include "base_non_query_node.hpp" // NEEDEDINCLUDE
-#include "storage/lqp_view.hpp" // NEEDEDINCLUDE
+#include "enable_make_for_lqp_node.hpp"
 
 namespace opossum {
+
+class LQPView;
 
 /**
  * This node type represents the CREATE VIEW management command.

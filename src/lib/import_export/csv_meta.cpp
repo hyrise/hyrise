@@ -2,7 +2,6 @@
 
 #include <fstream> // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 CsvMeta process_csv_meta_file(const std::string& filename) {

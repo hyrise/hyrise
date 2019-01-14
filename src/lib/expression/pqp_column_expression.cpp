@@ -1,6 +1,6 @@
 #include "pqp_column_expression.hpp" // NEEDEDINCLUDE
 
-
+#include "storage/table.hpp"
 
 namespace opossum {
 

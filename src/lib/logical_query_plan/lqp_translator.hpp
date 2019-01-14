@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
 #include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
 

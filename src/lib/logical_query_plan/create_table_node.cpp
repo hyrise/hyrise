@@ -1,7 +1,5 @@
 #include "create_table_node.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 CreateTableNode::CreateTableNode(const std::string& table_name, const TableColumnDefinitions& column_definitions)

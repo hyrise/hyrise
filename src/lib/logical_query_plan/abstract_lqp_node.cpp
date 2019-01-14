@@ -6,11 +6,7 @@
 #include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "join_node.hpp" // NEEDEDINCLUDE
 #include "lqp_utils.hpp" // NEEDEDINCLUDE
-#include "predicate_node.hpp" // NEEDEDINCLUDE
-#include "update_node.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
 #include "utils/print_directed_acyclic_graph.hpp" // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT

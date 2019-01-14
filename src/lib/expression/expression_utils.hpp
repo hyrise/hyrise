@@ -4,7 +4,6 @@
 
 #include "all_type_variant.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-// TODO continue here
 
 namespace opossum {
 

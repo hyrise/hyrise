@@ -1,7 +1,5 @@
 #include "dummy_table_node.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}

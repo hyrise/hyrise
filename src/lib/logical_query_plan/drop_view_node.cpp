@@ -1,12 +1,5 @@
 #include "drop_view_node.hpp" // NEEDEDINCLUDE
 
-#include <algorithm> // NEEDEDINCLUDE
-#include <memory> // NEEDEDINCLUDE
-#include <sstream> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
-
-#include "utils/assert.hpp" // NEEDEDINCLUDE
-
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
