@@ -47,11 +47,7 @@ int main(int argc, char* argv[]) {
     // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
-    // Display usage and quit
-    if (cli_parse_result.count("help")) {
-      std::cout << CLIConfigParser::detailed_help(cli_options) << std::endl;
-      return 0;
-    }
+    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
     query_path = cli_parse_result["query_path"].as<std::string>();
     table_path = cli_parse_result["table_path"].as<std::string>();
@@ -67,14 +63,14 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  benchmark_config->out << "- Benchmarking queries from " << query_path << std::endl;
-  benchmark_config->out << "- Running on tables from " << table_path << std::endl;
+  std::cout << "- Benchmarking queries from " << query_path << std::endl;
+  std::cout << "- Running on tables from " << table_path << std::endl;
 
   std::optional<std::unordered_set<std::string>> query_subset;
   if (queries_str == "all") {
-    benchmark_config->out << "- Running all queries from specified path" << std::endl;
+    std::cout << "- Running all queries from specified path" << std::endl;
   } else {
-    benchmark_config->out << "- Running subset of queries: " << queries_str << std::endl;
+    std::cout << "- Running subset of queries: " << queries_str << std::endl;
 
     // "a, b, c, d" -> ["a", " b", " c", " d"]
     auto query_subset_untrimmed = std::vector<std::string>{};

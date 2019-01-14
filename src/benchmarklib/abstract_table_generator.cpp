@@ -15,19 +15,19 @@ AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkCo
 void AbstractTableGenerator::generate_and_store() {
   Timer timer;
 
-  _benchmark_config->out << "- Loading/Generating tables " << std::flush;
+  std::cout << "- Loading/Generating tables " << std::flush;
   auto table_info_by_name = generate();
-  _benchmark_config->out << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
-                         << ")" << std::endl;
+  std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
+            << std::endl;
 
-  _benchmark_config->out << "- Encoding tables " << std::flush;
+  std::cout << "- Encoding tables " << std::flush;
 
   /**
    * Encode the Tables
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
-    table_info.re_encoded = BenchmarkTableEncoder::encode(table_name, table_info.table,
-                                                          _benchmark_config->encoding_config, _benchmark_config->out);
+    table_info.re_encoded =
+        BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
   }
 
   /**
@@ -47,27 +47,26 @@ void AbstractTableGenerator::generate_and_store() {
         binary_file_path.replace_extension(".bin");
       }
 
-      _benchmark_config->out << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'"
-                             << std::endl;
+      std::cout << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "'" << std::endl;
       ExportBinary::write_binary(*table_info.table, binary_file_path);
     }
   }
 
-  _benchmark_config->out << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
-                         << ")" << std::endl;
+  std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
+            << std::endl;
 
   /**
    * Add the Tables to the StorageManager
    */
-  _benchmark_config->out << "- Adding Tables to StorageManager and generating statistics " << std::flush;
+  std::cout << "- Adding Tables to StorageManager and generating statistics " << std::flush;
   auto& storage_manager = StorageManager::get();
   for (auto& [table_name, table_info] : table_info_by_name) {
     if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
     storage_manager.add_table(table_name, table_info.table);
   }
 
-  _benchmark_config->out << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
-                         << ")" << std::endl;
+  std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
+            << std::endl;
 }
 
 }  // namespace opossum
