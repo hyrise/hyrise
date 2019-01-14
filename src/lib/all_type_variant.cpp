@@ -1,5 +1,7 @@
 #include "all_type_variant.hpp" // NEEDEDINCLUDE
 
+#include <boost/functional/hash/hash.hpp>
+
 namespace opossum {
 
 bool is_floating_point_data_type(const DataType data_type) {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <vector> // NEEDEDINCLUDE
 
 #include "storage/encoding_type.hpp" // NEEDEDINCLUDE

@@ -1,6 +1,7 @@
 #include "join_graph_builder.hpp" // NEEDEDINCLUDE
 
 #include <algorithm> // NEEDEDINCLUDE
+#include <map>
 #include <numeric> // NEEDEDINCLUDE
 #include <queue> // NEEDEDINCLUDE
 #include <stack> // NEEDEDINCLUDE

@@ -1,5 +1,7 @@
 #include "viz_record_layout.hpp" // NEEDEDINCLUDE
 
+#include <sstream>
+
 namespace opossum {
 
 VizRecordLayout& VizRecordLayout::add_label(const std::string& label) {

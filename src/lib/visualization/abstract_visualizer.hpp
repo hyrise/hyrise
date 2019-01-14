@@ -4,6 +4,7 @@
 #include <boost/graph/graphviz.hpp> // NEEDEDINCLUDE
 #include <string> // NEEDEDINCLUDE
 
+#include "utils/assert.hpp"
 
 namespace opossum {
 

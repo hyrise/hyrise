@@ -2,6 +2,7 @@
 
 #include "storage/base_segment_accessor.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp"
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 
