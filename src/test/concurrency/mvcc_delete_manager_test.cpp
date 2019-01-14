@@ -26,27 +26,31 @@ public:
       _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
     }
 
-    void SetUp() override { }
+    void SetUp() override { } // managed by each test individually
 
     void TearDown() override { StorageManager::reset(); }
 
     void _incrementAllValuesByOne() {
-      auto get_table = std::make_shared<GetTable>(_table_name);
-      get_table->execute();
-
-      // Validate
       auto transaction_context = TransactionManager::get().new_transaction_context();
+      // GetTable
+      auto get_table = std::make_shared<GetTable>(_table_name);
+      get_table->set_transaction_context(transaction_context);
+      get_table->execute();
+      std::cout << "get_table done" << std::endl;
+      // Validate
       auto validate_table = std::make_shared<Validate>(get_table);
       validate_table->set_transaction_context(transaction_context);
       validate_table->execute();
-
+      std::cout << "validate_table done" << std::endl;
       // Update
       auto update_expressions = expression_vector(add_(_column_a, 1));
       auto updated_values_projection = std::make_shared<Projection>(validate_table, update_expressions);
       updated_values_projection->execute();
+      std::cout << "updated_values_projection done" << std::endl;
       auto update_table = std::make_shared<Update>(_table_name, validate_table, updated_values_projection);
       update_table->set_transaction_context(transaction_context);
       update_table->execute();
+      std::cout << "update_table done" << std::endl;
 
       transaction_context->commit();
     }
@@ -62,12 +66,18 @@ TEST_F(MvccDeleteManagerTest, LogicalDelete) {
 
   // Prepare
   auto& sm = StorageManager::get();
+  std::cout << "load_table" << std::endl;
   const auto table = load_table("src/test/tables/int3.tbl", chunk_size);
+  std::cout << "load_table done" << std::endl;
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(),3); // 1, 2, 3
+  std::cout << "add load_table" << std::endl;
   sm.add_table(_table_name, table);
+  std::cout << "add load_table done" << std::endl;
 
-  //_incrementAllValuesByOne();
+  std::cout << "increment alle values" << std::endl;
+  _incrementAllValuesByOne();
+  std::cout << "increment alle values done" << std::endl;
 
   EXPECT_EQ(sm.get_table(_table_name)->chunk_count(), 2);
   EXPECT_EQ(sm.get_table(_table_name)->row_count(),6); // _, _, _, 2, 3 | 4
