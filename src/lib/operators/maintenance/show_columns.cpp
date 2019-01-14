@@ -1,18 +1,10 @@
-#include "show_columns.hpp"
+#include "show_columns.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "tbb/concurrent_vector.h"
 
-#include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
-#include "storage/value_segment.hpp"
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
 
 namespace opossum {
 

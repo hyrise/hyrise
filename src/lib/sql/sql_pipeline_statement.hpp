@@ -1,13 +1,9 @@
 #pragma once
 
-#include <string>
 
-#include "SQLParserResult.h"
-#include "cache/cache.hpp"
-#include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
-#include "optimizer/optimizer.hpp"
-#include "storage/table.hpp"
+#include "SQLParserResult.h" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
+#include "optimizer/optimizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

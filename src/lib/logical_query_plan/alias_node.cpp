@@ -1,9 +1,7 @@
-#include "alias_node.hpp"
+#include "alias_node.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "boost/algorithm/string/join.hpp"
-#include "expression/expression_utils.hpp"
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

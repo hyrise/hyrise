@@ -1,27 +1,14 @@
-#include "aggregate.hpp"
+#include "aggregate.hpp" // NEEDEDINCLUDE
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <boost/container/pmr/monotonic_buffer_resource.hpp> // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
-#include "aggregate/aggregate_traits.hpp"
-#include "constant_mappings.hpp"
-#include "resolve_type.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
-#include "utils/aligned_size.hpp"
-#include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+#include "aggregate/aggregate_traits.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "type_comparison.hpp" // NEEDEDINCLUDE
+#include "utils/aligned_size.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

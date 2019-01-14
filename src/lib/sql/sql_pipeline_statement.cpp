@@ -1,22 +1,13 @@
-#include "sql_pipeline_statement.hpp"
 
-#include <boost/algorithm/string.hpp>
 
-#include <iomanip>
-#include <utility>
 
-#include "SQLParser.h"
-#include "concurrency/transaction_manager.hpp"
-#include "create_sql_parser_error_message.hpp"
-#include "expression/value_expression.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "optimizer/optimizer.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_plan_cache.hpp"
-#include "sql/sql_translator.hpp"
-#include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
+#include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
+#include "create_sql_parser_error_message.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
+#include "sql/sql_plan_cache.hpp" // NEEDEDINCLUDE
+#include "sql/sql_translator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

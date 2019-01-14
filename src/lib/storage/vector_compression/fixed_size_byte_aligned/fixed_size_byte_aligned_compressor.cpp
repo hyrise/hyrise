@@ -1,4 +1,4 @@
-#include "fixed_size_byte_aligned_compressor.hpp"
+#include "fixed_size_byte_aligned_compressor.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

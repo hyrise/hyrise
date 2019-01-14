@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <utility>
 
-#include "expression/abstract_expression.hpp"
-#include "operators/abstract_operator.hpp"
-#include "visualization/abstract_visualizer.hpp"
+#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
+#include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

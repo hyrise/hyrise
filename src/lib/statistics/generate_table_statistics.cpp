@@ -1,13 +1,8 @@
-#include "generate_table_statistics.hpp"
 
-#include <unordered_set>
 
-#include "base_column_statistics.hpp"
-#include "column_statistics.hpp"
-#include "generate_column_statistics.hpp"
-#include "resolve_type.hpp"
-#include "storage/table.hpp"
-#include "table_statistics.hpp"
+#include "column_statistics.hpp" // NEEDEDINCLUDE
+#include "generate_column_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

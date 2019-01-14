@@ -1,13 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <vector>
 
-#include "all_parameter_variant.hpp"
-#include "operator_performance_data.hpp"
-#include "types.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
+#include "operator_performance_data.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

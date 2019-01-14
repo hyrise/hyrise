@@ -1,13 +1,6 @@
-#include "equal_width_histogram.hpp"
+#include "equal_width_histogram.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "histogram_utils.hpp"
 
 namespace opossum {
 

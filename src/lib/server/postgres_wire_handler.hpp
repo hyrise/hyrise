@@ -1,14 +1,9 @@
 #pragma once
 
-#include <arpa/inet.h>
-#include <algorithm>
-#include <string>
-#include <vector>
+#include <arpa/inet.h> // NEEDEDINCLUDE
 
-#include "SQLParserResult.h"
-#include "all_parameter_variant.hpp"
-#include "sql/sql_pipeline_statement.hpp"
-#include "types.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

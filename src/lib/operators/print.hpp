@@ -1,11 +1,7 @@
 #pragma once
 
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };

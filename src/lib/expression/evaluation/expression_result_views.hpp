@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vector>
-#include "utils/assert.hpp"
+#include <vector> // NEEDEDINCLUDE
 
 namespace opossum {
 

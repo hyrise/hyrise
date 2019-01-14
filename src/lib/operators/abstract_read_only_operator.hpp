@@ -1,9 +1,8 @@
 #pragma once
 
-#include <memory>
 
-#include "operators/abstract_operator.hpp"
-#include "storage/table.hpp"
+#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

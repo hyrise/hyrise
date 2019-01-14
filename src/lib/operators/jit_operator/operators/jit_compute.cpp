@@ -1,4 +1,4 @@
-#include "jit_compute.hpp"
+#include "jit_compute.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

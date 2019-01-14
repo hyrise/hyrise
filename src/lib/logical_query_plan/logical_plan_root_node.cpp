@@ -1,8 +1,6 @@
-#include "logical_plan_root_node.hpp"
+#include "logical_plan_root_node.hpp" // NEEDEDINCLUDE
 
-#include <string>
 
-#include "abstract_lqp_node.hpp"
 
 namespace opossum {
 

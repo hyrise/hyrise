@@ -1,19 +1,7 @@
-#include <algorithm>
-#include <iterator>
-#include <limits>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_segment.hpp"
-#include "chunk.hpp"
-#include "index/base_index.hpp"
-#include "reference_segment.hpp"
-#include "resolve_type.hpp"
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
-#include "utils/assert.hpp"
+#include "index/base_index.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/chunk_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,27 +1,11 @@
-#include "csv_parser.hpp"
+#include "csv_parser.hpp" // NEEDEDINCLUDE
 
-#include <boost/algorithm/string/trim.hpp>
-#include <fstream>
-#include <functional>
-#include <list>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
+#include <fstream> // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "import_export/csv_converter.hpp"
-#include "import_export/csv_meta.hpp"
-#include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
-#include "storage/table.hpp"
-#include "utils/assert.hpp"
-#include "utils/load_table.hpp"
+#include "import_export/csv_converter.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

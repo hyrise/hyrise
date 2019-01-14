@@ -1,9 +1,8 @@
 #pragma once
 
-#include <memory>
 
-#include "optimizer/join_ordering/join_graph.hpp"
-#include "visualization/abstract_visualizer.hpp"
+#include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
+#include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

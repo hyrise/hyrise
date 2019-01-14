@@ -1,19 +1,8 @@
-#include "aggregate_node.hpp"
 
-#include <algorithm>
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
-#include <vector>
 
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
-#include "statistics/table_statistics.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

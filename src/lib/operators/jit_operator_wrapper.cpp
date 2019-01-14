@@ -1,7 +1,7 @@
-#include "jit_operator_wrapper.hpp"
+#include "jit_operator_wrapper.hpp" // NEEDEDINCLUDE
 
-#include "operators/jit_operator/operators/jit_aggregate.hpp"
-#include "operators/jit_operator/operators/jit_validate.hpp"
+#include "operators/jit_operator/operators/jit_aggregate.hpp" // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_validate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

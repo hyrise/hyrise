@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string>
 
-#include "types.hpp"
 
-#include "sql_pipeline.hpp"
-#include "sql_pipeline_statement.hpp"
+#include "sql_pipeline.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

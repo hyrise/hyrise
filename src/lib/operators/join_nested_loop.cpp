@@ -1,21 +1,9 @@
-#include "join_nested_loop.hpp"
+#include "join_nested_loop.hpp" // NEEDEDINCLUDE
 
-#include <map>
-#include <memory>
-#include <numeric>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterables/any_segment_iterable.hpp"
-#include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
-#include "utils/assert.hpp"
-#include "utils/ignore_unused_variable.hpp"
-#include "utils/performance_warning.hpp"
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "type_comparison.hpp" // NEEDEDINCLUDE
+#include "utils/ignore_unused_variable.hpp" // NEEDEDINCLUDE
 
 namespace {
 using namespace opossum;  // NOLINT

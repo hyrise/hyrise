@@ -1,11 +1,11 @@
 #pragma once
 
-#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
 
 #if HYRISE_JIT_SUPPORT
 
-#include "operators/jit_operator/operators/jit_expression.hpp"
-#include "operators/jit_operator_wrapper.hpp"
+#include "operators/jit_operator/operators/jit_expression.hpp" // NEEDEDINCLUDE
+#include "operators/jit_operator_wrapper.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

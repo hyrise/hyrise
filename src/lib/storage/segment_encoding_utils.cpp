@@ -1,15 +1,9 @@
-#include "segment_encoding_utils.hpp"
 
-#include <map>
-#include <memory>
 
-#include "storage/dictionary_segment/dictionary_encoder.hpp"
-#include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
-#include "storage/run_length_segment/run_length_encoder.hpp"
+#include "storage/dictionary_segment/dictionary_encoder.hpp" // NEEDEDINCLUDE
+#include "storage/frame_of_reference/frame_of_reference_encoder.hpp" // NEEDEDINCLUDE
+#include "storage/run_length_segment/run_length_encoder.hpp" // NEEDEDINCLUDE
 
-#include "storage/base_value_segment.hpp"
-#include "utils/assert.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

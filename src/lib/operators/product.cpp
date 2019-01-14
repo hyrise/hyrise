@@ -1,12 +1,7 @@
-#include "product.hpp"
+#include "product.hpp" // NEEDEDINCLUDE
 
-#include <map>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "storage/reference_segment.hpp"
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <regex>
-#include <string>
-#include <vector>
+#include <regex> // NEEDEDINCLUDE
 
-#include "boost/variant.hpp"
-#include "utils/assert.hpp"
+#include "boost/variant.hpp" // NEEDEDINCLUDE
+#include "utils/assert.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

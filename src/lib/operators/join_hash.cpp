@@ -1,24 +1,9 @@
-#include "join_hash.hpp"
+#include "join_hash.hpp" // NEEDEDINCLUDE
 
-#include <cmath>
-#include <memory>
-#include <numeric>
-#include <string>
-#include <type_traits>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
-#include "bytell_hash_map.hpp"
-#include "join_hash/join_hash_steps.hpp"
-#include "join_hash/join_hash_traits.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "type_cast.hpp"
-#include "type_comparison.hpp"
-#include "utils/assert.hpp"
-#include "utils/timer.hpp"
+#include "join_hash/join_hash_steps.hpp" // NEEDEDINCLUDE
+#include "join_hash/join_hash_traits.hpp" // NEEDEDINCLUDE
+#include "utils/timer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

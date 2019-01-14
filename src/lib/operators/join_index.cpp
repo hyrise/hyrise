@@ -1,21 +1,8 @@
-#include "join_index.hpp"
+#include "join_index.hpp" // NEEDEDINCLUDE
 
-#include <map>
-#include <memory>
-#include <numeric>
-#include <set>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "all_type_variant.hpp"
-#include "join_nested_loop.hpp"
-#include "resolve_type.hpp"
-#include "storage/index/base_index.hpp"
-#include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
-#include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+#include "join_nested_loop.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

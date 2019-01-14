@@ -1,18 +1,12 @@
 #pragma once
 
-#include <boost/container/small_vector.hpp>
-#include <boost/lexical_cast.hpp>
+#include <boost/container/small_vector.hpp> // NEEDEDINCLUDE
 
-#include "bytell_hash_map.hpp"
-#include "resolve_type.hpp"
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterate.hpp"
-#include "type_cast.hpp"
-#include "type_comparison.hpp"
-#include "uninitialized_vector.hpp"
+#include "bytell_hash_map.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "uninitialized_vector.hpp" // NEEDEDINCLUDE
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation

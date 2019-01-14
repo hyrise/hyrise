@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
 
-#include "cache/cache.hpp"
+#include "cache/cache.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

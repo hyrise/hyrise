@@ -1,13 +1,8 @@
 #pragma once
 
-#include <map>
-#include <memory>
-#include <optional>
-#include <set>
-#include <vector>
 
-#include "join_graph.hpp"
-#include "logical_query_plan/union_node.hpp"
+#include "join_graph.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,8 +1,7 @@
-#include "encoding_type.hpp"
+#include "encoding_type.hpp" // NEEDEDINCLUDE
 
-#include <boost/hana/for_each.hpp>
+#include <boost/hana/for_each.hpp> // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
 
 namespace opossum {
 

@@ -1,7 +1,5 @@
 #include "update.hpp" // NEEDEDINCLUDE
 
-// CHECKINCLUDE #include <memory>
-#include <vector>
 
 #include "delete.hpp" // NEEDEDINCLUDE
 #include "insert.hpp" // NEEDEDINCLUDE

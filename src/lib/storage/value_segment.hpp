@@ -1,12 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_value_segment.hpp"
+#include "base_value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

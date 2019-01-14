@@ -1,10 +1,9 @@
 #pragma once
 
-#include <algorithm>
 
-#include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables.hpp" // NEEDEDINCLUDE
 
-#include "storage/run_length_segment.hpp"
+#include "storage/run_length_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,18 +1,9 @@
 #pragma once
 
-#include <map>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
-#include "base_segment.hpp"
-#include "storage/pos_list.hpp"
-#include "table.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
-#include "value_segment.hpp"
+#include "storage/pos_list.hpp" // NEEDEDINCLUDE
+#include "table.hpp" // NEEDEDINCLUDE
+#include "value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

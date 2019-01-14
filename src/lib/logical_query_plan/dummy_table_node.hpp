@@ -1,10 +1,7 @@
 #pragma once
 
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "abstract_lqp_node.hpp"
+#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

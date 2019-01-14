@@ -1,17 +1,8 @@
-#include "predicate_reordering_rule.hpp"
+#include "predicate_reordering_rule.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "constant_mappings.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "statistics/table_statistics.hpp"
-#include "utils/assert.hpp"
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

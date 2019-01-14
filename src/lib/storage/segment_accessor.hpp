@@ -1,14 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 
-#include "resolve_type.hpp"
-#include "storage/base_segment_accessor.hpp"
-#include "storage/reference_segment.hpp"
-#include "types.hpp"
-#include "utils/performance_warning.hpp"
+#include "storage/base_segment_accessor.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

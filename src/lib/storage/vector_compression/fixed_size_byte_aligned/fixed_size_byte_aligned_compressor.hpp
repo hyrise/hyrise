@@ -1,13 +1,10 @@
 #pragma once
 
-#include <algorithm>
-#include <limits>
 
-#include "storage/vector_compression/base_vector_compressor.hpp"
+#include "storage/vector_compression/base_vector_compressor.hpp" // NEEDEDINCLUDE
 
-#include "fixed_size_byte_aligned_vector.hpp"
+#include "fixed_size_byte_aligned_vector.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
 
 namespace opossum {
 

@@ -1,18 +1,9 @@
-#include "projection.hpp"
+#include "projection.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <functional>
-#include <memory>
-#include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "utils/assert.hpp"
+#include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

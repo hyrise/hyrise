@@ -1,10 +1,7 @@
-#include "csv_meta.hpp"
+#include "csv_meta.hpp" // NEEDEDINCLUDE
 
-#include <fstream>
-#include <string>
-#include <vector>
+#include <fstream> // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

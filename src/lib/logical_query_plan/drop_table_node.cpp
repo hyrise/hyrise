@@ -1,4 +1,4 @@
-#include "drop_table_node.hpp"
+#include "drop_table_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

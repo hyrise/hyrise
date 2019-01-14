@@ -1,11 +1,8 @@
-#include "all_parameter_variant.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
-#include <string>
 
-#include "boost/lexical_cast.hpp"
+#include "boost/lexical_cast.hpp" // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp"
 
 namespace opossum {
 std::string to_string(const AllParameterVariant& x) {

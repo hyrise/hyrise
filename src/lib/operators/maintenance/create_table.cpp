@@ -1,10 +1,8 @@
-#include "create_table.hpp"
+#include "create_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "constant_mappings.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

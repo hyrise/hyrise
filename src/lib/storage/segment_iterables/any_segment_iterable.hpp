@@ -1,11 +1,9 @@
 #pragma once
 
-#include <iterator>
-#include <type_traits>
+#include <iterator> // NEEDEDINCLUDE
 
-#include "storage/reference_segment/reference_segment_iterable.hpp"
-#include "storage/segment_iterables.hpp"
-#include "storage/segment_iterables/any_segment_iterator.hpp"
+#include "storage/reference_segment/reference_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterables/any_segment_iterator.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 

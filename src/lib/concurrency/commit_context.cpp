@@ -1,7 +1,5 @@
-#include <memory>
 
-#include "commit_context.hpp"
-#include "utils/assert.hpp"
+#include "commit_context.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

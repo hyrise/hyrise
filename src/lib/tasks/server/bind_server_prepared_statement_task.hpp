@@ -1,8 +1,8 @@
 #pragma once
 
-#include "abstract_server_task.hpp"
+#include "abstract_server_task.hpp" // NEEDEDINCLUDE
 
-#include "all_parameter_variant.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

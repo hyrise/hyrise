@@ -1,16 +1,9 @@
-#include "column_is_null_table_scan_impl.hpp"
+#include "column_is_null_table_scan_impl.hpp" // NEEDEDINCLUDE
 
-#include <memory>
 
-#include "storage/base_value_segment.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/resolve_encoded_segment_type.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/segment_iterate.hpp"
-#include "storage/value_segment/null_value_vector_iterable.hpp"
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment/null_value_vector_iterable.hpp" // NEEDEDINCLUDE
 
-#include "resolve_type.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 

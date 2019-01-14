@@ -1,18 +1,7 @@
-#include "difference.hpp"
+#include "difference.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <iterator>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
-#include "storage/reference_segment.hpp"
-#include "type_cast.hpp"
-#include "utils/assert.hpp"
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 Difference::Difference(const std::shared_ptr<const AbstractOperator>& left_in,

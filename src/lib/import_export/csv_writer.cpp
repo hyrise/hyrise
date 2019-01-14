@@ -1,10 +1,6 @@
-#include "csv_writer.hpp"
+#include "csv_writer.hpp" // NEEDEDINCLUDE
 
-#include <fstream>
-#include <string>
-#include <vector>
 
-#include "types.hpp"
 
 namespace opossum {
 

@@ -1,13 +1,11 @@
-#include "dp_ccp.hpp"
+#include "dp_ccp.hpp" // NEEDEDINCLUDE
 
-#include <unordered_map>
 
-#include "cost_model/abstract_cost_estimator.hpp"
-#include "enumerate_ccp.hpp"
-#include "join_graph.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "operators/operator_join_predicate.hpp"
-#include "statistics/table_statistics.hpp"
+#include "cost_model/abstract_cost_estimator.hpp" // NEEDEDINCLUDE
+#include "enumerate_ccp.hpp" // NEEDEDINCLUDE
+#include "join_graph.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

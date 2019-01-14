@@ -1,20 +1,10 @@
-#include "sqlite_wrapper.hpp"
+#include "sqlite_wrapper.hpp" // NEEDEDINCLUDE
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 
-#include <fstream>
-#include <iomanip>
-#include <memory>
-#include <string>
-#include <vector>
+#include <fstream> // NEEDEDINCLUDE
+#include <iomanip> // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/table.hpp"
-#include "utils/load_table.hpp"
-#include "utils/string_utils.hpp"
+#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

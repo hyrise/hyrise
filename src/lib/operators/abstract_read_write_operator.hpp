@@ -1,15 +1,10 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <vector>
 
-#include "abstract_operator.hpp"
+#include "abstract_operator.hpp" // NEEDEDINCLUDE
 
-#include "concurrency/transaction_context.hpp"
-#include "storage/table.hpp"
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

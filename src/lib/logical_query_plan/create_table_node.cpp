@@ -1,8 +1,6 @@
-#include "create_table_node.hpp"
+#include "create_table_node.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "constant_mappings.hpp"
 
 namespace opossum {
 

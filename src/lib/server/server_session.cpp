@@ -1,34 +1,18 @@
-#include "server_session.hpp"
+#include "server_session.hpp" // NEEDEDINCLUDE
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/asio/placeholders.hpp>
-#include <boost/asio/write.hpp>
-#include <boost/bind.hpp>
 
-#include <chrono>
-#include <iostream>
-#include <thread>
 
-#include "SQLParserResult.h"
 
-#include "concurrency/transaction_manager.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_translator.hpp"
-#include "storage/storage_manager.hpp"
-#include "tasks/server/bind_server_prepared_statement_task.hpp"
-#include "tasks/server/create_pipeline_task.hpp"
-#include "tasks/server/execute_server_prepared_statement_task.hpp"
-#include "tasks/server/execute_server_query_task.hpp"
-#include "tasks/server/load_server_file_task.hpp"
-#include "tasks/server/parse_server_prepared_statement_task.hpp"
+#include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "tasks/server/bind_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
+#include "tasks/server/create_pipeline_task.hpp" // NEEDEDINCLUDE
+#include "tasks/server/execute_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
+#include "tasks/server/execute_server_query_task.hpp" // NEEDEDINCLUDE
+#include "tasks/server/load_server_file_task.hpp" // NEEDEDINCLUDE
+#include "tasks/server/parse_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
 
-#include "client_connection.hpp"
-#include "query_response_builder.hpp"
-#include "then_operator.hpp"
-#include "types.hpp"
-#include "use_boost_future.hpp"
-#include "utils/assert.hpp"
-#include "utils/load_table.hpp"
+#include "query_response_builder.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

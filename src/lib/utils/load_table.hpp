@@ -1,11 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <sstream>
-#include <string>
-#include <vector>
 
-#include "storage/chunk.hpp"
+#include "storage/chunk.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

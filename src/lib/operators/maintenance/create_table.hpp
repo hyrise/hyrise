@@ -1,7 +1,6 @@
 #pragma once
 
-#include "operators/abstract_read_only_operator.hpp"
-#include "storage/table_column_definition.hpp"
+#include "operators/abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

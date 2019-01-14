@@ -1,11 +1,9 @@
-#include "query_response_builder.hpp"
+#include "query_response_builder.hpp" // NEEDEDINCLUDE
 
-#include "server/postgres_wire_handler.hpp"
-#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline.hpp" // NEEDEDINCLUDE
 
-#include "SQLParserResult.h"
 
-#include "then_operator.hpp"
+#include "then_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

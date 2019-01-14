@@ -1,14 +1,10 @@
-#include "chunk_metrics_collection_task.hpp"
+#include "chunk_metrics_collection_task.hpp" // NEEDEDINCLUDE
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

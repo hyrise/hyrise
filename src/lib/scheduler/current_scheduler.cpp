@@ -1,9 +1,7 @@
-#include "current_scheduler.hpp"
+#include "current_scheduler.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <vector>
 
-#include "abstract_scheduler.hpp"
+#include "abstract_scheduler.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

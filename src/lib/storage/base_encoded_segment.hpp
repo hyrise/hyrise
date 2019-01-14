@@ -1,7 +1,6 @@
 #pragma once
 
-#include "storage/base_segment.hpp"
-#include "storage/encoding_type.hpp"
+#include "storage/base_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

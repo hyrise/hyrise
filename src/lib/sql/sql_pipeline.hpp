@@ -1,15 +1,9 @@
 #pragma once
 
-#include <memory>
 
-#include "SQLParserResult.h"
-#include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "optimizer/optimizer.hpp"
-#include "scheduler/operator_task.hpp"
-#include "sql/sql_pipeline_statement.hpp"
-#include "storage/chunk.hpp"
-#include "types.hpp"
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "scheduler/operator_task.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline_statement.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,22 +1,10 @@
-#include "segment_statistics.hpp"
+#include "segment_statistics.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <iterator>
-#include <type_traits>
-#include <unordered_set>
 
-#include "resolve_type.hpp"
 
-#include "abstract_filter.hpp"
-#include "min_max_filter.hpp"
-#include "range_filter.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/run_length_segment.hpp"
-#include "storage/segment_iterate.hpp"
-#include "storage/value_segment.hpp"
-#include "types.hpp"
+#include "min_max_filter.hpp" // NEEDEDINCLUDE
+#include "range_filter.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

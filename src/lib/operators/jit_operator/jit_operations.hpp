@@ -1,13 +1,11 @@
 #pragma once
 
-#include <boost/preprocessor/seq/for_each_product.hpp>
-#include <boost/preprocessor/tuple/elem.hpp>
+#include <boost/preprocessor/seq/for_each_product.hpp> // NEEDEDINCLUDE
 
-#include <cmath>
 
-#include "jit_types.hpp"
-#include "operators/table_scan/column_like_table_scan_impl.hpp"
-#include "resolve_type.hpp"
+#include "jit_types.hpp" // NEEDEDINCLUDE
+#include "operators/table_scan/column_like_table_scan_impl.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

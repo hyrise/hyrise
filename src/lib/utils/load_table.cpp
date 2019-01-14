@@ -1,14 +1,8 @@
-#include "load_table.hpp"
 
-#include <fstream>
-#include <memory>
-#include <string>
-#include <vector>
+#include <fstream> // NEEDEDINCLUDE
 
-#include "storage/table.hpp"
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp"
-#include "string_utils.hpp"
 
 namespace opossum {
 

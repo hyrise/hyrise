@@ -1,15 +1,8 @@
 #pragma once
 
-#include <array>
-#include <functional>
-#include <iterator>
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "adaptive_radix_tree_index.hpp"
+#include "adaptive_radix_tree_index.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
 
 namespace opossum {
 

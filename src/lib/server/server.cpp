@@ -1,12 +1,8 @@
-#include "server.hpp"
+#include "server.hpp" // NEEDEDINCLUDE
 
-#include <boost/asio/placeholders.hpp>
-#include <boost/bind.hpp>
+#include <boost/asio/placeholders.hpp> // NEEDEDINCLUDE
 
-#include "client_connection.hpp"
-#include "server_session.hpp"
-#include "task_runner.hpp"
-#include "then_operator.hpp"
+#include "server_session.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

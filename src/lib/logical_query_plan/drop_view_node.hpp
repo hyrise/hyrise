@@ -1,9 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <string>
 
-#include "base_non_query_node.hpp"
+#include "base_non_query_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

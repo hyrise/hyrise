@@ -1,16 +1,7 @@
-#include "sort.hpp"
+#include "sort.hpp" // NEEDEDINCLUDE
 
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 
-#include "storage/reference_segment.hpp"
-#include "storage/segment_accessor.hpp"
-#include "storage/segment_iterate.hpp"
-#include "storage/value_segment.hpp"
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

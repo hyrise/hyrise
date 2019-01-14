@@ -1,11 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 
-#include "resolve_type.hpp"
-#include "types.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

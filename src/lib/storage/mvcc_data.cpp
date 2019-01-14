@@ -1,8 +1,6 @@
-#include "mvcc_data.hpp"
+#include "mvcc_data.hpp" // NEEDEDINCLUDE
 
-#include <shared_mutex>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

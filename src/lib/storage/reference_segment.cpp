@@ -1,12 +1,6 @@
-#include "reference_segment.hpp"
+#include "reference_segment.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
 
-#include "abstract_segment_visitor.hpp"
-#include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

@@ -1,18 +1,11 @@
-#include "chunk_encoder.hpp"
 
-#include <memory>
-#include <vector>
 
-#include "base_value_segment.hpp"
-#include "chunk.hpp"
-#include "table.hpp"
-#include "types.hpp"
+#include "base_value_segment.hpp" // NEEDEDINCLUDE
+#include "table.hpp" // NEEDEDINCLUDE
 
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
-#include "statistics/chunk_statistics/segment_statistics.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/segment_encoding_utils.hpp"
-#include "utils/assert.hpp"
+#include "statistics/chunk_statistics/chunk_statistics.hpp" // NEEDEDINCLUDE
+#include "storage/base_encoded_segment.hpp" // NEEDEDINCLUDE
+#include "storage/segment_encoding_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

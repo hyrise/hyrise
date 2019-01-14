@@ -1,11 +1,8 @@
-#include "simd_bp128_compressor.hpp"
+#include "simd_bp128_compressor.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <array>
 
-#include "simd_bp128_vector.hpp"
+#include "simd_bp128_vector.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

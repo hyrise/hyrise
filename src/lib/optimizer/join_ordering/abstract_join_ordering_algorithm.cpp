@@ -1,11 +1,8 @@
-#include "greedy_operator_ordering.hpp"
+#include "greedy_operator_ordering.hpp" // NEEDEDINCLUDE
 
-#include "cost_model/abstract_cost_estimator.hpp"
-#include "enumerate_ccp.hpp"
-#include "join_graph.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "operators/operator_join_predicate.hpp"
-#include "statistics/table_statistics.hpp"
+#include "cost_model/abstract_cost_estimator.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "operators/operator_join_predicate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

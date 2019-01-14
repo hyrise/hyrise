@@ -1,19 +1,10 @@
-#include "column_between_table_scan_impl.hpp"
+#include "column_between_table_scan_impl.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <type_traits>
 
-#include "storage/chunk.hpp"
-#include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/segment_iterate.hpp"
-#include "storage/table.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
-#include "resolve_type.hpp"
-#include "type_comparison.hpp"
 
 namespace opossum {
 

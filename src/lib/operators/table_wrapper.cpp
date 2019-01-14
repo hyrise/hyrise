@@ -1,8 +1,5 @@
-#include "table_wrapper.hpp"
+#include "table_wrapper.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <vector>
 
 namespace opossum {
 

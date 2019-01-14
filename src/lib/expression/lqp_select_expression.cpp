@@ -1,13 +1,8 @@
-#include "lqp_select_expression.hpp"
+#include "lqp_select_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "boost/functional/hash.hpp"
 
-#include "expression_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "utils/assert.hpp"
+#include "expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

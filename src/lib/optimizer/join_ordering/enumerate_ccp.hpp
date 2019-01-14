@@ -1,11 +1,7 @@
 #pragma once
 
-#include <cstdint>
-#include <optional>
-#include <utility>
-#include <vector>
 
-#include "join_graph_edge.hpp"
+#include "join_graph_edge.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

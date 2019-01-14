@@ -1,19 +1,11 @@
-#include "jit_code_specializer.hpp"
+#include "jit_code_specializer.hpp" // NEEDEDINCLUDE
 
-#include <llvm/Analysis/GlobalsModRef.h>
-#include <llvm/Analysis/TargetTransformInfo.h>
-#include <llvm/Linker/IRMover.h>
-#include <llvm/Support/YAMLTraits.h>
-#include <llvm/Transforms/IPO/ForceFunctionAttrs.h>
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#include <llvm/Transforms/Scalar.h>
+#include <llvm/Transforms/Scalar.h> // NEEDEDINCLUDE
 
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/predicate.hpp> // NEEDEDINCLUDE
 
-#include <queue>
+#include <queue> // NEEDEDINCLUDE
 
-#include "jit_runtime_pointer.hpp"
-#include "llvm_extensions.hpp"
 
 namespace opossum {
 

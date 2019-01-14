@@ -1,20 +1,13 @@
 #pragma once
 
-#include <memory>
-#include <mutex>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "base_segment.hpp"
-#include "chunk.hpp"
-#include "proxy_chunk.hpp"
-#include "storage/index/index_info.hpp"
-#include "storage/table_column_definition.hpp"
-#include "type_cast.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+#include "base_segment.hpp" // NEEDEDINCLUDE
+#include "chunk.hpp" // NEEDEDINCLUDE
+#include "proxy_chunk.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/index/index_info.hpp" // NEEDEDINCLUDE
+#include "storage/table_column_definition.hpp" // NEEDEDINCLUDE
+#include "type_cast.hpp" // NEEDEDINCLUDE
+#include "utils/performance_warning.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

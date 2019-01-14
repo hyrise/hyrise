@@ -1,9 +1,6 @@
-#include "b_tree_index_impl.hpp"
+#include "b_tree_index_impl.hpp" // NEEDEDINCLUDE
 
-#include "storage/index/base_index.hpp"
-#include "storage/segment_iterate.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

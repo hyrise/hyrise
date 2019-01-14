@@ -1,17 +1,8 @@
-#include "union_positions.hpp"
+#include "union_positions.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <chrono>
-#include <memory>
-#include <numeric>
-#include <string>
-#include <utility>
-#include <vector>
+#include <numeric> // NEEDEDINCLUDE
 
-#include "storage/chunk.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
 /**
  * ### UnionPositions implementation

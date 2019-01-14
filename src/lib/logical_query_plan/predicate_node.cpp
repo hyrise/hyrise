@@ -1,20 +1,8 @@
-#include "predicate_node.hpp"
 
-#include <memory>
-#include <optional>
-#include <sstream>
-#include <string>
 
-#include "constant_mappings.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
-#include "operators/operator_scan_predicate.hpp"
-#include "statistics/table_statistics.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
+#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

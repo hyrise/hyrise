@@ -1,18 +1,10 @@
-#include "abstract_operator.hpp"
 
-#include <chrono>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "abstract_read_only_operator.hpp"
-#include "concurrency/transaction_context.hpp"
-#include "storage/table.hpp"
-#include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
-#include "utils/timer.hpp"
-#include "utils/tracing/probes.hpp"
+#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "utils/print_directed_acyclic_graph.hpp" // NEEDEDINCLUDE
+#include "utils/timer.hpp" // NEEDEDINCLUDE
+#include "utils/tracing/probes.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
