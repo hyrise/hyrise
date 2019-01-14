@@ -54,8 +54,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     }
   };
 
-  using entry_t = LRUKCacheEntry;
-  using handle_t = typename boost::heap::fibonacci_heap<entry_t>::handle_type;
+  using Handle = typename boost::heap::fibonacci_heap<LRUKCacheEntry>::handle_type;
 
   using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
@@ -63,7 +62,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
 
   class Iterator : public AbstractIterator {
    public:
-    using IteratorType = typename std::unordered_map<Key, handle_t>::iterator;
+    using IteratorType = typename std::unordered_map<Key, Handle>::iterator;
     explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
 
    private:
@@ -93,9 +92,9 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update entry.
-      handle_t handle = it->second;
+      Handle handle = it->second;
 
-      entry_t& entry = (*handle);
+      LRUKCacheEntry& entry = (*handle);
       entry.value = value;
       entry.add_history_entry(_access_counter);
       _queue.update(handle);
@@ -109,8 +108,8 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     }
 
     // Insert new item in cache.
-    entry_t entry{key, value, {_access_counter}};
-    handle_t handle = _queue.push(entry);
+    LRUKCacheEntry entry{key, value, {_access_counter}};
+    Handle handle = _queue.push(entry);
     _map[key] = handle;
   }
 
@@ -118,16 +117,16 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     ++_access_counter;
 
     auto it = _map.find(key);
-    handle_t handle = it->second;
-    entry_t& entry = (*handle);
+    Handle handle = it->second;
+    LRUKCacheEntry& entry = (*handle);
     entry.add_history_entry(_access_counter);
     _queue.update(handle);
     return entry.value;
   }
 
-  static const KeyValuePair get_value(const std::pair<Key, handle_t>& p) {
-    const handle_t handle = p.second;
-    const entry_t& entry = (*handle);
+  static const KeyValuePair get_value(const std::pair<Key, Handle>& p) {
+    const Handle handle = p.second;
+    const LRUKCacheEntry& entry = (*handle);
     return {p.first, entry.value};
   }
 
@@ -148,7 +147,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     this->_capacity = capacity;
   }
 
-  const boost::heap::fibonacci_heap<entry_t>& queue() const { return _queue; }
+  const boost::heap::fibonacci_heap<LRUKCacheEntry>& queue() const { return _queue; }
 
   ErasedIterator begin() {
     auto it = std::make_unique<Iterator>(_map.begin());
@@ -162,10 +161,10 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
 
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
-  boost::heap::fibonacci_heap<entry_t> _queue;
+  boost::heap::fibonacci_heap<LRUKCacheEntry> _queue;
 
   // Map to point towards element in the list.
-  std::unordered_map<Key, handle_t> _map;
+  std::unordered_map<Key, Handle> _map;
 
   // Running counter to keep track of the reference history.
   size_t _access_counter;

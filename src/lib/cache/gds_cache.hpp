@@ -27,8 +27,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     bool operator<(const GDSCacheEntry& other) const { return priority > other.priority; }
   };
 
-  using entry_t = GDSCacheEntry;
-  using handle_t = typename boost::heap::fibonacci_heap<entry_t>::handle_type;
+  using Handle = typename boost::heap::fibonacci_heap<GDSCacheEntry>::handle_type;
 
   using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
   using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
@@ -36,7 +35,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
 
   class Iterator : public AbstractIterator {
    public:
-    using IteratorType = typename std::unordered_map<Key, handle_t>::iterator;
+    using IteratorType = typename std::unordered_map<Key, Handle>::iterator;
     explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
 
    private:
@@ -65,9 +64,9 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
-      handle_t handle = it->second;
+      Handle handle = it->second;
 
-      entry_t& entry = (*handle);
+      GDSCacheEntry& entry = (*handle);
       entry.value = value;
       entry.size = size;
       entry.cost = cost;
@@ -84,16 +83,16 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     }
 
     // Insert new item in cache.
-    entry_t entry{key, value, cost, size, 0.0};
+    GDSCacheEntry entry{key, value, cost, size, 0.0};
     entry.priority = _inflation + entry.cost / entry.size;
-    handle_t handle = _queue.push(entry);
+    Handle handle = _queue.push(entry);
     _map[key] = handle;
   }
 
   Value& get(const Key& key) {
     auto it = _map.find(key);
-    handle_t handle = it->second;
-    entry_t& entry = (*handle);
+    Handle handle = it->second;
+    GDSCacheEntry& entry = (*handle);
     entry.priority = _inflation + entry.cost / entry.size;
     _queue.update(handle);
     return entry.value;
@@ -115,7 +114,7 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     this->_capacity = capacity;
   }
 
-  const boost::heap::fibonacci_heap<entry_t>& queue() const { return _queue; }
+  const boost::heap::fibonacci_heap<GDSCacheEntry>& queue() const { return _queue; }
 
   double inflation() const { return _inflation; }
 
@@ -137,10 +136,10 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
 
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
-  boost::heap::fibonacci_heap<entry_t> _queue;
+  boost::heap::fibonacci_heap<GDSCacheEntry> _queue;
 
   // Map to point towards element in the list.
-  std::unordered_map<Key, handle_t> _map;
+  std::unordered_map<Key, Handle> _map;
 
   // Inflation value that will be updated whenever an item is evicted.
   double _inflation;
