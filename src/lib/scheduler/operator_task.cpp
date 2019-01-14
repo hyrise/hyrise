@@ -1,17 +1,10 @@
-#include "operator_task.hpp"
+#include "operator_task.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "concurrency/transaction_manager.hpp"
 
-#include "operators/abstract_operator.hpp"
-#include "operators/abstract_read_write_operator.hpp"
+#include "operators/abstract_read_write_operator.hpp" // NEEDEDINCLUDE
 
-#include "scheduler/job_task.hpp"
-#include "scheduler/worker.hpp"
-#include "utils/tracing/probes.hpp"
+#include "utils/tracing/probes.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,

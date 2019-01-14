@@ -1,15 +1,12 @@
-#include "index_scan.hpp"
+#include "index_scan.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
 
-#include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/job_task.hpp"
+#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
+#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 
-#include "storage/index/base_index.hpp"
-#include "storage/reference_segment.hpp"
+#include "storage/index/base_index.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

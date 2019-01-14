@@ -1,14 +1,10 @@
-#include "delete.hpp"
+#include "delete.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
 
-#include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
-#include "statistics/table_statistics.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
-#include "utils/assert.hpp"
+#include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

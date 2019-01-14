@@ -1,14 +1,8 @@
-#include "aggregate_expression.hpp"
+#include "aggregate_expression.hpp" // NEEDEDINCLUDE
 
-#include <sstream>
 
-#include "boost/functional/hash.hpp"
 
-#include "constant_mappings.hpp"
-#include "expression_utils.hpp"
-#include "operators/aggregate/aggregate_traits.hpp"
-#include "resolve_type.hpp"
-#include "utils/assert.hpp"
+#include "operators/aggregate/aggregate_traits.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

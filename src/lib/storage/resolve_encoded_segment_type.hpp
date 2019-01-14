@@ -1,22 +1,15 @@
 #pragma once
 
-#include <boost/hana/fold.hpp>
-#include <boost/hana/map.hpp>
-#include <boost/hana/pair.hpp>
-#include <boost/hana/value.hpp>
 
-#include <memory>
 
 // Include your encoded segment file here!
-#include "storage/dictionary_segment.hpp"
-#include "storage/fixed_string_dictionary_segment.hpp"
-#include "storage/frame_of_reference_segment.hpp"
-#include "storage/run_length_segment.hpp"
+#include "storage/dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/frame_of_reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/run_length_segment.hpp" // NEEDEDINCLUDE
 
-#include "storage/encoding_type.hpp"
 
-#include "utils/enum_constant.hpp"
-#include "utils/template_type.hpp"
+#include "utils/template_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

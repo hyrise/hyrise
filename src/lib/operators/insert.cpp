@@ -1,17 +1,8 @@
-#include "insert.hpp"
+#include "insert.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <memory>
-#include <string>
-#include <vector>
 
-#include "concurrency/transaction_context.hpp"
-#include "resolve_type.hpp"
-#include "storage/base_encoded_segment.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/value_segment.hpp"
-#include "type_cast.hpp"
-#include "utils/assert.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,17 +1,10 @@
-#include "abstract_task.hpp"
+#include "abstract_task.hpp" // NEEDEDINCLUDE
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_scheduler.hpp"
-#include "current_scheduler.hpp"
-#include "task_queue.hpp"
-#include "utils/tracing/probes.hpp"
-#include "worker.hpp"
+#include "abstract_scheduler.hpp" // NEEDEDINCLUDE
+#include "current_scheduler.hpp" // NEEDEDINCLUDE
+#include "task_queue.hpp" // NEEDEDINCLUDE
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

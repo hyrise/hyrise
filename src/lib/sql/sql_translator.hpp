@@ -1,18 +1,12 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
-#include "SQLParser.h"
+#include "SQLParser.h" // NEEDEDINCLUDE
 
-#include "all_parameter_variant.hpp"
-#include "expression/abstract_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "parameter_id_allocator.hpp"
-#include "sql_identifier_resolver.hpp"
-#include "sql_identifier_resolver_proxy.hpp"
+#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
+#include "parameter_id_allocator.hpp" // NEEDEDINCLUDE
+#include "sql_identifier_resolver.hpp" // NEEDEDINCLUDE
+#include "sql_identifier_resolver_proxy.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

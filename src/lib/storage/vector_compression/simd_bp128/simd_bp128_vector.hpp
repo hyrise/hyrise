@@ -1,12 +1,9 @@
 #pragma once
 
-#include "storage/vector_compression/base_compressed_vector.hpp"
 
-#include "oversized_types.hpp"
-#include "simd_bp128_decompressor.hpp"
-#include "simd_bp128_iterator.hpp"
+#include "simd_bp128_decompressor.hpp" // NEEDEDINCLUDE
+#include "simd_bp128_iterator.hpp" // NEEDEDINCLUDE
 
-#include "types.hpp"
 
 namespace opossum {
 

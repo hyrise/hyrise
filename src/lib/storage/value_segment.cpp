@@ -1,17 +1,6 @@
-#include "value_segment.hpp"
 
-#include <limits>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "abstract_segment_visitor.hpp"
-#include "resolve_type.hpp"
-#include "type_cast.hpp"
-#include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+#include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

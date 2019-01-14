@@ -1,8 +1,6 @@
 #pragma once
 
-// CHECKINCLUDE #include <memory>
 #include <numeric> // NEEDEDINCLUDE
-#include <utility>
 
 #include "storage/vector_compression/base_vector_decompressor.hpp" // NEEDEDINCLUDE
 

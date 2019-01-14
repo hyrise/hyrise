@@ -1,15 +1,6 @@
-#include "adaptive_radix_tree_nodes.hpp"
+#include "adaptive_radix_tree_nodes.hpp" // NEEDEDINCLUDE
 
-#include <algorithm>
-#include <iterator>
-#include <memory>
-#include <utility>
-#include <vector>
 
-#include "adaptive_radix_tree_index.hpp"
-#include "storage/index/base_index.hpp"
-#include "types.hpp"
-#include "utils/assert.hpp"
 
 namespace opossum {
 

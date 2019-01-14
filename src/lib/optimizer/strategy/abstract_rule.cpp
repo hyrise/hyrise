@@ -1,11 +1,7 @@
-#include "abstract_rule.hpp"
+#include "abstract_rule.hpp" // NEEDEDINCLUDE
 
-#include <memory>
 
-#include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

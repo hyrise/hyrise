@@ -1,17 +1,9 @@
 #pragma once
 
-#include <limits>
-#include <memory>
-#include <optional>
-#include <unordered_set>
-#include <utility>
-#include <vector>
+#include <unordered_set> // NEEDEDINCLUDE
 
-#include "join_graph_edge.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "types.hpp"
+#include "join_graph_edge.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
