@@ -10,6 +10,7 @@
 #include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 #include "exists_expression.hpp" // NEEDEDINCLUDE
 #include "extract_expression.hpp" // NEEDEDINCLUDE
+#include "function_expression.hpp"
 #include "in_expression.hpp" // NEEDEDINCLUDE
 #include "is_null_expression.hpp" // NEEDEDINCLUDE
 #include "list_expression.hpp" // NEEDEDINCLUDE

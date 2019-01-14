@@ -1,4 +1,3 @@
-
 #include "commit_context.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

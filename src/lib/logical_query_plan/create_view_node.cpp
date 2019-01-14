@@ -1,6 +1,6 @@
 #include "create_view_node.hpp" // NEEDEDINCLUDE
 
-
+#include <sstream>
 
 namespace opossum {
 

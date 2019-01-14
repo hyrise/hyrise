@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp> // NEEDEDINCLUDE
+#include <unordered_set>
 
 #include "column_statistics.hpp" // NEEDEDINCLUDE
 #include "storage/segment_iterate.hpp" // NEEDEDINCLUDE

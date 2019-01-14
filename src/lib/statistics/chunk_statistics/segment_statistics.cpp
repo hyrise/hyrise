@@ -1,6 +1,6 @@
 #include "segment_statistics.hpp" // NEEDEDINCLUDE
 
-
+#include <unordered_set>
 
 #include "min_max_filter.hpp" // NEEDEDINCLUDE
 #include "range_filter.hpp" // NEEDEDINCLUDE

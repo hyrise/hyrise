@@ -5,8 +5,8 @@
 #include <boost/hana/map.hpp> // NEEDEDINCLUDE
 #include <boost/hana/pair.hpp> // NEEDEDINCLUDE
 #include <boost/hana/value.hpp> // NEEDEDINCLUDE
-
 #include <cstdint> // NEEDEDINCLUDE
+#include <optional>
 
 #include "utils/enum_constant.hpp" // NEEDEDINCLUDE
 

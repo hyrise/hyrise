@@ -5,6 +5,7 @@
 #endif
 
 #include <iomanip> // NEEDEDINCLUDE
+#include <sstream>
 #include <thread> // NEEDEDINCLUDE
 
 
