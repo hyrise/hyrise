@@ -5,89 +5,85 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
+#include "lib/lz4.h"
+
 namespace opossum {
 
-template <typename T, typename U>
-LZ4Segment<T, U>::LZ4Segment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
-                                                       std::unique_ptr<const BaseCompressedVector> offset_values)
+template <typename T>
+LZ4Segment<T>::LZ4Segment(const int decompressed_size, const int max_compressed_size,
+                             std::unique_ptr<std::vector<char>> compressed_data)
     : BaseEncodedSegment{data_type_from_type<T>()},
-      _block_minima{std::move(block_minima)},
-      _null_values{std::move(null_values)},
-      _offset_values{std::move(offset_values)},
-      _decompressor{_offset_values->create_base_decompressor()} {}
+      _decompressed_size{decompressed_size},
+      _max_compressed_size{max_compressed_size},
+      _compressed_data{std::move(compressed_data)} {}
 
-template <typename T, typename U>
-const pmr_vector<T>& LZ4Segment<T, U>::block_minima() const {
-  return _block_minima;
+template <typename T>
+const int LZ4Segment<T>::decompressed_size() const {
+  return _decompressed_size;
 }
 
-template <typename T, typename U>
-const pmr_vector<bool>& LZ4Segment<T, U>::null_values() const {
-  return _null_values;
+template <typename T>
+const int LZ4Segment<T>::max_compressed_size() const {
+  return _max_compressed_size;
 }
 
-template <typename T, typename U>
-const BaseCompressedVector& LZ4Segment<T, U>::offset_values() const {
-  return *_offset_values;
+template <typename T>
+const std::vector<char>& LZ4Segment<T>::compressed_data() const {
+  return *_compressed_data;
 }
 
-template <typename T, typename U>
-const AllTypeVariant LZ4Segment<T, U>::operator[](const ChunkOffset chunk_offset) const {
+template <typename T>
+const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
+  PerformanceWarning("LZ4::operator[]: decompressing the whole LZ4 segment");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
-  const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
-    return NULL_VALUE;
+  const auto& decompressed_segment = decompress();
+  return AllTypeVariant{decompressed_segment[chunk_offset]};
+}
+
+template <typename T>
+const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  PerformanceWarning("LZ4::get_typed_value: decompressing the whole LZ4 segment");
+  const auto& decompressed_segment = decompress();
+  return decompressed_segment[chunk_offset];
+}
+
+template <typename T>
+size_t LZ4Segment<T>::size() const {
+  return _compressed_data->size();
+}
+
+template <typename T>
+std::vector<T>& LZ4Segment<T>::decompress() const {
+  std::vector<T> decompressed_data(_decompressed_size);
+  int compressed_size = static_cast<int>(_compressed_data.size());
+  const int decompressed_result = LZ4_decompress_safe(_compressed_data.data(),
+                                                      static_cast<char*>(decompressed_data.data()),
+                                                      compressed_size, _decompressed_size);
+  if (decompressed_result <= 0) {
+    throw std::runtime_error("LZ4 decompression failed");
   }
-  return *typed_value;
+
+  return decompressed_data;
 }
 
-template <typename T, typename U>
-const std::optional<T> LZ4Segment<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
-  if (_null_values[chunk_offset]) {
-    return std::nullopt;
-  }
-  const auto minimum = _block_minima[chunk_offset / block_size];
-  const auto value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
-  return value;
-}
-
-template <typename T, typename U>
-size_t LZ4Segment<T, U>::size() const {
-  return _offset_values->size();
-}
-
-template <typename T, typename U>
-std::shared_ptr<BaseSegment> LZ4Segment<T, U>::copy_using_allocator(
+template <typename T>
+std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_block_minima = pmr_vector<T>{_block_minima, alloc};
-  auto new_null_values = pmr_vector<bool>{_null_values, alloc};
-  auto new_offset_values = _offset_values->copy_using_allocator(alloc);
-
-  return std::allocate_shared<LZ4Segment>(alloc, std::move(new_block_minima), std::move(new_null_values),
-                                                       std::move(new_offset_values));
+  return std::allocate_shared<LZ4Segment>(alloc, _decompressed_size, _max_compressed_size, std::move(_compressed_data));
 }
 
-template <typename T, typename U>
-size_t LZ4Segment<T, U>::estimate_memory_usage() const {
-  static const auto bits_per_byte = 8u;
-
-  return sizeof(*this) + sizeof(T) * _block_minima.size() + _offset_values->data_size() +
-         _null_values.size() / bits_per_byte;
+template <typename T>
+size_t LZ4Segment<T>::estimate_memory_usage() const {
+  return static_cast<size_t>(_max_compressed_size);
 }
 
-template <typename T, typename U>
-EncodingType LZ4Segment<T, U>::encoding_type() const {
+template <typename T>
+EncodingType LZ4Segment<T>::encoding_type() const {
   return EncodingType::LZ4;
 }
 
-template <typename T, typename U>
-CompressedVectorType LZ4Segment<T, U>::compressed_vector_type() const {
-  return _offset_values->type();
-}
-
-template class LZ4Segment<int32_t>;
-template class LZ4Segment<int64_t>;
+EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);
 
 }  // namespace opossum

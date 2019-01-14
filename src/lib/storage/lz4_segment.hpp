@@ -17,37 +17,16 @@ namespace opossum {
 
 class BaseCompressedVector;
 
-/**
- * @brief Segment implementing frame-of-reference encoding
- *
- * Frame-of-Reference encoding divides the values of segment into
- * fixed-size blocks. The values of each block are encoded
- * as an offset from the block’s minimum value. These offsets,
- * which can ideally be represented by fewer bits, are then
- * compressed using vector compression (null suppression).
- * FOR encoding on its own without vector compression does not
- * add any benefit.
- */
-template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
-                          enum_c<EncodingType, EncodingType::LZ4>, hana::type_c<T>)>>
+template <typename T>
 class LZ4Segment : public BaseEncodedSegment {
  public:
-  /**
-   * The segment is divided into fixed-size blocks.
-   * Each block has its own minimum from which the
-   * offsets are calculated. Theoretically, it would be
-   * possible to make the block size dependent on the
-   * data’s properties. Determining the optimal size
-   * is however not trivial.
-   */
-  static constexpr auto block_size = 2048u;
 
-  explicit LZ4Segment(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
-                                   std::unique_ptr<const BaseCompressedVector> offset_values);
+  explicit LZ4Segment(const int decompressed_size, const int max_compressed_size,
+                      std::unique_ptr<std::vector<char>> compressed_data);
 
-  const pmr_vector<T>& block_minima() const;
-  const pmr_vector<bool>& null_values() const;
-  const BaseCompressedVector& offset_values() const;
+  int decompressed_size() const;
+  int max_compressed_size() const;
+  const std::vector<char>& compressed_data() const;
 
   /**
    * @defgroup BaseSegment interface
@@ -59,6 +38,8 @@ class LZ4Segment : public BaseEncodedSegment {
   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
 
   size_t size() const final;
+
+  std::vector<T>& decompress() const;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
@@ -72,15 +53,13 @@ class LZ4Segment : public BaseEncodedSegment {
    */
 
   EncodingType encoding_type() const final;
-  CompressedVectorType compressed_vector_type() const final;
 
   /**@}*/
 
  private:
-  const pmr_vector<T> _block_minima;
-  const pmr_vector<bool> _null_values;
-  const std::unique_ptr<const BaseCompressedVector> _offset_values;
-  std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  const int _decompressed_size;
+  const int _max_compressed_size;
+  const std::unique_ptr<std::vector<char>> _compressed_data;
 };
 
 }  // namespace opossum
