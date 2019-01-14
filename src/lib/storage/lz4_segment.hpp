@@ -22,7 +22,7 @@ class LZ4Segment : public BaseEncodedSegment {
  public:
 
   explicit LZ4Segment(const int decompressed_size, const int max_compressed_size,
-                      std::unique_ptr<std::vector<char>> compressed_data);
+                      std::shared_ptr<std::vector<char>> compressed_data);
 
   int decompressed_size() const;
   int max_compressed_size() const;
@@ -59,7 +59,7 @@ class LZ4Segment : public BaseEncodedSegment {
  private:
   const int _decompressed_size;
   const int _max_compressed_size;
-  const std::unique_ptr<std::vector<char>> _compressed_data;
+  const std::shared_ptr<std::vector<char>> _compressed_data;
 };
 
 }  // namespace opossum
