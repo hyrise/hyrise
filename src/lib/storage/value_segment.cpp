@@ -1,6 +1,8 @@
-
+#include "value_segment.hpp"
 
 #include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "type_cast.hpp" // NEEDEDINCLUDE
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

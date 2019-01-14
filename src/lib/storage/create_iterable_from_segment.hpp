@@ -1,14 +1,13 @@
 #pragma once
 
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp" // NEEDEDINCLUDE
-
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp" // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/run_length_segment/run_length_segment_iterable.hpp" // NEEDEDINCLUDE
 #include "storage/value_segment/value_segment_iterable.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
+class ReferenceSegment;
 template <typename T>
 class ReferenceSegmentIterable;
 

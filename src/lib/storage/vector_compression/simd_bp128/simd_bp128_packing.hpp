@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "oversized_types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

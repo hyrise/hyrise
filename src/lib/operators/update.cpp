@@ -1,10 +1,10 @@
 #include "update.hpp" // NEEDEDINCLUDE
 
-
 #include "delete.hpp" // NEEDEDINCLUDE
 #include "insert.hpp" // NEEDEDINCLUDE
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
 

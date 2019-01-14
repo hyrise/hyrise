@@ -6,6 +6,7 @@
 #include "resolve_type.hpp" // NEEDEDINCLUDE
 #include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
 #include "scheduler/job_task.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
 

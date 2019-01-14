@@ -3,6 +3,8 @@
 #include <numeric> // NEEDEDINCLUDE
 
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"
+#include "storage/table.hpp"
 
 /**
  * ### UnionPositions implementation

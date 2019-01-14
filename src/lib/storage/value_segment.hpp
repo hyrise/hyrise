@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "base_value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

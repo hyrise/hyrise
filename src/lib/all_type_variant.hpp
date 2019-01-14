@@ -7,16 +7,12 @@
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
-
 #include <boost/mpl/push_front.hpp>
-
 #include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
-
 #include <boost/variant.hpp>
-
 #include <cstdint>
 #include <string>
 #include <vector>

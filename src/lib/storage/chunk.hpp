@@ -1,20 +1,16 @@
 #pragma once
 
-
-// the linter wants this to be above everything else
-
-
-#include "index/segment_index_type.hpp" // NEEDEDINCLUDE
-
+#include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp" // NEEDEDINCLUDE
-#include "mvcc_data.hpp" // NEEDEDINCLUDE
 #include "utils/scoped_locking_ptr.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
+enum class SegmentIndexType : uint8_t;
 class BaseIndex;
 class BaseSegment;
 class ChunkStatistics;
+struct MvccData;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
 
@@ -93,9 +89,9 @@ class Chunk : private Noncopyable {
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
   std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID>& column_ids) const;
 
-  std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
+  std::shared_ptr<BaseIndex> get_index(const SegmentIndexType& index_type,
                                        const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
+  std::shared_ptr<BaseIndex> get_index(const SegmentIndexType& index_type,
                                        const std::vector<ColumnID>& column_ids) const;
 
   template <typename Index>

@@ -1,6 +1,7 @@
 #include "jit_validate.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 #include "operators/validate.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

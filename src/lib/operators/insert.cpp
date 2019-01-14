@@ -2,7 +2,10 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "type_cast.hpp"
 
 namespace opossum {
 

@@ -1,10 +1,12 @@
 #pragma once
 
-
-#include "base_compressed_vector.hpp" // NEEDEDINCLUDE
-
+#include "types.hpp"
 
 namespace opossum {
+
+class BaseCompressedVector;
+enum class VectorCompressionType : uint8_t;
+struct UncompressedVectorInfo;
 
 /**
  * @brief Implemented vector compression schemes

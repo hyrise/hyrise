@@ -2,7 +2,6 @@
 
 #include <string> // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 FixedString::FixedString(char* mem, size_t string_length)

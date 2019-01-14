@@ -1,6 +1,8 @@
 #include "difference.hpp" // NEEDEDINCLUDE
 
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 Difference::Difference(const std::shared_ptr<const AbstractOperator>& left_in,

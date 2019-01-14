@@ -1,7 +1,6 @@
 #pragma once
 
-#include <atomic> // NEEDEDINCLUDE
-#include <shared_mutex>  // NOLINT lint thinks this is a C header or something // NEEDEDINCLUDE
+#include <shared_mutex>
 
 #include "types.hpp" // NEEDEDINCLUDE
 #include "utils/copyable_atomic.hpp" // NEEDEDINCLUDE

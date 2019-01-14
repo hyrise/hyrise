@@ -1,8 +1,6 @@
 #pragma once
 
-
-#include "chunk_encoder.hpp" // NEEDEDINCLUDE
-#include "utils/format_bytes.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 
 namespace opossum {
 

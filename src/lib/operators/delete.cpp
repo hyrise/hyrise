@@ -3,8 +3,11 @@
 #include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 #include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp" // NEEDEDINCLUDE
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

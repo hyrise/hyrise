@@ -1,6 +1,7 @@
 
 #include <fstream> // NEEDEDINCLUDE
 
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp" // NEEDEDINCLUDE
 
 

@@ -2,7 +2,6 @@
 
 #include <boost/hana/for_each.hpp> // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 namespace hana = boost::hana;

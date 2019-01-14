@@ -2,7 +2,6 @@
 
 #include "storage/vector_compression/base_vector_decompressor.hpp" // NEEDEDINCLUDE
 
-
 namespace opossum {
 
 template <typename UnsignedIntType>

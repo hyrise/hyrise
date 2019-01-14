@@ -1,6 +1,5 @@
 #include "variable_length_key_proxy.hpp" // NEEDEDINCLUDE
 
-
 #include "variable_length_key.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

@@ -1,14 +1,12 @@
 #pragma once
 
-
+#include <boost/hana/fold.hpp>
 
 // Include your encoded segment file here!
 #include "storage/dictionary_segment.hpp" // NEEDEDINCLUDE
 #include "storage/fixed_string_dictionary_segment.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "storage/frame_of_reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/run_length_segment.hpp" // NEEDEDINCLUDE
-
-
 #include "utils/template_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

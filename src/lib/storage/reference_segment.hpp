@@ -1,11 +1,11 @@
 #pragma once
 
-
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
-#include "table.hpp" // NEEDEDINCLUDE
-#include "value_segment.hpp" // NEEDEDINCLUDE
+#include "base_segment.hpp"
 
 namespace opossum {
+
+struct PosList;
+class Table;
 
 // ReferenceSegment is a specific segment type that stores all its values as position list of a referenced segment
 class ReferenceSegment : public BaseSegment {

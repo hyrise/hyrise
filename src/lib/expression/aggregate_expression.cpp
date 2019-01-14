@@ -1,5 +1,6 @@
 #include "aggregate_expression.hpp" // NEEDEDINCLUDE
 
+#include "constant_mappings.hpp"
 #include "operators/aggregate/aggregate_traits.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

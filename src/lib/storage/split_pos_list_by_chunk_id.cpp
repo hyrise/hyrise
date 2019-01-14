@@ -1,5 +1,7 @@
 #include "split_pos_list_by_chunk_id.hpp" // NEEDEDINCLUDE
 
+#include "storage/pos_list.hpp" // NEEDEDINCLUDE
+
 namespace opossum {
 
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const PosList>& input_pos_list,

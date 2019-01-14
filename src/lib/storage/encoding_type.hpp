@@ -2,7 +2,6 @@
 
 #include <boost/hana/at_key.hpp> // NEEDEDINCLUDE
 
-
 #include "all_type_variant.hpp" // NEEDEDINCLUDE
 #include "utils/enum_constant.hpp" // NEEDEDINCLUDE
 

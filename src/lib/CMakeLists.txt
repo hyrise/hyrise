@@ -384,7 +384,6 @@ dummy.cpp
     storage/abstract_segment_visitor.hpp
     storage/base_segment_accessor.hpp
     storage/base_dictionary_segment.hpp
-    storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
     storage/base_segment.cpp
     storage/base_segment.hpp

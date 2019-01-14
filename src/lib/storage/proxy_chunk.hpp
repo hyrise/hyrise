@@ -1,9 +1,9 @@
 #pragma once
 
-
-#include "chunk.hpp" // NEEDEDINCLUDE
+#include <memory>
 
 namespace opossum {
+class Chunk;
 
 // The ProxyChunk class wraps chunk objects and implements the RAII pattern
 // to track the time a particular chunk has been in scope. These times are

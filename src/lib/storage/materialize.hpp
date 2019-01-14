@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "storage/create_iterable_from_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

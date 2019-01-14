@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include "vector_compression.hpp" // NEEDEDINCLUDE
-
 
 namespace opossum {
 

@@ -1,5 +1,8 @@
 #include "segment_accessor.hpp" // NEEDEDINCLUDE
 
+#include "storage/pos_list.hpp"
+#include "storage/table.hpp"
+
 namespace opossum {
 
 namespace detail {

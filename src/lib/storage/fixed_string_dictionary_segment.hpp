@@ -3,11 +3,12 @@
 #include <string> // NEEDEDINCLUDE
 
 #include "base_dictionary_segment.hpp" // NEEDEDINCLUDE
-#include "fixed_string_dictionary_segment/fixed_string_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 
 class BaseCompressedVector;
+class BaseVectorDecompressor;
+class FixedStringVector;
 
 /**
  * @brief Segment implementing dictionary encoding for strings

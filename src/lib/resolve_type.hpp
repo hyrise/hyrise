@@ -4,6 +4,7 @@
 
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/resolve_encoded_segment_type.hpp" // NEEDEDINCLUDE
+#include "storage/value_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

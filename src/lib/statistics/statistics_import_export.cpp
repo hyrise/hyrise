@@ -3,6 +3,7 @@
 #include <fstream> // NEEDEDINCLUDE
 
 #include "column_statistics.hpp" // NEEDEDINCLUDE
+#include "constant_mappings.hpp"
 
 namespace opossum {
 

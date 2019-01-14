@@ -1,13 +1,13 @@
 #pragma once
 
-
-
-
 #include "base_encoded_segment.hpp" // NEEDEDINCLUDE
+#include "encoding_type.hpp"
+#include "utils/enum_constant.hpp"
 
 namespace opossum {
 
 class BaseCompressedVector;
+class BaseVectorDecompressor;
 
 /**
  * @brief Segment implementing frame-of-reference encoding

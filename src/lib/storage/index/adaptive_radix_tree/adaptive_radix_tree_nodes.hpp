@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include "adaptive_radix_tree_index.hpp" // NEEDEDINCLUDE
-
 
 namespace opossum {
 

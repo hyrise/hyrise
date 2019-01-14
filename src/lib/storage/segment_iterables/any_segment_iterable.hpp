@@ -2,13 +2,14 @@
 
 #include <iterator> // NEEDEDINCLUDE
 
-#include "storage/reference_segment/reference_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterables.hpp" // NEEDEDINCLUDE
 #include "storage/segment_iterables/any_segment_iterator.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {
 
 template <typename ValueType>
 class AnySegmentIterable;
+class BaseSegment;
 
 /**
  * @brief Wraps passed segment iterable in an AnySegmentIterable

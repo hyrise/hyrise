@@ -1,8 +1,6 @@
 #include "simd_bp128_compressor.hpp" // NEEDEDINCLUDE
 
-
 #include "simd_bp128_vector.hpp" // NEEDEDINCLUDE
-
 
 namespace opossum {
 

@@ -1,6 +1,5 @@
 #include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
 
-
 #include "utils/assert.hpp" // NEEDEDINCLUDE
 
 // When casting into this data type, make sure that the underlying data is properly aligned to 16 byte boundaries.

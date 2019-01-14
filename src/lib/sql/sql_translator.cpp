@@ -46,6 +46,7 @@
 #include "sql_identifier_resolver.hpp"
 #include "sql_identifier_resolver_proxy.hpp"
 #include "storage/lqp_view.hpp" // NEEDEDINCLUDE
+#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp" // NEEDEDINCLUDE
 

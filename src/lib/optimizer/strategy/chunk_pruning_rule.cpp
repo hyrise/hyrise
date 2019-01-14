@@ -1,6 +1,5 @@
 #include "chunk_pruning_rule.hpp" // NEEDEDINCLUDE
 
-
 #include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
 #include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE

@@ -4,6 +4,8 @@
 #include <vector> // NEEDEDINCLUDE
 
 #include "storage/base_dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "variable_length_key_proxy.hpp" // NEEDEDINCLUDE
 

@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "storage/index/base_index.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

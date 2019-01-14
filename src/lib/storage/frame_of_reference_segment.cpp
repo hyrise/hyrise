@@ -1,5 +1,9 @@
+#include "frame_of_reference_segment.hpp"
 
 #include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

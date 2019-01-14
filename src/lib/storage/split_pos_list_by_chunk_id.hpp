@@ -1,9 +1,13 @@
 #pragma once
 
+#include <memory>
+#include <vector>
 
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
+
+struct PosList;
 
 // A SubPosList is a part of a PosList. In the case of split_pos_list_by_chunk_id, we have multiple SubPosLists, each
 // of which references only a single chunk. For each entry in that SubPosList, we need to keep its position in the

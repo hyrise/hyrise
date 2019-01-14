@@ -2,14 +2,14 @@
 
 #include <map> // NEEDEDINCLUDE
 
-#include "lqp_view.hpp" // NEEDEDINCLUDE
-#include "prepared_plan.hpp" // NEEDEDINCLUDE
 #include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
-class Table;
 class AbstractLQPNode;
+class LQPView;
+class PreparedPlan;
+class Table;
 
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.

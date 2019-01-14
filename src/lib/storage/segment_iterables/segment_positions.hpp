@@ -2,7 +2,6 @@
 
 #include <boost/blank.hpp> // NEEDEDINCLUDE
 
-
 #include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

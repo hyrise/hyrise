@@ -1,7 +1,5 @@
 #include "mvcc_data.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 MvccData::MvccData(const size_t size) { grow_by(size, 0); }

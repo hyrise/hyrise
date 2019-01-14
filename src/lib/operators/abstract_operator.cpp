@@ -3,6 +3,7 @@
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 #include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp"
+#include "utils/format_bytes.hpp" // NEEDEDINCLUDE
 #include "utils/print_directed_acyclic_graph.hpp" // NEEDEDINCLUDE
 #include "utils/timer.hpp" // NEEDEDINCLUDE
 #include "utils/tracing/probes.hpp" // NEEDEDINCLUDE

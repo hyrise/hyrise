@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "variable_length_key.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

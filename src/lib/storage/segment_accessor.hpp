@@ -1,7 +1,7 @@
 #pragma once
 
-
 #include "storage/base_segment_accessor.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
 

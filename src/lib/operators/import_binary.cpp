@@ -7,6 +7,7 @@
 #include "import_export/binary.hpp" // NEEDEDINCLUDE
 #include "resolve_type.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp" // NEEDEDINCLUDE
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
 namespace opossum {

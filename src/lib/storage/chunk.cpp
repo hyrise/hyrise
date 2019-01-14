@@ -1,7 +1,9 @@
+#include "chunk.hpp"
 
 #include "index/base_index.hpp" // NEEDEDINCLUDE
 #include "resolve_type.hpp" // NEEDEDINCLUDE
 #include "statistics/chunk_statistics/chunk_statistics.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp"
 
 namespace opossum {
 
@@ -94,7 +96,7 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<Col
   return get_indices(segments);
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
+std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType& index_type,
                                             const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
   auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
@@ -103,7 +105,7 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
   return (index_it == _indices.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
+std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType& index_type,
                                             const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_index(index_type, segments);

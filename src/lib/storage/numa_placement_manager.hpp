@@ -2,8 +2,6 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-
-#include "utils/pausable_loop_thread.hpp" // NEEDEDINCLUDE
 #include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace boost {
@@ -15,6 +13,7 @@ class memory_resource;
 }  // namespace boost
 
 namespace opossum {
+struct PausableLoopThread;
 
 // The NUMAPlacementManager is a singleton that maintains the NUMA-aware allocators
 // and triggers the NUMA-aware chunk migration tasks

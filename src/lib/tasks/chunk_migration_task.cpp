@@ -1,7 +1,7 @@
 #include "chunk_migration_task.hpp" // NEEDEDINCLUDE
 
-
 #include "scheduler/topology.hpp" // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp" // NEEDEDINCLUDE
 

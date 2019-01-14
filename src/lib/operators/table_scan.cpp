@@ -9,6 +9,7 @@
 #include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
 #include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 #include "storage/reference_segment.hpp"
+#include "storage/table.hpp"
 #include "table_scan/abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
 #include "table_scan/column_between_table_scan_impl.hpp" // NEEDEDINCLUDE
 #include "table_scan/column_is_null_table_scan_impl.hpp" // NEEDEDINCLUDE

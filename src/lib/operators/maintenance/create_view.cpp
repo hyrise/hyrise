@@ -2,6 +2,7 @@
 
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp"
+#include "storage/lqp_view.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

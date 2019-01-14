@@ -1,11 +1,11 @@
 #pragma once
 
-
 #include "base_dictionary_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
 class BaseCompressedVector;
+class BaseVectorDecompressor;
 
 /**
  * @brief Segment implementing dictionary encoding

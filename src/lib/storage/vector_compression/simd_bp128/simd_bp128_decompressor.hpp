@@ -3,10 +3,9 @@
 #include <array>
 #include <numeric> // NEEDEDINCLUDE
 
-#include "storage/vector_compression/base_vector_decompressor.hpp" // NEEDEDINCLUDE
-
 #include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
-
+#include "storage/vector_compression/base_vector_decompressor.hpp" // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

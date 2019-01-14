@@ -1,7 +1,5 @@
 #include "adaptive_radix_tree_nodes.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 constexpr uint8_t INVALID_INDEX = 255u;

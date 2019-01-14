@@ -1,6 +1,11 @@
+#include "fixed_string_dictionary_segment.hpp"
 
-
+#include "fixed_string_dictionary_segment/fixed_string_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "type_cast.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

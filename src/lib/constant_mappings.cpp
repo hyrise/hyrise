@@ -1,8 +1,11 @@
-#include "constant_mappings.hpp"
+#include <boost/hana/fold.hpp>
 
+#include "constant_mappings.hpp"
 #include "expression/aggregate_expression.hpp" // NEEDEDINCLUDE
 #include "expression/function_expression.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/make_bimap.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

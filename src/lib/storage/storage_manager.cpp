@@ -1,13 +1,13 @@
 #include "storage_manager.hpp" // NEEDEDINCLUDE
 
-
 #include "operators/export_csv.hpp" // NEEDEDINCLUDE
 #include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
 #include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
 #include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 #include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp"
+#include "table.hpp"
+#include "lqp_view.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

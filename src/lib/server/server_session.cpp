@@ -4,6 +4,7 @@
 #include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
 #include "operators/abstract_operator.hpp"
 #include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
+#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "sql/sql_pipeline.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
