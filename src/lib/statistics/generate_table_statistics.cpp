@@ -77,8 +77,16 @@ void generate_table_statistics2(Table& table) {
 }
 
 void generate_compact_table_statistics(TableStatistics2& table_statistics) {
+  if (table_statistics.chunk_statistics_sets.empty() || table_statistics.chunk_statistics_sets.front().empty()) {
+    return;
+  }
+
+  if (table_statistics.chunk_statistics_sets.size() == 2) {
+    return;
+  }
+
   // TODO(moritz) revise
-  Assert(table_statistics.chunk_statistics_sets.size() == 1, "Already has compact TableStatistics");
+  Assert(table_statistics.chunk_statistics_sets.size() <= 2, "Unexpected amount of ChunkStatisticsSets");
 
   std::cout << "generate_table_statistics2():    Compacting..." << std::endl;
 

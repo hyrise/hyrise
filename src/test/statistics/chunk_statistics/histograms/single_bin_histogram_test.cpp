@@ -100,7 +100,7 @@ TEST_F(SingleBinHistogramTest, FromSegment) {
   const auto hist = SingleBinHistogram<int32_t>::from_segment(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}));
   EXPECT_EQ(hist->bin_count(), 1u);
   EXPECT_EQ(hist->bin_minimum(BinID{0}), 0);
-  EXPECT_EQ(hist->bin_maximum(bin_count() - 1), 18);
+  EXPECT_EQ(hist->bin_maximum(hist->bin_count() - 1), 18);
   EXPECT_EQ(hist->total_count(), 11u);
   EXPECT_EQ(hist->total_distinct_count(), 7u);
 }
