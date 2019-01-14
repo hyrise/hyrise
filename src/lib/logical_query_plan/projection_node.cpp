@@ -1,4 +1,4 @@
-
+#include "projection_node.hpp"
 
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "statistics/column_statistics.hpp" // NEEDEDINCLUDE

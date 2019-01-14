@@ -1,6 +1,7 @@
 #include "join_ordering_rule.hpp" // NEEDEDINCLUDE
 
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/projection_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp" // NEEDEDINCLUDE
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp" // NEEDEDINCLUDE
 #include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE

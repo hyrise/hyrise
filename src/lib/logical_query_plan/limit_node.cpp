@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

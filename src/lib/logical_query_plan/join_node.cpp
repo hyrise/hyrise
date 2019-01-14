@@ -1,4 +1,4 @@
-
+#include "join_node.hpp"
 
 #include "constant_mappings.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE

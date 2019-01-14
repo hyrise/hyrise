@@ -13,8 +13,6 @@
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_expression.hpp" // NEEDEDINCLUDE
 
-// TODO continue here
-
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate.
  *

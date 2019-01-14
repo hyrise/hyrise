@@ -3,6 +3,7 @@
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
 #include "expression/placeholder_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"
 
 namespace {
 

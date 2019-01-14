@@ -1,6 +1,7 @@
-
+#include "sort_node.hpp"
 
 #include "constant_mappings.hpp" // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

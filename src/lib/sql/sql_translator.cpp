@@ -44,6 +44,7 @@
 #include "logical_query_plan/insert_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/limit_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/show_columns_node.hpp" // NEEDEDINCLUDE

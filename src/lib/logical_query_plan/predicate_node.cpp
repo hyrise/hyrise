@@ -1,4 +1,4 @@
-
+#include "predicate_node.hpp"
 
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE

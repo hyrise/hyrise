@@ -1,12 +1,18 @@
 #pragma once
 
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include <queue>
+
+#include "all_type_variant.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+// TODO continue here
 
 namespace opossum {
 
+class AbstractExpression;
 class AbstractLQPNode;
 enum class LogicalOperator;
 class LQPColumnExpression;
+class PredicateNode;
 class TransactionContext;
 
 /**
