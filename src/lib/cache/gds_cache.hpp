@@ -53,7 +53,8 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     }
 
     KeyValuePair& dereference() const {
-      _tmp_return_value = get_value(*_map_position);
+      const auto iter_value = *_map_position;
+      _tmp_return_value = {iter_value.first, (*iter_value.second).value};
       return _tmp_return_value;
     }
   };
@@ -123,15 +124,10 @@ class GDSCache : public AbstractCacheImpl<Key, Value> {
     return (*it->second).priority;
   }
 
-  static const std::pair<Key, Value> get_value(std::pair<Key, handle_t> const& p) {
-    const handle_t handle = p.second;
-    const entry_t& entry = (*handle);
-    return {p.first, entry.value};
-  }
-
   ErasedIterator begin() {
     auto it = std::make_unique<Iterator>(_map.begin());
     return ErasedIterator(std::move(it));
+    // return {std::make_unique<Iterator>(_map.begin())};
   }
 
   ErasedIterator end() {

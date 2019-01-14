@@ -53,7 +53,8 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     }
 
     KeyValuePair& dereference() const {
-      _tmp_return_value = get_value(*_map_position);
+      const auto iter_value = *_map_position;
+      _tmp_return_value = {iter_value.first, (*iter_value.second).value};
       return _tmp_return_value;
     }
   };
@@ -100,12 +101,6 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     entry.priority = _inflation + entry.frequency / entry.size;
     _queue.update(handle);
     return entry.value;
-  }
-
-  static const KeyValuePair get_value(const std::pair<Key, Handle>& p) {
-    const Handle handle = p.second;
-    const GDFSCacheEntry& entry = (*handle);
-    return {p.first, entry.value};
   }
 
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }
