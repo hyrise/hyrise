@@ -18,32 +18,35 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
-      using OffsetValueIteratorT = decltype(offset_values.cbegin());
+    // TODO decompress segment
+    auto decompressed_segment = _segment;
+    // alias the data type of the constant iterator over the decompressed data
+    using ValueIteratorT = decltype(decompressed_segment.cbegin());
 
-      auto begin = Iterator<OffsetValueIteratorT>{_segment.block_minima().cbegin(), offset_values.cbegin(),
-                                                  _segment.null_values().cbegin()};
+    // create iterator instances for the begin and end
+    auto begin = Iterator<ValueIteratorT>{decompressed_segment.cbegin()};
+    auto end = Iterator<ValueIteratorT>{decompressed_segment.cend()};
 
-      auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
-
-      functor(begin, end);
-    });
+    // call the functor on the iterators (until the begin iterator equals the end iterator)
+    functor(begin, end);
   }
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
-      auto decompressor = vector.create_decompressor();
-      using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
+    // for now we also decompress the whole segment instead of having an actual point access
 
-      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
-                                                                 decompressor.get(), position_filter->cbegin(),
-                                                                 position_filter->cbegin()};
+    // TODO decompress segment
+    auto decompressed_segment = _segment;
+    // alias the data type of the constant iterator over the decompressed data
+    using ValueIteratorT = decltype(decompressed_segment.cbegin());
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
+    // create point access iterator instances for the begin and end
+    auto begin = PointAccessIterator<ValueIteratorT>{decompressed_segment.cbegin(), position_filter->cbegin(),
+                                                     position_filter->cbegin()};
+    auto end = PointAccessIterator<ValueIteratorT>{position_filter->cbegin(), position_filter->cend()};
 
-      functor(begin, end);
-    });
+    // call the functor on the iterators (until the begin iterator equals the end iterator)
+    functor(begin, end);
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -52,101 +55,68 @@ class LZ4Iterable : public PointAccessibleSegmentIterable<LZ4Iterable<T>> {
   const LZ4Segment<T>& _segment;
 
  private:
-  template <typename OffsetValueIteratorT>
-  class Iterator : public BaseSegmentIterator<Iterator<OffsetValueIteratorT>, SegmentPosition<T>> {
+  template <typename ValueIteratorT>
+  class Iterator : public BaseSegmentIterator<Iterator<ValueIteratorT>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = LZ4Iterable<T>;
-    using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
-    using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
    public:
-    // Begin Iterator
-    explicit Iterator(ReferenceFrameIterator block_minimum_it, OffsetValueIteratorT offset_value_it,
-                      NullValueIterator null_value_it)
-        : _block_minimum_it{block_minimum_it},
-          _offset_value_it{offset_value_it},
-          _null_value_it{null_value_it},
-          _index_within_frame{0u},
-          _chunk_offset{0u} {}
-
-    // End iterator
-    explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it, {}} {}
+    // Begin and End Iterator
+    explicit Iterator(ValueIteratorT data_it) : _chunk_offset{0u}, _data_it{data_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
-      ++_offset_value_it;
-      ++_null_value_it;
-      ++_index_within_frame;
       ++_chunk_offset;
-
-      if (_index_within_frame >= LZ4Segment<T>::block_size) {
-        _index_within_frame = 0u;
-        ++_block_minimum_it;
-      }
     }
 
-    bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
+    bool equal(const Iterator& other) const { return _data_it == other._data_it; }
 
     SegmentPosition<T> dereference() const {
-      const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
-      return SegmentPosition<T>{value, *_null_value_it, _chunk_offset};
+      const auto value = *(_data_it + _chunk_offset);
+      // TODO find out if it is a null value
+      return SegmentPosition<T>{value, false, _chunk_offset};
     }
 
    private:
-    ReferenceFrameIterator _block_minimum_it;
-    OffsetValueIteratorT _offset_value_it;
-    NullValueIterator _null_value_it;
-    size_t _index_within_frame;
     ChunkOffset _chunk_offset;
+    ValueIteratorT _data_it;
   };
 
-  template <typename OffsetValueDecompressorT>
+  template <typename ValueIteratorT>
   class PointAccessIterator
-      : public BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>, SegmentPosition<T>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<ValueIteratorT>, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = LZ4Iterable<T>;
 
     // Begin Iterator
-    PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        OffsetValueDecompressorT* attribute_decompressor,
+    PointAccessIterator(ValueIteratorT data_it,
                         const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
-        : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
+        : BasePointAccessSegmentIterator<PointAccessIterator<ValueIteratorT>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
-          _block_minima{block_minima},
-          _null_values{null_values},
-          _offset_value_decompressor{attribute_decompressor} {}
+        _data_it{data_it} {}
 
     // End Iterator
     explicit PointAccessIterator(const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it)
-        : PointAccessIterator{nullptr, nullptr, nullptr, std::move(position_filter_begin),
-                              std::move(position_filter_it)} {}
+        : PointAccessIterator{nullptr, std::move(position_filter_begin), std::move(position_filter_it)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
-      static constexpr auto block_size = LZ4Segment<T>::block_size;
-
-      const auto is_null = (*_null_values)[chunk_offsets.offset_in_referenced_chunk];
-      const auto block_minimum = (*_block_minima)[chunk_offsets.offset_in_referenced_chunk / block_size];
-      const auto offset_value = _offset_value_decompressor->get(chunk_offsets.offset_in_referenced_chunk);
-      const auto value = static_cast<T>(offset_value) + block_minimum;
-
-      return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
+      const auto value = *(_data_it + chunk_offsets.offset_in_referenced_chunk);
+      // TODO find out if it is a null value
+      return SegmentPosition<T>{value, false, chunk_offsets.offset_in_poslist};
     }
 
    private:
-    const pmr_vector<T>* _block_minima;
-    const pmr_vector<bool>* _null_values;
-    OffsetValueDecompressorT* _offset_value_decompressor;
+    ValueIteratorT _data_it;
   };
 };
 
