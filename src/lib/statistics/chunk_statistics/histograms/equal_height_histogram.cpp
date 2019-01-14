@@ -21,7 +21,6 @@ EqualHeightHistogram<T>::EqualHeightHistogram(const T minimum, std::vector<T>&& 
                                               std::vector<HistogramCountType>&& bin_distinct_counts)
     : AbstractHistogram<T>(), _bin_data({minimum, std::move(bin_maxima), total_count, std::move(bin_distinct_counts)}) {
   Assert(_bin_data.total_count > 0, "Cannot have histogram without any values.");
-  Assert(!_bin_data.bin_maxima.empty(), "Cannot have histogram without any bins.");
   Assert(_bin_data.bin_maxima.size() == _bin_data.bin_distinct_counts.size(),
          "Must have maxs and distinct counts for each bin.");
   Assert(_bin_data.minimum <= _bin_data.bin_maxima[0], "Must have maxs and distinct counts for each bin.");

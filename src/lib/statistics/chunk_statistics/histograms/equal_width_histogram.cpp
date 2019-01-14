@@ -24,7 +24,6 @@ EqualWidthHistogram<T>::EqualWidthHistogram(const T minimum, const T maximum,
     : AbstractHistogram<T>(),
       _bin_data(
           {minimum, maximum, std::move(bin_heights), std::move(bin_distinct_counts), bin_count_with_larger_range}) {
-  Assert(!_bin_data.bin_heights.empty(), "Cannot have histogram without any bins.");
   Assert(_bin_data.bin_heights.size() == _bin_data.bin_distinct_counts.size(),
          "Must have heights and distinct counts for each bin.");
   Assert(_bin_data.minimum <= _bin_data.maximum, "Cannot have upper bound of histogram smaller than lower bound.");

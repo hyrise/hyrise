@@ -120,18 +120,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const std::vector<std::pair<T, T>>& additional_bin_edges) const;
 
   /**
-   * Returns the lower bound (minimum value) of the histogram.
-   * This is equal to the smallest value in the segment.
-   */
-  T minimum() const;
-
-  /**
-   * Returns the upper bound (maximum value) of the histogram.
-   * This is equal to the largest value in the segment.
-   */
-  T maximum() const;
-
-  /**
    * Returns the number of bins actually present in the histogram.
    * This number can be smaller than the number of bins requested when creating a histogram.
    * See implementations of this method in specific histograms for details.

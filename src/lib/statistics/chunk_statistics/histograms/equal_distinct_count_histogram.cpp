@@ -24,7 +24,6 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
     : AbstractHistogram<T>(),
       _bin_data({std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights), distinct_count_per_bin,
                  bin_count_with_extra_value}) {
-  Assert(!_bin_data.bin_minima.empty(), "Cannot have histogram without any bins.");
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_maxima.size(),
          "Must have the same number of lower as upper bin edges.");
   Assert(_bin_data.bin_minima.size() == _bin_data.bin_heights.size(),

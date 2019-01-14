@@ -28,12 +28,16 @@ void create_pruning_filter_for_segment(SegmentStatistics2<T>& segment_statistics
     }
   } else {
     if (!segment_statistics.min_max_filter || !segment_statistics.min_max_filter->is_derived_from_complete_chunk) {
-      pruning_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+      if (!dictionary.empty()) {
+        pruning_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+      }
     }
   }
 
-  pruning_filter->is_derived_from_complete_chunk = true;
-  segment_statistics.set_statistics_object(pruning_filter);
+  if (pruning_filter) {
+    pruning_filter->is_derived_from_complete_chunk = true;
+    segment_statistics.set_statistics_object(pruning_filter);
+  }
 }
 
 }  // namespace

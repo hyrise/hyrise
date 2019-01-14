@@ -92,8 +92,8 @@ std::string convert_string_to_domain(const std::string& value, const std::string
   auto converted = value;
   auto pos = size_t{0};
 
-  while ((pos = value.find_first_not_of(supported_characters, pos)) != std::string::npos) {
-    converted[pos] = supported_characters[value[pos] % supported_characters.size()];
+  while ((pos = converted.find_first_not_of(supported_characters, pos)) != std::string::npos) {
+    converted[pos] = supported_characters[converted[pos] % supported_characters.size()];
   }
 
   return converted;

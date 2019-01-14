@@ -53,8 +53,6 @@ std::string AbstractHistogram<T>::description(const bool include_bin_info) const
   std::stringstream stream;
   stream << histogram_name();
   stream << " distinct: " << total_distinct_count();
-  stream << " min: " << minimum();
-  stream << " max: " << maximum();
   stream << " bins: " << bin_count();
 
   if (include_bin_info) {
@@ -81,16 +79,6 @@ std::vector<std::pair<T, HistogramCountType>> AbstractHistogram<T>::_gather_valu
 
   std::vector<std::pair<T, HistogramCountType>> result(value_counts.cbegin(), value_counts.cend());
   return result;
-}
-
-template <typename T>
-T AbstractHistogram<T>::minimum() const {
-  return bin_minimum(0u);
-}
-
-template <typename T>
-T AbstractHistogram<T>::maximum() const {
-  return bin_maximum(bin_count() - 1u);
 }
 
 template <typename T>
@@ -192,6 +180,10 @@ template <typename T>
 bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_type,
                                                      const AllTypeVariant& variant_value,
                                                      const std::optional<AllTypeVariant>& variant_value2) const {
+  if (bin_count() == 0) {
+    return true;
+  }
+
   const auto value = type_cast_variant<T>(variant_value);
 
   switch (predicate_type) {
@@ -201,15 +193,15 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
       return bin_id == INVALID_BIN_ID || bin_height(bin_id) == 0ul;
     }
     case PredicateCondition::NotEquals:
-      return minimum() == value && maximum() == value;
+      return bin_minimum(BinID{0}) == value && bin_maximum(bin_count() - 1) == value;
     case PredicateCondition::LessThan:
-      return value <= minimum();
+      return value <= bin_minimum(BinID{0});
     case PredicateCondition::LessThanEquals:
-      return value < minimum();
+      return value < bin_minimum(BinID{0});
     case PredicateCondition::GreaterThanEquals:
-      return value > maximum();
+      return value > bin_maximum(bin_count() - 1);
     case PredicateCondition::GreaterThan:
-      return value >= maximum();
+      return value >= bin_maximum(bin_count() - 1);
     case PredicateCondition::Between: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
 
@@ -388,8 +380,8 @@ bool AbstractHistogram<std::string>::_does_not_contain(const PredicateCondition 
       const auto match_all_index = value.find('%');
       if (match_all_index != std::string::npos) {
         const auto search_prefix = value.substr(0, match_all_index);
-        if (search_prefix == minimum().substr(0, search_prefix.length()) &&
-            search_prefix == maximum().substr(0, search_prefix.length())) {
+        if (search_prefix == bin_minimum(BinID{0}).substr(0, search_prefix.length()) &&
+            search_prefix == bin_maximum(bin_count() - 1).substr(0, search_prefix.length())) {
           return true;
         }
       }
@@ -425,12 +417,12 @@ CardinalityEstimate AbstractHistogram<T>::_estimate_cardinality(
     case PredicateCondition::NotEquals:
       return invert_estimate(_estimate_cardinality(PredicateCondition::Equals, variant_value));
     case PredicateCondition::LessThan: {
-      if (value > maximum()) {
+      if (value > bin_maximum(bin_count() - 1)) {
         return {static_cast<Cardinality>(total_count()), EstimateType::MatchesAll};
       }
 
       // This should never be false because does_not_contain should have been true further up if this was the case.
-      DebugAssert(value >= minimum(), "Value smaller than min of histogram.");
+      DebugAssert(value >= bin_minimum(BinID{0}), "Value smaller than min of histogram.");
 
       auto cardinality = Cardinality{0};
       auto estimate_type = EstimateType::MatchesApproximately;
@@ -686,7 +678,7 @@ float AbstractHistogram<T>::estimate_distinct_count(const PredicateCondition pre
       return total_distinct_count() - 1.f;
     }
     case PredicateCondition::LessThan: {
-      if (value > maximum()) {
+      if (value > bin_maximum(bin_count() - 1)) {
         return total_distinct_count();
       }
 
@@ -1117,11 +1109,18 @@ std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_edges() const {
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::_reduce_to_single_bin_histogram_impl() const {
+  if (bin_count() == 0) {
+    return nullptr;
+  }
+
+  const auto minimum = bin_minimum(BinID{0});
+  const auto maximum = bin_maximum(bin_count() - 1);
+
   if constexpr (std::is_same_v<T, std::string>) {
-    return std::make_shared<SingleBinHistogram<T>>(minimum(), maximum(), total_count(), total_distinct_count(),
+    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count(), total_distinct_count(),
                                                    _supported_characters, _string_prefix_length);
   } else {
-    return std::make_shared<SingleBinHistogram<T>>(minimum(), maximum(), total_count(), total_distinct_count());
+    return std::make_shared<SingleBinHistogram<T>>(minimum, maximum, total_count(), total_distinct_count());
   }
 }
 
