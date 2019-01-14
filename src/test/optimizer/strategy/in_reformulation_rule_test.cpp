@@ -125,14 +125,15 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToInnerJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// We cannot use an anti join here, because it does not preserve the columns from the right sub-tree.
 TEST_F(InReformulationRuleTest, SimpleCorrelatedInToAntiJoin) {
-  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.a = a.a)
+  // SELECT * FROM a WHERE a.a NOT IN (SELECT b.a FROM b WHERE b.a < a.a)
   const auto parameter = correlated_parameter_(ParameterID{0}, node_table_a_col_b);
 
   // clang-format off
   const auto subselect_lqp =
       ProjectionNode::make(expression_vector(node_table_b_col_a),
-                           PredicateNode::make(equals_(node_table_b_col_b, parameter),
+                           PredicateNode::make(less_than_(node_table_b_col_b, parameter),
                                                node_table_b));
 
   const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, node_table_a_col_b));
@@ -144,9 +145,9 @@ TEST_F(InReformulationRuleTest, SimpleCorrelatedInToAntiJoin) {
   const auto expected_lqp =
       AggregateNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b), expression_vector(),
                           ProjectionNode::make(expression_vector(node_table_a_col_a, node_table_a_col_b),
-                                               PredicateNode::make(equals_(node_table_b_col_b, node_table_a_col_b),
-                                                                   JoinNode::make(JoinMode::Anti,
-                                                                                  equals_(node_table_a_col_a,
+                                               PredicateNode::make(less_than_(node_table_b_col_b, node_table_a_col_b),
+                                                                   JoinNode::make(JoinMode::Inner,
+                                                                                  not_equals_(node_table_a_col_a,
                                                                                           node_table_b_col_a),
                                                                                   node_table_a,
                                                                                   node_table_b))));

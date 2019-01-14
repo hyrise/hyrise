@@ -79,7 +79,7 @@ bool InReformulationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node)
   } else {
     // For correlated sub-queries, we would ideally use multi-predicate semi joins to join on the join attribute and
     // any correlated predicate found in the sub-query. Since these are still work-in-progress, we emulate them by:
-    //   - Performing a inner join on the two trees
+    //   - Performing an inner join on the two trees
     //   - Pulling up correlated predicates (only implemented for one for now) above the join
     //   - Inserting a projection above the predicates to filter out any columns from the right sub-tree
     //   - Inserting a group by over all columns from the left subtree, to filter out duplicates introduced by the join
