@@ -1,27 +1,19 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 
+// Instead of adding includes here, try to add them to the caller first. That way, we only include files that are
+// needed and can rely on forward declarations for the rest
+#include "all_type_variant.hpp"
 #include "aggregate_expression.hpp" // NEEDEDINCLUDE
 #include "arithmetic_expression.hpp" // NEEDEDINCLUDE
-#include "between_expression.hpp" // NEEDEDINCLUDE
-#include "binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "case_expression.hpp" // NEEDEDINCLUDE
-#include "cast_expression.hpp" // NEEDEDINCLUDE
-#include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
-#include "exists_expression.hpp" // NEEDEDINCLUDE
 #include "extract_expression.hpp" // NEEDEDINCLUDE
 #include "function_expression.hpp"
-#include "in_expression.hpp" // NEEDEDINCLUDE
-#include "is_null_expression.hpp" // NEEDEDINCLUDE
-#include "list_expression.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_expression.hpp" // NEEDEDINCLUDE
-#include "lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "placeholder_expression.hpp" // NEEDEDINCLUDE
-#include "pqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "pqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "unary_minus_expression.hpp" // NEEDEDINCLUDE
-#include "value_expression.hpp" // NEEDEDINCLUDE
+
+// TODO continue here
 
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate.
@@ -50,8 +42,26 @@
 
 namespace opossum {
 
+class AbstractExpression;
+class AbstractLQPNode;
 class AbstractOperator;
-class LQPColumnReference;
+class BetweenExpression;
+class BinaryPredicateExpression;
+class CaseExpression;
+class CastExpression;
+class CorrelatedParameterExpression;
+class ExistsExpression;
+class FunctionExpression;
+class InExpression;
+class IsNullExpression;
+class ListExpression;
+class LQPColumnExpression;
+class LQPSelectExpression;
+class PlaceholderExpression;
+class PQPColumnExpression;
+class PQPSelectExpression;
+class UnaryMinusExpression;
+class ValueExpression;
 
 /**
  * expression_"functional", since it supplies a functional-programming like interface to build nested expressions

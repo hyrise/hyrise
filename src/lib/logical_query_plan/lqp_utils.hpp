@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue> // NEEDEDINCLUDE
+#include <set>
 
 #include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE

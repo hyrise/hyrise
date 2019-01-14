@@ -4,6 +4,7 @@
 
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/abstract_lqp_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/delete_node.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/insert_node.hpp" // NEEDEDINCLUDE

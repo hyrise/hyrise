@@ -1,28 +1,34 @@
 #pragma once
 
+#include <unordered_map>
 
-
-#include "expression/logical_expression.hpp" // NEEDEDINCLUDE
-#include "expression/pqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "expression_result.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 
+class AbstractExpression;
 class AbstractOperator;
 class AbstractPredicateExpression;
 class ArithmeticExpression;
+class BaseExpressionResult;
 class BaseSegment;
 class BinaryPredicateExpression;
 class CaseExpression;
 class CastExpression;
 class Chunk;
 class ExistsExpression;
+template <typename T>
+class ExpressionResult;
 class ExtractExpression;
 class FunctionExpression;
-class UnaryMinusExpression;
 class InExpression;
 class IsNullExpression;
+class LogicalExpression;
 class PQPColumnExpression;
+class PQPSelectExpression;
+class Table;
+class UnaryMinusExpression;
 
 /**
  * Computes the result of an Expression in three different ways

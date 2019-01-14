@@ -1,4 +1,4 @@
-
+#include "logical_expression.hpp"
 
 #include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
 

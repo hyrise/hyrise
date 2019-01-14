@@ -1,5 +1,6 @@
 #include "alias_node.hpp" // NEEDEDINCLUDE
 
+#include <sstream>
 
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 

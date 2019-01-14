@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "base_non_query_node.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

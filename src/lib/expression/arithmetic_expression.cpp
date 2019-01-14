@@ -1,5 +1,8 @@
 #include "arithmetic_expression.hpp" // NEEDEDINCLUDE
 
+#include <boost/functional/hash.hpp> // NEEDEDINCLUDE
+#include <sstream>
+
 #include "expression_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

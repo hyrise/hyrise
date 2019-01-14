@@ -3,9 +3,8 @@
 #include <unordered_map> // NEEDEDINCLUDE
 #include <unordered_set> // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 #include "expression_precedence.hpp" // NEEDEDINCLUDE
-#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

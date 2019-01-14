@@ -1,6 +1,5 @@
 #include "transaction_manager.hpp" // NEEDEDINCLUDE
 
-
 #include "commit_context.hpp" // NEEDEDINCLUDE
 #include "transaction_context.hpp" // NEEDEDINCLUDE
 

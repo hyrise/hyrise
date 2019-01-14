@@ -9,6 +9,7 @@
 #include "lqp_column_expression.hpp" // NEEDEDINCLUDE
 #include "lqp_select_expression.hpp" // NEEDEDINCLUDE
 #include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
+#include "placeholder_expression.hpp" // NEEDEDINCLUDE
 #include "pqp_select_expression.hpp" // NEEDEDINCLUDE
 #include "value_expression.hpp" // NEEDEDINCLUDE
 

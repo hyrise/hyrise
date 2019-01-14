@@ -1,9 +1,6 @@
 #pragma once
 
-
-
 #include "expression_result_views.hpp" // NEEDEDINCLUDE
-#include "storage/create_iterable_from_segment.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

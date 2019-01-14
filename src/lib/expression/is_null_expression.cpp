@@ -1,6 +1,6 @@
 #include "is_null_expression.hpp" // NEEDEDINCLUDE
 
-
+#include <sstream>
 
 namespace opossum {
 

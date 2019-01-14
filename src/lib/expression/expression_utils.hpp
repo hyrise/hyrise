@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

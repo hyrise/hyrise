@@ -1,7 +1,5 @@
 #include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
 
-
-
 #include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

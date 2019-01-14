@@ -1,7 +1,5 @@
 #include "unary_minus_expression.hpp" // NEEDEDINCLUDE
 
-
-
 namespace opossum {
 
 UnaryMinusExpression::UnaryMinusExpression(const std::shared_ptr<AbstractExpression>& argument)

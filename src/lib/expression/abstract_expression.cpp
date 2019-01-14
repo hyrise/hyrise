@@ -1,6 +1,5 @@
 #include "abstract_expression.hpp" // NEEDEDINCLUDE
 
-#include <queue> // NEEDEDINCLUDE
 #include <string> // NEEDEDINCLUDE
 
 #include "boost/functional/hash.hpp" // NEEDEDINCLUDE

@@ -1,6 +1,5 @@
 #include "cast_expression.hpp" // NEEDEDINCLUDE
 
-
 #include "constant_mappings.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
