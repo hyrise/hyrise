@@ -1,6 +1,7 @@
 #include "llvm_utils.hpp" // NEEDEDINCLUDE
 
 #include <llvm/IRReader/IRReader.h> // NEEDEDINCLUDE
+#include <llvm/IR/Module.h> // NEEDEDINCLUDE
 #include <llvm/Support/Error.h> // NEEDEDINCLUDE
 #include <llvm/Support/SourceMgr.h> // NEEDEDINCLUDE
 

@@ -1,7 +1,5 @@
 #include "column_vs_value_table_scan_impl.hpp" // NEEDEDINCLUDE
 
-#include <vector> // NEEDEDINCLUDE
-
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
 

@@ -1,5 +1,5 @@
 #include "abstract_read_write_operator.hpp" // NEEDEDINCLUDE
-
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

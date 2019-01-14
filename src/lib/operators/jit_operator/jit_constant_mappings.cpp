@@ -1,5 +1,4 @@
-
-
+#include "jit_constant_mappings.hpp"
 
 #include "jit_types.hpp" // NEEDEDINCLUDE
 #include "utils/make_bimap.hpp" // NEEDEDINCLUDE

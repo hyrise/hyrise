@@ -1,6 +1,6 @@
 #include "insert.hpp" // NEEDEDINCLUDE
 
-
+#include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp" // NEEDEDINCLUDE
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 

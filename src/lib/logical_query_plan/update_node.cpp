@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-
 namespace opossum {
 
 UpdateNode::UpdateNode(const std::string& table_name) : BaseNonQueryNode(LQPNodeType::Update), table_name(table_name) {}

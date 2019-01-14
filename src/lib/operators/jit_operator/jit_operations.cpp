@@ -1,5 +1,7 @@
 #include "jit_operations.hpp" // NEEDEDINCLUDE
 
+#include "expression/evaluation/like_matcher.hpp"
+
 namespace opossum {
 
 // Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence

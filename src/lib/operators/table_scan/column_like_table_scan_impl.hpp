@@ -1,11 +1,11 @@
 #pragma once
 
-
 #include "abstract_single_column_table_scan_impl.hpp" // NEEDEDINCLUDE
 #include "expression/evaluation/like_matcher.hpp" // NEEDEDINCLUDE
 
-
 namespace opossum {
+
+class BaseDictionarySegment;
 
 class Table;
 

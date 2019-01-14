@@ -1,11 +1,11 @@
 #pragma once
 
-
 #include "abstract_single_column_table_scan_impl.hpp" // NEEDEDINCLUDE
-
 #include "all_type_variant.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class BaseDictionarySegment;
 
 /**
  * @brief Compares one column to a literal (i.e., an AllTypeVariant)

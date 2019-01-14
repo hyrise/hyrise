@@ -2,6 +2,8 @@
 
 namespace opossum {
 
+// TODO remove
+
 /**
  * Sometimes the compiler may complain about unused variables.
  * Call this function with those variables to silence the compiler.

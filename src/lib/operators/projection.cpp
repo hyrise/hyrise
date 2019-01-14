@@ -1,11 +1,29 @@
 #include "projection.hpp" // NEEDEDINCLUDE
 
-
 #include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
 #include "expression/pqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
+
+namespace {
+  /**
+   * The dummy table is used for literal projections that have no input table.
+   * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
+   * Because each INSERT uses a projection as input, the above case needs to project the three
+   * literals (1, 2, 3) without any specific input table. Therefore, this dummy table is used instead.
+   *
+   * The dummy table contains one column, and a chunk with one (value) segment with one row. This way,
+   * the above projection contains exactly one row with the given literals.
+   */
+  class DummyTable : public Table {
+   public:
+    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int}}, TableType::Data) {
+      append(std::vector<AllTypeVariant>{0});
+    }
+  };
+}
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions)

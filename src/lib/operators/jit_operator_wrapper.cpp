@@ -2,6 +2,7 @@
 
 #include "operators/jit_operator/operators/jit_aggregate.hpp" // NEEDEDINCLUDE
 #include "operators/jit_operator/operators/jit_validate.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
 
 namespace opossum {
 

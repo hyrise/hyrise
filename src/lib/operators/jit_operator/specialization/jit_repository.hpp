@@ -1,9 +1,14 @@
 #pragma once
 
-#include <llvm/IR/Module.h> // NEEDEDINCLUDE
-
+#include <mutex>
 
 #include "utils/singleton.hpp" // NEEDEDINCLUDE
+
+namespace llvm {
+  class Module;
+  class Function;
+  class LLVMContext;
+}
 
 namespace opossum {
 

@@ -1,9 +1,7 @@
 #include "operator_task.hpp" // NEEDEDINCLUDE
 
-
-
+#include "concurrency/transaction_context.hpp"
 #include "operators/abstract_read_write_operator.hpp" // NEEDEDINCLUDE
-
 #include "utils/tracing/probes.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

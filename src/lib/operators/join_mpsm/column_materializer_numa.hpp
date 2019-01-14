@@ -1,4 +1,3 @@
-
 #include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
 #include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 #include "scheduler/topology.hpp" // NEEDEDINCLUDE

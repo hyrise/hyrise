@@ -1,6 +1,6 @@
 #include "union_all.hpp" // NEEDEDINCLUDE
 
-
+#include "storage/table.hpp"
 
 namespace opossum {
 UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,

@@ -1,7 +1,6 @@
 #pragma once
 
-
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 

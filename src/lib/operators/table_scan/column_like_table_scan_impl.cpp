@@ -4,7 +4,6 @@
 
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
-#include "utils/ignore_unused_variable.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -31,11 +30,10 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& seg
 void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                     PosList& matches,
                                                     const std::shared_ptr<const PosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto it, const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
     using Type = typename decltype(it)::ValueType;
     if constexpr (!std::is_same_v<Type, std::string>) {
       // gcc complains without this
-      ignore_unused_variable(end);
       Fail("Can only handle strings");
     } else {
       _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {

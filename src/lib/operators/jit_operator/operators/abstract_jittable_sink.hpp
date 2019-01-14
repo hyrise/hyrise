@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../../../storage/table.hpp" // NEEDEDINCLUDE
-#include "abstract_jittable.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "abstract_jittable.hpp"
 
 namespace opossum {
+
+class Table;
 
 /**
  * AbstractJittableSink is the last jit operator in the operator chain.

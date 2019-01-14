@@ -1,9 +1,10 @@
 #pragma once
 
 #include "operators/abstract_read_only_operator.hpp" // NEEDEDINCLUDE
-#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class PreparedPlan;
 
 class CreatePreparedPlan : public AbstractReadOnlyOperator {
  public:

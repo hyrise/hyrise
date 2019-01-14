@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
@@ -15,22 +13,6 @@ class Projection : public AbstractReadOnlyOperator {
              const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
   const std::string name() const override;
-
-  /**
-   * The dummy table is used for literal projections that have no input table.
-   * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
-   * Because each INSERT uses a projection as input, the above case needs to project the three
-   * literals (1, 2, 3) without any specific input table. Therefore, this dummy table is used instead.
-   *
-   * The dummy table contains one column, and a chunk with one (value) segment with one row. This way,
-   * the above projection contains exactly one row with the given literals.
-   */
-  class DummyTable : public Table {
-   public:
-    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int}}, TableType::Data) {
-      append(std::vector<AllTypeVariant>{0});
-    }
-  };
 
   static std::shared_ptr<Table> dummy_table();
 

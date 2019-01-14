@@ -1,6 +1,5 @@
 #include "create_table.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
-
 #include "storage/storage_manager.hpp" // NEEDEDINCLUDE
 #include "storage/table.hpp" // NEEDEDINCLUDE
 

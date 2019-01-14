@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "jit_compiler.hpp" // NEEDEDINCLUDE
 #include "jit_repository.hpp" // NEEDEDINCLUDE
 #include "llvm_extensions.hpp" // NEEDEDINCLUDE

@@ -1,12 +1,10 @@
 #pragma once
 
-
 #include "abstract_operator.hpp" // NEEDEDINCLUDE
 
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-
-
 namespace opossum {
+
+class TransactionContext;
 
 enum class ReadWriteOperatorState {
   Pending,     // The operator has been instantiated.

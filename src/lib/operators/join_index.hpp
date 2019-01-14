@@ -4,6 +4,7 @@
 #include "abstract_join_operator.hpp" // NEEDEDINCLUDE
 #include "storage/index/base_index.hpp" // NEEDEDINCLUDE
 #include "storage/pos_list.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
 /**

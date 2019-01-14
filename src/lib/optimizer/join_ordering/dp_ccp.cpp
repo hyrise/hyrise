@@ -5,6 +5,7 @@
 #include "enumerate_ccp.hpp" // NEEDEDINCLUDE
 #include "join_graph.hpp" // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

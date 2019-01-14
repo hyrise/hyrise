@@ -7,6 +7,7 @@
 #include "scheduler/job_task.hpp" // NEEDEDINCLUDE
 #include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
 

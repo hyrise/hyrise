@@ -2,7 +2,6 @@
 
 #include <llvm/Transforms/Utils/Cloning.h> // NEEDEDINCLUDE
 
-
 #include "jit_runtime_pointer.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

@@ -1,13 +1,10 @@
 #pragma once
 
-
 #include "abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
-
-#include "storage/abstract_segment_visitor.hpp" // NEEDEDINCLUDE
-
 
 namespace opossum {
 
+class BaseSegment;
 class Table;
 class ReferenceSegment;
 class AttributeVectorIterable;

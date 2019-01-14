@@ -4,6 +4,7 @@
 #include "operators/limit.hpp" // NEEDEDINCLUDE
 #include "operators/projection.hpp" // NEEDEDINCLUDE
 #include "operators/table_scan.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 #include "utils/format_duration.hpp" // NEEDEDINCLUDE
 #include "visualization/pqp_visualizer.hpp" // NEEDEDINCLUDE
 

@@ -1,9 +1,10 @@
 #pragma once
 
-#include "abstract_jittable.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "abstract_jittable.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class Table;
 
 /* Base class for all segment readers.
  * We need this class, so we can store a number of JitSegmentReaders with different template

@@ -1,12 +1,6 @@
 #include "mock_node.hpp" // NEEDEDINCLUDE
 
-#include <memory> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
-
 #include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 

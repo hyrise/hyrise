@@ -1,6 +1,5 @@
 #include "validate_node.hpp" // NEEDEDINCLUDE
 
-
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

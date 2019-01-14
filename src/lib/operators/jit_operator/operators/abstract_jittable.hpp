@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "operators/jit_operator/jit_types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

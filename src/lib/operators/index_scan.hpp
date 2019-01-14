@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
 
@@ -7,6 +8,7 @@
 
 namespace opossum {
 
+enum class SegmentIndexType : uint8_t;
 class Table;
 class AbstractTask;
 
@@ -19,7 +21,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
+  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType& index_type,
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 

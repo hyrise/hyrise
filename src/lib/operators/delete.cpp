@@ -1,6 +1,6 @@
 #include "delete.hpp" // NEEDEDINCLUDE
 
-
+#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
 #include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
 #include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE

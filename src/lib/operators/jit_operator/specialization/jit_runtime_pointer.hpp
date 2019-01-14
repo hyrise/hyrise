@@ -3,7 +3,6 @@
 #include <fcntl.h> // NEEDEDINCLUDE
 #include <unistd.h> // NEEDEDINCLUDE
 
-
 #include "utils/assert.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

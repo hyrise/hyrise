@@ -1,9 +1,7 @@
 #include "export_csv.hpp" // NEEDEDINCLUDE
 
-
-
 #include "import_export/csv_writer.hpp" // NEEDEDINCLUDE
-
+#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

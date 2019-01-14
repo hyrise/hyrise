@@ -1,8 +1,6 @@
 #pragma once
 
-
 #include "abstract_single_column_table_scan_impl.hpp" // NEEDEDINCLUDE
-
 
 namespace opossum {
 

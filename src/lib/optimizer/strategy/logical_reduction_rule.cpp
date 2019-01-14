@@ -4,6 +4,7 @@
 
 #include "expression/expression_functional.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {

@@ -1,4 +1,3 @@
-
 #include "utils/filesystem.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

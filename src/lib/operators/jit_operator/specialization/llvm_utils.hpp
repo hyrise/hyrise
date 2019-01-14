@@ -1,6 +1,11 @@
 #pragma once
 
-#include <llvm/IR/Module.h> // NEEDEDINCLUDE
+#include <memory>
+
+namespace llvm {
+	class Module;
+	class LLVMContext;
+}
 
 namespace opossum {
 

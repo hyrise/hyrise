@@ -2,9 +2,7 @@
 
 #include <boost/preprocessor/seq/for_each_product.hpp> // NEEDEDINCLUDE
 
-
 #include "jit_types.hpp" // NEEDEDINCLUDE
-#include "operators/table_scan/column_like_table_scan_impl.hpp" // NEEDEDINCLUDE
 #include "resolve_type.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

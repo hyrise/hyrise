@@ -3,6 +3,7 @@
 #include <iomanip> // NEEDEDINCLUDE
 
 #include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 namespace opossum {
 

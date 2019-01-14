@@ -1,9 +1,7 @@
 #include "jit_code_specializer.hpp" // NEEDEDINCLUDE
 
-#include <llvm/Transforms/Scalar.h> // NEEDEDINCLUDE
-
 #include <boost/algorithm/string/predicate.hpp> // NEEDEDINCLUDE
-
+#include <llvm/Transforms/Scalar.h> // NEEDEDINCLUDE
 #include <queue> // NEEDEDINCLUDE
 
 

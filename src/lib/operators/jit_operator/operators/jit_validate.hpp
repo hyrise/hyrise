@@ -1,7 +1,7 @@
 #pragma once
 
 #include "abstract_jittable.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

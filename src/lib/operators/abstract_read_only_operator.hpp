@@ -1,10 +1,10 @@
 #pragma once
 
-
 #include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
+
+class Table;
 
 /**
  * AbstractReadOnlyOperator is the superclass for all operators that not need write access to their input tables.
