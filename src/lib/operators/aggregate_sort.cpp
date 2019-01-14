@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "table_wrapper.hpp"
 #include "types.hpp"
 #include "type_cast.hpp"
 #include "operators/sort.hpp"
@@ -21,7 +22,7 @@ namespace opossum {
       return "TODO: insert description here";
     }
 
-    template<typename ColumnType, typename AggregateType>
+    template<typename ColumnType, typename AggregateType, AggregateFunction function>
     void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
         std::optional<AggregateType> current_aggregate_value;
 
@@ -32,11 +33,13 @@ namespace opossum {
             previous_values.emplace_back(sorted_table->chunks()[0]->segments()[column_id]->operator[](0));
         }
 
+        uint64_t value_count = 0u;
         auto chunks = sorted_table->chunks();
         for (const auto& chunk : chunks) {
             size_t chunk_size = chunk->size();
             const auto segments = chunk->segments();
             for (ChunkOffset offset{0}; offset < chunk_size; offset++) {
+                value_count++;
                 std::vector<AllTypeVariant> current_values;
                 current_values.reserve(_groupby_column_ids.size());
 
@@ -50,6 +53,9 @@ namespace opossum {
                     //const AggregateType old_value = type_cast_variant<AggregateType>(current_aggregate_value);
                     aggregate_function(new_value, current_aggregate_value);
                 } else {
+                    if constexpr (function == AggregateFunction::Count) {
+                        current_aggregate_value = value_count;
+                    }
                     aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
                     if (aggregate_index == 0) {
                         for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
@@ -59,6 +65,7 @@ namespace opossum {
 
                     previous_values = current_values;
                     current_aggregate_value = type_cast_variant<AggregateType>(segments[*_aggregates[aggregate_index].column]->operator[](offset));
+                    value_count = 1;
                 }
 
             }
@@ -116,7 +123,9 @@ namespace opossum {
 
         auto sorted_table = input_table;
         for(const auto column_id : _groupby_column_ids) {
-            Sort sort = Sort(_input_left, column_id);
+            const auto sorted_wrapper = std::make_shared<TableWrapper>(sorted_table);
+            sorted_wrapper->execute();
+            Sort sort = Sort(sorted_wrapper, column_id);
             sort.execute();
             sorted_table = sort.get_output();
         }
@@ -137,21 +146,21 @@ namespace opossum {
                     case AggregateFunction::Min: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min>().get_aggregate_function();
-                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(previous_values, groupby_keys, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::Max: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Max>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max>().get_aggregate_function();
-                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Max>(previous_values, groupby_keys, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::Sum: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Sum>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum>().get_aggregate_function();
-                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(previous_values, groupby_keys, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
@@ -159,21 +168,21 @@ namespace opossum {
                     case AggregateFunction::Avg: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Avg>().get_aggregate_function();
-                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Avg>(previous_values, groupby_keys, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::Count: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count>().get_aggregate_function();
-                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(previous_values, groupby_keys, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
                     case AggregateFunction::CountDistinct: {
                         using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType;
                         auto aggregate_function = AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>().get_aggregate_function();
-                        _aggregate_values(previous_values, groupby_keys, aggregate_results, aggregate_index,
+                        _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountDistinct>(previous_values, groupby_keys, aggregate_results, aggregate_index,
                                           aggregate_function, sorted_table);
                         break;
                     }
