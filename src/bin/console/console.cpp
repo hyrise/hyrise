@@ -474,7 +474,7 @@ int Console::_generate_tpch(const std::string& args) {
 int Console::_load_table(const std::string& args) {
   std::vector<std::string> arguments = trim_and_split(args);
 
-  if (arguments.size() < 1 || arguments.size() > 3) {
+  if (arguments.empty() || arguments.size() > 3) {
     out("Usage:\n");
     out("  load FILEPATH [TABLENAME [ENCODING]]\n");
     return ReturnCode::Error;
