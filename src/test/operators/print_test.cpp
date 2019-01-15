@@ -329,7 +329,7 @@ TEST_F(OperatorsPrintTest, SegmentType) {
       "=== Chunk 1 ===\n"
       "|<RLE>   |<RLE>   |\n"
       "|     123|   456.7|\n"
-      "=== Chunk 2===\n"
+      "=== Chunk 2 ===\n"
       "|<ValueS>|<ValueS>|\n"
       "|    1234|   457.7|\n";
   EXPECT_EQ(output.str(), expected_output);
