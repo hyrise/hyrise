@@ -26,7 +26,10 @@
 namespace {
   using namespace opossum;
 
-  // TODO Doc
+  // Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
+  // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
+  // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
+  // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
   template <typename ResultIds, typename Results, typename AggregateKey>
   typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key, const RowID& row_id) {
     // Get the result id for the current key or add it to the id map
@@ -100,7 +103,7 @@ void Aggregate::_on_cleanup() { _contexts_per_column.clear(); }
 
 /*
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
-AggregateKey, the AggregateContext is the "full" version
+AggregateKey, the AggregateContext is the "full" version.
 */
 template <typename ColumnDataType, typename AggregateType>
 struct AggregateResultContext : SegmentVisitorContext {
@@ -445,16 +448,6 @@ void Aggregate::_aggregate() {
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // Make sure the value or combination of values is added to the list of distinct value(s)
         get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
-
-        // Get the result id for the current key or add it to the id map
-        auto result_id_it = result_ids.emplace(hash_keys[chunk_offset], results.size());
-
-        // If it was added, add a corresponding result and the current row id. If it was not added, we already have
-        // that value / combination of values in our list of distinct values
-        if (result_id_it.second) {
-          results.emplace_back();
-          results[result_id_it.first->second].row_id = RowID(chunk_id, chunk_offset);
-        }
       }
     } else {
       ColumnID column_index{0};

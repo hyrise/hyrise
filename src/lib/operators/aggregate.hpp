@@ -49,6 +49,7 @@ For implementation details, please check the wiki: https://github.com/hyrise/hyr
 */
 
 /*
+For each group in the output, one AggregateResult is created.
 Current aggregated value and the number of rows that were used.
 The latter is used for AVG and COUNT.
 */
@@ -60,11 +61,13 @@ struct AggregateResult {
   RowID row_id;
 };
 
+// This vector holds the results for every group that was encountered and is indexed by AggregateResultId.
 template <typename ColumnDataType, typename AggregateType>
 using AggregateResults = pmr_vector<AggregateResult<ColumnDataType, AggregateType>>;
-
 using AggregateResultId = size_t;
 
+
+// The AggregateResultIdMap maps AggregateKeys to their index in the list of aggregate results.
 template <typename AggregateKey>
 using AggregateResultIdMapAllocator =
     PolymorphicAllocator<std::pair<const AggregateKey, AggregateResultId>>;
