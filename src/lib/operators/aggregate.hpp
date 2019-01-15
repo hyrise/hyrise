@@ -108,7 +108,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   // write the aggregated output for a given aggregate column
-  template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+  template <typename ColumnDataType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
 
  protected:
@@ -125,7 +125,7 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   void _on_cleanup() override;
 
-  template <typename AggregateKey, typename ColumnDataType>
+  template <typename ColumnDataType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
                                AggregateFunction function);
 
