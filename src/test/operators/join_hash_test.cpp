@@ -77,4 +77,25 @@ TEST_F(JoinHashTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 }
 
+TEST_F(JoinHashTest, HashJoinNotApplicable) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  const auto execute_hash_join = [&](const JoinMode mode, const PredicateCondition predicate_condition) {
+    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode,
+                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), predicate_condition);
+  };
+
+  // Inner joins with equality predicates are supported.
+  EXPECT_NO_THROW(execute_hash_join(JoinMode::Inner, PredicateCondition::Equals));
+
+  // Inner joins with inequality predicates are unsupported.
+  EXPECT_THROW(execute_hash_join(JoinMode::Inner, PredicateCondition::GreaterThan), std::logic_error);
+
+  // Outer joins with equality predicates are supported.
+  EXPECT_NO_THROW(execute_hash_join(JoinMode::Left, PredicateCondition::Equals));
+
+  // Outer joins with inequality predicates are unsupported.
+  EXPECT_THROW(execute_hash_join(JoinMode::Left, PredicateCondition::GreaterThan), std::logic_error);
+}
+
 }  // namespace opossum
