@@ -53,6 +53,7 @@ std::shared_ptr<const Table> Validate::_on_execute() {
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
+  DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
   const auto in_table = input_table_left();
   auto output = std::make_shared<Table>(in_table->column_definitions(), TableType::References);

@@ -268,4 +268,26 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   }
 }
 
+// This test uses the transaction context after its already been committed on behalf of every
+// read/write operator and the read only operator Validate
+TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
+  auto t1_context = TransactionManager::get().new_transaction_context();
+
+  auto validate1 = std::make_shared<Validate>(_gt);
+  validate1->set_transaction_context(t1_context);
+
+  validate1->execute();
+
+  auto delete_op = std::make_shared<Delete>(_table_name, validate1);
+  delete_op->set_transaction_context(t1_context);
+
+  delete_op->execute();
+
+  t1_context->commit();
+
+  auto delete_op2 = std::make_shared<Delete>(_table_name, validate1);
+  delete_op->set_transaction_context(t1_context);
+
+  EXPECT_THROW(delete_op->execute(), std::logic_error);
+}
 }  // namespace opossum
