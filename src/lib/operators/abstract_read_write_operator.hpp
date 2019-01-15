@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "abstract_operator.hpp"
@@ -30,7 +31,8 @@ class AbstractReadWriteOperator : public AbstractOperator {
  public:
   explicit AbstractReadWriteOperator(const OperatorType type,
                                      const std::shared_ptr<const AbstractOperator>& left = nullptr,
-                                     const std::shared_ptr<const AbstractOperator>& right = nullptr);
+                                     const std::shared_ptr<const AbstractOperator>& right = nullptr,
+                                     const std::string& target_table_name = nullptr);
 
   void execute() override;
 
@@ -50,6 +52,8 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * Returns true if a previous call to _on_execute produced an error.
    */
   bool execute_failed() const;
+
+  const std::string table_name();
 
   ReadWriteOperatorState state() const;
 
@@ -91,6 +95,8 @@ class AbstractReadWriteOperator : public AbstractOperator {
    * mark_as_failed() is called to signal to AbstractReadWriteOperator that the execution failed.
    */
   void _mark_as_failed();
+
+  const std::string _target_table_name;
 
  private:
   ReadWriteOperatorState _state;

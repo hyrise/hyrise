@@ -19,7 +19,8 @@ namespace opossum {
  */
 class Delete : public AbstractReadWriteOperator {
  public:
-  explicit Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete);
+  explicit Delete(const std::string& target_table_name,
+                  const std::shared_ptr<const AbstractOperator>& values_to_delete);
 
   const std::string name() const override;
 
@@ -40,7 +41,6 @@ class Delete : public AbstractReadWriteOperator {
   bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
 
  private:
-  const std::string _table_name;
   std::shared_ptr<Table> _table;
   TransactionID _transaction_id;
   std::vector<std::shared_ptr<const PosList>> _pos_lists;

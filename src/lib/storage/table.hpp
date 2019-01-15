@@ -9,6 +9,7 @@
 #include "base_segment.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
+#include "storage/constraints/table_constraint_definition.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
 #include "type_cast.hpp"
@@ -162,16 +163,24 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
+  const std::vector<TableConstraintDefinition>& get_unique_constraints() const;
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t estimate_memory_usage() const;
+
+  /**
+   * Constraints related functions
+   */
+  void add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary = false);
 
  protected:
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
+  std::vector<TableConstraintDefinition> _constraint_definitions;
   std::vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;

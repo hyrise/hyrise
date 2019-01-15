@@ -8,7 +8,9 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.hpp"
 #include "resolve_type.hpp"
+#include "storage/constraints/unique_checker.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -195,6 +197,8 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
+const std::vector<TableConstraintDefinition>& Table::get_unique_constraints() const { return _constraint_definitions; }
+
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
 
@@ -210,6 +214,20 @@ size_t Table::estimate_memory_usage() const {
   // TODO(anybody) TableLayout missing
 
   return bytes;
+}
+
+void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary) {
+  for (const auto& column_id : column_ids) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    if (primary) {
+      Assert(!column_is_nullable(column_id), "Column must be not nullable for primary key constraint")
+    }
+  }
+  TableConstraintDefinition constraint({column_ids, primary});
+  Assert(constraint_valid_for(*this, constraint, TransactionManager::get().last_commit_id(),
+                              TransactionManager::UNUSED_TRANSACTION_ID),
+         "Constraint is not satisfied on table values");
+  _constraint_definitions.emplace_back(constraint);
 }
 
 }  // namespace opossum

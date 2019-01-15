@@ -12,9 +12,8 @@
 
 namespace opossum {
 
-Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
-    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete},
-      _table_name{table_name},
+Delete::Delete(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
+    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete, nullptr, target_table_name},
       _transaction_id{0},
       _num_rows_deleted{0} {}
 
@@ -25,7 +24,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
-  _table = StorageManager::get().get_table(_table_name);
+  _table = StorageManager::get().get_table(_target_table_name);
   _transaction_id = context->transaction_id();
 
   const auto values_to_delete = input_table_left();
@@ -117,9 +116,9 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
   const auto values_to_delete = input_table_left();
 
-  if (!StorageManager::get().has_table(_table_name)) return false;
+  if (!StorageManager::get().has_table(_target_table_name)) return false;
 
-  const auto table = StorageManager::get().get_table(_table_name);
+  const auto table = StorageManager::get().get_table(_target_table_name);
 
   for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto chunk = values_to_delete->get_chunk(chunk_id);
@@ -139,7 +138,7 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Delete>(_table_name, copied_input_left);
+  return std::make_shared<Delete>(_target_table_name, copied_input_left);
 }
 
 void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

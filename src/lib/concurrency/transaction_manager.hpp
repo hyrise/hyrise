@@ -61,7 +61,8 @@ class TransactionManager : public Singleton<TransactionManager> {
   // not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
   // deleted in the same transaction (which has not yet committed)
   static constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
-  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
+  static constexpr auto UNUSED_TRANSACTION_ID = TransactionID{1};
+  static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{2};
 
  private:
   TransactionManager();
