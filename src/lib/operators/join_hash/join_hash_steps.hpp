@@ -86,6 +86,27 @@ inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> 
   return chunk_offsets;
 }
 
+template <typename T>
+std::vector<T> materialize_column(const Table& table, ColumnID column_id)
+{
+  std::vector<T> col(table.row_count());
+  size_t row_idx = 0;
+
+  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+    auto segment = table.get_chunk(chunk_id)->get_segment(column_id);
+
+    resolve_segment_type<T>(*segment, [&, chunk_id](auto& typed_segment) {
+      auto iterable = create_iterable_from_segment<T>(typed_segment);
+
+      iterable.for_each([&, chunk_id](const auto& value) {
+        col[row_idx++] = value;
+      });
+    });
+  }
+
+  return col;
+}
+
 template <typename T, typename HashedType, bool consider_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
@@ -457,12 +478,6 @@ void probe(const RadixContainer<RightType>& radix_container,
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
-          std::vector<AllTypeVariant> selected_row_data(additional_join_predicates.size());
-
-          for (size_t pred_idx = 0; pred_idx < additional_join_predicates.size(); ++pred_idx) {
-            selected_row_data[pred_idx] = _get_value(right, row.row_id, additional_join_predicates[pred_idx].column_id_pair.second);
-          }
-
 
           if (mode == JoinMode::Inner && row.row_id == NULL_ROW_ID) {
             // From previous joins, we could potentially have NULL values that do not refer to
@@ -498,8 +513,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
               // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
 
-              //if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
-              if (_fulfills_join_predicates(left, selected_row_data, row_id, additional_join_predicates)) {
+              if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
               }
