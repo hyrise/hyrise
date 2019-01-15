@@ -275,12 +275,10 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 
   auto validate1 = std::make_shared<Validate>(_gt);
   validate1->set_transaction_context(t1_context);
-
   validate1->execute();
 
   auto delete_op = std::make_shared<Delete>(_table_name, validate1);
   delete_op->set_transaction_context(t1_context);
-
   delete_op->execute();
 
   t1_context->commit();
