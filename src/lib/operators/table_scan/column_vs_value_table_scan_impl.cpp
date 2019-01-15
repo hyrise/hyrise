@@ -210,11 +210,32 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   }
   if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
+    //TODO remove
+    auto start = std::chrono::high_resolution_clock::now();
+
     const auto upper_bound = segment.get_last_bound(_value, position_filter);
+
+    //TODO remove
+    {
+      auto stop = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+      std::cout << "Upper Bound: " << duration.count() << " - ";
+    }
+
+    // TODO
+    start = std::chrono::high_resolution_clock::now();
+
     if (upper_bound != INVALID_CHUNK_OFFSET) {
       std::advance(upper_it, upper_bound);
     } else {
       std::advance(upper_it, std::distance(begin, end));
+    }
+
+    //TODO remove
+    {
+      auto stop = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+      std::cout << "Advance: " << duration.count() << std::endl;
     }
     return std::make_tuple(lower_it, upper_it, false);
   }

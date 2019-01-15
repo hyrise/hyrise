@@ -7,11 +7,14 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 #include "table_generator.hpp"
+#include "type_cast.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
+
+const int string_size = 512;
 
 void _clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -96,7 +99,7 @@ void BM_TableScanSorted(benchmark::State& state, const int table_size, const flo
                         std::function<std::shared_ptr<TableWrapper>(const int)> table_creator) {
   _clear_cache();
 
-  int search_value;
+  AllTypeVariant search_value;
   switch (predicate_condition) {
     case PredicateCondition::LessThanEquals:
     case PredicateCondition::LessThan:
@@ -116,6 +119,12 @@ void BM_TableScanSorted(benchmark::State& state, const int table_size, const flo
   const auto column_index = ColumnID(0);
 
   const auto column_definition = table_column_definitions.at(column_index);
+
+  if (column_definition.data_type == DataType::String) {
+    const auto str = std::to_string(type_cast_variant<int>(search_value));
+    search_value = std::string(string_size - str.length(), '0').append(str);
+  }
+
   const auto column_expression =
       pqp_column_(column_index, column_definition.data_type, column_definition.nullable, column_definition.name);
 
@@ -171,7 +180,6 @@ BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted99, rows, 0.99, PredicateConditio
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
                   unsorted_int_table);
 
-const int string_size = 16;
 
 BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
                   std::bind(sorted_string_table, std::placeholders::_1, string_size));

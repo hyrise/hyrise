@@ -160,18 +160,20 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
                                              const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the lower bound.");
 
+  const auto casted_search_value = type_cast_variant<T>(search_value);
+
   // TODO(cmfcmf): Quite a bit of duplication.
   if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
     if (position_filter != nullptr) {
       const auto result = std::lower_bound(
-          position_filter->cbegin(), position_filter->cend(), type_cast_variant<T>(search_value),
+          position_filter->cbegin(), position_filter->cend(), casted_search_value,
           [&](const auto& row_id, const auto& search) { return _values[row_id.chunk_offset] < search; });
       if (result == position_filter->cend()) {
         return INVALID_CHUNK_OFFSET;
       }
       return static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
     } else {
-      const auto result = std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
+      const auto result = std::lower_bound(_values.cbegin(), _values.cend(), casted_search_value);
       if (result == _values.cend()) {
         return INVALID_CHUNK_OFFSET;
       }
@@ -180,7 +182,7 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
   } else {
     if (position_filter != nullptr) {
       const auto result = std::lower_bound(
-          position_filter->cbegin(), position_filter->cend(), type_cast_variant<T>(search_value),
+          position_filter->cbegin(), position_filter->cend(), casted_search_value,
           [&](const auto& row_id, const auto& search) { return _values[row_id.chunk_offset] > search; });
       if (result == position_filter->cend()) {
         return INVALID_CHUNK_OFFSET;
@@ -188,13 +190,14 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
       return static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
     } else {
       const auto result =
-          std::lower_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
+          std::lower_bound(_values.cbegin(), _values.cend(), casted_search_value, std::greater<T>());
       if (result == _values.cend()) {
         return INVALID_CHUNK_OFFSET;
       }
       return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
     }
   }
+
 }
 
 template <typename T>
@@ -202,18 +205,20 @@ ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
                                             const std::shared_ptr<const PosList>& position_filter) const {
   Assert(_sort_order, "The segment needs to be sorted to calculate the upper bound.");
 
+  const auto casted_search_value = type_cast_variant<T>(search_value);
+
   // TODO(cmfcmf): Quite a bit of duplication.
   if (_sort_order.value() == OrderByMode::Ascending || _sort_order.value() == OrderByMode::AscendingNullsLast) {
     if (position_filter != nullptr) {
       const auto result = std::upper_bound(
-          position_filter->cbegin(), position_filter->cend(), type_cast_variant<T>(search_value),
+          position_filter->cbegin(), position_filter->cend(), casted_search_value,
           [&](const auto& search, const auto& row_id) { return search < _values[row_id.chunk_offset]; });
       if (result == position_filter->cend()) {
         return INVALID_CHUNK_OFFSET;
       }
       return static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
     } else {
-      const auto result = std::upper_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value));
+      const auto result = std::upper_bound(_values.cbegin(), _values.cend(), casted_search_value);
       if (result == _values.cend()) {
         return INVALID_CHUNK_OFFSET;
       }
@@ -222,7 +227,7 @@ ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
   } else {
     if (position_filter != nullptr) {
       const auto result = std::upper_bound(
-          position_filter->cbegin(), position_filter->cend(), type_cast_variant<T>(search_value),
+          position_filter->cbegin(), position_filter->cend(), casted_search_value,
           [&](const auto& search, const auto& row_id) { return search > _values[row_id.chunk_offset]; });
       if (result == position_filter->cend()) {
         return INVALID_CHUNK_OFFSET;
@@ -230,7 +235,7 @@ ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
       return static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
     } else {
       const auto result =
-          std::upper_bound(_values.cbegin(), _values.cend(), type_cast_variant<T>(search_value), std::greater<T>());
+          std::upper_bound(_values.cbegin(), _values.cend(), casted_search_value, std::greater<T>());
       if (result == _values.cend()) {
         return INVALID_CHUNK_OFFSET;
       }
