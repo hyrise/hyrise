@@ -1,5 +1,4 @@
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "cache/cache.hpp"
 #include "cache/gdfs_cache.hpp"
