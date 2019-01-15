@@ -92,8 +92,8 @@ std::shared_ptr<const Table> Print::_on_execute() {
       const auto& segment = chunk->get_segment(column_id);
       _out << "|" << std::setw(column_width) << _segment_type(segment) << std::setw(0);
     }
-    if (_flags & PrintMvcc) _out << "||";
-    _out << std::endl;
+    if (_flags & PrintMvcc) _out << "|";
+    _out << "|" << std::endl;
 
     // print the rows in the chunk
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
