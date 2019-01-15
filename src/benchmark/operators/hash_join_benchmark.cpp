@@ -41,10 +41,10 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
       left, right, mode, join_predicates[0].column_id_pair, join_predicates[0].predicateCondition);
   latest_operator->execute();
 
-  std::cout << "Row count after first join: " << latest_operator->get_output()->row_count() << std::endl;
-  Print::print(left);
-  Print::print(right);
-  Print::print(latest_operator);
+  // std::cout << "Row count after first join: " << latest_operator->get_output()->row_count() << std::endl;
+  // Print::print(left);
+  // Print::print(right);
+  // Print::print(latest_operator);
 
   // execute table scans for the following predicates (ColumnVsColumnTableScan)
   for (size_t index = 1; index < join_predicates.size(); ++index) {
@@ -57,9 +57,9 @@ void execute_multi_predicate_join_with_scan(const std::shared_ptr<const Abstract
                                                                        left_column_expr, right_column_expr);
     latest_operator = std::make_shared<TableScan>(latest_operator, predicate);
     latest_operator->execute();
-    Print::print(latest_operator);
-    std::cout << "Row count after " << index + 1 << " predicate: "
-              << latest_operator->get_output()->row_count() << std::endl;
+    // Print::print(latest_operator);
+    // std::cout << "Row count after " << index + 1 << " predicate: "
+    //           << latest_operator->get_output()->row_count() << std::endl;
   }
 }
 
