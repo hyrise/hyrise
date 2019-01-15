@@ -66,10 +66,8 @@ if(NOT CMAKE_BUILD_TYPE IN_LIST BUILD_TYPES)
     message(FATAL_ERROR "Unknown Build Type: ${CMAKE_BUILD_TYPE}")
 endif()
 
-# Flag to enforce colored output. When compilers recognize output to terminals, recent version automatically
-# use colored output. However, when using Ninja, the output is not directly sent to the terminal. With this
-# flag enabled, also Ninja builds have colored outputs.
-if (${FORCE_COLORED_OUTPUT})
+# Enforce colored output when generator is Ninja.
+if ("${CMAKE_GENERATOR}" STREQUAL "Ninja")
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
        add_compile_options(-fdiagnostics-color=always)
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
