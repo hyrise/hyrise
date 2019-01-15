@@ -66,6 +66,17 @@ if(NOT CMAKE_BUILD_TYPE IN_LIST BUILD_TYPES)
     message(FATAL_ERROR "Unknown Build Type: ${CMAKE_BUILD_TYPE}")
 endif()
 
+# Flag to enforce colored output. When compiler recognize output to terminals, recent version automatically
+# set colored output. However, when using Ninja, the output is not directly the terminal. With this flag enabled,
+# also Ninja build will have colored outputs.
+if (${FORCE_COLORED_OUTPUT})
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+       add_compile_options (-fdiagnostics-color=always)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+       add_compile_options (-fcolor-diagnostics)
+    endif ()
+endif ()
+
 # CMake settings
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH}) # To allow CMake to locate our Find*.cmake files
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}) # Put binaries into root of build tree
