@@ -28,10 +28,11 @@ void _clear_cache() {
 std::shared_ptr<TableColumnDefinitions> create_column_definitions(const DataType data_type) {
   auto table_column_definitions = std::make_shared<TableColumnDefinitions>();
 
-  table_column_definitions->emplace_back("ascending", data_type, true);
-  table_column_definitions->emplace_back("ascending_nulls_last", data_type, true);
-  table_column_definitions->emplace_back("descending", data_type, true);
-  table_column_definitions->emplace_back("descending_nulls_last", data_type, true);
+  // TODO(cmfcmf): Benchmark nullable segments
+  table_column_definitions->emplace_back("ascending", data_type, false);
+  table_column_definitions->emplace_back("ascending_nulls_last", data_type, false);
+  table_column_definitions->emplace_back("descending", data_type, false);
+  table_column_definitions->emplace_back("descending_nulls_last", data_type, false);
 
   return table_column_definitions;
 }

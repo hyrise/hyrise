@@ -45,9 +45,8 @@ class JitBaseSegmentIterator {};
  *   Value dereference() const { return Value{}; }
  * };
  */
-template <typename Derived, typename Value>
-class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost::forward_traversal_tag, Value>,
-                            public JitBaseSegmentIterator {};
+template <typename Derived, typename Value, typename Tag = boost::forward_traversal_tag>
+class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, Tag, Value>, public JitBaseSegmentIterator {};
 
 /**
  * Mapping between chunk offset into a reference segment and

@@ -49,15 +49,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   const ValueSegment<T>& _segment;
 
  private:
-  class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> { //kjjhh,
-//                          public boost::iterator_facade<NonNullIterator, NonNullSegmentPosition<T>,
-//                              boost::random_access_traversal_tag, NonNullSegmentPosition<T>> {
+  class NonNullIterator
+      : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>, boost::random_access_traversal_tag> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
-
-//    typedef typename pmr_concurrent_vector<T>::difference_type difference_type;
 
    public:
     explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
@@ -71,19 +68,11 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       ++_chunk_offset;
     }
 
-    void decrement() {
-      --_value_it;
-      --_chunk_offset;
-    }
-
     void advance(size_t n) {
+      // std::cout << "advance" << std::endl;
       _value_it += n;
       _chunk_offset += n;
     }
-
-//    difference_type distance_to(const NonNullIterator& other) {
-//      return other._value_it - _value_it;
-//    }
 
     bool equal(const NonNullIterator& other) const { return _value_it == other._value_it; }
 
@@ -94,7 +83,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
-  class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>, boost::random_access_traversal_tag> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -115,6 +104,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       ++_value_it;
       ++_null_value_it;
       ++_chunk_offset;
+    }
+
+    void advance(size_t n) {
+      _value_it += n;
+      _null_value_it += n;
+      _chunk_offset += n;
     }
 
     bool equal(const Iterator& other) const { return _value_it == other._value_it; }
