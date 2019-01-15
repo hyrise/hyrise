@@ -329,6 +329,7 @@ Cardinality CardinalityEstimator::estimate_cardinality(const std::shared_ptr<Abs
 
 std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::shared_ptr<OptimizationContext>& context) const {
+
   auto bitmask = std::optional<boost::dynamic_bitset<>>{};
 
   //std::cout << "estimate_statistics() {" << std::endl;
@@ -336,10 +337,17 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
   //std::cout << std::endl;
 
   if (context) {
+    if (context->plan_statistics_cache) {
+      const auto plan_statistics_cache_iter = context->plan_statistics_cache->find(lqp);
+      if (plan_statistics_cache_iter != context->plan_statistics_cache->end()) {
+        return plan_statistics_cache_iter->second;
+      }
+    }
+
     bitmask = build_plan_bitmask(lqp, context);
     if (bitmask) {
-      const auto cache_iter = context->cache.find(*bitmask);
-      if (cache_iter != context->cache.end()) {
+      const auto cache_iter = context->predicate_sets_cache.find(*bitmask);
+      if (cache_iter != context->predicate_sets_cache.end()) {
         // //std::cout << "Found statistics for " << *bitmask << " in cache" << std::endl;
         const auto& cache_entry = cache_iter->second;
 
@@ -477,7 +485,13 @@ std::shared_ptr<TableStatistics2> CardinalityEstimator::estimate_statistics(
       cache_entry.column_expressions.emplace(column_expressions[column_id], column_id);
     }
 
-    context->cache.emplace(*bitmask, std::move(cache_entry));
+    context->predicate_sets_cache.emplace(*bitmask, std::move(cache_entry));
+  }
+
+  if (context) {
+    if (context->plan_statistics_cache) {
+      context->plan_statistics_cache->emplace(lqp, output_table_statistics);
+    }
   }
 
   //std::cout << "}" << std::endl;

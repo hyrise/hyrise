@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <boost/dynamic_bitset.hpp>
+#include "cost_model/cost.hpp"
 #include "expression/abstract_expression.hpp"
 
 namespace opossum {
@@ -26,7 +27,13 @@ class OptimizationContext {
     ExpressionUnorderedMap<ColumnID> column_expressions;
   };
 
-  std::map<boost::dynamic_bitset<>, TableStatisticsCacheEntry> cache;
+  std::map<boost::dynamic_bitset<>, TableStatisticsCacheEntry> predicate_sets_cache;
+
+  using PlanStatisticsCache = std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<TableStatistics2>>;
+  std::optional<PlanStatisticsCache> plan_statistics_cache;
+
+  using PlanCostCache = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
+  std::optional<PlanCostCache> plan_cost_cache;
 };
 
 };  // namespace opossum

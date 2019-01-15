@@ -177,6 +177,9 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
                             const std::shared_ptr<OptimizationContext>& context) const {
   rule.apply_to(root_node, *_cost_estimator, context);
 
+  // TODO(moritz) doc
+  context->plan_statistics_cache.reset();
+
   /**
    * Optimize Subselects
    */

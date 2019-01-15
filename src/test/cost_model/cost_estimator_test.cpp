@@ -44,7 +44,7 @@ TEST_F(CostEstimatorTest, DiamondShape) {
         : AbstractCostEstimator(nullptr), dummy_costs(dummy_costs) {}
 
    protected:
-    virtual Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
+    virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
                                      const std::shared_ptr<OptimizationContext>& context = {}) const {
       return dummy_costs.at(node);
     }

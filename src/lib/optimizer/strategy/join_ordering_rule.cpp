@@ -5,6 +5,7 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -14,6 +15,13 @@ std::string JoinOrderingRule::name() const { return "JoinOrderingRule"; }
 void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root,
                                 const AbstractCostEstimator& cost_estimator,
                                 const std::shared_ptr<OptimizationContext>& context) const {
+
+  // TODO(moritz) doc
+  if (context) {
+    context->plan_statistics_cache.emplace();
+    context->plan_cost_cache.emplace();
+  }
+
   /**
    * Dispatch _perform_join_ordering_recursively() and fix the column order afterwards, since changing join order might
    * have changed it

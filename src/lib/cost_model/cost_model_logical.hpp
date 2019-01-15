@@ -13,9 +13,8 @@ class CostModelLogical : public AbstractCostEstimator {
  public:
   using AbstractCostEstimator::AbstractCostEstimator;
 
- protected:
-  Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
-                           const std::shared_ptr<OptimizationContext>& context) const override;
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
+                          const std::shared_ptr<OptimizationContext>& context) const override;
 
  private:
   static float _get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression);

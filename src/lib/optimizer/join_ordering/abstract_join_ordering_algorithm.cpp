@@ -5,7 +5,9 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "optimizer/optimization_context.hpp"
 #include "statistics/table_statistics.hpp"
+#include "statistics/cardinality_estimator.hpp"
 
 namespace opossum {
 
@@ -28,7 +30,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
   predicate_nodes_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     const auto predicate_node = PredicateNode::make(predicate, lqp);
-    predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator.estimate_plan_cost(predicate_node, context));
+    predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator.estimate_node_cost(predicate_node, context));
   }
 
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
@@ -42,7 +44,9 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
         predicate_nodes_and_cost[predicate_node_idx - 1].first);
   }
 
-  return predicate_nodes_and_cost.back().first;
+  const auto plan_with_predicates = predicate_nodes_and_cost.back().first;
+
+  return plan_with_predicates;
 }
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
@@ -70,11 +74,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   join_predicates_and_cost.reserve(join_predicates.size());
   for (const auto& join_predicate : join_predicates) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
-    join_predicates_and_cost.emplace_back(join_predicate, cost_estimator.estimate_plan_cost(join_node, context));
-
-    // need to do this since nodes do not get properly (by design :(( ) removed from plan on their destruction
-    join_node->set_left_input(nullptr);
-    join_node->set_right_input(nullptr);
+    join_predicates_and_cost.emplace_back(join_predicate, cost_estimator.estimate_node_cost(join_node, context));
   }
 
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
@@ -95,18 +95,18 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   }
 
   // Build JoinNode (for primary predicate) and subsequent scans (for secondary predicates)
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+  auto plan_with_joins = std::shared_ptr<AbstractLQPNode>{};
   if (primary_join_predicate) {
-    lqp = JoinNode::make(JoinMode::Inner, primary_join_predicate, left_lqp, right_lqp);
+    plan_with_joins = JoinNode::make(JoinMode::Inner, primary_join_predicate, left_lqp, right_lqp);
   } else {
-    lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
+    plan_with_joins = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
   }
 
   for (const auto& predicate_and_cost : join_predicates_and_cost) {
-    lqp = PredicateNode::make(predicate_and_cost.first, lqp);
+    plan_with_joins = PredicateNode::make(predicate_and_cost.first, plan_with_joins);
   }
 
-  return lqp;
+  return plan_with_joins;
 }
 
 }  // namespace opossum

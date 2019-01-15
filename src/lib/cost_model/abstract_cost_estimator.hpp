@@ -21,11 +21,10 @@ class AbstractCostEstimator {
   Cost estimate_plan_cost(const std::shared_ptr<AbstractLQPNode>& lqp,
                           const std::shared_ptr<OptimizationContext>& context = {}) const;
 
-  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
+  virtual Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
+                                  const std::shared_ptr<OptimizationContext>& context) const = 0;
 
- protected:
-  virtual Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node,
-                                   const std::shared_ptr<OptimizationContext>& context) const = 0;
+  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
 };
 
 }  // namespace opossum
