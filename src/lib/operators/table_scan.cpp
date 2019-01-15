@@ -180,7 +180,8 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
   // those complex queries anyway.
 
   if (!std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate) &&
-      !std::dynamic_pointer_cast<IsNullExpression>(predicate)) {
+      !std::dynamic_pointer_cast<IsNullExpression>(predicate) &&
+      !std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
     // We have no dedicated Impl for these, so we leave them untouched
     return predicate;
   }
