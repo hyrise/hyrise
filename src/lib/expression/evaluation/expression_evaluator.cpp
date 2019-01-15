@@ -80,52 +80,52 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
   return and_(gte_expression, lte_expression);
 }
 
-std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpression& in_expression) {
-  /**
-   * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
-   * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
-   *
-   * Out of array_expression.elements(), pick those expressions whose type can be compared with
-   * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
-   * "5 IN (6, 5, "Hello")
-   */
+// std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpression& in_expression) {
+//   /**
+//    * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+//    * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
+//    *
+//    * Out of array_expression.elements(), pick those expressions whose type can be compared with
+//    * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+//    * "5 IN (6, 5, "Hello")
+//    */
 
-  const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression.set());
-  Assert(list_expression, "Expected ListExpression");
+//   const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression.set());
+//   Assert(list_expression, "Expected ListExpression");
 
-  const auto left_is_string = in_expression.value()->data_type() == DataType::String;
-  std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-  for (const auto& element : list_expression->elements()) {
-    if ((element->data_type() == DataType::String) == left_is_string) {
-      type_compatible_elements.emplace_back(element);
-    }
-  }
+//   const auto left_is_string = in_expression.value()->data_type() == DataType::String;
+//   std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+//   for (const auto& element : list_expression->elements()) {
+//     if ((element->data_type() == DataType::String) == left_is_string) {
+//       type_compatible_elements.emplace_back(element);
+//     }
+//   }
 
-  if (type_compatible_elements.empty()) {
-    // `5 IN ()` is FALSE as is `NULL IN ()`
-    return value_(0);
-  }
+//   if (type_compatible_elements.empty()) {
+//     // `5 IN ()` is FALSE as is `NULL IN ()`
+//     return value_(0);
+//   }
 
-  std::shared_ptr<AbstractExpression> rewritten_expression;
+//   std::shared_ptr<AbstractExpression> rewritten_expression;
 
-  if (in_expression.is_negated()) {
-    // a NOT IN (1,2,3) --> a != 1 AND a != 2 AND a != 3
-    rewritten_expression = not_equals_(in_expression.value(), type_compatible_elements.front());
-    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
-      const auto equals_element = not_equals_(in_expression.value(), type_compatible_elements[element_idx]);
-      rewritten_expression = and_(rewritten_expression, equals_element);
-    }
-  } else {
-    // a IN (1,2,3) --> a == 1 OR a == 2 OR a == 3
-    rewritten_expression = equals_(in_expression.value(), type_compatible_elements.front());
-    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
-      const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
-      rewritten_expression = or_(rewritten_expression, equals_element);
-    }
-  }
+//   if (in_expression.is_negated()) {
+//     // a NOT IN (1,2,3) --> a != 1 AND a != 2 AND a != 3
+//     rewritten_expression = not_equals_(in_expression.value(), type_compatible_elements.front());
+//     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+//       const auto equals_element = not_equals_(in_expression.value(), type_compatible_elements[element_idx]);
+//       rewritten_expression = and_(rewritten_expression, equals_element);
+//     }
+//   } else {
+//     // a IN (1,2,3) --> a == 1 OR a == 2 OR a == 3
+//     rewritten_expression = equals_(in_expression.value(), type_compatible_elements.front());
+//     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+//       const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
+//       rewritten_expression = or_(rewritten_expression, equals_element);
+//     }
+//   }
 
-  return rewritten_expression;
-}
+//   return rewritten_expression;
+// }
 
 }  // namespace
 
@@ -227,13 +227,17 @@ template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
     const BinaryPredicateExpression& expression) {
-  const auto& left = *expression.left_operand();
-  const auto& right = *expression.right_operand();
-
   auto result = std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>{};
 
+  // To reduce the number of template instantiations, we flip > and >= to < and <=
+  auto predicate_condition = expression.predicate_condition;
+  const bool flip = predicate_condition == PredicateCondition::GreaterThan || predicate_condition == PredicateCondition::GreaterThanEquals;
+  if (flip) predicate_condition = flip_predicate_condition(predicate_condition);
+  const auto& left = flip ? *expression.right_operand() : *expression.left_operand();
+  const auto& right = flip ? *expression.left_operand() : *expression.right_operand();
+
   // clang-format off
-  resolve_binary_predicate_evaluator(expression.predicate_condition, [&](const auto evaluator_t) {
+  resolve_binary_predicate_evaluator(predicate_condition, [&](const auto evaluator_t) {
     using Evaluator = typename decltype(evaluator_t)::type;
     result = _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Evaluator>(left, right);  // NOLINT
   });
@@ -341,181 +345,181 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null
   Fail("Can only evaluate predicates to bool");
 }
 
-template <>
-std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
-ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const InExpression& in_expression) {
-  const auto& left_expression = *in_expression.value();
-  const auto& right_expression = *in_expression.set();
+// template <>
+// std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
+// ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const InExpression& in_expression) {
+//   const auto& left_expression = *in_expression.value();
+//   const auto& right_expression = *in_expression.set();
 
-  std::vector<ExpressionEvaluator::Bool> result_values;
-  std::vector<bool> result_nulls;
+//   std::vector<ExpressionEvaluator::Bool> result_values;
+//   std::vector<bool> result_nulls;
 
-  if (right_expression.type == ExpressionType::List) {
-    const auto& list_expression = static_cast<const ListExpression&>(right_expression);
+//   if (right_expression.type == ExpressionType::List) {
+//     const auto& list_expression = static_cast<const ListExpression&>(right_expression);
 
-    if (list_expression.elements().empty()) {
-      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
-    }
+//     if (list_expression.elements().empty()) {
+//       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
+//       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+//           std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+//     }
 
-    if (left_expression.data_type() == DataType::Null) {
-      // `NULL [NOT] IN ...` is NULL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
-                                                                           std::vector<bool>{true});
-    }
+//     if (left_expression.data_type() == DataType::Null) {
+//       // `NULL [NOT] IN ...` is NULL
+//       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0},
+//                                                                            std::vector<bool>{true});
+//     }
 
-    /**
-     * Out of array_expression.elements(), pick those expressions whose type can be compared with
-     * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
-     * "5 IN (6, 5, "Hello")
-     */
-    const auto left_is_string = left_expression.data_type() == DataType::String;
-    std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-    bool all_elements_are_values_of_left_type = true;
-    resolve_data_type(left_expression.data_type(), [&](const auto left_data_type_t) {
-      using LeftDataType = typename decltype(left_data_type_t)::type;
+//     /**
+//      * Out of array_expression.elements(), pick those expressions whose type can be compared with
+//      * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+//      * "5 IN (6, 5, "Hello")
+//      */
+//     const auto left_is_string = left_expression.data_type() == DataType::String;
+//     std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+//     bool all_elements_are_values_of_left_type = true;
+//     resolve_data_type(left_expression.data_type(), [&](const auto left_data_type_t) {
+//       using LeftDataType = typename decltype(left_data_type_t)::type;
 
-      for (const auto& element : list_expression.elements()) {
-        if ((element->data_type() == DataType::String) == left_is_string) {
-          type_compatible_elements.emplace_back(element);
-        }
+//       for (const auto& element : list_expression.elements()) {
+//         if ((element->data_type() == DataType::String) == left_is_string) {
+//           type_compatible_elements.emplace_back(element);
+//         }
 
-        if (element->type != ExpressionType::Value) {
-          all_elements_are_values_of_left_type = false;
-        } else {
-          const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
-          if (value_expression->value.type() != typeid(LeftDataType)) all_elements_are_values_of_left_type = false;
-        }
-      }
-    });
+//         if (element->type != ExpressionType::Value) {
+//           all_elements_are_values_of_left_type = false;
+//         } else {
+//           const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
+//           if (value_expression->value.type() != typeid(LeftDataType)) all_elements_are_values_of_left_type = false;
+//         }
+//       }
+//     });
 
-    if (type_compatible_elements.empty()) {
-      // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
-          std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
-    }
+//     if (type_compatible_elements.empty()) {
+//       // `x IN ()` is false/`x NOT IN ()` is true, even if this is not supported by SQL
+//       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(
+//           std::vector<ExpressionEvaluator::Bool>{in_expression.is_negated()});
+//     }
 
-    // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
-    // compare the left value with the values in the list. A binary search is used because of its algorithmic beauty
-    // (and for reeeeally long lists, as they might come from ORMs).
-    //
-    // If we can't store the values in a vector (because they are too complex), we translate the IN clause to a series
-    // of ORs:
-    // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
-    // The first path is faster, while the second one is more flexible.
-    if (all_elements_are_values_of_left_type) {
-      _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
-        using LeftDataType = typename std::decay_t<decltype(left_view)>::Type;
+//     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
+//     // compare the left value with the values in the list. A binary search is used because of its algorithmic beauty
+//     // (and for reeeeally long lists, as they might come from ORMs).
+//     //
+//     // If we can't store the values in a vector (because they are too complex), we translate the IN clause to a series
+//     // of ORs:
+//     // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+//     // The first path is faster, while the second one is more flexible.
+//     if (all_elements_are_values_of_left_type) {
+//       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
+//         using LeftDataType = typename std::decay_t<decltype(left_view)>::Type;
 
-        // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
-        if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
-          std::vector<LeftDataType> right_values;
-          right_values.reserve(type_compatible_elements.size());
-          for (const auto& expression : type_compatible_elements) {
-            const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
-            right_values.emplace_back(boost::get<LeftDataType>(value_expression->value));
-          }
-          std::sort(right_values.begin(), right_values.end());
+//         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
+//         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
+//           std::vector<LeftDataType> right_values;
+//           right_values.reserve(type_compatible_elements.size());
+//           for (const auto& expression : type_compatible_elements) {
+//             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
+//             right_values.emplace_back(boost::get<LeftDataType>(value_expression->value));
+//           }
+//           std::sort(right_values.begin(), right_values.end());
 
-          result_values.resize(left_view.size(), in_expression.is_negated());
-          if (left_view.is_nullable()) {
-            result_nulls.resize(left_view.size());
-          }
+//           result_values.resize(left_view.size(), in_expression.is_negated());
+//           if (left_view.is_nullable()) {
+//             result_nulls.resize(left_view.size());
+//           }
 
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
-            if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
-              result_nulls[chunk_offset] = true;
-              continue;
-            }
-            if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
-                it != right_values.cend() && *it == left_view.value(chunk_offset)) {
-              result_values[chunk_offset] = !in_expression.is_negated();
-            }
-          }
-        } else {
-          Fail("Should have ruled out NullValues on the left side of IN by now");
-        }
-      });
+//           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
+//             if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
+//               result_nulls[chunk_offset] = true;
+//               continue;
+//             }
+//             if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
+//                 it != right_values.cend() && *it == left_view.value(chunk_offset)) {
+//               result_values[chunk_offset] = !in_expression.is_negated();
+//             }
+//           }
+//         } else {
+//           Fail("Should have ruled out NullValues on the left side of IN by now");
+//         }
+//       });
 
-      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
-                                                                           std::move(result_nulls));
-    }
-    PerformanceWarning("Using slow path for IN expression");
+//       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
+//                                                                            std::move(result_nulls));
+//     }
+//     PerformanceWarning("Using slow path for IN expression");
 
-    // Nope, it is a list with diverse types - falling back to rewrite of expression:
-    return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
+//     // Nope, it is a list with diverse types - falling back to rewrite of expression:
+//     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
 
-  } else if (right_expression.type == ExpressionType::PQPSelect) {
-    const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
-    Assert(select_expression, "Expected PQPSelectExpression");
+//   } else if (right_expression.type == ExpressionType::PQPSelect) {
+//     const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
+//     Assert(select_expression, "Expected PQPSelectExpression");
 
-    resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
-      using SelectDataType = typename decltype(select_data_type_t)::type;
+//     resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
+//       using SelectDataType = typename decltype(select_data_type_t)::type;
 
-      const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
-      const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
+//       const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
+//       const auto select_results = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
 
-      Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
-             "Unexpected number of lists returned from Select. "
-             "Should be one (if the Select is not correlated), or one per row (if it is)");
+//       Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
+//              "Unexpected number of lists returned from Select. "
+//              "Should be one (if the Select is not correlated), or one per row (if it is)");
 
-      _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
-        using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
+//       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
+//         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
-        if constexpr (EqualsEvaluator::supports_v<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>) {
-          const auto result_size = _result_size(left_view.size(), select_results.size());
+//         if constexpr (EqualsEvaluator::supports_v<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>) {
+//           const auto result_size = _result_size(left_view.size(), select_results.size());
 
-          result_values.resize(result_size);
-          // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
-          result_nulls.resize(result_size);
+//           result_values.resize(result_size);
+//           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
+//           result_nulls.resize(result_size);
 
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-            // If the SELECT returned just one list, always perform the IN check with that one list
-            // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
-            // against the list of the current row
-            const auto& list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
+//           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+//             // If the SELECT returned just one list, always perform the IN check with that one list
+//             // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
+//             // against the list of the current row
+//             const auto& list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
 
-            auto list_contains_null = false;
+//             auto list_contains_null = false;
 
-            for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
-              // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
-              // here as well.
-              EqualsEvaluator{}(result_values[chunk_offset],  // NOLINT - complains about missing spaces before "{"...
-                                list.value(list_element_idx), left_view.value(chunk_offset));
-              if (result_values[chunk_offset]) break;
+//             for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
+//               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
+//               // here as well.
+//               EqualsEvaluator{}(result_values[chunk_offset],  // NOLINT - complains about missing spaces before "{"...
+//                                 list.value(list_element_idx), left_view.value(chunk_offset));
+//               if (result_values[chunk_offset]) break;
 
-              list_contains_null |= list.is_null(list_element_idx);
-            }
+//               list_contains_null |= list.is_null(list_element_idx);
+//             }
 
-            result_nulls[chunk_offset] =
-                (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
+//             result_nulls[chunk_offset] =
+//                 (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
 
-            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
-          }
+//             if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
+//           }
 
-        } else {
-          // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of failing, because that's
-          // what we do for `5 IN ('Hello', 'World')
-          result_values.resize(1);
-        }
-      });
-    });
+//         } else {
+//           // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of failing, because that's
+//           // what we do for `5 IN ('Hello', 'World')
+//           result_values.resize(1);
+//         }
+//       });
+//     });
 
-  } else {
-    *
-     * `<expression> IN <anything_but_list_or_select>` is not legal SQL, but on expression level we have to support
-     * it, since `<anything_but_list_or_select>` might be a column holding the result of a subselect.
-     * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
+//   } else {
+//     *
+//      * `<expression> IN <anything_but_list_or_select>` is not legal SQL, but on expression level we have to support
+//      * it, since `<anything_but_list_or_select>` might be a column holding the result of a subselect.
+//      * To accomplish this, we simply rewrite the expression to `<expression> IN LIST(<anything_but_list_or_select>)`.
      
 
-    return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
-        in_expression.predicate_condition, in_expression.value(), list_(in_expression.set())));
-  }
+//     return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
+//         in_expression.predicate_condition, in_expression.value(), list_(in_expression.set())));
+//   }
 
-  return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
-                                                                       std::move(result_nulls));
-}
+//   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
+//                                                                        std::move(result_nulls));
+// }
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(
@@ -586,38 +590,37 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
     const CaseExpression& case_expression) {
   const auto when = evaluate_expression_to_result<ExpressionEvaluator::Bool>(*case_expression.when());
 
-  std::shared_ptr<ExpressionResult<Result>> result;
+  std::vector<Result> values;
+  std::vector<bool> nulls;
 
   _resolve_to_expression_results(
       *case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
         using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
         using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-        const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
-        std::vector<Result> values(result_size);
-        std::vector<bool> nulls(result_size);
-
         // clang-format off
-      if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
-        for (auto chunk_offset = ChunkOffset{0};
-             chunk_offset < result_size; ++chunk_offset) {
-          if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
-            values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
-            nulls[chunk_offset] = then_result.is_null(chunk_offset);
-          } else {
-            values[chunk_offset] = to_value<Result>(else_result.value(chunk_offset));
-            nulls[chunk_offset] = else_result.is_null(chunk_offset);
-          }
-        }
-      } else {
-        Fail("Illegal operands for CaseExpression");
-      }
-        // clang-format on
+        if constexpr (CaseEvaluator::supports_v<Result, ThenResultType, ElseResultType>) {
+          const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
+          values.resize(result_size);
+          nulls.resize(result_size);
 
-        result = std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
+          for (auto chunk_offset = ChunkOffset{0};
+               chunk_offset < result_size; ++chunk_offset) {
+            if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
+              values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
+              nulls[chunk_offset] = then_result.is_null(chunk_offset);
+            } else {
+              values[chunk_offset] = to_value<Result>(else_result.value(chunk_offset));
+              nulls[chunk_offset] = else_result.is_null(chunk_offset);
+            }
+          }
+        } else {
+          Fail("Illegal operands for CaseExpression");
+        }
+        // clang-format on
       });
 
-  return result;
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
 }
 
 template <typename Result>
