@@ -123,34 +123,67 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   create_table_query << ");";
   _exec_sql(create_table_query.str());
 
+  // Prepare INSERT INTO statement
+  std::stringstream insert_into_stream;
+  insert_into_stream << "INSERT INTO " << table_name << " VALUES (";
+  for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
+    insert_into_stream << "?";
+    if (column_id + 1 < table.column_count()) {
+      insert_into_stream << ", ";
+    }
+  }
+  insert_into_stream << ");";
+  const auto insert_into_str = insert_into_stream.str();
+
+  sqlite3_stmt * insert_into_statement;
+  const auto r = sqlite3_prepare_v2(_db, insert_into_str.c_str(), -1, &insert_into_statement, nullptr);
+  Assert(r == SQLITE_OK, "");
+
+//  sqlite3_bind_text(insert_into_statement, 0, table_name.c_str(), static_cast<int>(table_name.size()), SQLITE_TRANSIENT);
+
   for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-      std::stringstream insert_query;
-
-      // stringstream has than annoying property of truncating floats by default
-      insert_query << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << std::endl;
-
-      insert_query << "INSERT INTO " << table_name << " VALUES (";
       for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
         const auto segment = chunk->get_segment(column_id);
         const auto value = (*segment)[chunk_offset];
 
-        if (column_types[column_id] == "TEXT" && !variant_is_null(value)) {
-          insert_query << "'" << value << "'";
+        if (variant_is_null(value)) {
+          sqlite3_bind_null(insert_into_statement, static_cast<int>(column_id));
         } else {
-          insert_query << value;
+          switch (table.column_data_type(column_id)) {
+            case DataType::Int:
+              sqlite3_bind_int(insert_into_statement, static_cast<int>(column_id), boost::get<int32_t>(value));
+              break;
+            case DataType::Long:
+              sqlite3_bind_int64(insert_into_statement, static_cast<int>(column_id), boost::get<int64_t>(value));
+              break;
+            case DataType::Float:
+              sqlite3_bind_double(insert_into_statement, static_cast<int>(column_id), boost::get<float>(value));
+              break;
+            case DataType::Double:
+              sqlite3_bind_double(insert_into_statement, static_cast<int>(column_id), boost::get<double>(value));
+              break;
+            case DataType::String: {
+              const auto& string_value = boost::get<std::string>(value);
+              sqlite3_bind_text(insert_into_statement, static_cast<int>(column_id), string_value.c_str(), -1, SQLITE_TRANSIENT);
+            } break;
+            case DataType::Null:
+            case DataType::Bool:
+              Fail("SQLiteWrapper: column type not supported.");
+              break;
+          }
         }
-
-        if ((column_id + 1u) < table.column_count()) {
-          insert_query << ", ";
-        }
+        const auto r2 = sqlite3_step(insert_into_statement);
+        Assert(r2 == SQLITE_DONE, "");
+        sqlite3_reset(insert_into_statement);
       }
-      insert_query << ");";
-      _exec_sql(insert_query.str());
     }
+
   }
+
+  sqlite3_finalize(insert_into_statement);
 }
 
 std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
@@ -191,7 +224,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   sqlite3_reset(result_row);
 
   while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
-    _add_row(result_table, result_row, sqlite3_column_count(result_row));
+    _copy_row_from_sqlite_to_hyrise(result_table, result_row, sqlite3_column_count(result_row));
   }
 
   sqlite3_finalize(result_row);
@@ -270,7 +303,8 @@ void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset
   _exec_sql(command_ss.str());
 }
 
-void SQLiteWrapper::_add_row(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count) {
+void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table> &table, sqlite3_stmt *result_row,
+                                                    int column_count) {
   std::vector<AllTypeVariant> row;
 
   for (int i = 0; i < column_count; ++i) {

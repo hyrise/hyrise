@@ -42,6 +42,11 @@ class SQLiteWrapper final {
   void create_table(const Table& table, const std::string& table_name);
 
   /*
+   * Execute a properly escaped `INSERT INTO table_name VALUES (values...)` command
+   */
+  void insert_into_values(const std::string& table, const std::vector<AllTypeVariant>& values);
+
+  /*
    * Executes a sql query in the sqlite database context.
    *
    * @param sql_query Query to be executed
@@ -58,7 +63,7 @@ class SQLiteWrapper final {
   /*
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
-  void _add_row(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
+  void _copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table> &table, sqlite3_stmt *result_row, int column_count);
 
   /**
    * Execute an SQL statement on the wrapped sqlite db
