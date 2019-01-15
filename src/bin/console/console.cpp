@@ -920,7 +920,7 @@ int Console::_unload_plugin(const std::string& input) {
 
   if (arguments.size() != 1) {
     out("Usage:\n");
-    out("  unload_plugin PLUGINNAME\n");
+    out("  unload_plugin NAME\n");
     return ReturnCode::Error;
   }
 
