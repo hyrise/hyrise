@@ -49,26 +49,44 @@ namespace opossum {
                     current_values.emplace_back(current_value);
                 }
 
-                const auto new_value_uncasted = segments[*_aggregates[aggregate_index].column]->operator[](offset);
-                if (current_values == previous_values) {
-                    const ColumnType new_value = type_cast_variant<ColumnType>(new_value_uncasted);
-                    //const AggregateType old_value = type_cast_variant<AggregateType>(current_aggregate_value);
-                    aggregate_function(new_value, current_aggregate_value);
-                    value_count++;
-                    if constexpr (function == AggregateFunction::CountDistinct) {
-                        unique_values.insert(new_value);
+                const auto new_value_raw = segments[*_aggregates[aggregate_index].column]->operator[](offset);
+                const auto groupby_key_unchanged = std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), [](const auto &a, const auto &b) {
+                    if (variant_is_null(a) && variant_is_null((b))) {
+                        return true;
+                    } else if (variant_is_null(a) != variant_is_null(b)) {
+                        return false;
+                    } else {
+                        return a == b;
+                    }
+                });
+                if (groupby_key_unchanged) {
+                    if (new_value_raw.which() != 0) {
+                        const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
+                        aggregate_function(new_value, current_aggregate_value);
+                        value_count++;
+                        if constexpr (function == AggregateFunction::CountDistinct) {
+                            unique_values.insert(new_value);
+                        }
                     }
                 } else {
                     if constexpr (function == AggregateFunction::Count) {
                         current_aggregate_value = value_count;
                     }
                     if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
-                        current_aggregate_value = *current_aggregate_value / value_count;
+                        if (value_count == 0) {
+                            current_aggregate_value = std::optional<AggregateType>();
+                        } else {
+                            current_aggregate_value = *current_aggregate_value / value_count;
+                        }
                     }
                     if constexpr (function == AggregateFunction::CountDistinct) {
                         current_aggregate_value = unique_values.size();
                     }
-                    aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
+                    if (current_aggregate_value.has_value()) {
+                        aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
+                    } else {
+                        aggregate_results[aggregate_index].emplace_back(NULL_VALUE);
+                    }
                     if (aggregate_index == 0) {
                         for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
                             groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
@@ -76,11 +94,16 @@ namespace opossum {
                     }
 
                     previous_values = current_values;
-                    current_aggregate_value = type_cast_variant<AggregateType>(new_value_uncasted);
-                    value_count = 1u;
-                    if constexpr (function == AggregateFunction::CountDistinct) {
-                        const ColumnType new_value = type_cast_variant<ColumnType>(new_value_uncasted);
-                        unique_values = {new_value};
+                    current_aggregate_value = std::optional<AggregateType>();
+                    unique_values.clear();
+                    value_count = 0u;
+                    if (new_value_raw.which() != 0) {
+                        const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
+                        aggregate_function(new_value, current_aggregate_value);
+                        value_count = 1u;
+                        if constexpr (function == AggregateFunction::CountDistinct) {
+                            unique_values = {new_value};
+                        }
                     }
                 }
 
@@ -90,7 +113,11 @@ namespace opossum {
             current_aggregate_value = value_count;
         }
         if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
-            current_aggregate_value = *current_aggregate_value / value_count;
+            if (value_count == 0) {
+                current_aggregate_value = std::optional<AggregateType>();
+            } else {
+                current_aggregate_value = *current_aggregate_value / value_count;
+            }
         }
         if constexpr (function == AggregateFunction::CountDistinct) {
             current_aggregate_value = unique_values.size();
@@ -124,7 +151,7 @@ namespace opossum {
 
         //create table with correct schema
         for (const auto column_id : _groupby_column_ids) {
-            _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id));
+            _output_column_definitions.emplace_back(input_table->column_name(column_id), input_table->column_data_type(column_id), true);
         }
 
         ColumnID column_index{0};
@@ -179,7 +206,16 @@ namespace opossum {
                         AllTypeVariant current_value = segments[column_id]->operator[](offset);
                         current_values.emplace_back(current_value);
                     }
-                    if (current_values != previous_values) {
+                    const auto groupby_key_changed = !std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), [](const auto &a, const auto &b) {
+                        if (variant_is_null(a) && variant_is_null((b))) {
+                            return true;
+                        } else if (variant_is_null(a) != variant_is_null(b)) {
+                            return false;
+                        } else {
+                            return a == b;
+                        }
+                    });
+                    if (groupby_key_changed) {
                         for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
                                 groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
                         }

@@ -77,9 +77,9 @@ namespace opossum {
     template <typename ColumnType, typename AggregateType>
     struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
         AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-            if (!std::is_arithmetic_v<AggregateType>) {
+            /*if (!std::is_arithmetic_v<AggregateType>) {
                 Fail("Invalid aggregate");
-            }
+            }*/
             // We reuse Sum here and use it together with aggregate_count to calculate the average
             return AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
         }
