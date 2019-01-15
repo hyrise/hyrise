@@ -311,7 +311,7 @@ TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
 }
 
 TEST_F(OperatorsPrintTest, SegmentType) {
-  auto table = load_table("resources/test_data/tbl/int_float.tbl", 2);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", 1);
 
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
   ChunkEncoder::encode_chunks(table, {ChunkID{1}}, EncodingType::RunLength);
