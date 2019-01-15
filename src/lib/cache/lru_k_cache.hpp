@@ -79,7 +79,8 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     }
 
     const KeyValuePair& dereference() const {
-      _tmp_return_value = get_value(*_wrapped_iterator);
+      const auto iter_value = *_wrapped_iterator;
+      _tmp_return_value = {iter_value.first, (*iter_value.second).value};
       return _tmp_return_value;
     }
   };
@@ -122,12 +123,6 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
     entry.add_history_entry(_access_counter);
     _queue.update(handle);
     return entry.value;
-  }
-
-  static const KeyValuePair get_value(const std::pair<Key, Handle>& p) {
-    const Handle handle = p.second;
-    const LRUKCacheEntry& entry = (*handle);
-    return {p.first, entry.value};
   }
 
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }
