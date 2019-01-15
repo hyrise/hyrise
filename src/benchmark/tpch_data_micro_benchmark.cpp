@@ -1,5 +1,7 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
+#include "benchmark_config.hpp"
+#include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
@@ -8,7 +10,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -22,32 +24,22 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
     const auto scale_factor = 0.001f;
+    const auto default_encoding = EncodingType::Dictionary;
+
+    auto benchmark_config = BenchmarkConfig::get_default_config();
+    // TODO(anyone): setup benchmark_config with the given default_encoding
+    // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data with scale factor " << scale_factor << " ... " << std::flush;
-      TpchDbGenerator(scale_factor, 100'000).generate_and_store();
-      std::cout << "done." << std::endl;
-
-      // Tables are dictionary-encoded for the following benchmarks.
-      const auto default_encoding = EncodingType::Dictionary;
-      std::cout << "Encoding tables ... " << std::flush;
-      ChunkEncoder::encode_all_chunks(sm.get_table("lineitem"),
-                                      std::vector<SegmentEncodingSpec>(sm.get_table("lineitem")->column_count(),
-                                                                       SegmentEncodingSpec(default_encoding)));
-      ChunkEncoder::encode_all_chunks(sm.get_table("orders"),
-                                      std::vector<SegmentEncodingSpec>(sm.get_table("orders")->column_count(),
-                                                                       SegmentEncodingSpec(default_encoding)));
-      std::cout << "done." << std::endl;
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and "
+                << encoding_type_to_string.left.at(default_encoding) << " encoding:" << std::endl;
+      TpchTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
     }
+
+    _table_wrapper_map = create_table_wrappers(sm);
 
     auto lineitem_tab = sm.get_table("lineitem");
     auto orders_tab = sm.get_table("orders");
-
-    _lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_tab);
-    _lineitem_wrapper->execute();
-
-    _orders_wrapper = std::make_shared<TableWrapper>(orders_tab);
-    _orders_wrapper->execute();
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
@@ -83,10 +75,23 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
   void TearDown(::benchmark::State&) {}
 
+  std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
+    std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
+    for (const auto& table_name : sm.table_names()) {
+      auto table = sm.get_table(table_name);
+      auto table_wrapper = std::make_shared<TableWrapper>(table);
+      table_wrapper->execute();
+
+      wrapper_map.emplace(table_name, table_wrapper);
+    }
+
+    return wrapper_map;
+  }
+
   inline static bool _tpch_data_generated = false;
 
-  std::shared_ptr<TableWrapper> _lineitem_wrapper;
-  std::shared_ptr<TableWrapper> _orders_wrapper;
+  std::map<std::string, std::shared_ptr<TableWrapper>> _table_wrapper_map;
+
   std::shared_ptr<PQPColumnExpression> _lorderkey_operand;
   std::shared_ptr<BinaryPredicateExpression> _int_predicate;
   std::shared_ptr<PQPColumnExpression> _lshipinstruct_operand;
@@ -102,13 +107,13 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(_lineitem_wrapper, _tpchq6_discount_predicate);
+    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
     table_scan->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchmark::State& state) {
-  const auto first_scan = std::make_shared<TableScan>(_lineitem_wrapper, _tpchq6_discount_predicate);
+  const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
   first_scan->execute();
 
   for (auto _ : state) {
@@ -118,7 +123,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchma
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmark::State& state) {
-  const auto first_scan = std::make_shared<TableScan>(_lineitem_wrapper, _tpchq6_discount_predicate);
+  const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
   first_scan->execute();
   const auto first_scan_result = first_scan->get_output();
   const auto second_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
@@ -132,13 +137,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmar
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnPhysicalTable)(benchmark::State& state) {
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(_lineitem_wrapper, _int_predicate);
+    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
     table_scan->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(benchmark::State& state) {
-  const auto table_scan = std::make_shared<TableScan>(_lineitem_wrapper, _int_predicate);
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
   table_scan->execute();
   const auto scanned_table = table_scan->get_output();
 
@@ -150,13 +155,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnPhysicalTable)(benchmark::State& state) {
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(_lineitem_wrapper, _string_predicate);
+    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
     table_scan->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(benchmark::State& state) {
-  const auto table_scan = std::make_shared<TableScan>(_lineitem_wrapper, _string_predicate);
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
   table_scan->execute();
   const auto scanned_table = table_scan->get_output();
 
@@ -175,32 +180,36 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
  */
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(_orders_wrapper, _lineitem_wrapper, JoinMode::Semi,
-                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto join =
+        std::make_shared<JoinHash>(_table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
+                                   ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
     join->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(_lineitem_wrapper, _orders_wrapper, JoinMode::Semi,
-                                           ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto join =
+        std::make_shared<JoinHash>(_table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
+                                   ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
     join->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationSmaller)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(_orders_wrapper, _lineitem_wrapper, JoinMode::Semi,
-                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto join = std::make_shared<JoinSortMerge>(_table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"),
+                                                JoinMode::Semi, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+                                                PredicateCondition::Equals);
     join->execute();
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(benchmark::State& state) {
   for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(_lineitem_wrapper, _orders_wrapper, JoinMode::Semi,
-                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto join = std::make_shared<JoinSortMerge>(_table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"),
+                                                JoinMode::Semi, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+                                                PredicateCondition::Equals);
     join->execute();
   }
 }
