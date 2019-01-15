@@ -87,8 +87,7 @@ inline std::vector<size_t> determine_chunk_offsets(std::shared_ptr<const Table> 
 }
 
 template <typename T>
-std::vector<T> materialize_column(const Table& table, ColumnID column_id)
-{
+std::vector<T> materialize_column(const Table& table, ColumnID column_id) {
   std::vector<T> col(table.row_count());
   size_t row_idx = 0;
 
@@ -98,9 +97,7 @@ std::vector<T> materialize_column(const Table& table, ColumnID column_id)
     resolve_segment_type<T>(*segment, [&, chunk_id](auto& typed_segment) {
       auto iterable = create_iterable_from_segment<T>(typed_segment);
 
-      iterable.for_each([&, chunk_id](const auto& value) {
-        col[row_idx++] = value;
-      });
+      iterable.for_each([&, chunk_id](const auto& value) { col[row_idx++] = value; });
     });
   }
 
@@ -371,14 +368,14 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   return radix_output;
 }
 
-
 inline AllTypeVariant _get_value(const Table& table, const RowID row_id, const ColumnID& column_id) {
   const auto& segment = *table.get_chunk(row_id.chunk_id)->segments()[column_id];
   return segment[row_id.chunk_offset];
 }
 
-inline bool _fulfills_join_predicates(const Table& left, const Table& right, const RowID left_row_id,
-    const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
+// fulfills V1
+inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
+                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
   if (join_predicates.empty()) {
     return true;
   }
@@ -387,8 +384,8 @@ inline bool _fulfills_join_predicates(const Table& left, const Table& right, con
     DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
                 "Only PredicateCondition::Equals is"
                 " supported.");
-    const auto left_value = _get_value(left, left_row_id, pred.column_id_pair.first);
-    const auto right_value = _get_value(right, right_row_id, pred.column_id_pair.second);
+    const auto left_value = _get_value(left_table, left_row_id, pred.column_id_pair.first);
+    const auto right_value = _get_value(right_table, right_row_id, pred.column_id_pair.second);
 
     if (left_value != right_value) {
       return false;
@@ -398,7 +395,8 @@ inline bool _fulfills_join_predicates(const Table& left, const Table& right, con
   return true;
 }
 
-inline bool _fulfills_join_predicates(const Table& left, const std::vector<AllTypeVariant> right,
+// fulfills V2, slower than V1
+inline bool _fulfills_join_predicates(const Table& left_table, const std::vector<AllTypeVariant> right,
                                       const RowID left_row_id, const std::vector<JoinPredicate>& join_predicates) {
   if (join_predicates.empty()) {
     return true;
@@ -409,7 +407,7 @@ inline bool _fulfills_join_predicates(const Table& left, const std::vector<AllTy
     DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
                 "Only PredicateCondition::Equals is"
                 " supported.");
-    const auto left_value = _get_value(left, left_row_id, pred.column_id_pair.first);
+    const auto left_value = _get_value(left_table, left_row_id, pred.column_id_pair.first);
     const auto& right_value = right[pred_idx];
 
     if (left_value != right_value) {
@@ -420,6 +418,63 @@ inline bool _fulfills_join_predicates(const Table& left, const std::vector<AllTy
   return true;
 }
 
+// fulfills V3: segment accessors, static typing (int32_t), faster than V1
+
+//inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
+//                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
+//  if (join_predicates.empty()) {
+//    return true;
+//  }
+//
+//  for (const auto& pred : join_predicates) {
+//    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
+//                "Only PredicateCondition::Equals is"
+//                " supported.");
+//    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
+//    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
+//
+//    auto left_accessor = create_segment_accessor<int32_t>(left_segment);
+//    auto right_accessor = create_segment_accessor<int32_t>(right_segment);
+//    if (!(left_accessor->access(left_row_id.chunk_offset) == right_accessor->access(right_row_id.chunk_offset))) {
+//      return false;
+//    }
+//  }
+//
+//  return true;
+//}
+
+// fulfills V4: segment accessors, dynamic typing, faster than V3 but slower than V1
+
+//inline bool _fulfills_join_predicates(const Table& left_table, const Table& right_table, const RowID left_row_id,
+//                                      const RowID right_row_id, const std::vector<JoinPredicate>& join_predicates) {
+//  if (join_predicates.empty()) {
+//    return true;
+//  }
+//
+//  for (const auto& pred : join_predicates) {
+//    DebugAssert(pred.predicateCondition == PredicateCondition::Equals,
+//                "Only PredicateCondition::Equals is"
+//                " supported.");
+//    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
+//    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
+//
+//    auto left_accessor = create_segment_accessor<int32_t>(left_segment);
+//    auto right_accessor = create_segment_accessor<int32_t>(right_segment);
+//
+//    const auto column_data_type = left_table.column_data_type(pred.column_id_pair.first);
+//
+//    resolve_data_type(column_data_type, [&](const auto type) {
+//      using ColumnDataType = typename decltype(type)::type;
+//      auto left_accessor = create_segment_accessor<ColumnDataType>(left_segment);
+//      auto right_accessor = create_segment_accessor<ColumnDataType>(right_segment);
+//      if (!(left_accessor->access(left_row_id.chunk_offset) == right_accessor->access(right_row_id.chunk_offset))) {
+//        return false;
+//      }
+//    });
+//  }
+//
+//  return true;
+//}
 
 /*
   In the probe phase we take all partitions from the right partition, iterate over them and compare each join candidate
@@ -429,9 +484,7 @@ inline bool _fulfills_join_predicates(const Table& left, const std::vector<AllTy
 template <typename RightType, typename HashedType, bool consider_null_values>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
-           std::vector<PosList>& pos_lists_right, const JoinMode mode,
-           const Table& left,
-           const Table& right,
+           std::vector<PosList>& pos_lists_right, const JoinMode mode, const Table& left, const Table& right,
            const std::vector<JoinPredicate>& additional_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
@@ -510,7 +563,6 @@ void probe(const RadixContainer<RightType>& radix_container,
 
             // If NULL values are discarded, the matching row pairs will be written to the result pos lists.
             for (const auto& row_id : matching_rows) {
-
               // hier prüfen, ob die zusätzlichen joinpredicates erfüllt sind.
 
               if (_fulfills_join_predicates(left, right, row_id, row.row_id, additional_join_predicates)) {

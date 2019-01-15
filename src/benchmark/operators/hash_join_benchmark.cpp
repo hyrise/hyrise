@@ -118,10 +118,8 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
 
   if (as_reference_segment) {
     // validate needs a transaction context. This is taken from test/operators/validate_test.cpp:60
-    // not sure if this is the right thing to do here
     auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-    // this currently fails since the Tables have no MVCC data
     // src/lib/operators/validate.cpp:121
     validate_left = std::make_shared<Validate>(table_wrapper_left);
     validate_right = std::make_shared<Validate>(table_wrapper_right);
@@ -153,7 +151,6 @@ void execute_multi_predicate_join(benchmark::State& state, size_t chunk_size, si
 
   opossum::StorageManager::get().reset();
 }
-
 
 //---------------------------------------------------------------------------------------------------------------------
 /* Multi predicate join using a scan for the second predicate and value segments */
@@ -197,7 +194,6 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_with_scan
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, true, false);
 }
-
 
 //---------------------------------------------------------------------------------------------------------------------
 /* True multi predicate join using value segments */
@@ -284,7 +280,6 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Multi_Predicate_Join_10To10_with_scan
 (benchmark::State& state) {  // NOLINT 1,000 x 1,000
   execute_multi_predicate_join(state, CHUNK_SIZE, SCALE_FACTOR, 10, 10, true, true);
 }
-
 
 //---------------------------------------------------------------------------------------------------------------------
 /* True multi predicate join using reference segments */
