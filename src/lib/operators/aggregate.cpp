@@ -33,17 +33,15 @@ namespace {
   template <typename ResultIds, typename Results, typename AggregateKey>
   typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key, const RowID& row_id) {
     // Get the result id for the current key or add it to the id map
-    auto it = result_ids.find(key);
-    if (it != result_ids.end()) return results[it->second];
-
-    auto result_id = results.size();
-
-    result_ids.emplace_hint(it, key, result_id);
+    auto result_id_inserted = result_ids.try_emplace(key, results.size());
+    const auto& result_id = result_id_inserted.first->second;
 
     // If it was added to the id map, add the current row id to the result list so that we can revert the
     // value(s) -> key mapping
-    results.emplace_back();
-    results[result_id].row_id = row_id;
+    if (result_id_inserted.second) {
+      results.emplace_back();
+      results[result_id].row_id = row_id;
+    }
 
     return results[result_id];
   }
