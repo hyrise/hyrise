@@ -42,8 +42,8 @@ namespace {
 
     // If it was added to the id map, add the current row id to the result list so that we can revert the
     // value(s) -> key mapping
-    results[result_id].row_id = row_id;
     results.emplace_back();
+    results[result_id].row_id = row_id;
 
     return results[result_id];
   }
