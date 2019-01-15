@@ -33,6 +33,7 @@ namespace opossum {
 
         std::optional<AggregateType> current_aggregate_value;
         uint64_t value_count = 0u;
+        uint64_t value_count_with_null = 0u;
 
         std::unordered_set<ColumnType> unique_values;
 
@@ -49,7 +50,6 @@ namespace opossum {
                     current_values.emplace_back(current_value);
                 }
 
-                const auto new_value_raw = segments[*_aggregates[aggregate_index].column]->operator[](offset);
                 const auto groupby_key_unchanged = std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), [](const auto &a, const auto &b) {
                     if (variant_is_null(a) && variant_is_null((b))) {
                         return true;
@@ -59,6 +59,13 @@ namespace opossum {
                         return a == b;
                     }
                 });
+
+                AllTypeVariant new_value_raw;
+                if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
+                    new_value_raw = NULL_VALUE;
+                } else {
+                    new_value_raw = segments[*_aggregates[aggregate_index].column]->operator[](offset);
+                }
                 if (groupby_key_unchanged) {
                     if (new_value_raw.which() != 0) {
                         const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
@@ -68,9 +75,14 @@ namespace opossum {
                             unique_values.insert(new_value);
                         }
                     }
+                    value_count_with_null++;
                 } else {
                     if constexpr (function == AggregateFunction::Count) {
-                        current_aggregate_value = value_count;
+                        if (_aggregates[aggregate_index].column) {
+                            current_aggregate_value = value_count;
+                        } else {
+                            current_aggregate_value = value_count_with_null;
+                        }
                     }
                     if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
                         if (value_count == 0) {
@@ -97,6 +109,7 @@ namespace opossum {
                     current_aggregate_value = std::optional<AggregateType>();
                     unique_values.clear();
                     value_count = 0u;
+                    value_count_with_null = 1u;
                     if (new_value_raw.which() != 0) {
                         const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
                         aggregate_function(new_value, current_aggregate_value);
@@ -110,7 +123,11 @@ namespace opossum {
             }
         }
         if constexpr (function == AggregateFunction::Count) {
-            current_aggregate_value = value_count;
+            if (_aggregates[aggregate_index].column) {
+                current_aggregate_value = value_count;
+            } else {
+                current_aggregate_value = value_count_with_null;
+            }
         }
         if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
             if (value_count == 0) {
@@ -233,7 +250,8 @@ namespace opossum {
 
             std::vector<AllTypeVariant> previous_values;
 
-            auto data_type = input_table->column_data_type(*aggregate.column);
+
+            const auto data_type = !aggregate.column ? DataType::Int : input_table->column_data_type(*aggregate.column);
             resolve_data_type(data_type, [&, aggregate](auto type) {
                 using ColumnDataType = typename decltype(type)::type;
 
