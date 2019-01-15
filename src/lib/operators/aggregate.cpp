@@ -23,29 +23,6 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace {
-  using namespace opossum;
-
-  // Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
-  // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
-  // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
-  // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-  template <typename ResultIds, typename Results, typename AggregateKey>
-  typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key, const RowID& row_id) {
-    // Get the result id for the current key or add it to the id map
-    auto result_id_inserted = result_ids.emplace(key, results.size());
-
-    // If it was added to the id map, add the current row id to the result list so that we can revert the
-    // value(s) -> key mapping
-    if (result_id_inserted.second) {
-      results.emplace_back();
-      results[result_id_inserted.first->second].row_id = row_id;
-    }
-
-    return results[result_id_inserted.first->second];
-  }
-}
-
 namespace opossum {
 
 Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
@@ -209,7 +186,9 @@ void Aggregate::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, cons
 
   ChunkOffset chunk_offset{0};
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
-    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID(chunk_id, chunk_offset));
+    auto& result_id = result_ids[hash_keys[chunk_offset]];
+    auto& result = results[result_id];
+    result.row_id = RowID(chunk_id, chunk_offset);
 
     /**
     * If the value is NULL, the current aggregate value does not change.
@@ -447,7 +426,9 @@ void Aggregate::_aggregate() {
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
         // Make sure the value or combination of values is added to the list of distinct value(s)
-        get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
+        auto& result_id = result_ids[hash_keys[chunk_offset]];
+        auto& result = results[result_id];
+        result.row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
       ColumnID column_index{0};
@@ -468,7 +449,9 @@ void Aggregate::_aggregate() {
 
           // count occurrences for each group key
           for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-            auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
+            auto& result_id = result_ids[hash_keys[chunk_offset]];
+            auto& result = results[result_id];
+            result.row_id = RowID(chunk_id, chunk_offset);
             ++result.aggregate_count;
           }
 
