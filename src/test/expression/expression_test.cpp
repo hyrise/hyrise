@@ -91,8 +91,8 @@ TEST_F(ExpressionTest, DeepEquals) {
   const auto parameter_a = correlated_parameter_(ParameterID{5}, a);
   const auto parameter_b = correlated_parameter_(ParameterID{5}, a);
   EXPECT_EQ(*parameter_a, *parameter_b);
-  static_cast<CorrelatedParameterExpression&>(*parameter_a).set_value(3);
-  static_cast<CorrelatedParameterExpression&>(*parameter_b).set_value(4);
+  parameter_a->set_value(3);
+  parameter_b->set_value(4);
   EXPECT_NE(*parameter_a, *parameter_b);
 }
 
@@ -104,7 +104,7 @@ TEST_F(ExpressionTest, DeepCopy) {
   EXPECT_EQ(*expr_b, *expr_b->deep_copy());
 
   const auto parameter_a = correlated_parameter_(ParameterID{5}, a);
-  static_cast<CorrelatedParameterExpression&>(*parameter_a).set_value(3);
+  parameter_a->set_value(3);
   const auto parameter_b = parameter_a->deep_copy();
   EXPECT_EQ(*parameter_a, *parameter_b);
   static_cast<CorrelatedParameterExpression&>(*parameter_b).set_value(4);
