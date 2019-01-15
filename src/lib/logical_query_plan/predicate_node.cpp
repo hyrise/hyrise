@@ -42,7 +42,7 @@ bool PredicateNode::creates_reference_segments() const { return true; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
+  DebugAssert(left_input && !right_input, "PredicateNode needs left_input and no right_input");
 
   /**
    * If the predicate is not a simple `<column> <predicate_condition> <value/column/placeholder>` predicate, 
