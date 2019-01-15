@@ -50,7 +50,6 @@ void MVCC_Benchmark_Fixture::_incrementAllValuesByOne() {
 }
 
 void MVCC_Benchmark_Fixture::_invalidateRecords(int recordsCount) {
-
   // With each UPDATE, 10 records are updated resp. invalidated.
   int requiredUpdatesCount = recordsCount / 10;
 
@@ -75,7 +74,7 @@ void MVCC_Benchmark_Fixture::SetUp(::benchmark::State& state) {
 void MVCC_Benchmark_Fixture::TearDown(::benchmark::State&) { StorageManager::reset(); }
 
 void MVCC_Benchmark_Fixture::_clear_cache() {
-
+  //TODO(Julian)
 }
 
 }  // namespace opossum

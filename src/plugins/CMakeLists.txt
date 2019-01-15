@@ -24,6 +24,7 @@ function(add_plugin)
     endif()
 endfunction(add_plugin)
 
+add_plugin(NAME MvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME TestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 

@@ -121,6 +121,7 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/predicate_reordering_test.cpp
     optimizer/strategy/strategy_base_test.hpp
+    plugins/mvcc_delete_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
@@ -187,7 +188,7 @@ set(
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
-)
+    )
 
 if (${ENABLE_JIT_SUPPORT})
     # Some of the JIT test cases require pre-compiled LLVM bitcode.

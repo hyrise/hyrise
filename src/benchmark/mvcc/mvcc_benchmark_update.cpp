@@ -7,9 +7,9 @@
 #include "expression/pqp_column_expression.hpp"
 #include "mvcc_benchmark_fixture.hpp"
 #include "operators/get_table.hpp"
+#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
-#include "operators/print.hpp"
 #include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -18,10 +18,8 @@
 
 namespace opossum {
 
-
 BENCHMARK_DEFINE_F(MVCC_Benchmark_Fixture, BM_MVCC_VALIDATE)(benchmark::State& state) {
-
-  for(auto _ : state) {
+  for (auto _ : state) {
     _clear_cache();
 
     auto get_table = std::make_shared<GetTable>(_table_name);
@@ -33,19 +31,15 @@ BENCHMARK_DEFINE_F(MVCC_Benchmark_Fixture, BM_MVCC_VALIDATE)(benchmark::State& s
 
     validate_table->execute();
   }
-
 }
 
 BENCHMARK_DEFINE_F(MVCC_Benchmark_Fixture, BM_MVCC_UPDATE)(benchmark::State& state) {
-
-  for(auto _ : state) {
+  for (auto _ : state) {
     _clear_cache();
 
     _incrementAllValuesByOne();
   }
-
 }
-
 
 // Run benchmark with a table of up to 99.990 invalidated lines
 BENCHMARK_REGISTER_F(MVCC_Benchmark_Fixture, BM_MVCC_VALIDATE)->RangeMultiplier(2)->Range(1, 99990);

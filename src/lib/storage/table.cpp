@@ -107,14 +107,19 @@ void Table::append_mutable_chunk() {
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
   for (const auto& chunk : _chunks) {
-    ret += chunk->size();
+    if (chunk) ret += chunk->size();
   }
   return ret;
 }
 
 bool Table::empty() const { return row_count() == 0u; }
 
-ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
+ChunkID Table::chunk_count() const {
+  ChunkID count{0};
+  for (ChunkID chunk_id{0}; chunk_id < _chunks.size(); chunk_id++)
+    if (_chunks[chunk_id]) count++;
+  return count;
+}
 
 const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
 
@@ -128,6 +133,11 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
+}
+
+void Table::delete_chunk(ChunkID chunk_id) {
+  DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
+  _chunks[chunk_id] = nullptr;
 }
 
 ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) {
