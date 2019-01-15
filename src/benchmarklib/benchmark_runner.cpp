@@ -433,6 +433,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
+  // Create a comma separated strings with the encoding and compression options
   const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
   const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
   const auto compression_strings_option =

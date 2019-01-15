@@ -313,22 +313,25 @@ TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
 TEST_F(OperatorsPrintTest, SegmentType) {
   auto table = load_table("resources/test_data/tbl/int_float.tbl", 2);
 
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}});
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
+  ChunkEncoder::encode_chunks(table, {ChunkID{1}}, EncodingType::RunLength);
 
-  Print::print(table, 2, output);
+  Print::print(table, 1, output);
 
   auto expected_output =
       "=== Columns\n"
-      "|       a|       b||        MVCC        |\n"
-      "|     int|   float||_BEGIN|_END  |_TID  |\n"
-      "|not null|not null||      |      |      |\n"
+      "|       a|       b|\n"
+      "|     int|   float|\n"
+      "|not null|not null|\n"
       "=== Chunk 0 ===\n"
-      "|<Dic:1B>|<Dic:1B>||\n"
-      "|   12345|   458.7||     0|      |      |\n"
-      "|     123|   456.7||     0|      |      |\n"
+      "|<Dic:1B>|<Dic:1B>|\n"
+      "|   12345|   458.7|\n"
       "=== Chunk 1 ===\n"
-      "|<ValueS>|<ValueS>||\n"
-      "|    1234|   457.7||     0|      |      |\n";
+      "|<RLE>   |<RLE>   |\n"
+      "|     123|   456.7|\n"
+      "=== Chunk 2===\n"
+      "|<ValueS>|<ValueS>|\n"
+      "|    1234|   457.7|\n";
   EXPECT_EQ(output.str(), expected_output);
 }
 

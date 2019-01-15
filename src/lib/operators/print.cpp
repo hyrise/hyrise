@@ -90,7 +90,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       const auto column_width = widths[column_id];
       const auto& segment = chunk->get_segment(column_id);
-      _out << "|" << std::setw(column_width - 2) << _segment_type(segment) << std::setw(0);
+      _out << "|" << std::setw(column_width) << _segment_type(segment) << std::setw(0);
     }
     if (_flags & PrintMvcc) _out << "||";
     _out << std::endl;
@@ -179,43 +179,41 @@ std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) co
         Fail("An actual segment should never have this type");
       }
       case EncodingType::Dictionary: {
-        segment_type += "Dic:";
+        segment_type += "Dic";
         break;
       }
       case EncodingType::RunLength: {
-        segment_type += "RLE:";
+        segment_type += "RLE";
         break;
       }
       case EncodingType::FixedStringDictionary: {
-        segment_type += "FSD:";
+        segment_type += "FSD";
         break;
       }
       case EncodingType::FrameOfReference: {
-        segment_type += "FoR:";
+        segment_type += "FoR";
         break;
       }
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
         case CompressedVectorType::FixedSize4ByteAligned: {
-          segment_type += "4B";
+          segment_type += ":4B";
           break;
         }
         case CompressedVectorType::FixedSize2ByteAligned: {
-          segment_type += "2B";
+          segment_type += ":2B";
           break;
         }
         case CompressedVectorType::FixedSize1ByteAligned: {
-          segment_type += "1B";
+          segment_type += ":1B";
           break;
         }
         case CompressedVectorType::SimdBp128: {
-          segment_type += "BP";
+          segment_type += ":BP";
           break;
         }
       }
-    } else {
-      segment_type += "--";
     }
   } else {
     Fail("Unknown segment type");
