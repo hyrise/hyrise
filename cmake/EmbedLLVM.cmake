@@ -46,7 +46,7 @@ function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
     set(FLAGS -std=c++17 -O3 -fwhole-program-vtables -flto ${CMAKE_CXX_FLAGS})
     add_custom_command(
         OUTPUT ${LLVM_BUNDLE_FILE}
-        COMMAND ${CMAKE_CXX_COMPILER} ${FLAGS} -c -emit-llvm -DSOURCE_PATH_SIZE -I${CMAKE_CURRENT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/third_party/sql-parser/src -o ${LLVM_BUNDLE_FILE} ${CPP_BUNDLE_FILE}
+        COMMAND ${CMAKE_CXX_COMPILER} ${FLAGS} -c -emit-llvm -DHYRISE_DEBUG=${HYRISE_DEBUG} -I${CMAKE_CURRENT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/third_party/sql-parser/src -o ${LLVM_BUNDLE_FILE} ${CPP_BUNDLE_FILE}
         DEPENDS ${CPP_BUNDLE_FILE} ${INPUT_FILES})
     set_source_files_properties(${LLVM_BUNDLE_FILE} PROPERTIES GENERATED TRUE)
 
@@ -56,21 +56,19 @@ function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
     set(MANGLED_SYMBOL _ZN7opossum${SYMBOL_NAME_LENGTH}${SYMBOL_NAME}E)
     math(EXPR SYMBOL_NAME_SIZE_LENGTH "${SYMBOL_NAME_LENGTH} + 5")
     set(MANGLED_SIZE_SYMBOL _ZN7opossum${SYMBOL_NAME_SIZE_LENGTH}${SYMBOL_NAME}_sizeE)
-    file(WRITE ${ASM_FILE} "
-        .global ${MANGLED_SYMBOL}
-        .global _${MANGLED_SYMBOL}
-        .global ${MANGLED_SIZE_SYMBOL}
-        .global _${MANGLED_SIZE_SYMBOL}
-        .p2align 3
-        ${MANGLED_SYMBOL}:
-        _${MANGLED_SYMBOL}:
-        .incbin \"${LLVM_BUNDLE_FILE}\"
-        1:
-        .p2align 3
-        ${MANGLED_SIZE_SYMBOL}:
-        _${MANGLED_SIZE_SYMBOL}:
-        .8byte 1b - ${MANGLED_SYMBOL}"
+
+    # We use `configure_file` to copy the .s template file to the build directory and configure it with variables
+    # specific to the build (MANGLED_SYMBOL, LLVM_BUNDLE_FILE, ...)
+    # Using configure_file() means that this configuration will only happen when cmake runs; there is NO dependency
+    # checking at build time, so if you change ".../specialization/llvm/jit_llvm_bundle.s", this will have no effect
+    # on the build unless cmake is run again. For now, using `add_custom_command` to properly solve this seems
+    # unnecessary, but is possible if this becomes a problem.
+    configure_file("${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/jit_llvm_bundle.s" ${ASM_FILE})
+    set_source_files_properties(
+        ${ASM_FILE}
+        PROPERTIES
+            OBJECT_DEPENDS ${LLVM_BUNDLE_FILE}
     )
-    set_source_files_properties(${ASM_FILE} PROPERTIES GENERATED TRUE OBJECT_DEPENDS ${LLVM_BUNDLE_FILE})
+
     set(${OUTPUT_FILE} ${ASM_FILE} PARENT_SCOPE)
 endfunction()

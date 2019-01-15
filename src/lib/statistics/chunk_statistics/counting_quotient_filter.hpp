@@ -51,6 +51,16 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
   bool can_prune(const PredicateCondition predicate_type, const AllTypeVariant& value,
                  const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
+  /**
+   * Calculate hash of value and return requested number of bits.
+   * @param value       value to hash
+   * @param bit_count   the number of bits requested
+   *
+   * @return            The least significant bit-count bits of the hashed value (if bit_count < sizeof(size_t),
+   *                    the most significant bits are zero padded).
+   */
+  static uint64_t get_hash_bits(const ElementType& value, const uint64_t bit_count);
+
   // Can't copy CountingQuotientFilter
   CountingQuotientFilter(CountingQuotientFilter&) = delete;
   CountingQuotientFilter(CountingQuotientFilter&&) = delete;
@@ -58,8 +68,6 @@ class CountingQuotientFilter : public AbstractFilter, public Noncopyable {
   CountingQuotientFilter operator=(CountingQuotientFilter&&) = delete;
 
  private:
-  size_t _hash(const ElementType& value) const;
-
   boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
   const size_t _hash_bits;
 };

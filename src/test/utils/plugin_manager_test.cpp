@@ -22,7 +22,7 @@ class PluginManagerTest : public BaseTest {
   }
 };
 
-TEST_F(PluginManagerTest, LoadStopPlugin) {
+TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   auto& sm = StorageManager::get();
   auto& pm = PluginManager::get();
   auto& plugins = get_plugins();
@@ -40,13 +40,13 @@ TEST_F(PluginManagerTest, LoadStopPlugin) {
 
   pm.unload_plugin("TestPlugin");
 
-  // The test plugin removes the dummy table from the storage manager when it is stopped
+  // The test plugin removes the dummy table from the storage manager when it is unloaded
   EXPECT_FALSE(sm.has_table("DummyTable"));
   EXPECT_EQ(plugins.count("TestPlugin"), 0u);
 }
 
-// Plugins are stopped when the PluginManager's destructor is called, this is simulated and tested here.
-TEST_F(PluginManagerTest, LoadPluginAutomaticStop) {
+// Plugins are unloaded when the PluginManager's destructor is called, this is simulated and tested here.
+TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   auto& sm = StorageManager::get();
   auto& pm = PluginManager::get();
   auto& plugins = get_plugins();
@@ -63,10 +63,10 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticStop) {
   EXPECT_TRUE(sm.has_table("DummyTable"));
 
   // The PluginManager's destructor calls _clean_up(), we call it here explicitly to simulate the destructor
-  // being called, which in turn should call stop() on all loaded plugins.
+  // being called, which in turn should unload all loaded plugins.
   call_clean_up();
 
-  // The test plugin removes the dummy table from the storage manager when it is stopped
+  // The test plugin removes the dummy table from the storage manager when it is unloaded
   // (implicitly by the destructor of the PluginManager).
   EXPECT_FALSE(sm.has_table("DummyTable"));
 }
@@ -100,6 +100,15 @@ TEST_F(PluginManagerTest, LoadingTwoInstancesOfSamePlugin) {
   EXPECT_EQ(plugins.size(), 0u);
   pm.load_plugin(build_dylib_path("libTestPlugin"));
   EXPECT_THROW(pm.load_plugin(build_dylib_path("libTestPlugin")), std::exception);
+}
+
+TEST_F(PluginManagerTest, UnloadNotLoadedPlugin) {
+  auto& pm = PluginManager::get();
+  auto& plugins = get_plugins();
+
+  EXPECT_EQ(plugins.size(), 0u);
+
+  EXPECT_THROW(pm.unload_plugin("NotLoadedPlugin"), std::exception);
 }
 
 }  // namespace opossum

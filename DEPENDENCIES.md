@@ -2,14 +2,13 @@
 
 | Name             | Version          | Platform |                              Optional |
 | ---------------- | ---------------- | -------- | ------------------------------------- |
-| build-essential  | any              |    Linux |                                    No |
 | boost            | >= 1.65.0        |    All   |                                    No |
 | clang            | 6                |    All   |                 Yes, if gcc installed |
 | clang-format     | 6.0 / 2018-01-11 |    All   |                      Yes (formatting) |
 | clang-tidy       | 6.0 / 2018-01-11 |    All   |                         Yes (linting) |
 | cmake            | 3.5 (deprecated) |    All   |                                    No |
 | cmake            | 3.9              |    All   |                                    No |
-| gcc              | 7.2              |    All   | Yes, if clang installed, not for OS X |
+| gcc              | 8.2              |    All   | Yes, if clang installed, not for OS X |
 | gcovr            | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz         | any              |    All   |             Yes (query visualization) |
 | libclang-dev     | 6                |    Linux |                             Yes (JIT) |

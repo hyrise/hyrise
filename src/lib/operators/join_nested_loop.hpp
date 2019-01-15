@@ -22,12 +22,6 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   const std::string name() const override;
 
- protected:
-  std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-
   struct JoinParams {
     PosList& pos_list_left;
     PosList& pos_list_right;
@@ -38,6 +32,12 @@ class JoinNestedLoop : public AbstractJoinOperator {
     const JoinMode mode;
     const PredicateCondition predicate_condition;
   };
+
+ protected:
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -53,14 +53,6 @@ class JoinNestedLoop : public AbstractJoinOperator {
   _join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& segment_left,
                              const std::shared_ptr<const BaseSegment>& segment_right, const ChunkID chunk_id_left,
                              const ChunkID chunk_id_right, JoinParams& params);
-
-  template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  static void __attribute__((noinline))
-  _join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                           RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                           const ChunkID chunk_id_right, JoinParams& params);
-
-  static void _process_match(RowID left_row_id, RowID right_row_id, JoinParams& params);
 
   void _create_table_structure();
 

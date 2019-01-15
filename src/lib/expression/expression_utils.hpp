@@ -8,7 +8,6 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "parameter_expression.hpp"
 
 namespace opossum {
 
@@ -145,7 +144,7 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
 bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
 
 /**
- * @return  The value of a ParameterExpression or ValueExpression
+ * @return  The value of a CorrelatedParameterExpression or ValueExpression
  *          std::nullopt for other expression types
  */
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);

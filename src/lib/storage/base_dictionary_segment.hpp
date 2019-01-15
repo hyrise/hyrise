@@ -34,6 +34,12 @@ class BaseDictionarySegment : public BaseEncodedSegment {
   virtual ValueID upper_bound(const AllTypeVariant& value) const = 0;
 
   /**
+   * @pre       @param value_id is a valid ValueID of the Dictionary
+   * @return    The value associated with @param value_id
+   */
+  virtual AllTypeVariant value_of_value_id(const ValueID value_id) const = 0;
+
+  /**
    * @brief The size of the dictionary
    */
   virtual ValueID::base_type unique_values_count() const = 0;

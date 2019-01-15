@@ -10,17 +10,7 @@
 namespace opossum {
 
 bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
-  // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
-  // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
-  //   if (plugin_handle_wrapper.plugin == plugin) {
-  //     return true;
-  //   }
-  // }
-
-  // return false;
-
-  for (const auto& p : _plugins) {
-    auto plugin_handle_wrapper = p.second;
+  for (auto& [_, plugin_handle_wrapper] : _plugins) {
     if (plugin_handle_wrapper.plugin == plugin) {
       return true;
     }
@@ -61,9 +51,9 @@ void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);
-  if (plugin != _plugins.cend()) {
-    _unload_erase_plugin(plugin);
-  }
+  Assert(plugin != _plugins.cend(), "Unloading plugin failed: A plugin with name  " + name + " does not exist.");
+
+  _unload_erase_plugin(plugin);
 }
 
 const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(

@@ -60,6 +60,15 @@ struct AggregateResult {
   RowID row_id;
 };
 
+template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
+using ResultMapAllocator =
+    PolymorphicAllocator<std::pair<const AggregateKey, AggregateResult<AggregateType, ColumnDataType>>>;
+
+template <typename AggregateKey, typename AggregateType, typename ColumnDataType>
+using AggregateResultMap =
+    std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnDataType>, std::hash<AggregateKey>,
+                       std::equal_to<AggregateKey>, ResultMapAllocator<AggregateKey, AggregateType, ColumnDataType>>;
+
 /*
 The key type that is used for the aggregation map.
 */
@@ -124,9 +133,6 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename AggregateKey>
   std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                    const AggregateFunction function) const;
-
-  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
-  std::shared_ptr<SegmentVisitorContext> _create_aggregate_context_impl() const;
 
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
