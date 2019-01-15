@@ -12,7 +12,7 @@ class MvccDeleteManager {
 
  private:
   static bool _delete_logically(const std::string& table_name, ChunkID chunk_id);
-  void _delete_physically(const std::string& tableName, ChunkID chunkID);
+  static void _delete_physically(const std::string& tableName, ChunkID chunkID);
   static std::shared_ptr<const Table> _get_referencing_table(const std::string& table_name, ChunkID chunk_id);
 };
 

@@ -34,8 +34,8 @@ bool MvccDeleteManager::_delete_logically(const std::string& table_name, const C
   validate_table->set_transaction_context(transaction_context);
   validate_table->execute();
 
-  // Use UPDATE operator to DELETE and RE-INSERT valid records in chunk
-  // Pass validate_table as input twice since data will not be changed.
+  // Use Update operator to delete and re-insert valid records in chunk
+  // Pass validate_table into Update operator twice since data will not be changed.
   auto update_table = std::make_shared<Update>(table_name, validate_table, validate_table);
   update_table->set_transaction_context(transaction_context);
   update_table->execute();
@@ -89,10 +89,23 @@ std::shared_ptr<const Table> MvccDeleteManager::_get_referencing_table(const std
   return table_out;
 }  // namespace opossum
 
-void MvccDeleteManager::_delete_physically(const std::string& tableName, const ChunkID chunkID) {
-  // Assert: Logical delete must have happened to this point.
+void MvccDeleteManager::_delete_physically(const std::string& table_name, const ChunkID chunk_id) {
+  auto &sm = StorageManager::get();
+  auto table = sm.get_table(table_name);
+  auto chunk = table->get_chunk(chunk_id);
 
-  // TODO(Julian) later
+  Assert(chunk, "Chunk does not exist. Physical Delete can not be applied.")
+  Assert(chunk->get_cleanup_commit_id() != MvccData::MAX_COMMIT_ID, "Chunk needs to be deleted logically before deleting it physically.")
+
+
+  // TODO(anyone) get snapshot commit ids somehow & compare lowest one with cleanup_commit_id
+
+
+  // Release memory, create a "gap" in the chunk vector
+  std::vector<std::shared_ptr<Chunk>> chunk_vector = table->chunks();
+  auto& chunk_ptr = chunk_vector[chunk_id];
+  chunk_vector[chunk_id] = nullptr;
+  chunk_ptr.reset(); // TODO(anyone) required to reset manually?
 }
 
 }  // namespace opossum

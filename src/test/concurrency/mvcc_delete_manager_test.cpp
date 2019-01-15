@@ -87,7 +87,9 @@ TEST_F(MvccDeleteManagerTest, LogicalDelete) {
   EXPECT_EQ(_get_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{0}), 4);
 
   // Delete chunk logically
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
   MvccDeleteManager::run_logical_delete(_table_name, ChunkID{0});
+  EXPECT_NE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id(), MvccData::MAX_COMMIT_ID);
 
   // Check table structure
   // Expected: _, _, _, _, _ | 4, 2, 3
