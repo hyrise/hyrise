@@ -214,9 +214,8 @@ std::tuple<IteratorType, IteratorType, bool> ColumnVsValueTableScanImpl::get_sor
   }
   if ((_predicate_condition == PredicateCondition::LessThanEquals && is_ascending) ||
       (_predicate_condition == PredicateCondition::GreaterThanEquals && !is_ascending)) {
-
-// TODO(cmfcmf): Remove
-// #define PROF
+    // TODO(cmfcmf): Remove
+    // #define PROF
 
 #ifdef PROF
     auto start = std::chrono::high_resolution_clock::now();

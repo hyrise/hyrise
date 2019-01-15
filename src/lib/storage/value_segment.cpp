@@ -189,15 +189,13 @@ ChunkOffset ValueSegment<T>::get_first_bound(const AllTypeVariant& search_value,
       }
       return static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
     } else {
-      const auto result =
-          std::lower_bound(_values.cbegin(), _values.cend(), casted_search_value, std::greater<T>());
+      const auto result = std::lower_bound(_values.cbegin(), _values.cend(), casted_search_value, std::greater<T>());
       if (result == _values.cend()) {
         return INVALID_CHUNK_OFFSET;
       }
       return static_cast<ChunkOffset>(std::distance(_values.cbegin(), result));
     }
   }
-
 }
 
 template <typename T>
@@ -234,8 +232,7 @@ ChunkOffset ValueSegment<T>::get_last_bound(const AllTypeVariant& search_value,
       }
       return static_cast<ChunkOffset>(std::distance(position_filter->cbegin(), result));
     } else {
-      const auto result =
-          std::upper_bound(_values.cbegin(), _values.cend(), casted_search_value, std::greater<T>());
+      const auto result = std::upper_bound(_values.cbegin(), _values.cend(), casted_search_value, std::greater<T>());
       if (result == _values.cend()) {
         return INVALID_CHUNK_OFFSET;
       }

@@ -181,7 +181,6 @@ BENCHMARK_CAPTURE(BM_TableScanSorted, IntSorted99, rows, 0.99, PredicateConditio
 BENCHMARK_CAPTURE(BM_TableScanSorted, IntUnSorted99, rows, 0.99, PredicateCondition::LessThanEquals,
                   unsorted_int_table);
 
-
 BENCHMARK_CAPTURE(BM_TableScanSorted, StringSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
                   std::bind(sorted_string_table, std::placeholders::_1, string_size));
 BENCHMARK_CAPTURE(BM_TableScanSorted, StringUnSorted01, rows, 0.001, PredicateCondition::LessThanEquals,
