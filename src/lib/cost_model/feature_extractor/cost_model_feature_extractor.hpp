@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cost_model/abstract_feature_extractor.hpp>
 #include <string>
 
 #include "expression/abstract_predicate_expression.hpp"
@@ -14,6 +15,8 @@
 #include "cost_model/feature/runtime_hardware_features.hpp"
 #include "cost_model/feature/table_scan_features.hpp"
 
+#include "cost_model/feature_extractor/abstract_feature_extractor.hpp"
+
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -26,23 +29,23 @@
 namespace opossum {
 namespace cost_model {
 
-class CostModelFeatureExtractor {
+class CostModelFeatureExtractor : public AbstractFeatureExtractor {
  public:
-  static const CostModelFeatures extract_features(const std::shared_ptr<const AbstractLQPNode>& node);
+  const CostModelFeatures extract_features(const std::shared_ptr<const AbstractLQPNode>& node) const override;
 
  private:
-  static const CostModelFeatures _extract_general_features(const std::shared_ptr<const AbstractLQPNode>& node);
-  static const ConstantHardwareFeatures _extract_constant_hardware_features();
-  static const RuntimeHardwareFeatures _extract_runtime_hardware_features();
+  const CostModelFeatures _extract_general_features(const std::shared_ptr<const AbstractLQPNode>& node) const;
+  const ConstantHardwareFeatures _extract_constant_hardware_features() const;
+  const RuntimeHardwareFeatures _extract_runtime_hardware_features() const;
 
-  static const TableScanFeatures _extract_features(const std::shared_ptr<const PredicateNode>& node);
-  static const ProjectionFeatures _extract_features(const std::shared_ptr<const ProjectionNode>& node);
-  static const JoinFeatures _extract_features(const std::shared_ptr<const JoinNode>& node);
-  static const AggregateFeatures _extract_features(const std::shared_ptr<const AggregateNode>& node);
+  const TableScanFeatures _extract_features(const std::shared_ptr<const PredicateNode>& node) const;
+  const ProjectionFeatures _extract_features(const std::shared_ptr<const ProjectionNode>& node) const;
+  const JoinFeatures _extract_features(const std::shared_ptr<const JoinNode>& node) const;
+  const AggregateFeatures _extract_features(const std::shared_ptr<const AggregateNode>& node) const;
 
-  static void _extract_table_scan_features_for_predicate_expression(
+  void _extract_table_scan_features_for_predicate_expression(
       const std::shared_ptr<AbstractLQPNode>& input, TableScanFeatures& features,
-      const std::shared_ptr<AbstractPredicateExpression>& expression);
+      const std::shared_ptr<AbstractPredicateExpression>& expression) const;
 
   //  static const ColumnFeatures _extract_features_for_column_expression(
   //          const std::shared_ptr<AbstractLQPNode>& input, const ColumnID& column_id, const std::string& prefix);

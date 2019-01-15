@@ -17,6 +17,7 @@ struct JoinFeatures : AbstractFeatures {
   ColumnFeatures right_join_column{"right"};
 
   const std::map<std::string, AllTypeVariant> serialize() const override;
+  const std::unordered_map<std::string, float> to_cost_model_features() const override;
 };
 
 }  // namespace cost_model

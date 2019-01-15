@@ -59,7 +59,7 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
       encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FrameOfReference_percentage =
       encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
-  column_features.column_reference_segment_percentage = number_of_reference_segments / static_cast<float>(chunk_count);
+  column_features.column_is_reference_segment = number_of_reference_segments > 0;
   column_features.column_data_type = column_expression->data_type();
   // TODO(Sven): this returns the size of the original, stored, unfiltered column...
   column_features.column_memory_usage_bytes = _get_memory_usage_for_column(table, column_id);
@@ -69,7 +69,8 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
   return column_features;
 }
 
-std::pair<EncodingType, bool> ColumnFeatureExtractor::_get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment) {
+std::pair<EncodingType, bool> ColumnFeatureExtractor::_get_encoding_type_for_segment(
+    const std::shared_ptr<BaseSegment>& segment) {
   const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
 
   // Dereference ReferenceSegment for encoding feature

@@ -10,7 +10,7 @@ namespace opossum {
 namespace cost_model {
 
 const CostModelFeatures CostModelFeatureExtractor::extract_features(
-    const std::shared_ptr<const AbstractLQPNode>& node) {
+    const std::shared_ptr<const AbstractLQPNode>& node) const {
   auto calibration_result = _extract_general_features(node);
   calibration_result.constant_hardware_features = _extract_constant_hardware_features();
   calibration_result.runtime_hardware_features = _extract_runtime_hardware_features();
@@ -52,7 +52,7 @@ const CostModelFeatures CostModelFeatureExtractor::extract_features(
 }
 
 const CostModelFeatures CostModelFeatureExtractor::_extract_general_features(
-    const std::shared_ptr<const AbstractLQPNode>& node) {
+    const std::shared_ptr<const AbstractLQPNode>& node) const {
   CostModelFeatures operator_features{};
   //            const auto time = op->performance_data().walltime;
   //            const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
@@ -109,11 +109,12 @@ const CostModelFeatures CostModelFeatureExtractor::_extract_general_features(
   return operator_features;
 }
 
-const ConstantHardwareFeatures CostModelFeatureExtractor::_extract_constant_hardware_features() { return {}; }
+const ConstantHardwareFeatures CostModelFeatureExtractor::_extract_constant_hardware_features() const { return {}; }
 
-const RuntimeHardwareFeatures CostModelFeatureExtractor::_extract_runtime_hardware_features() { return {}; }
+const RuntimeHardwareFeatures CostModelFeatureExtractor::_extract_runtime_hardware_features() const { return {}; }
 
-const TableScanFeatures CostModelFeatureExtractor::_extract_features(const std::shared_ptr<const PredicateNode>& node) {
+const TableScanFeatures CostModelFeatureExtractor::_extract_features(
+    const std::shared_ptr<const PredicateNode>& node) const {
   TableScanFeatures features{};
 
   const auto left_input = node->left_input();
@@ -139,7 +140,7 @@ const TableScanFeatures CostModelFeatureExtractor::_extract_features(const std::
 
 void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expression(
     const std::shared_ptr<AbstractLQPNode>& input, TableScanFeatures& features,
-    const std::shared_ptr<AbstractPredicateExpression>& expression) {
+    const std::shared_ptr<AbstractPredicateExpression>& expression) const {
   features.scan_operator_type = predicate_condition_to_string.left.at(expression->predicate_condition);
 
   const auto& predicate_arguments = expression->arguments;
@@ -212,7 +213,7 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
 //}
 
 const ProjectionFeatures CostModelFeatureExtractor::_extract_features(
-    const std::shared_ptr<const ProjectionNode>& node) {
+    const std::shared_ptr<const ProjectionNode>& node) const {
   ProjectionFeatures features{};
   // TODO(Sven): Add features that signal whether subselects need to be executed
   features.input_column_count = node->left_input()->node_expressions.size();
@@ -221,7 +222,7 @@ const ProjectionFeatures CostModelFeatureExtractor::_extract_features(
   return features;
 }
 
-const JoinFeatures CostModelFeatureExtractor::_extract_features(const std::shared_ptr<const JoinNode>& node) {
+const JoinFeatures CostModelFeatureExtractor::_extract_features(const std::shared_ptr<const JoinNode>& node) const {
   JoinFeatures features{};
   //  const auto& left_table = node->left_input();
   //  const auto& right_table = node->right_input();
@@ -244,7 +245,8 @@ const JoinFeatures CostModelFeatureExtractor::_extract_features(const std::share
   return features;
 }
 
-const AggregateFeatures CostModelFeatureExtractor::_extract_features(const std::shared_ptr<const AggregateNode>& node) {
+const AggregateFeatures CostModelFeatureExtractor::_extract_features(
+    const std::shared_ptr<const AggregateNode>& node) const {
   return {};
 }
 

@@ -26,17 +26,17 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
     for (const auto& encoding : configuration.encodings) {
       for (const auto& left_table : tables) {
         for (const auto& right_table : tables) {
-//          const auto first_table_ratio = left_table.second / static_cast<double>(right_table.second);
+          //          const auto first_table_ratio = left_table.second / static_cast<double>(right_table.second);
           const auto table_ratio = right_table.second / static_cast<double>(left_table.second);
           for (const auto ratio : {0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0}) {
-//            if (abs(table_ratio - ratio) == 0) {
+            //            if (abs(table_ratio - ratio) == 0) {
             if (table_ratio == ratio) {
               output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, encoding,
                                 data_type, false, static_cast<double>(ratio)});
               // output.push_back(
               // {left_table.first, right_table.first, encoding, data_type, true, static_cast<size_t>(ratio)});
             } else {
-//              std::cout << "did not find correct ratio for " << ratio << " was " << table_ratio << " (" << left_table.second << "/" << right_table.second << ")" << std::endl;
+              //              std::cout << "did not find correct ratio for " << ratio << " was " << table_ratio << " (" << left_table.second << "/" << right_table.second << ")" << std::endl;
             }
           }
         }
@@ -78,7 +78,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_genera
     const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const {
   // TODO(Sven): Refactor
   if (_configuration.table_ratio < 1) {
-      const auto ratio = 1 / _configuration.table_ratio;
+    const auto ratio = 1 / _configuration.table_ratio;
     const auto left_column_definition = _find_primary_key();
     if (!left_column_definition) return {};
 
@@ -105,7 +105,6 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_genera
 
     return expression_functional::equals_(left_column_expression, right_column_expression);
   }
-
 }
 
 const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoin::_find_primary_key() const {
@@ -119,7 +118,8 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoi
   return {};
 }
 
-const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoin::_find_foreign_key(const double table_ratio) const {
+const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoin::_find_foreign_key(
+    const double table_ratio) const {
   for (const auto& definition : _column_definitions) {
     // In case of _configuration.table_ratio == 1, this will select the primary key
     if (definition.type == _configuration.data_type && definition.encoding == _configuration.encoding_type &&

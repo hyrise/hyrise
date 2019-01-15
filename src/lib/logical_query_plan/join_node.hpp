@@ -37,7 +37,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   std::shared_ptr<AbstractExpression> join_predicate() const;
 
   const JoinMode join_mode;
-  const std::optional<JoinType> join_type;
+  // JoinAlgorithmRule needs to manipulate join_type.. instead we could copy the JoinNode replacing the join_type
+  std::optional<JoinType> join_type;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

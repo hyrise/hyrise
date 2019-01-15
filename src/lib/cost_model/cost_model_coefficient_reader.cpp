@@ -2,14 +2,154 @@
 
 namespace opossum {
 
-//    const OperatorType operator_type;
-//    const DataType data_type;
-//    const bool is_reference_segment;
-//    const bool is_small_table;
+// Hard-coded efficients for now
+const TableScanCoefficientsPerGroup CostModelCoefficientReader::read_table_scan_coefficients(
+    const std::string& file_path) {
+  return {{TableScanModelGroup{OperatorType::TableScan, DataType::Int, false, false},
+           {
+               {"left_input_row_count", 3.610426},
+               {"output_selectivity", 13455.857513},
+               {"number_of_computable_or_column_expressions", 13516.186064},
+               {"output_selectivity_distance_to_50_percent", -20962.779708},
+               {"first_column_segment_encoding_Unencoded", 1072.985447},
+               {"first_column_segment_encoding_Dictionary", -3090.789586},
+               {"first_column_segment_encoding_RunLength", 516.967241},
+               {"first_column_segment_encoding_FixedStringDictionary", 0},
+               {"first_column_segment_encoding_FrameOfReference", 2430.509443},
+               {"first_column_segment_encoding_undefined", 0.0},
+               // Dirty hack to treat both reference segment features the same as we only have a single group
+               {"first_column_is_segment_reference_segment_False", 929.672544},
+               {"first_column_is_segment_reference_segment_True", 929.672544},
+               // Dirty hack to treat all data types the same as we only have a single group
+               {"first_column_segment_data_type_null", 0.0},
+               {"first_column_segment_data_type_int", 929.672544},
+               {"first_column_segment_data_type_long", 929.672544},
+               {"first_column_segment_data_type_float", 929.672544},
+               {"first_column_segment_data_type_double", 929.672544},
+               {"first_column_segment_data_type_string", 929.672544},
+               {"first_column_segment_data_type_undefined", 929.672544},
 
-    const ModelCoefficientsPerGroup CostModelCoefficientReader::read_coefficients(const std::string& file_path) {
-        return {
-                {TableScanModelGroup{OperatorType::TableScan, DataType::Int, false, false}, {{"", 0.0}}}
-        };
-    }
+               {"second_column_segment_encoding_Unencoded", -141.565897},
+               {"second_column_segment_encoding_Dictionary", -404.548421},
+               {"second_column_segment_encoding_RunLength", -1052.165155},
+               {"second_column_segment_encoding_FixedStringDictionary", 0.0},
+               {"second_column_segment_encoding_FrameOfReference", 188.825665},
+               {"second_column_segment_encoding_undefined", 2339.126352},
+               // Dirty hack to treat both reference segment features the same as we only have a single group
+               {"second_column_is_segment_reference_segment_False", 929.672544},
+               {"second_column_is_segment_reference_segment_True", 929.672544},
+               // Dirty hack to treat all data types the same as we only have a single group
+               {"second_column_segment_data_type_null", 0.0},
+               {"second_column_segment_data_type_int", -1409.453808},
+               {"second_column_segment_data_type_long", -1409.453808},
+               {"second_column_segment_data_type_float", -1409.453808},
+               {"second_column_segment_data_type_double", -1409.453808},
+               {"second_column_segment_data_type_string", -1409.453808},
+               {"second_column_segment_data_type_undefined", 2339.126352},
+
+               {"third_column_segment_encoding_Unencoded", 4234.101693},
+               {"third_column_segment_encoding_Dictionary", 3468.172709},
+               {"third_column_segment_encoding_RunLength", 3019.108945},
+               {"third_column_segment_encoding_FixedStringDictionary", 0.0},
+               {"third_column_segment_encoding_FrameOfReference", 2344.911438},
+               {"third_column_segment_encoding_undefined", -12136.622240},
+               // Dirty hack to treat both reference segment features the same as we only have a single group
+               {"third_column_is_segment_reference_segment_False", 929.672544},
+               {"third_column_is_segment_reference_segment_True", 929.672544},
+               {"third_column_segment_data_type_null", 0.0},
+               {"third_column_segment_data_type_int", 13066.294784},
+               {"third_column_segment_data_type_long", 13066.294784},
+               {"third_column_segment_data_type_float", 13066.294784},
+               {"third_column_segment_data_type_double", 13066.294784},
+               {"third_column_segment_data_type_string", 13066.294784},
+               {"third_column_segment_data_type_undefined", -12136.622240},
+               {"is_column_comparison_False", 2339.126352},
+               {"is_column_comparison_True", -1409.453808},
+               {"is_output_selectivity_below_50_percent_False", -643.709061},
+               {"is_output_selectivity_below_50_percent_True", 1573.381605},
+               // Dirty hack as we only have a single group
+               {"is_small_table_False", 929.672544},
+               {"is_small_table_True", 929.672544},
+           }}};
+}
+
+const JoinCoefficientsPerGroup CostModelCoefficientReader::read_join_coefficients(const std::string& file_path) {
+  return {{JoinModelGroup{OperatorType::JoinHash},
+           {{"input_table_size_ratio", 41.62287366907364},
+            {"left_column_memory_usage_bytes", 0.1675266101101176},
+            {"left_column_segment_encoding_Dictionary_percentage", 2947.574642634456},
+            {"left_column_segment_encoding_RunLength_percentage", 5124.1636622711585},
+            {"left_column_segment_encoding_Unencoded_percentage", 138.09839196871235},
+            {"left_input_row_count", 18.51294232975461},
+            {"right_column_memory_usage_bytes", 3.561323315116489},
+            {"right_column_segment_encoding_Dictionary_percentage", 2947.5746426351952},
+            {"right_column_segment_encoding_RunLength_percentage", 5124.163662271214},
+            {"right_column_segment_encoding_Unencoded_percentage", 138.09839196870962},
+            {"right_input_row_count", 59.650335710424315},
+            {"left_column_data_type_int", 8209.83669687511},
+            {"operator_type_JoinHash", 8209.83669687511},
+            {"operator_type_JoinIndex", 0.0},
+            {"operator_type_JoinNestedLoop", 0.0},
+            {"operator_type_JoinMPSM", 0.0},
+            {"operator_type_JoinSortMerge", 0.0},
+            {"right_column_data_type_int", 8209.836696875112}}},
+          {JoinModelGroup{OperatorType::JoinNestedLoop},
+           {{"input_table_size_ratio", -45.093108015523455},
+            {"left_column_memory_usage_bytes", -0.8008039991238076},
+            {"left_column_segment_encoding_Dictionary_percentage", 1501.4291535597174},
+            {"left_column_segment_encoding_RunLength_percentage", 5086.555173220305},
+            {"left_column_segment_encoding_Unencoded_percentage", 559.1337822781256},
+            {"left_input_row_count", 72.00646872146842},
+            {"right_column_memory_usage_bytes", 0.5138248787763051},
+            {"right_column_segment_encoding_Dictionary_percentage", 1501.4291535587952},
+            {"right_column_segment_encoding_RunLength_percentage", 5086.555173220122},
+            {"right_column_segment_encoding_Unencoded_percentage", 559.1337822781056},
+            {"right_input_row_count", 17.76920501078569},
+            {"left_column_data_type_int", 7147.118109057023},
+            {"operator_type_JoinHash", 0.0},
+            {"operator_type_JoinIndex", 0.0},
+            {"operator_type_JoinNestedLoop", 7147.118109057023},
+            {"operator_type_JoinMPSM", 0.0},
+            {"operator_type_JoinSortMerge", 0.0},
+            {"right_column_data_type_int", 7147.118109057021}}},
+          {JoinModelGroup{OperatorType::JoinMPSM},
+           {{"input_table_size_ratio", -6.482651117574889},
+            {"left_column_memory_usage_bytes", 1.8775780762847942},
+            {"left_column_segment_encoding_Dictionary_percentage", 4687.894077208553},
+            {"left_column_segment_encoding_RunLength_percentage", 6747.751331695077},
+            {"left_column_segment_encoding_Unencoded_percentage", 2994.330673395745},
+            {"left_input_row_count", 46.86968101551542},
+            {"right_column_memory_usage_bytes", 1.8778046159844708},
+            {"right_column_segment_encoding_Dictionary_percentage", 4687.894077205832},
+            {"right_column_segment_encoding_RunLength_percentage", 6747.751331695084},
+            {"right_column_segment_encoding_Unencoded_percentage", 2994.3306733954178},
+            {"right_input_row_count", 26.323348791246616},
+            {"left_column_data_type_int", 14429.97608229637},
+            {"operator_type_JoinHash", 0.0},
+            {"operator_type_JoinIndex", 0.0},
+            {"operator_type_JoinNestedLoop", 0.0},
+            {"operator_type_JoinMPSM", 14429.97608229637},
+            {"operator_type_JoinSortMerge", 0.0},
+            {"right_column_data_type_int", 14429.976082296362}}},
+          {JoinModelGroup{OperatorType::JoinSortMerge},
+           {{"input_table_size_ratio", -27.571810481338396},
+            {"left_column_memory_usage_bytes", 2.097218822916152},
+            {"left_column_segment_encoding_Dictionary_percentage", 2960.7209962495094},
+            {"left_column_segment_encoding_RunLength_percentage", 4582.558291258369},
+            {"left_column_segment_encoding_Unencoded_percentage", 180.31011344446142},
+            {"left_input_row_count", 29.805512369344157},
+            {"right_column_memory_usage_bytes", 2.045732878690554},
+            {"right_column_segment_encoding_Dictionary_percentage", 2960.720996252574},
+            {"right_column_segment_encoding_RunLength_percentage", 4582.558291258438},
+            {"right_column_segment_encoding_Unencoded_percentage", 180.31011344433773},
+            {"right_input_row_count", 17.37672911782754},
+            {"left_column_data_type_int", 7723.589400955347},
+            {"operator_type_JoinHash", 0.0},
+            {"operator_type_JoinIndex", 0.0},
+            {"operator_type_JoinNestedLoop", 0.0},
+            {"operator_type_JoinMPSM", 0.0},
+            {"operator_type_JoinSortMerge", 7723.589400955347},
+            {"right_column_data_type_int", 7723.5894009553585}}}};
+}
+
 }  // namespace opossum

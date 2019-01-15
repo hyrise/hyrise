@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
 import pandas as pd
-from sklearn import preprocessing as pre
-
 import warnings
 
 warnings.filterwarnings('ignore')
@@ -34,9 +32,10 @@ class TrainingDataPipeline:
         df['is_output_selectivity_below_50_percent'] = df.output_selectivity < 0.5
         df['output_selectivity_distance_to_50_percent'] = abs(df.output_selectivity - 0.5)
         df['is_small_table'] = df.left_input_row_count < 1000
+        df['is_result_empty'] = df.output_row_count == 0
 
         encoding_categories = ['Unencoded', 'Dictionary', 'RunLength', 'FixedStringDictionary', 'FrameOfReference', 'undefined']
-        boolean_categories = [False, True]
+        #boolean_categories = [False, True]
         data_type_categories = ['null', 'int', 'long', 'float', 'double', 'string', 'undefined']
 
         # And many more... not sure how to cover this
@@ -54,11 +53,10 @@ class TrainingDataPipeline:
         df = set_categories(df, 'second_column_segment_encoding', encoding_categories)
         df = set_categories(df, 'third_column_segment_encoding', encoding_categories)
 
-        df = set_categories(df, 'is_column_comparison', boolean_categories)
-
-        df = set_categories(df, 'first_column_is_segment_reference_segment', boolean_categories)
-        df = set_categories(df, 'second_column_is_segment_reference_segment', boolean_categories)
-        df = set_categories(df, 'third_column_is_segment_reference_segment', boolean_categories)
+        #df = set_categories(df, 'is_column_comparison', boolean_categories)
+        #df = set_categories(df, 'first_column_is_segment_reference_segment', boolean_categories)
+        #df = set_categories(df, 'second_column_is_segment_reference_segment', boolean_categories)
+        #df = set_categories(df, 'third_column_is_segment_reference_segment', boolean_categories)
 
         df = set_categories(df, 'first_column_segment_data_type', data_type_categories)
         df = set_categories(df, 'second_column_segment_data_type', data_type_categories)
@@ -68,9 +66,9 @@ class TrainingDataPipeline:
 
         df = set_categories(df, 'operator_type', ['IndexScan', 'TableScan'])
 
-        df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
-
-        df = set_categories(df, 'is_small_table', boolean_categories)
+        #df = set_categories(df, 'is_output_selectivity_below_50_percent', boolean_categories)
+        #df = set_categories(df, 'is_small_table', boolean_categories)
+        #df = set_categories(df, 'is_result_empty', boolean_categories)
 
         df['execution_time_ms'] = df['execution_time_ns'].apply(lambda x: x*1e-6)
 

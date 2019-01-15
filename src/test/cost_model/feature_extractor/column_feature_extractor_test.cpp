@@ -22,7 +22,7 @@ TEST_F(ColumnFeatureExtractorTest, UnencodedColumn) {
   const auto column_expression = lqp_column_({node, ColumnID{0}});
   const auto column_features = cost_model::ColumnFeatureExtractor::extract_features(node, column_expression, "");
 
-  EXPECT_EQ(column_features.column_reference_segment_percentage, 0.0);
+  EXPECT_EQ(column_features.column_is_reference_segment, false);
   EXPECT_EQ(column_features.column_data_type, DataType::Int);
   EXPECT_EQ(column_features.column_segment_encoding_Dictionary_percentage, 0.0);
   EXPECT_EQ(column_features.column_segment_encoding_FixedStringDictionary_percentage, 0.0);

@@ -12,25 +12,6 @@ from sklearn.base import BaseEstimator, RegressorMixin
 warnings.filterwarnings('ignore')
 
 
-class HeteroscedasticLinearRegression(BaseEstimator, RegressorMixin): 
-
-    def __init__(self):
-        self.lr_ = LinearRegression(n_jobs=-1)
-
-    def fit(self, X, y):
-
-        X_adapted = X.div(y, axis=0)
-        y_adapted = y.div(y, axis=0)
-
-        self.lr_.fit(X_adapted, y_adapted)
-
-        return self
-
-    def predict(self, X):
-        self.lr_.predict(X)
-
-    def score(self, X, y, **kwargs):
-        return self.lr_.score(X, y)
 
 class SpecializedModel:
 
@@ -65,7 +46,6 @@ class SpecializedModel:
 
         self.models = { group: learn_model_for_group(df) for group, df in grouped_dfs.items() }
         return self
-
 
     def predict(self, X):
         def predict_single_entry(row):

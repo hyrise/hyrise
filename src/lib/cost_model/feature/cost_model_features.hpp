@@ -19,6 +19,7 @@ namespace cost_model {
 struct CostModelFeatures : public AbstractFeatures {
  public:
   const std::map<std::string, AllTypeVariant> serialize() const override;
+  const std::unordered_map<std::string, float> to_cost_model_features() const override;
 
   OperatorType operator_type;
   uint64_t execution_time_ns = 0;

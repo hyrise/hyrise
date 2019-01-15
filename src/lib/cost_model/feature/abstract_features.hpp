@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <unordered_map>
 
 #include "all_type_variant.hpp"
 
@@ -17,6 +18,7 @@ struct AbstractFeatures {
   AbstractFeatures& operator=(const AbstractFeatures&) = default;
 
   virtual const std::map<std::string, AllTypeVariant> serialize() const = 0;
+  virtual const std::unordered_map<std::string, float> to_cost_model_features() const = 0;
   const std::vector<std::string> feature_names() const;
 };
 
