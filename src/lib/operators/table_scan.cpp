@@ -15,9 +15,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
-#include "expression/exists_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/in_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
@@ -82,8 +80,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   const auto in_table = input_table_left();
 
   const auto output_table = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
-
-  _predicate = _resolve_uncorrelated_subqueries(_predicate);
 
   _impl = create_impl();
   _impl_description = _impl->description();
@@ -183,8 +179,9 @@ std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
   // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
   // those complex queries anyway.
 
-  // We can't handle IN (SELECT ... ) and EXISTS because the code below expects a single result to be returned
-  if (std::dynamic_pointer_cast<InExpression>(predicate) || std::dynamic_pointer_cast<ExistsExpression>(predicate)) {
+  if (!std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate) &&
+      !std::dynamic_pointer_cast<IsNullExpression>(predicate)) {
+    // We have no dedicated Impl for these, so we leave them untouched
     return predicate;
   }
 
@@ -216,7 +213,10 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
    * an expression.
    */
 
-  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate)) {
+  auto resolved_predicate = _resolve_uncorrelated_subqueries(_predicate);
+
+  if (const auto binary_predicate_expression =
+          std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
     const auto predicate_condition = binary_predicate_expression->predicate_condition;
 
     const auto left_operand = binary_predicate_expression->left_operand();
@@ -273,7 +273,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(_predicate)) {
+  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(resolved_predicate)) {
     // Predicate pattern: <column> IS NULL
     if (const auto left_column_expression =
             std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
@@ -282,7 +282,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(_predicate)) {
+  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
 
     const auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
@@ -297,10 +297,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   }
 
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), _predicate);
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), resolved_predicate);
 }
-
-const std::string& TableScan::impl_description() const { return _impl_description; }
 
 void TableScan::_on_cleanup() { _impl.reset(); }
 

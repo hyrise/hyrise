@@ -276,31 +276,31 @@ TEST_P(OperatorsTableScanTest, SingleScan) {
 TEST_P(OperatorsTableScanTest, SingleScanWithSubselect) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
-  const auto pqp =
+  const auto subselect_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
 
   auto scan = std::make_shared<TableScan>(get_int_float_op(),
                                           greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                               pqp_select_(pqp, DataType::Int, false)));
+                                                               pqp_select_(subselect_pqp, DataType::Int, false)));
   scan->execute();
-  EXPECT_EQ(scan->impl_description(), "ColumnVsValue");
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
 TEST_P(OperatorsTableScanTest, BetweenScanWithSubselect) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
-  const auto pqp =
+  const auto subselect_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
 
   {
     auto scan = std::make_shared<TableScan>(
         get_int_float_op(), between_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                     pqp_select_(pqp, DataType::Int, false), to_expression(int{12345})));
+                                     pqp_select_(subselect_pqp, DataType::Int, false), to_expression(int{12345})));
     scan->execute();
-    EXPECT_EQ(scan->impl_description(), "ColumnBetween");
+    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
     EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
   }
 }
@@ -701,7 +701,7 @@ TEST_P(OperatorsTableScanTest, MatchesAllExcludesNulls) {
   }
 
   /**
-   * BETWEEEN
+   * BETWEEN
    */
   const auto between_scan = create_table_scan(table, ColumnID{0}, PredicateCondition::Between, 0, 15'000);
   between_scan->execute();
@@ -787,11 +787,6 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   const auto column_b = pqp_column_(ColumnID{1}, DataType::Float, false, "b");
   const auto column_s = pqp_column_(ColumnID{1}, DataType::String, false, "c");
   const auto column_an = pqp_column_(ColumnID{0}, DataType::String, true, "a");
-
-  const auto pqp = std::make_shared<Limit>(
-      std::make_shared<Projection>(get_int_string_op(), expression_vector(PQPColumnExpression::from_table(
-                                                            *get_int_float_op()->get_output(), "a"))),
-      to_expression(int64_t{1}));
 
   EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(
       TableScan{get_int_float_op(), equals_(column_a, 5)}.create_impl().get()));

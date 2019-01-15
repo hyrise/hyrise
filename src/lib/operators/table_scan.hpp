@@ -48,9 +48,6 @@ class TableScan : public AbstractReadOnlyOperator {
    */
   std::unique_ptr<AbstractTableScanImpl> create_impl() const;
 
-  // Returns the name of the used implementation
-  const std::string& impl_description() const;
-
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -69,7 +66,7 @@ class TableScan : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractExpression>& predicate);
 
  private:
-  std::shared_ptr<AbstractExpression> _predicate;
+  const std::shared_ptr<AbstractExpression> _predicate;
 
   std::unique_ptr<AbstractTableScanImpl> _impl;
 
