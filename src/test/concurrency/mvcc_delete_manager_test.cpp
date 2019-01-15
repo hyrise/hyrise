@@ -65,7 +65,7 @@ TEST_F(MvccDeleteManagerTest, LogicalDelete) {
 
   // Prepare test
   auto& sm = StorageManager::get();
-  const auto table = load_table("src/test/tables/int3.tbl", chunk_size);
+  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
   sm.add_table(_table_name, table);
 
   // Check table structure

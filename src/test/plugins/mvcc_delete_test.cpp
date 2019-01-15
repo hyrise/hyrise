@@ -19,7 +19,7 @@ class MvccDeleteTest : public BaseTest {
  protected:
   void load_and_update_table(const std::string& name, const uint8_t val) {
     auto& sm = StorageManager::get();
-    const auto table = load_table("src/test/tables/10_ints.tbl", 10);
+    const auto table = load_table("resources/test_data/tbl/10_ints.tbl", 10);
     sm.add_table(name, table);
 
     EXPECT_EQ(table->row_count(), 10);
@@ -46,12 +46,12 @@ class MvccDeleteTest : public BaseTest {
 
   void load_plugin() {
     auto& pm = PluginManager::get();
-    pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
+    pm.load_plugin(build_dylib_path("MvccDeletePlugin"));
   }
 
   void unload_plugin() {
     auto& pm = PluginManager::get();
-    pm.unload_plugin(build_dylib_path("MvccDeletePlugin"));
+    pm.unload_plugin("MvccDeletePlugin");
   }
 };
 

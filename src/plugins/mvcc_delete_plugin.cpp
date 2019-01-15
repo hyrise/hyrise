@@ -16,7 +16,7 @@ void MvccDeletePlugin::start() {
       if (chunk) {
         const double invalid_row_amount = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
         if (invalid_row_amount == 1) {
-          //TODO: Implement update if e.g. 0.9 < invalid_row_amaount < 1
+          // TODO(anyone) Implement update if e.g. 0.9 < invalid_row_amaount < 1
 
           table.second->delete_chunk(chunk_id);
         }
