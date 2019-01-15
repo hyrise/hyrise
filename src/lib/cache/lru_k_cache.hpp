@@ -150,13 +150,11 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
   const boost::heap::fibonacci_heap<LRUKCacheEntry>& queue() const { return _queue; }
 
   ErasedIterator begin() {
-    auto it = std::make_unique<Iterator>(_map.begin());
-    return ErasedIterator(std::move(it));
+    return ErasedIterator{std::make_unique<Iterator>(_map.begin())};
   }
 
   ErasedIterator end() {
-    auto it = std::make_unique<Iterator>(_map.end());
-    return ErasedIterator(std::move(it));
+    return ErasedIterator{std::make_unique<Iterator>(_map.end())};
   }
 
  protected:

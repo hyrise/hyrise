@@ -93,13 +93,11 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
   }
 
   ErasedIterator begin() {
-    auto it = std::make_unique<Iterator>(_list.begin());
-    return ErasedIterator(std::move(it));
+    return ErasedIterator{std::make_unique<Iterator>(_list.begin())};
   }
 
   ErasedIterator end() {
-    auto it = std::make_unique<Iterator>(_list.end());
-    return ErasedIterator(std::move(it));
+    return ErasedIterator{std::make_unique<Iterator>(_list.end())};
   }
 
  protected:

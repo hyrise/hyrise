@@ -129,13 +129,11 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
   }
 
   ErasedIterator begin() {
-    auto it = std::make_unique<Iterator>(_map.begin());
-    return ErasedIterator(std::move(it));
+    return ErasedIterator{std::make_unique<Iterator>(_map.begin())};
   }
 
   ErasedIterator end() {
-    auto it = std::make_unique<Iterator>(_map.end());
-    return ErasedIterator(std::move(it));
+    return ErasedIterator{std::make_unique<Iterator>(_map.end())};
   }
 
  protected:
