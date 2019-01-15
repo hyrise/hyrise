@@ -1,6 +1,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "../utils/plugin_test_utils.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -11,7 +12,6 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
-#include "../utils/plugin_test_utils.hpp"
 
 namespace opossum {
 
@@ -32,7 +32,8 @@ class MvccDeleteTest : public BaseTest {
     get_table->set_transaction_context(transaction_context);
     get_table->execute();
 
-    const auto& where_scan = std::make_shared<TableScan>(get_table, expression_functional::greater_than_(column_a, val));
+    const auto& where_scan =
+        std::make_shared<TableScan>(get_table, expression_functional::greater_than_(column_a, val));
     where_scan->set_transaction_context(transaction_context);
     where_scan->execute();
 
@@ -97,4 +98,4 @@ TEST_F(MvccDeleteTest, RemovePartialInvalidChunk) {
   sm.drop_table("test_table");
 }
 
-} // namespace opossum
+}  // namespace opossum

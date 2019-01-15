@@ -22,6 +22,8 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
+        concurrency/mvcc_delete_manager.cpp
+        concurrency/mvcc_delete_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
     cost_model/abstract_cost_estimator.cpp

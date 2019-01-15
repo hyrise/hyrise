@@ -2,7 +2,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(
     hyriseMicroBenchmarks
-
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
@@ -15,14 +14,16 @@ add_executable(
     operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
-    operators/mvcc_benchmark.cpp
+    #operators/mvcc_benchmark.cpp # Fabian's benchmark
+    mvcc/mvcc_benchmark_fixture.hpp # Julian's benchmark
+    mvcc/mvcc_benchmark_fixture.cpp
+    mvcc/mvcc_benchmark_update.cpp
     statistics/generate_table_statistics_benchmark.cpp
     tpch_table_generator_benchmark.cpp
 )
 
 target_link_libraries(
     hyriseMicroBenchmarks
- 
     hyrise
     hyriseBenchmarkLib
     benchmark

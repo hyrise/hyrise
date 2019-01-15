@@ -41,6 +41,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
     for (const auto& row_id : *pos_list) {
       auto referenced_chunk = _table->get_chunk(row_id.chunk_id);
+      _num_rows_deleted_per_chunk[row_id.chunk_id]++;
 
       auto expected = 0u;
       // Actual row lock for delete happens here
@@ -86,6 +87,10 @@ void Delete::_finish_commit() {
   const auto table_statistics = _table->table_statistics();
   if (table_statistics) {
     table_statistics->increase_invalid_row_count(_num_rows_deleted);
+  }
+
+  for (const auto& kv : _num_rows_deleted_per_chunk) {
+    _table->get_chunk(kv.first)->increase_invalid_row_count(kv.second);
   }
 }
 
