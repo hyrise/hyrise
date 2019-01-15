@@ -151,3 +151,17 @@ target_link_libraries(pqxx PUBLIC ${PQ_LIBRARY})
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)
+
+include(ExternalProject)
+externalproject_add(
+    libjemalloc
+
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
+    CONFIGURE_COMMAND cd <SOURCE_DIR> && ./autogen.sh
+    BUILD_COMMAND ${CMAKE_BUILD_TOOL}
+    BUILD_IN_SOURCE 1
+    STEP_TARGETS build
+)
+add_library(jemalloc SHARED IMPORTED GLOBAL)
+add_dependencies(jemalloc libjemalloc-build)
+set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc/lib/libjemalloc.so)

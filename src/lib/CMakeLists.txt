@@ -590,6 +590,7 @@ set(
     sqlparser
     cqf
     uninitialized_vector
+    jemalloc
     ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
