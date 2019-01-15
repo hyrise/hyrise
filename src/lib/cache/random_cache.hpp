@@ -92,13 +92,9 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
     _rand = std::uniform_int_distribution<>(0, static_cast<int>(capacity - 1));
   }
 
-  ErasedIterator begin() {
-    return ErasedIterator{std::make_unique<Iterator>(_list.begin())};
-  }
+  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_list.begin())}; }
 
-  ErasedIterator end() {
-    return ErasedIterator{std::make_unique<Iterator>(_list.end())};
-  }
+  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_list.end())}; }
 
  protected:
   // List to hold all elements.

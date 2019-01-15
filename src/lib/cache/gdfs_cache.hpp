@@ -128,13 +128,9 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     return (*it->second).priority;
   }
 
-  ErasedIterator begin() {
-    return ErasedIterator{std::make_unique<Iterator>(_map.begin())};
-  }
+  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
 
-  ErasedIterator end() {
-    return ErasedIterator{std::make_unique<Iterator>(_map.end())};
-  }
+  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
 
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.

@@ -84,13 +84,9 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
     this->_capacity = capacity;
   }
 
-  ErasedIterator begin() {
-    return ErasedIterator{std::make_unique<Iterator>(_list.begin())};
-  }
+  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_list.begin())}; }
 
-  ErasedIterator end() {
-    return ErasedIterator{std::make_unique<Iterator>(_list.end())};
-  }
+  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_list.end())}; }
 
  protected:
   // Doubly-linked list to hold all elements.

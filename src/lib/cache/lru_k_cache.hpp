@@ -149,13 +149,9 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
 
   const boost::heap::fibonacci_heap<LRUKCacheEntry>& queue() const { return _queue; }
 
-  ErasedIterator begin() {
-    return ErasedIterator{std::make_unique<Iterator>(_map.begin())};
-  }
+  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
 
-  ErasedIterator end() {
-    return ErasedIterator{std::make_unique<Iterator>(_map.end())};
-  }
+  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
 
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.

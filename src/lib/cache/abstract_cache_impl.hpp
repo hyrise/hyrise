@@ -20,7 +20,8 @@ class AbstractCacheImpl {
     virtual const KeyValuePair& dereference() const = 0;
   };
 
-  class ErasedIterator : public boost::iterator_facade<ErasedIterator, KeyValuePair const, boost::forward_traversal_tag> {
+  class ErasedIterator
+      : public boost::iterator_facade<ErasedIterator, KeyValuePair const, boost::forward_traversal_tag> {
    public:
     explicit ErasedIterator(std::unique_ptr<AbstractIterator> it) : _it(std::move(it)) {}
 
