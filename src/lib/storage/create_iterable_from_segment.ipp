@@ -4,9 +4,9 @@
 
 namespace opossum {
 
-template <typename T, bool EraseType>
+template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const ReferenceSegment& segment) {
-  if constexpr (EraseType) {
+  if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return ReferenceSegmentIterable<T>{segment};

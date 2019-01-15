@@ -15,8 +15,6 @@ AnySegmentIterable<T> CreateAnySegmentIterable<T>::create(const BaseSegment& bas
     any_segment_iterable.emplace(erase_type_from_iterable(actual_iterable));
   });
 
-  DebugAssert(any_segment_iterable, "Could not create iterable");
-
   return std::move(*any_segment_iterable);
 }
 
