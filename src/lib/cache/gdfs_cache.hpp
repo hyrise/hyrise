@@ -52,7 +52,7 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
       return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
     }
 
-    KeyValuePair& dereference() const {
+    const KeyValuePair& dereference() const {
       const auto iter_value = *_wrapped_iterator;
       _tmp_return_value = {iter_value.first, (*iter_value.second).value};
       return _tmp_return_value;

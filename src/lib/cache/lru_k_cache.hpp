@@ -78,7 +78,7 @@ class LRUKCache : public AbstractCacheImpl<Key, Value> {
       return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
     }
 
-    KeyValuePair& dereference() const {
+    const KeyValuePair& dereference() const {
       _tmp_return_value = get_value(*_wrapped_iterator);
       return _tmp_return_value;
     }

@@ -17,10 +17,10 @@ class AbstractCacheImpl {
 
     virtual void increment() = 0;
     virtual bool equal(const AbstractIterator& other) const = 0;
-    virtual KeyValuePair& dereference() const = 0;
+    virtual const KeyValuePair& dereference() const = 0;
   };
 
-  class ErasedIterator : public boost::iterator_facade<ErasedIterator, KeyValuePair, boost::forward_traversal_tag> {
+  class ErasedIterator : public boost::iterator_facade<ErasedIterator, KeyValuePair const, boost::forward_traversal_tag> {
    public:
     explicit ErasedIterator(std::unique_ptr<AbstractIterator> it) : _it(std::move(it)) {}
 
@@ -29,7 +29,7 @@ class AbstractCacheImpl {
 
     void increment() { _it->increment(); }
     bool equal(const ErasedIterator& other) const { return _it->equal(*other._it); }
-    KeyValuePair& dereference() const { return _it->dereference(); }
+    const KeyValuePair& dereference() const { return _it->dereference(); }
 
     std::unique_ptr<AbstractIterator> _it;
   };

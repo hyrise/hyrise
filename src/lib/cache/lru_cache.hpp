@@ -34,7 +34,7 @@ class LRUCache : public AbstractCacheImpl<Key, Value> {
       return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
     }
 
-    KeyValuePair& dereference() const { return *_wrapped_iterator; }
+    const KeyValuePair& dereference() const { return *_wrapped_iterator; }
   };
 
   explicit LRUCache(size_t capacity) : AbstractCacheImpl<Key, Value>(capacity) {}
