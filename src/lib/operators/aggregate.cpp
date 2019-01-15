@@ -24,28 +24,29 @@
 #include "utils/performance_warning.hpp"
 
 namespace {
-  using namespace opossum;
+using namespace opossum;  // NOLINT
 
-  // Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
-  // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
-  // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
-  // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-  template <typename ResultIds, typename Results, typename AggregateKey>
-  typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key, const RowID& row_id) {
-    // Get the result id for the current key or add it to the id map
-    auto result_id_inserted = result_ids.try_emplace(key, results.size());
-    const auto& result_id = result_id_inserted.first->second;
+// Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
+// AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
+// This is important so that we can reconstruct the original values later. In any case, a reference to the result is
+// returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
+template <typename ResultIds, typename Results, typename AggregateKey>
+typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key,
+                                              const RowID& row_id) {
+  // Get the result id for the current key or add it to the id map
+  auto result_id_inserted = result_ids.try_emplace(key, results.size());
+  const auto& result_id = result_id_inserted.first->second;
 
-    // If it was added to the id map, add the current row id to the result list so that we can revert the
-    // value(s) -> key mapping
-    if (result_id_inserted.second) {
-      results.emplace_back();
-      results[result_id].row_id = row_id;
-    }
-
-    return results[result_id];
+  // If it was added to the id map, add the current row id to the result list so that we can revert the
+  // value(s) -> key mapping
+  if (result_id_inserted.second) {
+    results.emplace_back();
+    results[result_id].row_id = row_id;
   }
+
+  return results[result_id];
 }
+}  // namespace
 
 namespace opossum {
 
@@ -469,7 +470,8 @@ void Aggregate::_aggregate() {
 
           // count occurrences for each group key
           for (ChunkOffset chunk_offset{0}; chunk_offset < input_chunk_size; chunk_offset++) {
-            auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
+            auto& result =
+                get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
             ++result.aggregate_count;
           }
 
@@ -583,9 +585,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     // Output column for COUNT(*). int is chosen arbitrarily.
     const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
 
-    resolve_data_type(data_type, [&, column_index](auto type) {
-      _write_aggregate_output(type, column_index, aggregate.function);
-    });
+    resolve_data_type(
+        data_type, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
 
     ++column_index;
   }
@@ -628,8 +629,9 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    const AggregateResults<ColumnDataType, AggregateType>& results) {
   DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
   auto& values = segment->values();
@@ -644,8 +646,9 @@ std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
 
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    const AggregateResults<ColumnDataType, AggregateType>& results) {
   DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
 
   auto& values = segment->values();
@@ -660,8 +663,9 @@ std::enable_if_t<func == AggregateFunction::CountDistinct, void> write_aggregate
 
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    const AggregateResults<ColumnDataType, AggregateType>& results) {
   DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
 
   auto& values = segment->values();
@@ -683,8 +687,9 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
-                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
+    std::shared_ptr<ValueSegment<AggregateType>> segment,
+    const AggregateResults<ColumnDataType, AggregateType>& results) {
   Fail("Invalid aggregate");
 }
 

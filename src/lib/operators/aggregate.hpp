@@ -66,16 +66,14 @@ template <typename ColumnDataType, typename AggregateType>
 using AggregateResults = pmr_vector<AggregateResult<ColumnDataType, AggregateType>>;
 using AggregateResultId = size_t;
 
-
 // The AggregateResultIdMap maps AggregateKeys to their index in the list of aggregate results.
 template <typename AggregateKey>
-using AggregateResultIdMapAllocator =
-    PolymorphicAllocator<std::pair<const AggregateKey, AggregateResultId>>;
+using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const AggregateKey, AggregateResultId>>;
 
 template <typename AggregateKey>
 using AggregateResultIdMap =
-    std::unordered_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>,
-                       std::equal_to<AggregateKey>, AggregateResultIdMapAllocator<AggregateKey>>;
+    std::unordered_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+                       AggregateResultIdMapAllocator<AggregateKey>>;
 
 /*
 The key type that is used for the aggregation map.
