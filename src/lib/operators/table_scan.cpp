@@ -170,14 +170,52 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   return output_table;
 }
 
+std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(
+    const std::shared_ptr<AbstractExpression>& predicate) {
+  // If the predicate has an uncorrelated subquery as an argument, we resolve that subquery first. That way, we can
+  // use, e.g., a regular ColumnVsValueTableScanImpl instead of the ExpressionEvaluator. That is faster. We do not care
+  // about subqueries that are deeper within the expression tree, because we would need the ExpressionEvaluator for
+  // those complex queries anyway.
+
+  if (!std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate) &&
+      !std::dynamic_pointer_cast<IsNullExpression>(predicate) &&
+      !std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
+    // We have no dedicated Impl for these, so we leave them untouched
+    return predicate;
+  }
+
+  const auto new_predicate = predicate->deep_copy();
+  for (auto& argument : new_predicate->arguments) {
+    const auto subquery = std::dynamic_pointer_cast<PQPSelectExpression>(argument);
+    if (!subquery || subquery->is_correlated()) continue;
+
+    auto subquery_result = AllTypeVariant{};
+    resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      auto expression_result = ExpressionEvaluator{}.evaluate_expression_to_result<ColumnDataType>(*subquery);
+      Assert(expression_result->size() == 1, "Expected subquery to return a single row");
+      if (!expression_result->is_null(0)) {
+        subquery_result = AllTypeVariant{expression_result->value(0)};
+      }
+    });
+    argument = std::make_shared<ValueExpression>(std::move(subquery_result));
+  }
+
+  return new_predicate;
+}
+
 std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   /**
    * Select the scanning implementation (`_impl`) to use based on the kind of the expression. For this we have to
    * closely examine the predicate expression.
-   * Use the ExpressionEvaluator as a fallback if no dedicated scanning implementation exists for an expression.
+   * Use the ExpressionEvaluator as a powerful, but slower fallback if no dedicated scanning implementation exists for
+   * an expression.
    */
 
-  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(_predicate)) {
+  auto resolved_predicate = _resolve_uncorrelated_subqueries(_predicate);
+
+  if (const auto binary_predicate_expression =
+          std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
     const auto predicate_condition = binary_predicate_expression->predicate_condition;
 
     const auto left_operand = binary_predicate_expression->left_operand();
@@ -234,7 +272,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(_predicate)) {
+  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(resolved_predicate)) {
     // Predicate pattern: <column> IS NULL
     if (const auto left_column_expression =
             std::dynamic_pointer_cast<PQPColumnExpression>(is_null_expression->operand())) {
@@ -243,7 +281,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
   }
 
-  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(_predicate)) {
+  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
 
     const auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
@@ -258,7 +296,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   }
 
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), _predicate);
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(input_table_left(), resolved_predicate);
 }
 
 void TableScan::_on_cleanup() { _impl.reset(); }
