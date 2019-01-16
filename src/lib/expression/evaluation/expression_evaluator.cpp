@@ -1202,20 +1202,32 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
   std::vector<Result> values;
   std::vector<bool> nulls;
 
-  _resolve_to_expression_result_views(left_expression, right_expression, [&](const auto& left, const auto& right) {
+  _resolve_to_expression_results(left_expression, right_expression, [&](const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
-      const auto result_row_count = _result_size(left.size(), right.size());
-      values.resize(result_row_count);
-      nulls.resize(result_row_count);
+      const auto result_size = _result_size(left.size(), right.size());
+      values.resize(result_size);
+      nulls.resize(result_size);
 
-      for (auto row_idx = ChunkOffset{0}; row_idx < result_row_count; ++row_idx) {
-        bool null;
-        Functor{}(values[row_idx], null, left.value(row_idx), left.is_null(row_idx), right.value(row_idx),
-                  right.is_null(row_idx));
-        nulls[row_idx] = null;
+      bool null;
+      // Using three different branches instead of views, which would generate 9 cases.
+      if (left.is_literal() == right.is_literal()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          Functor{}(values[row_idx], null, left.values[row_idx], left.nulls[row_idx], right.values[row_idx], right.nulls[row_idx]);
+          nulls[row_idx] = null;
+        }
+      } else if (right.is_literal()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          Functor{}(values[row_idx], null, left.values[row_idx], left.nulls[row_idx], right.values[0], right.nulls[0]);
+          nulls[row_idx] = null;
+        }
+      } else {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          Functor{}(values[row_idx], null, left.values[0], left.nulls[0], right.values[row_idx], right.nulls[row_idx]);
+          nulls[row_idx] = null;
+        }
       }
     } else {
       Fail("BinaryOperation not supported on the requested DataTypes");
@@ -1229,18 +1241,6 @@ template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression, const Functor& fn) {
   _resolve_to_expression_result(expression,
                                 [&](const auto& result) { result.as_view([&](const auto& view) { fn(view); }); });
-}
-
-template <typename Functor>
-void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression& left_expression,
-                                                              const AbstractExpression& right_expression,
-                                                              const Functor& fn) {
-  _resolve_to_expression_results(left_expression, right_expression,
-                                 [&](const auto& left_result, const auto& right_result) {
-                                   left_result.as_view([&](const auto& left_view) {
-                                     right_result.as_view([&](const auto& right_view) { fn(left_view, right_view); });
-                                   });
-                                 });
 }
 
 template <typename Functor>
