@@ -29,57 +29,53 @@ std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsC
 
 std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
+  const auto& left_segment = *chunk->get_segment(_left_column_id);
+  const auto& right_segment = *chunk->get_segment(_right_column_id);
+
+  // If the left and the right segment and/or type are not the same, we erase the types even for the release build.
+  // This because we have not worked with those combinations and we don't want the templates to be instantiated.
+  const bool neither_is_reference_segment = !dynamic_cast<const ReferenceSegment*>(&left_segment) && !dynamic_cast<const ReferenceSegment*>(&right_segment);
+  if (typeid(left_segment) != typeid(right_segment) && neither_is_reference_segment) {
+    return _typed_scan_chunk<SegmentIterationTypeErasure::Always>(chunk_id);
+  } else {
+    return _typed_scan_chunk<SegmentIterationTypeErasure::OnlyInDebug>(chunk_id);
+  }
+}
+
+template<SegmentIterationTypeErasure type_erasure>
+std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID chunk_id) const {
+  const auto chunk = _in_table->get_chunk(chunk_id);
 
   const auto left_segment = chunk->get_segment(_left_column_id);
   const auto right_segment = chunk->get_segment(_right_column_id);
 
   auto matches_out = std::make_shared<PosList>();
 
-  resolve_data_type(left_segment->data_type(), [&](auto left_type) {
-    resolve_data_type(right_segment->data_type(), [&](auto right_type) {
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
-
-      // If the left and the right segment and/or type are not the same, we erase the types even for the release build.
-      // This because we have not worked with those combinations and we don't want the templates to be instantiated.
-      auto create_iterable = [](auto&& segment, auto type) {
-        using Type = typename decltype(type)::type;
-        if constexpr (!HYRISE_DEBUG && std::is_same_v<LeftType, RightType>) {
-          // Generate the fast, typed code
-          return create_iterable_from_segment<Type>(segment);
-        } else {
-          if (!HYRISE_DEBUG) PerformanceWarning("Using non-specialized code for column vs column comparison");
-          return create_any_segment_iterable<Type>(*segment);
-        }
-      };
-
-      const auto left_segment_iterable = create_iterable(left_segment, left_type);
-      const auto right_segment_iterable = create_iterable(right_segment, right_type);
+  segment_with_iterators(*left_segment, [&](auto left_it, const auto left_end) {
+    segment_with_iterators(*right_segment, [&](auto right_it, const auto right_end) {
+      using LeftType = typename decltype(left_it)::ValueType;
+      using RightType = typename decltype(right_it)::ValueType;
 
       // C++ cannot compare strings and non-strings out of the box:
       if constexpr(std::is_same_v<LeftType, std::string> == std::is_same_v<RightType, std::string>) {
-        left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
-          right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
-            bool flipped = false;
-            auto condition = _predicate_condition;
-            if (condition == PredicateCondition::GreaterThan || condition == PredicateCondition::GreaterThanEquals) {
-              condition = flip_predicate_condition(condition);
-              flipped = true;
-            }
+        bool flipped = false;
+        auto condition = _predicate_condition;
+        if (condition == PredicateCondition::GreaterThan || condition == PredicateCondition::GreaterThanEquals) {
+          condition = flip_predicate_condition(condition);
+          flipped = true;
+        }
 
-            with_comparator_light(condition, [&](auto predicate_comparator) {
-              auto comparator = [predicate_comparator](const auto& left, const auto& right) {
-                return predicate_comparator(left.value(), right.value());
-              };
-              if (flipped) {
-                AbstractTableScanImpl::_scan_with_iterators<true>(comparator, right_it, right_end, chunk_id, *matches_out,
-                                                                  left_it);
-              } else {
-                AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, *matches_out,
-                                                                  right_it);
-              }
-            });
-          });
+        with_comparator_light(condition, [&](auto predicate_comparator) {
+          auto comparator = [predicate_comparator](const auto& left, const auto& right) {
+            return predicate_comparator(left.value(), right.value());
+          };
+          if (flipped) {
+            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, right_it, right_end, chunk_id, *matches_out,
+                                                              left_it);
+          } else {
+            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, *matches_out,
+                                                              right_it);
+          }
         });
       } else {
         Fail("Trying to compare strings and non-strings");

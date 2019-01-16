@@ -36,6 +36,9 @@ class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
   const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
   const ColumnID _right_column_id;
+
+  template<SegmentIterationTypeErasure type_erasure>
+  std::shared_ptr<PosList> _typed_scan_chunk(ChunkID chunk_id) const;
 };
 
 }  // namespace opossum
