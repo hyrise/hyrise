@@ -217,4 +217,9 @@ class Noncopyable {
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
 
+// Used as a template parameter that decides when iterator types should be erased. Erasing iterator types improves
+// compile time at the cost of runtime performance.
+enum class SegmentIterationTypeErasure { OnlyInDebug, Always };
+
+
 }  // namespace opossum
