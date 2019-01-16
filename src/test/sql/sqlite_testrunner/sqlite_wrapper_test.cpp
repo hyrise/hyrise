@@ -27,8 +27,8 @@ TEST_F(SQLiteWrapperTest, CreateTable) {
 }
 
 TEST_F(SQLiteWrapperTest, CreateTableWithSpecialCharsInText) {
-  // Test that loading Tables into SQLite works for Tables containing characters that have special meaning in SQL and
-  // need to be escaped properly ("'", ",")
+  // Test that loading Tables into SQLite works for Tables containing characters that have special meaning in SQL, e.g.
+  // commas and single quotes.
 
   const auto expected_table = load_table("resources/test_data/tbl/string_string_special_chars.tbl");
 
