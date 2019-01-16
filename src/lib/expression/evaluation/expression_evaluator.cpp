@@ -923,11 +923,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
 
     const auto value = _segment_materializations[column_id]->value_as_variant(chunk_offset);
 
-    if (variant_is_null(value)) {
-      parameters.emplace(parameter_id, NullValue{});
-    } else {
-      parameters.emplace(parameter_id, value);
-    }
+    parameters.emplace(parameter_id, value);
   }
 
   // TODO(moritz) deep_copy() shouldn't be necessary for every row if we could re-execute PQPs...
@@ -963,7 +959,7 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
           nulls[chunk_offset] = view.is_null(chunk_offset);
         }
       }
-      segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
     }
     // clang-format on
   });
