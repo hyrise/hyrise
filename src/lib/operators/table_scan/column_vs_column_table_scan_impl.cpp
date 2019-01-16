@@ -65,16 +65,24 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
           flipped = true;
         }
 
+         // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto left_it_copy = left_it;
+        const auto left_end_copy = left_end;
+        const auto right_it_copy = right_it;
+        const auto right_end_copy = right_it;
+        const auto chunk_id_copy = chunk_id;
+        const auto& matches_out_ref = matches_out;
+
         with_comparator_light(condition, [&](auto predicate_comparator) {
           auto comparator = [predicate_comparator](const auto& left, const auto& right) {
             return predicate_comparator(left.value(), right.value());
           };
           if (flipped) {
-            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, right_it, right_end, chunk_id, *matches_out,
-                                                              left_it);
+            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, right_it_copy, right_end_copy, chunk_id_copy, *matches_out_ref,
+                                                              left_it_copy);
           } else {
-            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, *matches_out,
-                                                              right_it);
+            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it_copy, left_end_copy, chunk_id_copy, *matches_out_ref,
+                                                              right_it_copy);
           }
         });
       } else {
