@@ -78,6 +78,7 @@ set(
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
     operators/join_null_test.cpp
+    operators/join_proxy_test.cpp
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp

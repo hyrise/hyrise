@@ -11,6 +11,8 @@
 #include "all_type_variant.hpp"
 #include "cost_model/cost_model_adaptive.hpp"
 #include "cost_model/cost_model_coefficient_reader.hpp"
+#include "cost_model/feature/cost_model_features.hpp"
+#include "cost_model/feature/join_features.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
@@ -22,6 +24,10 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+
+#include "operators/operator_join_predicate.hpp"
+
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
@@ -54,8 +60,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   const auto& left_input_size = left_input_table->row_count();
   const auto& right_input_size = right_input_table->row_count();
 
-  std::cout << left_input_size << std::endl;
-  std::cout << right_input_size << std::endl;
+  std::cout << "JoinProxy: " << left_input_size << "x" << right_input_size << std::endl;
 
   // Create Operators for all valid join algorithms
   //  const auto hash_join = std::make_shared<JoinHash>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
@@ -64,15 +69,100 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   //  const auto mpsm_join = std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
   //  const auto sort_merge_join = std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
 
-  // Cost all valid join algorithms
-  //  _cost_model->
+  CostModelFeatures cost_model_features{};
+    if (left_input_size > 0 && right_input_size > 0) {
+        if (left_input_size > right_input_size) {
+            cost_model_features.input_table_size_ratio = left_input_size / static_cast<float>(right_input_size);
+        } else {
+            cost_model_features.input_table_size_ratio = right_input_size / static_cast<float>(left_input_size);
+        }
+    }
 
-  // Order by costs and select Join Algorithm
+  cost_model_features.left_input_row_count = left_input_size;
+  cost_model_features.right_input_row_count = right_input_size;
+  cost_model_features.total_row_count = std::max<uint64_t>(1, left_input_size) * std::max<uint64_t>(1, right_input_size);
+  cost_model_features.logical_cost_sort_merge = left_input_size * static_cast<float>(std::log(right_input_size));
+  cost_model_features.logical_cost_hash = left_input_size + right_input_size;
+
+const auto left_column_id = _column_ids.first;
+const auto right_column_id = _column_ids.second;
+
+    size_t left_memory_usage = 0;
+    for (const auto& chunk : left_input_table->chunks()) {
+        const auto& segment = chunk->get_segment(left_column_id);
+        left_memory_usage += segment->estimate_memory_usage();
+    }
+
+    size_t right_memory_usage = 0;
+    for (const auto& chunk : right_input_table->chunks()) {
+        const auto& segment = chunk->get_segment(right_column_id);
+        right_memory_usage += segment->estimate_memory_usage();
+    }
+
+    // Left Join Column Features
+    JoinFeatures join_features {};
+    join_features.join_mode = _mode;
+    join_features.left_join_column.column_memory_usage_bytes = left_memory_usage;
+    join_features.left_join_column.column_data_type = DataType::Int;
+    join_features.left_join_column.column_segment_encoding_Dictionary_percentage = 1.0f;
+    join_features.left_join_column.column_segment_encoding_RunLength_percentage = 0.0f;
+    join_features.left_join_column.column_segment_encoding_Unencoded_percentage = 0.0f;
+
+    join_features.right_join_column.column_memory_usage_bytes = right_memory_usage;
+    join_features.right_join_column.column_data_type = DataType::Int;
+    join_features.right_join_column.column_segment_encoding_Dictionary_percentage = 1.0f;
+    join_features.right_join_column.column_segment_encoding_RunLength_percentage = 0.0f;
+    join_features.right_join_column.column_segment_encoding_Unencoded_percentage = 0.0f;
+
+    // Build Join Models
+    const auto join_coefficients = CostModelCoefficientReader::read_join_coefficients();
+    std::unordered_map<OperatorType, std::shared_ptr<LinearRegressionModel>> join_models;
+    for (const auto& [group, coefficients] : join_coefficients) {
+        join_models[group.operator_type] = std::make_shared<LinearRegressionModel>(coefficients);
+    }
+
+    OperatorType minimal_costs_join_type = OperatorType::JoinSortMerge;
+    Cost minimal_costs{std::numeric_limits<float>::max()};
+
+    const auto valid_join_types = _valid_join_types();
+    for (const auto& join_type : valid_join_types) {
+        cost_model_features.operator_type = join_type;
+        const auto predicted_costs = join_models.at(join_type)->predict(cost_model_features.to_cost_model_features());
+        std::cout << "JoinProxy: " << operator_type_to_string.at(join_type) << " -> " << predicted_costs << std::endl;
+        if (predicted_costs < minimal_costs) {
+            minimal_costs_join_type = join_type;
+            minimal_costs = predicted_costs;
+        }
+    }
+
+//    return {};
 
   // Execute Join
+    const auto join_impl = _instantiate_join(minimal_costs_join_type);
+    join_impl->execute();
+    const auto execution_time = join_impl->performance_data().walltime;
+    const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time).count();
+    const auto mape = abs(execution_time_ns - minimal_costs) / static_cast<float>(execution_time_ns) * 100.0f;
+    std::cout << "Error: " << execution_time_ns - minimal_costs << " [actual: " << execution_time_ns << ", " << mape << "%]" << std::endl;
+    return join_impl->get_output();
+}
 
-  // Return output
-  return nullptr;
+const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const OperatorType operator_type) const {
+    std::cout << "JoinProxy: Initializing " << operator_type_to_string.at(operator_type) << std::endl;
+    switch (operator_type) {
+        case OperatorType::JoinHash:
+            return std::make_shared<JoinHash>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+        case OperatorType::JoinIndex:
+            return std::make_shared<JoinIndex>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+        case OperatorType::JoinMPSM:
+            return std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+        case OperatorType::JoinNestedLoop:
+            return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+        case OperatorType::JoinSortMerge:
+            return std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _column_ids, _predicate_condition);
+        default:
+            Fail("Unexpected operator type in JoinProxy. Can only handle Join operators");
+    }
 }
 
 std::string JoinProxy::PerformanceData::to_string(DescriptionMode description_mode) const {
@@ -80,5 +170,15 @@ std::string JoinProxy::PerformanceData::to_string(DescriptionMode description_mo
   //        string += (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
   return string;
 }
+
+    const std::vector<OperatorType> JoinProxy::_valid_join_types() const {
+        // TODO(Sven): Add IndexJoin
+        if (_predicate_condition == PredicateCondition::Equals && _mode != JoinMode::Outer) {
+            return {OperatorType::JoinHash, OperatorType::JoinNestedLoop, OperatorType::JoinMPSM, OperatorType::JoinSortMerge};
+        }
+
+        return {OperatorType::JoinNestedLoop, OperatorType::JoinMPSM, OperatorType::JoinSortMerge};
+    }
+
 
 }  // namespace opossum

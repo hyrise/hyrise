@@ -40,6 +40,7 @@
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
+#include "operators/join_proxy.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -332,6 +333,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   const auto predicate_condition = operator_join_predicate->predicate_condition;
 
+  return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
+                                     operator_join_predicate->column_ids, predicate_condition);
+  /*
   if (join_node->join_type) {
     switch (*(join_node->join_type)) {
       case JoinType::Hash:
@@ -352,6 +356,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     }
   }
 
+
+
   // TODO(Sven): These two conditions should be part of an Optimizer Rule.
   // Otherwise it will be hard for the Cost Model to handle Joins
   if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
@@ -361,7 +367,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
                                          operator_join_predicate->column_ids, predicate_condition);
-}
+*/
+   }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {

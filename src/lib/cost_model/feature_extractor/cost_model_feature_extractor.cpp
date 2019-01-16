@@ -90,7 +90,6 @@ const CostModelFeatures CostModelFeatureExtractor::_extract_general_features(
     }
   }
 
-  operator_features.total_row_count = left_input_row_count * right_input_row_count;
   operator_features.logical_cost_sort_merge = left_input_row_count * static_cast<float>(std::log(left_input_row_count));
   operator_features.logical_cost_hash = left_input_row_count + left_input_row_count;
 
@@ -102,6 +101,7 @@ const CostModelFeatures CostModelFeatureExtractor::_extract_general_features(
       std::max<uint64_t>(1, left_input_row_count) * std::max<uint64_t>(1, right_input_row_count);
   const auto selectivity = std::min<float>(1.0, output_row_count / static_cast<float>(total_input_row_count));
 
+  operator_features.total_row_count = total_input_row_count;
   operator_features.selectivity = selectivity;
   operator_features.output_row_count = output_row_count;
   //            operator_features.output_chunk_count = output->chunk_count();
