@@ -221,5 +221,4 @@ struct Null {};
 // compile time at the cost of runtime performance.
 enum class SegmentIterationTypeErasure { OnlyInDebug, Always };
 
-
 }  // namespace opossum

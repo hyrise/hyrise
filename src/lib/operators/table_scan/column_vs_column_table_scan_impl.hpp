@@ -37,7 +37,7 @@ class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
   const PredicateCondition _predicate_condition;
   const ColumnID _right_column_id;
 
-  template<SegmentIterationTypeErasure type_erasure>
+  template <SegmentIterationTypeErasure type_erasure>
   std::shared_ptr<PosList> _typed_scan_chunk(ChunkID chunk_id) const;
 };
 
