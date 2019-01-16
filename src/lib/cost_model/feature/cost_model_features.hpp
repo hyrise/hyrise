@@ -24,6 +24,9 @@ struct CostModelFeatures : public AbstractFeatures {
   OperatorType operator_type;
   uint64_t execution_time_ns = 0;
   float input_table_size_ratio = 0.0;
+  size_t total_row_count = 0;
+  float logical_cost_sort_merge = 0;
+  float logical_cost_hash = 0;
 
   size_t left_input_row_count = 0;
   size_t left_input_chunk_count = 0;

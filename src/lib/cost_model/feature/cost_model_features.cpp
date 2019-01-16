@@ -30,6 +30,9 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
     {"is_selectivity_below_50_percent", is_selectivity_below_50_percent},
     {"selectivity_distance_to_50_percent", selectivity_distance_to_50_percent},
     {"operator_description", operator_description},
+    {"total_row_count", static_cast<int64_t>(total_row_count)},
+    {"logical_cost_sort_merge", logical_cost_sort_merge},
+    {"logical_cost_hash", logical_cost_hash}
   };
   // clang-format on
 
@@ -84,6 +87,9 @@ const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_fe
           {"is_selectivity_below_50_percent", static_cast<float>(is_selectivity_below_50_percent)},
           {"selectivity_distance_to_50_percent", selectivity_distance_to_50_percent},
 //          {"operator_description", operator_description},
+          {"total_row_count", static_cast<float>(total_row_count)},
+          {"logical_cost_sort_merge", logical_cost_sort_merge},
+          {"logical_cost_hash", logical_cost_hash}
   };
   // clang-format on
 

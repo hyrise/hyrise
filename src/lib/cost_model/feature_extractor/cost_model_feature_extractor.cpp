@@ -90,6 +90,10 @@ const CostModelFeatures CostModelFeatureExtractor::_extract_general_features(
     }
   }
 
+  operator_features.total_row_count = left_input_row_count * right_input_row_count;
+  operator_features.logical_cost_sort_merge = left_input_row_count * static_cast<float>(std::log(left_input_row_count));
+  operator_features.logical_cost_hash = left_input_row_count + left_input_row_count;
+
   // Output selectivity seems to be off
   const auto output_row_count = static_cast<size_t>(node->get_statistics()->row_count());
   // Calculate cross-join cardinality.
