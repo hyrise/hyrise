@@ -39,7 +39,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
     return _typed_scan_chunk<SegmentIterationTypeErasure::OnlyInDebug>(chunk_id);
   } else {
     return _typed_scan_chunk<SegmentIterationTypeErasure::Always>(chunk_id);
-    if (!IS_DEBUG) PerformanceWarning("Using non-specialized (i.e., type-erased) version of ColumnVsColumnTableScan");
+    if (!HYRISE_DEBUG) PerformanceWarning("Using non-specialized (i.e., type-erased) version of ColumnVsColumnTableScan");
   }
 }
 
