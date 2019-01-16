@@ -54,8 +54,8 @@ void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condi
     case PredicateCondition::NotEquals:         functor(boost::hana::type<NotEqualsEvaluator>{});         break;
     case PredicateCondition::LessThan:          functor(boost::hana::type<LessThanEvaluator >{});         break;
     case PredicateCondition::LessThanEquals:    functor(boost::hana::type<LessThanEqualsEvaluator>{});    break;
-    case PredicateCondition::GreaterThan:       
-    case PredicateCondition::GreaterThanEquals: 
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
       Fail("PredicateCondition should have been flipped");
       break;
 
@@ -231,7 +231,8 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
 
   // To reduce the number of template instantiations, we flip > and >= to < and <=
   auto predicate_condition = expression.predicate_condition;
-  const bool flip = predicate_condition == PredicateCondition::GreaterThan || predicate_condition == PredicateCondition::GreaterThanEquals;
+  const bool flip = predicate_condition == PredicateCondition::GreaterThan ||
+                    predicate_condition == PredicateCondition::GreaterThanEquals;
   if (flip) predicate_condition = flip_predicate_condition(predicate_condition);
   const auto& left = flip ? *expression.right_operand() : *expression.left_operand();
   const auto& right = flip ? *expression.left_operand() : *expression.right_operand();
@@ -1004,30 +1005,28 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           const auto& left = *predicate_expression.arguments[flip ? 1 : 0];
           const auto& right = *predicate_expression.arguments[flip ? 0 : 1];
 
-          _resolve_to_expression_results(
-              left, right,
-              [&](const auto& left_result, const auto& right_result) {
-                using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
-                using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
+          _resolve_to_expression_results(left, right, [&](const auto& left_result, const auto& right_result) {
+            using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
+            using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
 
-                resolve_binary_predicate_evaluator(predicate_condition, [&](const auto functor) {
-                  using ExpressionFunctorType = typename decltype(functor)::type;
+            resolve_binary_predicate_evaluator(predicate_condition, [&](const auto functor) {
+              using ExpressionFunctorType = typename decltype(functor)::type;
 
-                  if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
-                                                                         RightDataType>::value) {
-                    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                      if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+              if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
+                                                                     RightDataType>::value) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
-                      auto matches = ExpressionEvaluator::Bool{0};
-                      ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
-                                              right_result.value(chunk_offset));
-                      if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
-                    }
-                  } else {
-                    Fail("Argument types not compatible");
-                  }
-                });
-              });
+                  auto matches = ExpressionEvaluator::Bool{0};
+                  ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
+                                          right_result.value(chunk_offset));
+                  if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                }
+              } else {
+                Fail("Argument types not compatible");
+              }
+            });
+          });
         } break;
 
         case PredicateCondition::Between:
@@ -1191,7 +1190,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     }
   });
 
-  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));;
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
 }
 
 template <typename Result, typename Functor>
@@ -1210,10 +1209,13 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
       nulls.resize(result_size);
 
       auto get_null = [](const auto& result, ChunkOffset row_idx) -> bool {
-        switch(result.nulls.size()) {
-          case 0: return false;
-          case 1: return result.nulls[0];
-          default: return result.nulls[row_idx];
+        switch (result.nulls.size()) {
+          case 0:
+            return false;
+          case 1:
+            return result.nulls[0];
+          default:
+            return result.nulls[row_idx];
         }
       };
 
