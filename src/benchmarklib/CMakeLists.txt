@@ -42,6 +42,7 @@ set(
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp
+    query_benchmark_result.cpp
     query_benchmark_result.hpp
 )
 
