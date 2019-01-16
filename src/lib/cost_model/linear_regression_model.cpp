@@ -11,7 +11,6 @@ Cost LinearRegressionModel::predict(const std::unordered_map<std::string, float>
   Cost cost = 0;
 
   for (const auto& [coefficient, coefficient_value] : _coefficients) {
-    // TODO(Sven): or should we always throw in case of a missing feature?
     Assert(features.count(coefficient), "Missing feature in LinearRegressionModel: " + coefficient);
 
     const auto feature_value = features.at(coefficient);
