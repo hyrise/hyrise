@@ -9,6 +9,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -34,69 +35,54 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   auto matches_out = std::make_shared<PosList>();
 
-  segment_with_iterators(*left_segment, [&](auto left_it, const auto left_end) {
-    segment_with_iterators(*right_segment, [&](auto right_it, const auto right_end) {
-      using LeftSegmentIterableType = typename decltype(left_it)::IterableType;
-      using RightSegmentIterableType = typename decltype(right_it)::IterableType;
+  resolve_data_type(left_segment->data_type(), [&](auto left_type) {
+    resolve_data_type(right_segment->data_type(), [&](auto right_type) {
+      using LeftType = typename decltype(left_type)::type;
+      using RightType = typename decltype(right_type)::type;
 
-      using LeftType = typename decltype(left_it)::ValueType;
-      using RightType = typename decltype(right_it)::ValueType;
-
-      /**
-       * The following generic lambda is instantiated for each combinations of type (int, long, etc.) and
-       * each segment iterator type (value, value-non-null, dictionary-simd, ...)!
-       * However, not all combinations are valid or possible.
-       * Only data segments (value, dictionary) or reference segments will be compared, as a table with both data and
-       * reference segments is ruled out. Moreover it is not possible to compare strings to any of the four numerical
-       * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
-       * reduces the number of combinations.
-       */
-
-      constexpr auto LEFT_IS_REFERENCE_SEGMENT =
-          std::is_same<LeftSegmentIterableType, ReferenceSegmentIterable<LeftType>>{};
-      constexpr auto RIGHT_IS_REFERENCE_SEGMENT =
-          std::is_same<RightSegmentIterableType, ReferenceSegmentIterable<RightType>>{};
-
-      constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
-      constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
-
-      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
-      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
-
-      constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
-      constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
-
-      if constexpr ((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
-                    (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
-        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-        const auto left_it_copy = left_it;
-        const auto left_end_copy = left_end;
-        const auto right_it_copy = right_it;
-        const auto right_end_copy = right_end;
-        const auto chunk_id_copy = chunk_id;
-        const auto& matches_out_ref = matches_out;
-
-        bool flipped = false;
-        auto condition = _predicate_condition;
-        if (condition == PredicateCondition::GreaterThan || condition == PredicateCondition::GreaterThanEquals) {
-          condition = flip_predicate_condition(condition);
-          flipped = true;
+      // If the left and the right segment and/or type are not the same, we erase the types even for the release build.
+      // This because we have not worked with those combinations and we don't want the templates to be instantiated.
+      auto create_iterable = [](auto&& segment, auto type) {
+        using Type = typename decltype(type)::type;
+        if constexpr (!HYRISE_DEBUG && std::is_same_v<LeftType, RightType>) {
+          // Generate the fast, typed code
+          return create_iterable_from_segment<Type>(segment);
+        } else {
+          if (!HYRISE_DEBUG) PerformanceWarning("Using non-specialized code for column vs column comparison");
+          return create_any_segment_iterable<Type>(*segment);
         }
+      };
 
-        with_comparator_light(condition, [&](auto predicate_comparator) {
-          auto comparator = [predicate_comparator](const auto& left, const auto& right) {
-            return predicate_comparator(left.value(), right.value());
-          };
-          if (flipped) {
-            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, right_it_copy, right_end_copy, chunk_id_copy,
-                                                              *matches_out_ref, left_it_copy);
-          } else {
-            AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it_copy, left_end_copy, chunk_id_copy,
-                                                              *matches_out_ref, right_it_copy);
-          }
+      const auto left_segment_iterable = create_iterable(left_segment, left_type);
+      const auto right_segment_iterable = create_iterable(right_segment, right_type);
+
+      // C++ cannot compare strings and non-strings out of the box:
+      if constexpr(std::is_same_v<LeftType, std::string> == std::is_same_v<RightType, std::string>) {
+        left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
+          right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
+            bool flipped = false;
+            auto condition = _predicate_condition;
+            if (condition == PredicateCondition::GreaterThan || condition == PredicateCondition::GreaterThanEquals) {
+              condition = flip_predicate_condition(condition);
+              flipped = true;
+            }
+
+            with_comparator_light(condition, [&](auto predicate_comparator) {
+              auto comparator = [predicate_comparator](const auto& left, const auto& right) {
+                return predicate_comparator(left.value(), right.value());
+              };
+              if (flipped) {
+                AbstractTableScanImpl::_scan_with_iterators<true>(comparator, right_it, right_end, chunk_id, *matches_out,
+                                                                  left_it);
+              } else {
+                AbstractTableScanImpl::_scan_with_iterators<true>(comparator, left_it, left_end, chunk_id, *matches_out,
+                                                                  right_it);
+              }
+            });
+          });
         });
       } else {
-        Fail("Invalid segment combination detected!");  // NOLINT - cpplint.py does not know about constexpr
+        Fail("Trying to compare strings and non-strings");
       }
     });
   });
