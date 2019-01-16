@@ -8,7 +8,7 @@
 #include "expression_result_views.hpp"
 #include "null_value.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterables/segment_iterator_values.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

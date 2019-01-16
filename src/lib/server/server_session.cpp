@@ -61,6 +61,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_perform_sessio
            [=]() { return _connection->send_auth(); } >> then >>
            // We need to provide some random server version > 9 here, because some clients require it.
            [=]() { return _connection->send_parameter_status("server_version", "9.5"); } >> then >>
+           [=]() { return _connection->send_parameter_status("client_encoding", "UTF8"); } >> then >>
            [=]() { return _connection->send_ready_for_query(); };
   };
 }

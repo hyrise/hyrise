@@ -16,7 +16,7 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   auto unencoded_table_cache = TableCache{};
 
-  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner.tables");
+  std::ifstream file("resources/test_data/sqlite_testrunner.tables");
   std::string line;
   while (std::getline(file, line)) {
     if (line.empty()) {
@@ -77,10 +77,8 @@ void SQLiteTestRunner::SetUp() {
   auto& table_cache = table_cache_iter->second;
 
   /**
-   * Reset the StorageManager and populate it with mint Tables with the correct encoding from the cache
+   * Populate the StorageManager with mint Tables with the correct encoding from the cache
    */
-  StorageManager::reset();
-
   for (auto const& [table_name, table_cache_entry] : table_cache) {
     /*
       Opossum:
@@ -119,7 +117,7 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 
   if (!queries.empty()) return queries;
 
-  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
+  std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
   std::string query;
 
   while (std::getline(file, query)) {

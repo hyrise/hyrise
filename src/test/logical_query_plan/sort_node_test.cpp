@@ -1,10 +1,7 @@
 #include <memory>
 #include <vector>
 
-#include "gtest/gtest.h"
-
 #include "base_test.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -14,10 +11,10 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class SortNodeTest : public ::testing::Test {
+class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float_double_string.tbl", 2));
+    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
 
@@ -27,8 +24,6 @@ class SortNodeTest : public ::testing::Test {
 
     _sort_node = SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
   }
-
-  void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<StoredTableNode> _table_node;
   std::shared_ptr<SortNode> _sort_node;

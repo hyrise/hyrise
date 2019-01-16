@@ -1047,8 +1047,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::P
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::ExecuteStatement& execute_statement) {
-  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{execute_statement.parameters->size()};
-  for (auto parameter_idx = size_t{0}; parameter_idx < execute_statement.parameters->size(); ++parameter_idx) {
+  const auto num_parameters = execute_statement.parameters ? execute_statement.parameters->size() : 0;
+  auto parameters = std::vector<std::shared_ptr<AbstractExpression>>{num_parameters};
+  for (auto parameter_idx = size_t{0}; parameter_idx < num_parameters; ++parameter_idx) {
     parameters[parameter_idx] = translate_hsql_expr(*(*execute_statement.parameters)[parameter_idx], _use_mvcc);
   }
 
@@ -1176,7 +1177,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(),
              "ValuePlaceholderID out of range");
       auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
-      return std::make_shared<ParameterExpression>(
+      return std::make_shared<PlaceholderExpression>(
           _parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
     }
 

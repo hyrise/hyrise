@@ -16,8 +16,8 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
       _referenced_table(referenced_table),
       _referenced_column_id(referenced_column_id),
       _pos_list(pos) {
-  Assert(_referenced_column_id < _referenced_table->column_count(), "ColumnID out of range")
-      DebugAssert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
+  Assert(_referenced_column_id < _referenced_table->column_count(), "ColumnID out of range");
+  Assert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
 
   // Theoretically, a ReferenceSegment can become bigger than the input segments of the operator. This can happen, for
   // example, if a hash-based join puts all entries into the same bucket and generates a single segment. It is the duty

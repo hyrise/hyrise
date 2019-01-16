@@ -3,7 +3,7 @@
 #include <boost/iterator/iterator_facade.hpp>
 
 #include "storage/pos_list.hpp"
-#include "storage/segment_iterables/segment_iterator_values.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -23,7 +23,7 @@ class JitBaseSegmentIterator {};
  * interface (see segment_iterables/.hpp) and are implemented
  * in sub-classes of SegmentIterable (see e.g. value_segment_iterable.hpp)
  *
- * Value must be a sub-class of AbstractSegmentIteratorValue<T>.
+ * Value must be a sub-class of AbstractSegmentPosition<T>.
  *
  *
  * Why is boost::iterator_core_access a friend class?

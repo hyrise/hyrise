@@ -2,7 +2,6 @@
 
 | Name             | Version          | Platform |                              Optional |
 | ---------------- | ---------------- | -------- | ------------------------------------- |
-| build-essential  | any              |    Linux |                                    No |
 | boost            | >= 1.65.0        |    All   |                                    No |
 | clang            | 6                |    All   |                 Yes, if gcc installed |
 | clang-format     | 6.0 / 2018-01-11 |    All   |                      Yes (formatting) |

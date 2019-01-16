@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "SQLParser.h"
-#include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -39,7 +38,7 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_table_generator.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -134,7 +133,7 @@ Console::Console()
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = opossum::TpccTableGenerator::table_generator_functions();
+  auto tpcc_generators = TpccTableGenerator::table_generator_functions();
   for (const auto& generator : tpcc_generators) {
     _tpcc_commands.push_back(generator.first);
   }
@@ -392,23 +391,27 @@ int Console::_help(const std::string&) {
 }
 
 int Console::_generate_tpcc(const std::string& tablename) {
+  auto& storage_manager = StorageManager::get();
+
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = opossum::TpccTableGenerator().generate_all_tables();
+    auto tables = TpccTableGenerator().generate_all_tables();
     for (auto& [table_name, table] : tables) {
-      StorageManager::get().add_table(table_name, table);
+      if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+      storage_manager.add_table(table_name, table);
     }
     return ReturnCode::Ok;
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = opossum::TpccTableGenerator().generate_table(tablename);
+  auto table = TpccTableGenerator().generate_table(tablename);
   if (table == nullptr) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return ReturnCode::Error;
   }
 
-  opossum::StorageManager::get().add_table(tablename, table);
+  if (storage_manager.has_table(tablename)) storage_manager.drop_table(tablename);
+  storage_manager.add_table(tablename, table);
   return ReturnCode::Ok;
 }
 
@@ -444,7 +447,7 @@ int Console::_generate_tpch(const std::string& args) {
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
-  TpchDbGenerator{scale_factor, chunk_size}.generate_and_store();
+  TpchTableGenerator{scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -483,7 +486,7 @@ int Console::_load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      auto table = opossum::load_table(filepath);
+      auto table = load_table(filepath);
 
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
@@ -534,10 +537,10 @@ int Console::_export_table(const std::string& args) {
 
   try {
     if (extension == "bin") {
-      auto ex = std::make_shared<opossum::ExportBinary>(gt, filepath);
+      auto ex = std::make_shared<ExportBinary>(gt, filepath);
       ex->execute();
     } else if (extension == "csv") {
-      auto ex = std::make_shared<opossum::ExportCsv>(gt, filepath);
+      auto ex = std::make_shared<ExportCsv>(gt, filepath);
       ex->execute();
     } else {
       out("Exporting to extension \"" + extension + "\" is not supported.\n");
@@ -721,10 +724,10 @@ int Console::_change_runtime_setting(const std::string& input) {
 
   if (property == "scheduler") {
     if (value == "on") {
-      opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
+      CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
       out("Scheduler turned on\n");
     } else if (value == "off") {
-      opossum::CurrentScheduler::set(nullptr);
+      CurrentScheduler::set(nullptr);
       out("Scheduler turned off\n");
     } else {
       out("Usage: scheduler (on|off)\n");
@@ -874,7 +877,7 @@ int Console::_unload_plugin(const std::string& input) {
 
   if (arguments.size() != 1) {
     out("Usage:\n");
-    out("  unload_plugin PLUGINNAME\n");
+    out("  unload_plugin NAME\n");
     return ReturnCode::Error;
   }
 
@@ -985,7 +988,7 @@ int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
-  // Bind CTRL-C to behaviour specified in opossum::Console::_handle_signal
+  // Bind CTRL-C to behaviour specified in Console::_handle_signal
   std::signal(SIGINT, &opossum::Console::handle_signal);
 
   console.set_prompt("> ");
