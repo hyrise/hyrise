@@ -1,6 +1,6 @@
 #include "join_algorithm_rule.hpp"
 
-//#include <iostream>
+#include <limits>
 //#include <memory>
 //#include <optional>
 //#include <string>
@@ -16,6 +16,8 @@
 //#include "logical_query_plan/stored_table_node.hpp"
 //#include "types.hpp"
 //#include "utils/assert.hpp"
+
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
@@ -34,7 +36,7 @@ namespace opossum {
 
                 // SortMerge can handle everything
                 JoinType minimal_costs_join_type = JoinType::SortMerge;
-                Cost minimal_costs {};
+                Cost minimal_costs {std::numeric_limits<float>::max()};
 
                 for (const auto& join_type : valid_join_types) {
                     join_node->join_type = join_type;

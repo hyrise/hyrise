@@ -1,5 +1,6 @@
 #include "cost_model_adaptive.hpp"
 
+#include "cost_model/cost_model_coefficient_reader.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -11,6 +12,14 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+    const std::shared_ptr<CostModelAdaptive> CostModelAdaptive::create_default() {
+      return std::make_shared<CostModelAdaptive>(
+              CostModelCoefficientReader::read_table_scan_coefficients(),
+              CostModelCoefficientReader::read_join_coefficients(),
+              std::make_shared<CostModelFeatureExtractor>()
+              );
+    }
 
 CostModelAdaptive::CostModelAdaptive(const TableScanCoefficientsPerGroup& table_scan_coefficients,
                                      const JoinCoefficientsPerGroup& join_coefficients,

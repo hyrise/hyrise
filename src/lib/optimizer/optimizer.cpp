@@ -3,6 +3,7 @@
 #include <memory>
 #include <unordered_set>
 
+#include "cost_model/cost_model_adaptive.hpp"
 #include "cost_model/cost_model_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
@@ -14,6 +15,7 @@
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/exists_reformulation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
+#include "strategy/join_algorithm_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/logical_reduction_rule.hpp"
@@ -100,12 +102,15 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
+  // TODO(Sven): Naming in comments seems to be wrong. This should be PredicatePlacementRule, right?
   optimizer->add_rule(std::make_shared<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicateReorderingRule has positioned them as desired
   optimizer->add_rule(std::make_shared<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_shared<IndexScanRule>());
+
+  optimizer->add_rule(std::make_shared<JoinAlgorithmRule>(CostModelAdaptive::create_default()));
 
   return optimizer;
 }
