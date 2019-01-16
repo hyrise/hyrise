@@ -958,8 +958,10 @@ std::shared_ptr<BaseSegment> ExpressionEvaluator::evaluate_expression_to_segment
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           nulls[chunk_offset] = view.is_null(chunk_offset);
         }
+        segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
+      } else {
+        segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
       }
-      segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
     }
     // clang-format on
   });
@@ -1207,21 +1209,35 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
       values.resize(result_size);
       nulls.resize(result_size);
 
+      auto get_null = [](const auto& result, ChunkOffset row_idx) -> bool {
+        switch(result.nulls.size()) {
+          case 0: return false;
+          case 1: return result.nulls[0];
+          default: return result.nulls[row_idx];
+        }
+      };
+
       bool null;
       // Using three different branches instead of views, which would generate 9 cases.
       if (left.is_literal() == right.is_literal()) {
         for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-          Functor{}(values[row_idx], null, left.values[row_idx], left.nulls[row_idx], right.values[row_idx], right.nulls[row_idx]);
+          const auto left_null = get_null(left, row_idx);
+          const auto right_null = get_null(right, row_idx);
+          Functor{}(values[row_idx], null, left.values[row_idx], left_null, right.values[row_idx], right_null);
           nulls[row_idx] = null;
         }
       } else if (right.is_literal()) {
         for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-          Functor{}(values[row_idx], null, left.values[row_idx], left.nulls[row_idx], right.values[0], right.nulls[0]);
+          const auto left_null = get_null(left, row_idx);
+          const auto right_null = get_null(right, row_idx);
+          Functor{}(values[row_idx], null, left.values[row_idx], left_null, right.values[0], right_null);
           nulls[row_idx] = null;
         }
       } else {
         for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-          Functor{}(values[row_idx], null, left.values[0], left.nulls[0], right.values[row_idx], right.nulls[row_idx]);
+          const auto left_null = get_null(left, row_idx);
+          const auto right_null = get_null(right, row_idx);
+          Functor{}(values[row_idx], null, left.values[0], left_null, right.values[row_idx], right_null);
           nulls[row_idx] = null;
         }
       }

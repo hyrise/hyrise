@@ -77,7 +77,7 @@ class ExpressionResult : public BaseExpressionResult {
   }
 
   AllTypeVariant value_as_variant(const size_t idx) const final {
-    return value(idx);
+    return is_null(idx) ? AllTypeVariant{NullValue{}} : AllTypeVariant{value(idx)};
   }
 
   bool is_null(const size_t idx) const {
