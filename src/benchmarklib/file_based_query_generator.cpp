@@ -46,7 +46,7 @@ std::string FileBasedQueryGenerator::query_name(const QueryID query_id) const { 
 
 size_t FileBasedQueryGenerator::available_query_count() const { return _queries.size(); }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& query_file_path,
+void FileBasedQueryGenerator::_parse_query_file(const filesystem::path& query_file_path,
                                                 const std::optional<std::unordered_set<std::string>>& query_subset) {
   std::ifstream file(query_file_path);
 

@@ -39,7 +39,7 @@ void AbstractTableGenerator::generate_and_store() {
         continue;
       }
 
-      auto binary_file_path = std::filesystem::path{};
+      auto binary_file_path = filesystem::path{};
       if (table_info.binary_file_path) {
         binary_file_path = *table_info.binary_file_path;
       } else {

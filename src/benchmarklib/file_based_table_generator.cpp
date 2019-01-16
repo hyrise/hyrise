@@ -19,7 +19,7 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
-  Assert(std::filesystem::is_directory(_path), "Table path must be a directory");
+  Assert(filesystem::is_directory(_path), "Table path must be a directory");
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
   const auto table_extensions = std::unordered_set<std::string>{".csv", ".tbl", ".bin"};
@@ -31,7 +31,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * binary version of a table.
    */
   for (const auto& directory_entry : filesystem::recursive_directory_iterator(_path)) {
-    if (!std::filesystem::is_regular_file(directory_entry)) continue;
+    if (!filesystem::is_regular_file(directory_entry)) continue;
 
     const auto extension = directory_entry.path().extension();
 
@@ -63,8 +63,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
     if (table_info.binary_file_path && table_info.text_file_path) {
-      const auto last_binary_write = std::filesystem::last_write_time(*table_info.binary_file_path);
-      const auto last_text_write = std::filesystem::last_write_time(*table_info.text_file_path);
+      const auto last_binary_write = filesystem::last_write_time(*table_info.binary_file_path);
+      const auto last_text_write = filesystem::last_write_time(*table_info.text_file_path);
 
       if (last_binary_write < last_text_write) {
         _benchmark_config->out << "- Binary file '" << (*table_info.binary_file_path)

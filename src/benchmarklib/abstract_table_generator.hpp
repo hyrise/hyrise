@@ -15,8 +15,8 @@ struct BenchmarkTableInfo {
 
   // Set if the table has a binary/textual file path associated with it. E.g., if the table was loaded from such a file
   // or if it should be exported to it as part of binary caching.
-  std::optional<std::filesystem::path> binary_file_path;
-  std::optional<std::filesystem::path> text_file_path;
+  std::optional<filesystem::path> binary_file_path;
+  std::optional<filesystem::path> text_file_path;
 
   bool loaded_from_binary{false};
 
