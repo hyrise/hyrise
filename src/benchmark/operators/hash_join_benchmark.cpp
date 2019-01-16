@@ -17,8 +17,8 @@
 
 namespace {
 
-const size_t CHUNK_SIZE = 10'000;
-const size_t SCALE_FACTOR = 6;
+const size_t CHUNK_SIZE = 10000;
+const size_t SCALE_FACTOR = 1000000;
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
