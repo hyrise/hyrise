@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 #include "cxxopts.hpp"
@@ -7,7 +8,6 @@
 
 #include "benchmark_config.hpp"
 #include "encoding_config.hpp"
-#include "utils/filesystem.hpp"
 
 namespace opossum {
 
