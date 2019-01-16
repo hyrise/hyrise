@@ -458,9 +458,6 @@ inline bool _fulfills_join_predicates(const Table& left_table, const std::vector
 //    const auto& left_segment = left_table.get_chunk(left_row_id.chunk_id)->segments()[pred.column_id_pair.first];
 //    const auto& right_segment = right_table.get_chunk(right_row_id.chunk_id)->segments()[pred.column_id_pair.second];
 //
-//    auto left_accessor = create_segment_accessor<int32_t>(left_segment);
-//    auto right_accessor = create_segment_accessor<int32_t>(right_segment);
-//
 //    const auto column_data_type = left_table.column_data_type(pred.column_id_pair.first);
 //
 //    resolve_data_type(column_data_type, [&](const auto type) {
