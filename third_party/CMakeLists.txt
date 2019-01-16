@@ -156,12 +156,12 @@ include(ExternalProject)
 externalproject_add(
     libjemalloc
 
-    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
-    CONFIGURE_COMMAND cd <SOURCE_DIR> && ./autogen.sh
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc-5.1.0
+    CONFIGURE_COMMAND cd <SOURCE_DIR> && ./configure
     BUILD_COMMAND ${CMAKE_BUILD_TOOL}
     BUILD_IN_SOURCE 1
     STEP_TARGETS build
 )
 add_library(jemalloc SHARED IMPORTED GLOBAL)
 add_dependencies(jemalloc libjemalloc-build)
-set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc/lib/libjemalloc.so)
+set_target_properties(jemalloc PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc-5.1.0/lib/libjemalloc.so)
