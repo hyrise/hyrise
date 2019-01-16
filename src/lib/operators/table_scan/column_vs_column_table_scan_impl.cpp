@@ -42,7 +42,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
   // We use type erasure here because we currently do not compare, e.g., a ValueSegment with a DictionarySegment,
   // and we don't want the compiler to spend time instantiating unused templates. Whenever the types of the iterators
   // is removed, we also erase the comparator lambda by wrapping it into an std::function. All of this brought the
-  // compile time down by a factor of 5.
+  // compile time down by a factor of 5. This is only relevant for the release build - in the debug build, iterators
+  // are erased anyway.
 
   resolve_data_and_segment_type(left_segment, [&](auto left_type, auto& left_typed_segment) {
     resolve_data_and_segment_type(right_segment, [&](auto right_type, auto& right_typed_segment) {
