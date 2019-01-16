@@ -143,7 +143,13 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
       this->_table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
       std::vector<ColumnID>{ColumnID{0}});
 
-  EXPECT_EQ(aggregate->name(), "Aggregate");
+  if constexpr (std::is_same_v<TypeParam, Aggregate>) {
+      EXPECT_EQ(aggregate->name(), "Aggregate");
+  } else if constexpr (std::is_same_v<TypeParam, AggregateSort>) {
+    EXPECT_EQ(aggregate->name(), "AggregateSort");
+  } else {
+      Fail("Unknown aggregate type");
+  }
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotSumStringColumns) {
