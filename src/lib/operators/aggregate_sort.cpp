@@ -22,6 +22,16 @@ namespace opossum {
       return "TODO: insert description here";
     }
 
+    bool compare_all_type_variant(const AllTypeVariant& a, const AllTypeVariant& b) {
+        if (variant_is_null(a) && variant_is_null((b))) {
+            return true;
+        } else if (variant_is_null(a) != variant_is_null(b)) {
+            return false;
+        } else {
+            return a == b;
+        }
+    }
+
     template<typename ColumnType, typename AggregateType, AggregateFunction function>
     void AggregateSort::_aggregate_values(std::vector<AllTypeVariant>& previous_values, std::vector<std::vector<AllTypeVariant>>& groupby_keys, std::vector<std::vector<AllTypeVariant>>& aggregate_results, uint64_t aggregate_index, AggregateFunctor<ColumnType, AggregateType> aggregate_function, std::shared_ptr<const Table> sorted_table) {
         // initialize previous values with values in first row
@@ -50,15 +60,7 @@ namespace opossum {
                     current_values.emplace_back(current_value);
                 }
 
-                const auto groupby_key_unchanged = std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), [](const auto &a, const auto &b) {
-                    if (variant_is_null(a) && variant_is_null((b))) {
-                        return true;
-                    } else if (variant_is_null(a) != variant_is_null(b)) {
-                        return false;
-                    } else {
-                        return a == b;
-                    }
-                });
+                const auto groupby_key_unchanged = std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), compare_all_type_variant);
 
                 AllTypeVariant new_value_raw;
                 if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
@@ -67,7 +69,7 @@ namespace opossum {
                     new_value_raw = segments[*_aggregates[aggregate_index].column]->operator[](offset);
                 }
                 if (groupby_key_unchanged) {
-                    if (new_value_raw.which() != 0) {
+                    if (!variant_is_null(new_value_raw)) {
                         const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
                         aggregate_function(new_value, current_aggregate_value);
                         value_count++;
@@ -77,40 +79,13 @@ namespace opossum {
                     }
                     value_count_with_null++;
                 } else {
-                    if constexpr (function == AggregateFunction::Count) {
-                        if (_aggregates[aggregate_index].column) {
-                            current_aggregate_value = value_count;
-                        } else {
-                            current_aggregate_value = value_count_with_null;
-                        }
-                    }
-                    if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) { //TODO arithmetic seems hacky
-                        if (value_count == 0) {
-                            current_aggregate_value = std::optional<AggregateType>();
-                        } else {
-                            current_aggregate_value = *current_aggregate_value / value_count;
-                        }
-                    }
-                    if constexpr (function == AggregateFunction::CountDistinct) {
-                        current_aggregate_value = unique_values.size();
-                    }
-                    if (current_aggregate_value.has_value()) {
-                        aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
-                    } else {
-                        aggregate_results[aggregate_index].emplace_back(NULL_VALUE);
-                    }
-                    if (aggregate_index == 0) {
-                        for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
-                            groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
-                        }
-                    }
-
+                    _set_and_write_aggregate_value<ColumnType, AggregateType, function>(previous_values, groupby_keys, aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
                     previous_values = current_values;
                     current_aggregate_value = std::optional<AggregateType>();
                     unique_values.clear();
                     value_count = 0u;
                     value_count_with_null = 1u;
-                    if (new_value_raw.which() != 0) {
+                    if (!variant_is_null(new_value_raw)) {
                         const auto new_value = type_cast_variant<ColumnType>(new_value_raw);
                         aggregate_function(new_value, current_aggregate_value);
                         value_count = 1u;
@@ -122,8 +97,20 @@ namespace opossum {
 
             }
         }
+        _set_and_write_aggregate_value<ColumnType, AggregateType, function>(previous_values, groupby_keys, aggregate_results, aggregate_index, current_aggregate_value, value_count, value_count_with_null, unique_values);
+    }
+
+    template<typename ColumnType, typename AggregateType, AggregateFunction function>
+    void AggregateSort::_set_and_write_aggregate_value(const std::vector<AllTypeVariant> &previous_values,
+                                                      std::vector<std::vector<AllTypeVariant>> &groupby_keys,
+                                                      std::vector<std::vector<AllTypeVariant>> &aggregate_results,
+                                                      uint64_t aggregate_index,
+                                                      std::optional<AggregateType> &current_aggregate_value,
+                                                      uint64_t value_count  __attribute__((unused)),
+                                                      uint64_t value_count_with_null  __attribute__((unused)),
+                                                      const std::unordered_set<ColumnType> &unique_values) const {
         if constexpr (function == AggregateFunction::Count) {
-            if (_aggregates[aggregate_index].column) {
+            if (this->_aggregates[aggregate_index].column) {
                 current_aggregate_value = value_count;
             } else {
                 current_aggregate_value = value_count_with_null;
@@ -135,17 +122,23 @@ namespace opossum {
             } else {
                 current_aggregate_value = *current_aggregate_value / value_count;
             }
+
         }
         if constexpr (function == AggregateFunction::CountDistinct) {
             current_aggregate_value = unique_values.size();
         }
-        aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
+        if (current_aggregate_value.has_value()) {
+            aggregate_results[aggregate_index].emplace_back(*current_aggregate_value);
+        } else {
+            aggregate_results[aggregate_index].emplace_back(NULL_VALUE);
+        }
         if (aggregate_index == 0) {
-            for (size_t groupby_id = 0;groupby_id < _groupby_column_ids.size();groupby_id++) {
+            for (size_t groupby_id = 0;groupby_id < this->_groupby_column_ids.size(); groupby_id++) {
                 groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);
             }
         }
     }
+
 
 
     std::shared_ptr<const Table> AggregateSort::_on_execute() {
@@ -236,15 +229,7 @@ namespace opossum {
                         AllTypeVariant current_value = segments[column_id]->operator[](offset);
                         current_values.emplace_back(current_value);
                     }
-                    const auto groupby_key_changed = !std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), [](const auto &a, const auto &b) {
-                        if (variant_is_null(a) && variant_is_null((b))) {
-                            return true;
-                        } else if (variant_is_null(a) != variant_is_null(b)) {
-                            return false;
-                        } else {
-                            return a == b;
-                        }
-                    });
+                    const auto groupby_key_changed = !std::equal(current_values.cbegin(), current_values.cend(), previous_values.cbegin(), compare_all_type_variant);
                     if (groupby_key_changed) {
                         for (size_t groupby_id = 0; groupby_id < _groupby_column_ids.size(); groupby_id++) {
                                 groupby_keys[groupby_id].emplace_back(previous_values[groupby_id]);

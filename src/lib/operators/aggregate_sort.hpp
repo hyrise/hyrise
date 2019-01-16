@@ -65,6 +65,16 @@ class AggregateSort : public AbstractAggregateOperator {
 
   template <typename ColumnType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index, AggregateFunction function);
+
+
+  template<typename ColumnType, typename AggregateType, AggregateFunction function>
+  void _set_and_write_aggregate_value(const std::vector<AllTypeVariant> &previous_values,
+                                                      std::vector<std::vector<AllTypeVariant>> &groupby_keys,
+                                                      std::vector<std::vector<AllTypeVariant>> &aggregate_results,
+                                                      uint64_t aggregate_index,
+                                                      std::optional<AggregateType> &current_aggregate_value,
+                                                      uint64_t value_count, uint64_t value_count_with_null,
+                                                      const std::unordered_set<ColumnType> &unique_values) const;
 };
 
 }  // namespace opossum
