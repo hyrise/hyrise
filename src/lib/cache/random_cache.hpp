@@ -15,7 +15,29 @@ namespace opossum {
 template <typename Key, typename Value>
 class RandomCache : public AbstractCacheImpl<Key, Value> {
  public:
-  typedef typename std::pair<Key, Value> KeyValuePair;
+  using typename AbstractCacheImpl<Key, Value>::KeyValuePair;
+  using typename AbstractCacheImpl<Key, Value>::AbstractIterator;
+  using typename AbstractCacheImpl<Key, Value>::ErasedIterator;
+
+  class Iterator : public AbstractIterator {
+   public:
+    using IteratorType = typename std::vector<KeyValuePair>::iterator;
+    explicit Iterator(IteratorType p) : _wrapped_iterator(p) {}
+
+   private:
+    friend class boost::iterator_core_access;
+    friend class AbstractCacheImpl<Key, Value>::ErasedIterator;
+
+    IteratorType _wrapped_iterator;
+
+    void increment() { ++_wrapped_iterator; }
+
+    bool equal(const AbstractIterator& other) const {
+      return _wrapped_iterator == static_cast<const Iterator&>(other)._wrapped_iterator;
+    }
+
+    const KeyValuePair& dereference() const { return *_wrapped_iterator; }
+  };
 
   explicit RandomCache(size_t capacity)
       : AbstractCacheImpl<Key, Value>(capacity), _gen(_rd()), _rand(0, static_cast<int>(capacity - 1)) {
@@ -69,6 +91,10 @@ class RandomCache : public AbstractCacheImpl<Key, Value> {
     this->_capacity = capacity;
     _rand = std::uniform_int_distribution<>(0, static_cast<int>(capacity - 1));
   }
+
+  ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_list.begin())}; }
+
+  ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_list.end())}; }
 
  protected:
   // List to hold all elements.
