@@ -51,8 +51,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
 
   auto matches_out = std::make_shared<PosList>();
 
-  segment_with_iterators(*left_segment, [&](auto left_it, const auto left_end) {
-    segment_with_iterators(*right_segment, [&](auto right_it, const auto right_end) {
+  segment_with_iterators(*left_segment, [&](auto left_it, [[maybe_unused]] const auto left_end) {
+    segment_with_iterators(*right_segment, [&](auto right_it, [[maybe_unused]] const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;
 
