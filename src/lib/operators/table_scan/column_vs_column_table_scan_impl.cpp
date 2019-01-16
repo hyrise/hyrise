@@ -34,11 +34,12 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   // If the left and the right segment and/or type are not the same, we erase the types even for the release build.
   // This because we have not worked with those combinations and we don't want the templates to be instantiated.
-  const bool neither_is_reference_segment = !dynamic_cast<const ReferenceSegment*>(&left_segment) && !dynamic_cast<const ReferenceSegment*>(&right_segment);
-  if (typeid(left_segment) != typeid(right_segment) && neither_is_reference_segment) {
-    return _typed_scan_chunk<SegmentIterationTypeErasure::Always>(chunk_id);
-  } else {
+  const bool either_is_reference_segment = dynamic_cast<const ReferenceSegment*>(&left_segment) || dynamic_cast<const ReferenceSegment*>(&right_segment);
+  if (typeid(left_segment) == typeid(right_segment) && either_is_reference_segment) {
     return _typed_scan_chunk<SegmentIterationTypeErasure::OnlyInDebug>(chunk_id);
+  } else {
+    return _typed_scan_chunk<SegmentIterationTypeErasure::Always>(chunk_id);
+    if (!IS_DEBUG) PerformanceWarning("Using non-specialized (i.e., type-erased) version of ColumnVsColumnTableScan");
   }
 }
 
@@ -51,8 +52,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
 
   auto matches_out = std::make_shared<PosList>();
 
-  segment_with_iterators(*left_segment, [&](auto left_it, [[maybe_unused]] const auto left_end) {
-    segment_with_iterators(*right_segment, [&](auto right_it, [[maybe_unused]] const auto right_end) {
+  segment_with_iterators<ResolveDataTypeTag, SegmentIterationTypeErasure>(*left_segment, [&](auto left_it, [[maybe_unused]] const auto left_end) {
+    segment_with_iterators<ResolveDataTypeTag, SegmentIterationTypeErasure>(*right_segment, [&](auto right_it, [[maybe_unused]] const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;
 

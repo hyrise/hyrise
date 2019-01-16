@@ -39,6 +39,8 @@ namespace opossum {
 
 struct ResolveDataTypeTag {};
 
+enum class SegmentIterationTypeErasure { OnlyInDebug, Always };
+
 // Variant without PosList
 template <typename T = ResolveDataTypeTag,
           SegmentIterationTypeErasure type_erasure = SegmentIterationTypeErasure::OnlyInDebug, typename Functor>
