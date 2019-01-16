@@ -83,7 +83,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
           flipped = true;
         }
 
-        with_comparator(condition, [&](auto predicate_comparator) {
+        with_comparator_light(condition, [&](auto predicate_comparator) {
           auto comparator = [predicate_comparator](const auto& left, const auto& right) {
             return predicate_comparator(left.value(), right.value());
           };
