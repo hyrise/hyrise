@@ -188,6 +188,19 @@ namespace opossum {
         auto result_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
 
         if(input_table->empty()) {
+
+            if (_groupby_column_ids.empty()) {
+                std::vector<AllTypeVariant> default_values;
+                for (const auto aggregate : _aggregates) {
+                    if (aggregate.function == AggregateFunction::Count || aggregate.function == AggregateFunction::CountDistinct) {
+                        default_values.emplace_back(AllTypeVariant{0});
+                    } else {
+                        default_values.emplace_back(NULL_VALUE);
+                    }
+                }
+                result_table->append(default_values);
+            }
+
             return result_table;
         }
 
