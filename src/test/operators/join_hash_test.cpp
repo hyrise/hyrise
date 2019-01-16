@@ -81,8 +81,8 @@ TEST_F(JoinHashTest, HashJoinNotApplicable) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   const auto execute_hash_join = [&](const JoinMode mode, const PredicateCondition predicate_condition) {
-    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode,
-                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), predicate_condition);
+    std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, mode, ColumnIDPair(ColumnID{0}, ColumnID{0}),
+                               predicate_condition);
   };
 
   // Inner joins with equality predicates are supported.

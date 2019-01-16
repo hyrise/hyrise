@@ -1,6 +1,6 @@
 #include "join_features.hpp"
 
-//#include "constant_mappings.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 namespace cost_model {
@@ -8,6 +8,7 @@ namespace cost_model {
 const std::map<std::string, AllTypeVariant> JoinFeatures::serialize() const {
   std::map<std::string, AllTypeVariant> join_features = {
       //      {"join_type", join_type_to_string.at(join_type)},
+      {"join_mode", join_mode_to_string.at(join_mode)},
   };
 
   const auto serialized_left_join_column = left_join_column.serialize();

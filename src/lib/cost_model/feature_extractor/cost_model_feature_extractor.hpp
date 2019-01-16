@@ -47,9 +47,10 @@ class CostModelFeatureExtractor : public AbstractFeatureExtractor {
       const std::shared_ptr<AbstractLQPNode>& input, TableScanFeatures& features,
       const std::shared_ptr<AbstractPredicateExpression>& expression) const;
 
-  //  static const ColumnFeatures _extract_features_for_column_expression(
-  //          const std::shared_ptr<AbstractLQPNode>& input, const ColumnID& column_id, const std::string& prefix);
-  //
+  const ColumnFeatures _extract_features_for_column_expression(const std::shared_ptr<AbstractLQPNode>& input,
+                                                               const ColumnID& column_id,
+                                                               const std::string& prefix) const;
+
   //  static const std::map<EncodingType, size_t> _get_encoding_type_for_column(const LQPColumnReference& reference);
   //  static size_t _get_memory_usage_for_column(const std::shared_ptr<const Table>& table, ColumnID column_id);
 };

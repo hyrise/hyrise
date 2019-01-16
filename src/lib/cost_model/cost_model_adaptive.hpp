@@ -58,7 +58,7 @@ using namespace cost_model;
  */
 class CostModelAdaptive : public AbstractCostEstimator {
  public:
-    static const std::shared_ptr<CostModelAdaptive> create_default();
+  static const std::shared_ptr<CostModelAdaptive> create_default();
 
   CostModelAdaptive(const TableScanCoefficientsPerGroup& table_scan_coefficients,
                     const JoinCoefficientsPerGroup& join_coefficients,

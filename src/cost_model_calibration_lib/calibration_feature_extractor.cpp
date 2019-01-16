@@ -214,7 +214,7 @@ const ColumnFeatures CalibrationFeatureExtractor::_extract_features_for_column_e
       encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FrameOfReference_percentage =
       encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
-  column_features.column_reference_segment_percentage = number_of_reference_segments / static_cast<float>(chunk_count);
+  column_features.column_is_reference_segment = number_of_reference_segments > 0;
   column_features.column_data_type = column_expression->data_type();
   column_features.column_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
   // TODO(Sven): How to calculate from segment_distinct_value_count?

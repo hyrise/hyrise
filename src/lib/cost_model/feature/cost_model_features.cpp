@@ -52,6 +52,14 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
 }
 
 const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_features() const {
+  // One-Hot Encoding for OperatorType
+  std::unordered_map<std::string, float> one_hot_encoded_operator_types{};
+  for (const auto& [type, type_string] : operator_type_to_string) {
+    const auto value = (operator_type == type) ? 1.0f : 0.0f;
+    const auto feature_name = "operator_type_" + type_string;
+    one_hot_encoded_operator_types[feature_name] = value;
+  }
+
   // clang-format off
   std::unordered_map<std::string, float> features = {
 //          {"operator_type", operator_type_to_string.at(operator_type)},
@@ -87,6 +95,7 @@ const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_fe
   const auto serialized_projection_features = projection_features.to_cost_model_features();
   const auto serialized_table_scan_features = table_scan_features.to_cost_model_features();
 
+  features.insert(one_hot_encoded_operator_types.begin(), one_hot_encoded_operator_types.end());
   features.insert(serialized_constant_hardware_features.begin(), serialized_constant_hardware_features.end());
   features.insert(serialized_runtime_hardware_features.begin(), serialized_runtime_hardware_features.end());
   features.insert(serialized_aggregate_features.begin(), serialized_aggregate_features.end());

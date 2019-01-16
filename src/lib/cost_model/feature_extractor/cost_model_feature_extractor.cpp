@@ -176,6 +176,11 @@ void CostModelFeatureExtractor::_extract_table_scan_features_for_predicate_expre
   }
 }
 
+const ColumnFeatures CostModelFeatureExtractor::_extract_features_for_column_expression(
+    const std::shared_ptr<AbstractLQPNode>& input, const ColumnID& column_id, const std::string& prefix) const {
+  return ColumnFeatures{""};
+}
+
 //const std::map<EncodingType, size_t> CostModelFeatureExtractor::_get_encoding_type_for_column(
 //    const LQPColumnReference& reference) {
 //  const auto original_node = reference.original_node();
@@ -224,23 +229,24 @@ const ProjectionFeatures CostModelFeatureExtractor::_extract_features(
 
 const JoinFeatures CostModelFeatureExtractor::_extract_features(const std::shared_ptr<const JoinNode>& node) const {
   JoinFeatures features{};
-  //  const auto& left_table = node->left_input();
-  //  const auto& right_table = node->right_input();
-  //
-  //  const auto& join_predicate = node->join_predicate();
-  //  Assert(join_predicate, "Need predicate for non Cross Join");
+  //    const auto& left_table = node->left_input();
+  //    const auto& right_table = node->right_input();
 
-  //  const auto operator_join_predicate =
-  //      OperatorJoinPredicate::from_expression(*node->join_predicate(), *node->left_input(), *node->right_input());
+  const auto& join_predicate = node->join_predicate();
+  Assert(join_predicate, "Need predicate for non Cross Join");
 
-  //  const auto column_ids = operator_join_predicate->column_ids;
-  //
-  //  const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
-  //  const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
+  //    const auto operator_join_predicate =
+  //        OperatorJoinPredicate::from_expression(*node->join_predicate(), *node->left_input(), *node->right_input());
 
-  //  operator_result.join_type = op->type();
-  //  features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
-  //  features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
+  //    const auto column_ids = operator_join_predicate->column_ids;
+
+  //    const auto& left_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.first);
+  //    const auto& right_column_expression = PQPColumnExpression::from_table(*left_table, column_ids.second);
+
+  //    features.join_type = node->type();
+  features.join_mode = node->join_mode;
+  //    features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
+  //    features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
 
   return features;
 }

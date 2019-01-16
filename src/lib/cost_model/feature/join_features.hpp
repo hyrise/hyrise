@@ -13,6 +13,7 @@ namespace cost_model {
 
 struct JoinFeatures : AbstractFeatures {
   //  JoinType join_type;
+  JoinMode join_mode;
   ColumnFeatures left_join_column{"left"};
   ColumnFeatures right_join_column{"right"};
 

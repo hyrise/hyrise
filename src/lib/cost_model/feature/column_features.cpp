@@ -27,14 +27,17 @@ const std::map<std::string, AllTypeVariant> ColumnFeatures::serialize() const {
 }
 
 const std::unordered_map<std::string, float> ColumnFeatures::to_cost_model_features() const {
-  const auto data_type_string = column_data_type ? data_type_to_string.left.at(*column_data_type) : "";
+  // One-Hot Encoding for Data Type
+  std::unordered_map<std::string, float> one_hot_encoded_data_types{};
+  for (const auto& [data_type, data_type_string] : data_type_to_string.left) {
+    const auto value = (column_data_type == data_type) ? 1.0f : 0.0f;
+    const auto feature_name = _prefix + "_column_data_type_" + data_type_string;
+    one_hot_encoded_data_types[feature_name] = value;
+  }
+  one_hot_encoded_data_types[_prefix + "_column_data_type_undefined"] = column_data_type ? 0.0f : 1.0f;
 
-  //      for (const auto& [data_type_string, data_type] : data_type_to_string) {
-  //        std::cout << data_type_string << std::endl;
-  //        std::cout << data_type_to_string.left.at(data_type) << std::endl;
-  //      }
-
-  return {
+  std::unordered_map<std::string, float> features = {
+      //      {_prefix + "_column_segment_encoding_undefined_percentage", column_data_type ? 0.0f : 1.0f},
       {_prefix + "_column_segment_encoding_Unencoded_percentage", column_segment_encoding_Unencoded_percentage},
       {_prefix + "_column_segment_encoding_Dictionary_percentage", column_segment_encoding_Dictionary_percentage},
       {_prefix + "_column_segment_encoding_RunLength_percentage", column_segment_encoding_RunLength_percentage},
@@ -43,12 +46,13 @@ const std::unordered_map<std::string, float> ColumnFeatures::to_cost_model_featu
       {_prefix + "_column_segment_encoding_FrameOfReference_percentage",
        column_segment_encoding_FrameOfReference_percentage},
       {_prefix + "_column_is_reference_segment", static_cast<float>(column_is_reference_segment)},
-      // TODO(Sven): fix. Add column data types
-      //              {_prefix + "_column_data_type", data_type_string},
-      {_prefix + "_column_data_type", 0.0f},
       {_prefix + "_column_memory_usage_bytes", static_cast<float>(column_memory_usage_bytes)},
       {_prefix + "_column_distinct_value_count", static_cast<float>(column_distinct_value_count)},
   };
+
+  features.insert(one_hot_encoded_data_types.begin(), one_hot_encoded_data_types.end());
+
+  return features;
 }
 
 }  // namespace cost_model

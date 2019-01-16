@@ -13,13 +13,11 @@
 
 namespace opossum {
 
-    const std::shared_ptr<CostModelAdaptive> CostModelAdaptive::create_default() {
-      return std::make_shared<CostModelAdaptive>(
-              CostModelCoefficientReader::read_table_scan_coefficients(),
-              CostModelCoefficientReader::read_join_coefficients(),
-              std::make_shared<CostModelFeatureExtractor>()
-              );
-    }
+const std::shared_ptr<CostModelAdaptive> CostModelAdaptive::create_default() {
+  return std::make_shared<CostModelAdaptive>(CostModelCoefficientReader::read_table_scan_coefficients(),
+                                             CostModelCoefficientReader::read_join_coefficients(),
+                                             std::make_shared<CostModelFeatureExtractor>());
+}
 
 CostModelAdaptive::CostModelAdaptive(const TableScanCoefficientsPerGroup& table_scan_coefficients,
                                      const JoinCoefficientsPerGroup& join_coefficients,
@@ -72,7 +70,7 @@ Cost CostModelAdaptive::_estimate_node_cost(const std::shared_ptr<AbstractLQPNod
     }
 
     default:
-      std::cout << "In default" << std::endl;
+      //      std::cout << "In default" << std::endl;
       return left_input_row_count + output_row_count;
   }
 }

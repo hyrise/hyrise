@@ -37,8 +37,8 @@ class JoinProxy : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-private:
-    const std::shared_ptr<AbstractCostEstimator> _cost_model;
+ private:
+  const std::shared_ptr<AbstractCostEstimator> _cost_model;
 };
 
 }  // namespace opossum
