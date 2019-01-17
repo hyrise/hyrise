@@ -41,7 +41,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
   // == DictionarySegment<int>. ReferenceSegments do not need to be handled differently because we expect a table to
   // either have only ReferenceSegments or non-ReferenceSegments.
   //
-  // We use type erasure here because we currently do not use comparisons between, e.g., a ValueSegment and a
+  // We use type erasure here because we currently do not actively use comparisons between, e.g., a ValueSegment and a
   // DictionarySegment. While it is supported, it is not executed, so we don't want the compiler to spend time
   // instantiating unused templates. Whenever the types of the iterators is removed, we also erase the comparator
   // lambda by wrapping it into an std::function. All of this brought the compile time down by a factor of 5. This
