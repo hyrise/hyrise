@@ -34,16 +34,19 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   std::shared_ptr<PosList> result;
 
-  // If the left and the right segment and/or type are not the same, we erase the types even for the release build.
-  // For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int> ==
+  // Reducing the compile time:
+  //
+  // If the left and the right segment and/or data type are not the same, we erase the types even for the release
+  // build. For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int> ==
   // DictionarySegment<int>. ReferenceSegments do not need to be handled differently because we expect a table to
   // either have only ReferenceSegments or non-ReferenceSegments.
   //
-  // We use type erasure here because we currently do not compare, e.g., a ValueSegment with a DictionarySegment,
-  // and we don't want the compiler to spend time instantiating unused templates. Whenever the types of the iterators
-  // is removed, we also erase the comparator lambda by wrapping it into an std::function. All of this brought the
-  // compile time down by a factor of 5. This is only relevant for the release build - in the debug build, iterators
-  // are erased anyway.
+  // We use type erasure here because we currently do not use comparisons between, e.g., a ValueSegment and a
+  // DictionarySegment. While it is supported, it is not executed, so we don't want the compiler to spend time
+  // instantiating unused templates. Whenever the types of the iterators is removed, we also erase the comparator
+  // lambda by wrapping it into an std::function. All of this brought the compile time down by a factor of 5. This
+  // is only really relevant for the release build - in the debug build, iterators are erased anyway. Still, we erase
+  // the comparator type in the debug build as well.
 
   resolve_data_and_segment_type(left_segment, [&](auto left_type, auto& left_typed_segment) {
     resolve_data_and_segment_type(right_segment, [&](auto right_type, auto& right_typed_segment) {
@@ -87,8 +90,8 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
       flipped = true;
     }
 
-    auto erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
-      if constexpr (type_erasure == SegmentIterationTypeErasure::Always) {
+    auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
+      if constexpr (type_erasure == SegmentIterationTypeErasure::OnlyInDebug) {
         return comparator;
       } else {
         return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype(it1->value())>>&,
@@ -108,11 +111,11 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
           };
 
           if (flipped) {
-            const auto erased_comparator = erase_comparator_type(comparator, right_it, left_it);
+            const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
             AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id_copy,
                                                               *matches_out_ref, left_it);
           } else {
-            const auto erased_comparator = erase_comparator_type(comparator, left_it, right_it);
+            const auto erased_comparator = conditionally_erase_comparator_type(comparator, left_it, right_it);
             AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, left_it, left_end, chunk_id_copy,
                                                               *matches_out_ref, right_it);
           }
