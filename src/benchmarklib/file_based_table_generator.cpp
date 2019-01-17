@@ -99,8 +99,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
     }
 
-    std::cout << " (" << table_info.table->row_count() << " rows; "
-              << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")" << std::endl;
+    std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")" << std::endl;
   }
 
   return table_info_by_name;

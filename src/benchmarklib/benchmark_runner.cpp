@@ -64,15 +64,17 @@ void BenchmarkRunner::run() {
 
   if (_config.verify) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
+    Timer timer;
+
     // Load the data into SQLite
     _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
-      std::cout << "- Loading '" << table_name << "' into SQLite " << std::flush;
-      Timer timer;
+      std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
+      Timer per_table_timer;
       _sqlite_wrapper->create_table(*table, table_name);
-      std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
-                << std::endl;
+      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
+    std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
   }
 
   // Run the preparation queries
@@ -354,10 +356,12 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
     const auto hyrise_result = pipeline.get_result_table();
 
     std::cout << "- Running query with SQLite " << std::flush;
-    Timer timer;
+    Timer sqlite_timer;
     const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
-    std::cout << "(" << timer.lap_as_string() << ")." << std::endl;
+    std::cout << "(" << sqlite_timer.lap_formatted() << ")." << std::endl;
+
     std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;
+    Timer timer;
 
     // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
@@ -365,13 +369,16 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
         std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
       } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                     FloatComparisonMode::RelativeDifference)) {
-        std::cout << "- Verification failed." << std::endl;
+        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl;
       } else {
-        std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows)" << std::endl;
+        std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows; " << timer.lap_formatted()
+                  << ")" << std::endl;
       }
     } else {
       if (sqlite_result && sqlite_result->row_count() > 0) {
-        std::cout << "- Verification failed: SQLite returned a result, but Hyrise didn't" << std::endl;
+        std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
+      } else {
+        std::cout << "- Verification passed (Result tables empty, treat with caution!)" << std::endl;
       }
     }
   }

@@ -114,7 +114,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
 
   if (op->get_output()) {
     auto total = op->performance_data().walltime;
-    label += "\n\n" + format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(total));
+    label += "\n\n" + format_duration(total);
     info.pen_width = std::fmax(1, std::ceil(std::log10(total.count()) / 2));
   }
 

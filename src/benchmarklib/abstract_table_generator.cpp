@@ -17,26 +17,27 @@ void AbstractTableGenerator::generate_and_store() {
 
   std::cout << "- Loading/Generating tables " << std::endl;
   auto table_info_by_name = generate();
+  std::cout << "- Loading/Generating tables done (" << timer.lap_formatted() << ")" << std::endl;
 
   /**
    * Encode the Tables
    */
   std::cout << "- Encoding tables if necessary" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
-    timer.lap();
     std::cout << "-  Encoding '" << table_name << "' " << std::flush;
+    Timer per_table_timer;
     table_info.re_encoded =
         BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
     std::cout << (table_info.re_encoded ? " - no encoding necessary " : " - encoding applied ");
-    std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
-              << std::endl;
+    std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
+  std::cout << "- Encoding tables done (" << timer.lap_formatted() << ")" << std::endl;
 
   /**
    * Write the Tables into binary files if required
    */
   if (_benchmark_config->cache_binary_tables) {
-    timer.lap();
+    std::cout << "- Writing tables into binary files if necessary" << std::endl;
 
     for (auto& [table_name, table_info] : table_info_by_name) {
       if (table_info.loaded_from_binary && !table_info.re_encoded && !table_info.binary_file_out_of_date) {
@@ -52,23 +53,27 @@ void AbstractTableGenerator::generate_and_store() {
       }
 
       std::cout << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "' " << std::flush;
+      Timer per_table_timer;
       ExportBinary::write_binary(*table_info.table, binary_file_path);
-      std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
-                << std::endl;
+      std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
     }
+    std::cout << "- Writing tables into binary files done (" << timer.lap_formatted() << ")" << std::endl;
   }
 
   /**
    * Add the Tables to the StorageManager
    */
-  std::cout << "- Adding Tables to StorageManager and generating statistics " << std::flush;
+  std::cout << "- Adding Tables to StorageManager and generating statistics " << std::endl;
   auto& storage_manager = StorageManager::get();
   for (auto& [table_name, table_info] : table_info_by_name) {
+    std::cout << "-  Adding '" << table_name << "' " << std::flush;
+    Timer per_table_timer;
     if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
     storage_manager.add_table(table_name, table_info.table);
+    std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
 
-  std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
+  std::cout << "- Adding Tables to StorageManager and generating statistics done (" << timer.lap_formatted() << ")"
             << std::endl;
 }
 
