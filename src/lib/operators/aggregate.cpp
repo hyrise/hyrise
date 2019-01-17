@@ -109,17 +109,23 @@ AggregateKey, the AggregateContext is the "full" version.
 */
 template <typename ColumnDataType, typename AggregateType>
 struct AggregateResultContext : SegmentVisitorContext {
+  using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, AggregateType>>;
+
+  AggregateResultContext() : results(
+    AggregateResultAllocator{&buffer}
+  ) {}
+
+  boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, AggregateType> results;
 };
 
 template <typename ColumnDataType, typename AggregateType, typename AggregateKey>
-struct AggregateContext : AggregateResultContext<ColumnDataType, AggregateType> {
+struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
-    auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&buffer};
+    auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
     result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 
-  boost::container::pmr::monotonic_buffer_resource buffer;
   std::unique_ptr<AggregateResultIdMap<AggregateKey>> result_ids;
 };
 
