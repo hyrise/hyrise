@@ -59,7 +59,7 @@ BenchmarkRunner::~BenchmarkRunner() {
   }
 }
 
-void BenchmarkRunner::run() {
+int BenchmarkRunner::run() {
   _table_generator->generate_and_store();
 
   if (_config.verify) {
@@ -146,6 +146,11 @@ void BenchmarkRunner::run() {
       }
     }
   }
+
+  return std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
+    Assert(result.verification_passed, "Verification result should have been set");
+    return *result.verification_passed;
+  });
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
@@ -366,18 +371,23 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
     // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
       if (sqlite_result->row_count() == 0) {
+        _query_results[query_id].verification_passed = false;
         std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
       } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                     FloatComparisonMode::RelativeDifference)) {
+        _query_results[query_id].verification_passed = false;
         std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl;
       } else {
+        _query_results[query_id].verification_passed = true;
         std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows; " << timer.lap_formatted()
                   << ")" << std::endl;
       }
     } else {
       if (sqlite_result && sqlite_result->row_count() > 0) {
+        _query_results[query_id].verification_passed = false;
         std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
       } else {
+        _query_results[query_id].verification_passed = true;
         std::cout << "- Verification passed (Result tables empty, treat with caution!)" << std::endl;
       }
     }
@@ -427,6 +437,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"avg_real_time_per_iteration", time_per_query},
                              {"items_per_second", items_per_second},
                              {"time_unit", "ns"}};
+
+    if (_config.verify) {
+      Assert(query_result.verification_passed, "Verification should have been performed");
+      benchmark["verification_passed"] = *query_result.verification_passed;
+    }
 
     benchmarks.push_back(benchmark);
   }

@@ -33,7 +33,7 @@ class BenchmarkRunner {
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
-  void run();
+  int run();
 
   static cxxopts::Options get_basic_cli_options(const std::string& benchmark_name);
 
