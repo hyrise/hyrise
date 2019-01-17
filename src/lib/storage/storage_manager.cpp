@@ -1,5 +1,7 @@
 #include "storage_manager.hpp"  // NEEDEDINCLUDE
 
+#include <iostream>
+
 #include "lqp_view.hpp"                              // NEEDEDINCLUDE
 #include "operators/export_csv.hpp"                  // NEEDEDINCLUDE
 #include "operators/table_wrapper.hpp"               // NEEDEDINCLUDE

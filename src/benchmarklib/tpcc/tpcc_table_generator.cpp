@@ -3,6 +3,7 @@
 #include <functional>
 #include <future>
 #include <iomanip>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <sstream>

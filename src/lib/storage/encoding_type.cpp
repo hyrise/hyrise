@@ -1,3 +1,4 @@
+#include "all_type_variant.hpp"
 #include "encoding_type.hpp"  // NEEDEDINCLUDE
 
 #include <boost/hana/for_each.hpp>  // NEEDEDINCLUDE

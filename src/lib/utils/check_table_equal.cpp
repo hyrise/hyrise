@@ -1,6 +1,7 @@
 #include "check_table_equal.hpp"  // NEEDEDINCLUDE
 
 #include <iomanip>  // NEEDEDINCLUDE
+#include <iostream>
 
 #include "storage/table.hpp"  // NEEDEDINCLUDE
 
