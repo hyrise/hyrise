@@ -1193,65 +1193,51 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 template <typename Result, typename Functor>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_functor_based_null_logic(
     const AbstractExpression& left_expression, const AbstractExpression& right_expression) {
-  std::vector<Result> values;
-  std::vector<bool> nulls;
+  auto result = std::shared_ptr<ExpressionResult<Result>>{};
 
-  _resolve_to_expression_results(left_expression, right_expression, [&](const auto& left, const auto& right) {
+  _resolve_to_expression_result_views(left_expression, right_expression, [&](const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
-      const auto result_size = _result_size(left.size(), right.size());
-      values.resize(result_size);
-      nulls.resize(result_size);
+      const auto result_row_count = _result_size(left.size(), right.size());
 
-      auto get_null = [](const auto& result, ChunkOffset row_idx) -> bool {
-        switch (result.nulls.size()) {
-          case 0:
-            return false;
-          case 1:
-            return result.nulls[0];
-          default:
-            return result.nulls[row_idx];
-        }
-      };
+      std::vector<bool> nulls(result_row_count);
+      std::vector<Result> values(result_row_count);
 
-      bool null;
-      // Using three different branches instead of views, which would generate 9 cases.
-      if (left.is_literal() == right.is_literal()) {
-        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-          const auto left_null = get_null(left, row_idx);
-          const auto right_null = get_null(right, row_idx);
-          Functor{}(values[row_idx], null, left.values[row_idx], left_null, right.values[row_idx], right_null);
-          nulls[row_idx] = null;
-        }
-      } else if (right.is_literal()) {
-        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-          const auto left_null = get_null(left, row_idx);
-          const auto right_null = get_null(right, row_idx);
-          Functor{}(values[row_idx], null, left.values[row_idx], left_null, right.values[0], right_null);
-          nulls[row_idx] = null;
-        }
-      } else {
-        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
-          const auto left_null = get_null(left, row_idx);
-          const auto right_null = get_null(right, row_idx);
-          Functor{}(values[row_idx], null, left.values[0], left_null, right.values[row_idx], right_null);
-          nulls[row_idx] = null;
-        }
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_row_count; ++row_idx) {
+        bool null;
+        Functor{}(values[row_idx], null, left.value(row_idx), left.is_null(row_idx), right.value(row_idx),
+                  right.is_null(row_idx));
+        nulls[row_idx] = null;
       }
+
+      result = std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
+
     } else {
       Fail("BinaryOperation not supported on the requested DataTypes");
     }
   });
 
-  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
+  return result;
 }
 
 template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression, const Functor& fn) {
   _resolve_to_expression_result(expression,
                                 [&](const auto& result) { result.as_view([&](const auto& view) { fn(view); }); });
+}
+
+template <typename Functor>
+void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression& left_expression,
+                                                              const AbstractExpression& right_expression,
+                                                              const Functor& fn) {
+  _resolve_to_expression_results(left_expression, right_expression,
+                                 [&](const auto& left_result, const auto& right_result) {
+                                   left_result.as_view([&](const auto& left_view) {
+                                     right_result.as_view([&](const auto& right_view) { fn(left_view, right_view); });
+                                   });
+                                 });
 }
 
 template <typename Functor>

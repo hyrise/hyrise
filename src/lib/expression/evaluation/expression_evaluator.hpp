@@ -151,8 +151,9 @@ class ExpressionEvaluator final {
   template <typename Functor>
   void _resolve_to_expression_result_view(const AbstractExpression& expression, const Functor& fn);
 
-  // We had _resolve_to_expression_result_viewS before, but it blew up the compile times. Have a look at
-  // _evaluate_binary_with_functor_based_null_logic for an example on how to avoid it.
+  template <typename Functor>
+  void _resolve_to_expression_result_views(const AbstractExpression& left_expression,
+                                           const AbstractExpression& right_expression, const Functor& fn);
 
   template <typename Functor>
   void _resolve_to_expression_results(const AbstractExpression& left_expression,
