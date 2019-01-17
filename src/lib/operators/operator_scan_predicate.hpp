@@ -17,7 +17,7 @@ class AbstractLPQNode;
 struct OperatorScanPredicate {
   /**
    * Try to build a conjunction of OperatorScanPredicates from an @param expression executed on @param node.
-   * This *can* returns multiple as to allow for BETWEEN being split into two simple comparisons
+   * This *can* return multiple as to allow for BETWEEN being split into two simple comparisons
    *
    * @return std::nullopt if that fails (e.g. the expression is a more complex expression)
    */
