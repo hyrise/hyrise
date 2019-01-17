@@ -92,5 +92,5 @@ int main(int argc, char* argv[]) {
   auto query_generator =
       std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, query_filename_blacklist, query_subset);
 
-  return BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
+  BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
 }

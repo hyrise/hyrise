@@ -33,10 +33,7 @@ class BenchmarkRunner {
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
-  /**
-   * @return the application return code. Currently this only return non-zero if verification against SQLite failed.
-   */
-  int run();
+  void run();
 
   static cxxopts::Options get_basic_cli_options(const std::string& benchmark_name);
 

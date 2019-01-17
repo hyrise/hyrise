@@ -59,7 +59,7 @@ BenchmarkRunner::~BenchmarkRunner() {
   }
 }
 
-int BenchmarkRunner::run() {
+void BenchmarkRunner::run() {
   _table_generator->generate_and_store();
 
   if (_config.verify) {
@@ -147,7 +147,7 @@ int BenchmarkRunner::run() {
     }
   }
 
-  // Return non-zero if verification against SQLite failed
+  // Fail if verification against SQLite was requested and failed
   if (_config.verify) {
     const auto any_verification_failed =
         std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
@@ -155,9 +155,7 @@ int BenchmarkRunner::run() {
           return !*result.verification_passed;
         });
 
-    return any_verification_failed ? 1 : 0;
-  } else {
-    return 0;
+    Assert(!any_verification_failed, "Verification failed");
   }
 }
 
