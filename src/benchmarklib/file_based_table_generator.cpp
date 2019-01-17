@@ -99,9 +99,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       }
     }
 
-    std::cout << " - Loaded " << table_info.table->row_count() << " rows in "
+    std::cout << " (" << table_info.table->row_count() << " rows; "
                            << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap()))
-                           << std::endl;
+                           << ")" << std::endl;
   }
 
   return table_info_by_name;

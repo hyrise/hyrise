@@ -19,14 +19,6 @@ class SQLiteWrapper final {
   ~SQLiteWrapper();
 
   /*
-   * Creates a table in the sqlite database from a given .tbl file.
-   *
-   * @param file Path to .tbl file
-   * @param tablename The desired table name
-   */
-  void create_table_from_tbl(const std::string& file, const std::string& table_name);
-
-  /*
    * Recreates a table given another table to copy from.
    *
    * @param command SQL command string
@@ -40,11 +32,6 @@ class SQLiteWrapper final {
    * @param tablename  The desired table name
    */
   void create_table(const Table& table, const std::string& table_name);
-
-  /*
-   * Execute a properly escaped `INSERT INTO table_name VALUES (values...)` command
-   */
-  void insert_into_values(const std::string& table, const std::vector<AllTypeVariant>& values);
 
   /*
    * Executes a sql query in the sqlite database context.
@@ -70,7 +57,7 @@ class SQLiteWrapper final {
    */
   void _exec_sql(const std::string& sql) const;
 
-  sqlite3* _db;
+  sqlite3* _db{nullptr};
 };
 
 }  // namespace opossum

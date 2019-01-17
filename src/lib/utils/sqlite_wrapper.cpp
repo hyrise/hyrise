@@ -16,77 +16,24 @@
 #include "utils/load_table.hpp"
 #include "utils/string_utils.hpp"
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+
+}  // namespace
+
 namespace opossum {
 
-SQLiteWrapper::SQLiteWrapper() : _db(nullptr) {
-  int rc = sqlite3_open(":memory:", &_db);
-
-  if (rc != SQLITE_OK) {
+SQLiteWrapper::SQLiteWrapper() {
+  const auto r = sqlite3_open(":memory:", &_db);
+  if (r != SQLITE_OK) {
     sqlite3_close(_db);
-    throw std::runtime_error("Cannot open database: " + std::string(sqlite3_errmsg(_db)) + "\n");
+    Fail("Cannot open database: " + std::string(sqlite3_errmsg(_db)));
   }
 }
 
 SQLiteWrapper::~SQLiteWrapper() { sqlite3_close(_db); }
-
-void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::string& table_name) {
-  std::ifstream infile(file);
-  Assert(infile.is_open(), "SQLiteWrapper: Could not find file " + file);
-
-  std::string line;
-  std::getline(infile, line);
-  std::vector<std::string> column_names = split_string_by_delimiter(line, '|');
-  std::getline(infile, line);
-  std::vector<std::string> column_types;
-
-  for (const std::string& type : split_string_by_delimiter(line, '|')) {
-    std::string actual_type = split_string_by_delimiter(type, '_')[0];
-    if (actual_type == "int" || actual_type == "long") {
-      column_types.emplace_back("INT");
-    } else if (actual_type == "float" || actual_type == "double") {
-      column_types.emplace_back("REAL");
-    } else if (actual_type == "string") {
-      column_types.emplace_back("TEXT");
-    } else {
-      DebugAssert(false, "SQLiteWrapper: column type " + type + " not supported.");
-    }
-  }
-
-  std::stringstream query;
-  query << "CREATE TABLE " << table_name << "(";
-  for (size_t i = 0; i < column_names.size(); i++) {
-    query << column_names[i] << " " << column_types[i];
-
-    if ((i + 1) < column_names.size()) {
-      query << ", ";
-    }
-  }
-  query << ");";
-
-  size_t rows_added = 0;
-  query << "INSERT INTO " << table_name << " VALUES ";
-  while (std::getline(infile, line)) {
-    if (rows_added) query << ", ";
-    query << "(";
-    std::vector<std::string> values = split_string_by_delimiter(line, '|');
-    for (size_t i = 0; i < values.size(); i++) {
-      if (column_types[i] == "TEXT" && values[i] != "null") {
-        query << "'" << values[i] << "'";
-      } else {
-        query << values[i];
-      }
-
-      if ((i + 1) < values.size()) {
-        query << ", ";
-      }
-    }
-    query << ")";
-    ++rows_added;
-  }
-  query << ";";
-
-  _exec_sql(query.str());
-}
 
 void SQLiteWrapper::create_table(const Table& table, const std::string& table_name) {
   std::vector<std::string> column_types;
@@ -123,7 +70,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   create_table_query << ");";
   _exec_sql(create_table_query.str());
 
-  // Prepare INSERT INTO statement
+  // Prepare `INSERT INTO <table_name> VALUES (?, ?, ...)` statement
   std::stringstream insert_into_stream;
   insert_into_stream << "INSERT INTO " << table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
@@ -136,9 +83,10 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   const auto insert_into_str = insert_into_stream.str();
 
   sqlite3_stmt * insert_into_statement;
-  const auto r = sqlite3_prepare_v2(_db, insert_into_str.c_str(), -1, &insert_into_statement, nullptr);
-  Assert(r == SQLITE_OK, "");
+  const auto sqlite3_prepare_return_code = sqlite3_prepare_v2(_db, insert_into_str.c_str(), -1, &insert_into_statement, nullptr);
+  Assert(sqlite3_prepare_return_code == SQLITE_OK, "Failed to prepare statement: " + std::string(sqlite3_errmsg(_db)));
 
+  // Insert
   for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
 
@@ -148,30 +96,28 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
         const auto sqlite_column_id = static_cast<int>(column_id) + 1;
         const auto value = (*segment)[chunk_offset];
 
+        auto sqlite3_bind_return_code = int{};
+
         if (variant_is_null(value)) {
-          sqlite3_bind_null(insert_into_statement, sqlite_column_id);
+          sqlite3_bind_return_code = sqlite3_bind_null(insert_into_statement, sqlite_column_id);
         } else {
           switch (table.column_data_type(column_id)) {
             case DataType::Int: {
-              const auto r3 = sqlite3_bind_int(insert_into_statement, sqlite_column_id,
+              sqlite3_bind_return_code = sqlite3_bind_int(insert_into_statement, sqlite_column_id,
                                             boost::get<int32_t>(value));
-              if (r3 != SQLITE_OK) {
-                auto error_message = "Failed to execute query: " + std::string(sqlite3_errmsg(_db));
-                Fail(error_message);
-              }
             } break;
             case DataType::Long:
-              sqlite3_bind_int64(insert_into_statement, sqlite_column_id, boost::get<int64_t>(value));
+              sqlite3_bind_return_code = sqlite3_bind_int64(insert_into_statement, sqlite_column_id, boost::get<int64_t>(value));
               break;
             case DataType::Float:
-              sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<float>(value));
+              sqlite3_bind_return_code = sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<float>(value));
               break;
             case DataType::Double:
-              sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<double>(value));
+              sqlite3_bind_return_code = sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<double>(value));
               break;
             case DataType::String: {
               const auto& string_value = boost::get<std::string>(value);
-              sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), -1, SQLITE_TRANSIENT);
+              sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), -1, SQLITE_TRANSIENT);
             } break;
             case DataType::Null:
             case DataType::Bool:
@@ -179,12 +125,15 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
               break;
           }
         }
+
+        Assert(sqlite3_bind_return_code == SQLITE_OK, "Failed to bind value: " + std::string(sqlite3_errmsg(_db)));
       }
 
-      auto r2 = sqlite3_step(insert_into_statement);
-      Assert(r2 == SQLITE_DONE, "");
-      r2 = sqlite3_reset(insert_into_statement);
-      Assert(r2 == SQLITE_OK, "");
+      const auto sqlite3_step_return_code = sqlite3_step(insert_into_statement);
+      Assert(sqlite3_step_return_code == SQLITE_DONE, "Failed to step INSERT: " + std::string(sqlite3_errmsg(_db)));
+
+      const auto sqlite3_reset_return_code = sqlite3_reset(insert_into_statement);
+      Assert(sqlite3_reset_return_code == SQLITE_OK, "Failed to reset statement: " + std::string(sqlite3_errmsg(_db)));
     }
 
   }

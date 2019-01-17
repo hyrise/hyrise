@@ -18,6 +18,8 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/sqlite_wrapper.hpp"
+#include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
@@ -61,10 +63,15 @@ void BenchmarkRunner::run() {
   _table_generator->generate_and_store();
 
   if (_config.verify) {
+    std::cout << "- Loading tables into SQLite for verification." << std::endl;
     // Load the data into SQLite
     _sqlite_wrapper = std::make_unique<SQLiteWrapper>();
     for (const auto& [table_name, table] : StorageManager::get().tables()) {
+      std::cout << "- Loading '" << table_name << "' into SQLite " << std::flush;
+      Timer timer;
       _sqlite_wrapper->create_table(*table, table_name);
+      std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
+                << std::endl;
     }
   }
 
@@ -349,14 +356,18 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
 
     // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
-      Assert(sqlite_result->row_count() > 0, "Verification failed: Hyrise returned a result, but SQLite didn't");
-      Assert(check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                               FloatComparisonMode::RelativeDifference),
-             "Verification failed");
-      std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows)" << std::endl;
+      if (sqlite_result->row_count() == 0) {
+        std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
+      } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                               FloatComparisonMode::RelativeDifference)) {
+        std::cout << "- Verification failed." << std::endl;
+      } else {
+        std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows)" << std::endl;
+      }
     } else {
-      Assert(!sqlite_result || sqlite_result->row_count() == 0,
-             "Verification failed: SQLite returned a result, but Hyrise didn't");
+      if (sqlite_result && sqlite_result->row_count() > 0) {
+        std::cout << "- Verification failed: SQLite returned a result, but Hyrise didn't" << std::endl;
+      }
     }
   }
 
