@@ -82,8 +82,8 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   const auto insert_into_str = insert_into_stream.str();
 
   sqlite3_stmt* insert_into_statement;
-  const auto sqlite3_prepare_return_code =
-      sqlite3_prepare_v2(_db, insert_into_str.c_str(), -1, &insert_into_statement, nullptr);
+  const auto sqlite3_prepare_return_code = sqlite3_prepare_v2(
+      _db, insert_into_str.c_str(), static_cast<int>(insert_into_str.size() + 1), &insert_into_statement, nullptr);
   Assert(sqlite3_prepare_return_code == SQLITE_OK, "Failed to prepare statement: " + std::string(sqlite3_errmsg(_db)));
 
   // Insert
@@ -93,6 +93,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
         const auto segment = chunk->get_segment(column_id);
+        // SQLite's parameter indices are 1-based.
         const auto sqlite_column_id = static_cast<int>(column_id) + 1;
         const auto value = (*segment)[chunk_offset];
 
@@ -120,8 +121,11 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
               break;
             case DataType::String: {
               const auto& string_value = boost::get<std::string>(value);
-              sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id,
-                                                           string_value.c_str(), -1, SQLITE_TRANSIENT);
+              // clang-tidy doesn't like SQLITE_TRANSIENT
+              // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
+              sqlite3_bind_return_code =
+                  sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(),
+                                    static_cast<int>(string_value.size()), SQLITE_TRANSIENT);
             } break;
             case DataType::Null:
             case DataType::Bool:
