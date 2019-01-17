@@ -38,42 +38,39 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     _table_wrapper_map = create_table_wrappers(sm);
 
-    auto lineitem_tab = sm.get_table("lineitem");
-    auto orders_tab = sm.get_table("orders");
+    auto lineitem_table = sm.get_table("lineitem");
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
     // assuming non-inclusive between predicates are not yet supported).
     // This order is not necessarily the order Hyrise uses (estimates can be vastly off) or which will eventually
     // be calculated by more sophisticated cost models.
-    _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_tab->column_data_type(ColumnID{6}),
-                                           lineitem_tab->column_is_nullable(ColumnID{6}), "");
+    _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
+                                           lineitem_table->column_is_nullable(ColumnID{6}), "");
     _tpchq6_discount_predicate =
         std::make_shared<BetweenExpression>(_tpchq6_discount_operand, value_(0.05), value_(0.70001));
 
-    _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_tab->column_data_type(ColumnID{10}),
-                                                lineitem_tab->column_is_nullable(ColumnID{10}), "");
+    _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
+                                                lineitem_table->column_is_nullable(ColumnID{10}), "");
     _tpchq6_shipdate_less_predicate = std::make_shared<BinaryPredicateExpression>(
         PredicateCondition::LessThan, _tpchq6_shipdate_less_operand, value_("1995-01-01"));
 
-    _tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_tab->column_data_type(ColumnID{4}),
-                                           lineitem_tab->column_is_nullable(ColumnID{4}), "");
+    _tpchq6_quantity_operand = pqp_column_(ColumnID{4}, lineitem_table->column_data_type(ColumnID{4}),
+                                           lineitem_table->column_is_nullable(ColumnID{4}), "");
     _tpchq6_quantity_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, _tpchq6_quantity_operand, value_(24));
 
     // The following two "synthetic" predicates have a selectivity of 1.0
-    _lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_tab->column_data_type(ColumnID{0}),
-                                     lineitem_tab->column_is_nullable(ColumnID{0}), "");
+    _lorderkey_operand = pqp_column_(ColumnID{0}, lineitem_table->column_data_type(ColumnID{0}),
+                                     lineitem_table->column_is_nullable(ColumnID{0}), "");
     _int_predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
                                                                  _lorderkey_operand, value_(-5));
 
-    _lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_tab->column_data_type(ColumnID{13}),
-                                         lineitem_tab->column_is_nullable(ColumnID{13}), "");
+    _lshipinstruct_operand = pqp_column_(ColumnID{13}, lineitem_table->column_data_type(ColumnID{13}),
+                                         lineitem_table->column_is_nullable(ColumnID{13}), "");
     _string_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, _lshipinstruct_operand, value_("a"));
   }
-
-  void TearDown(::benchmark::State&) {}
 
   std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
