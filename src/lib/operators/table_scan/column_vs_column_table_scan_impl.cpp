@@ -36,9 +36,9 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
   // Reducing the compile time:
   //
-  // If the left and the right segment and/or data type are not the same, we erase the types even for the release
-  // build. For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int> ==
-  // DictionarySegment<int>. ReferenceSegments do not need to be handled differently because we expect a table to
+  // If the left and the right segment and/or data type are not the same, we erase the segment iterable types even for
+  // the release build. For example, ValueSegment<int> == ValueSegment<float> will be erased. So will ValueSegment<int>
+  // == DictionarySegment<int>. ReferenceSegments do not need to be handled differently because we expect a table to
   // either have only ReferenceSegments or non-ReferenceSegments.
   //
   // We use type erasure here because we currently do not use comparisons between, e.g., a ValueSegment and a
