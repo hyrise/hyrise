@@ -24,7 +24,7 @@
 #include "utils/performance_warning.hpp"
 
 namespace {
-using namespace opossum;
+using namespace opossum;  // NOLINT
 
 // Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
 // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
