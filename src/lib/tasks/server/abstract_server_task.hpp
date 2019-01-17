@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/thread/future.hpp>  // NEEDEDINCLUDE
+#include <boost/thread/future.hpp>
 
-#include "scheduler/abstract_task.hpp"  // NEEDEDINCLUDE
+#include "scheduler/abstract_task.hpp"
 
 namespace opossum {
 

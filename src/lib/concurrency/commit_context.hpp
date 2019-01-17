@@ -1,9 +1,9 @@
 #pragma once
 
-#include <atomic>  // NEEDEDINCLUDE
+#include <atomic>
 #include <functional>
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

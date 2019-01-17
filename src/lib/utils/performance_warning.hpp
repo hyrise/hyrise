@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/preprocessor/stringize.hpp>  // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include <string>                            // NEEDEDINCLUDE
+#include <boost/preprocessor/stringize.hpp>
+#include <string>
 
-#include "utils/string_utils.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "utils/string_utils.hpp"
 
 /**
  * Performance Warnings can be used in places where slow workarounds are used. This includes BaseSegment[] or the

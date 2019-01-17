@@ -1,8 +1,8 @@
 #include "chunk.hpp"
 
-#include "index/base_index.hpp"                              // NEEDEDINCLUDE
-#include "resolve_type.hpp"                                  // NEEDEDINCLUDE
-#include "statistics/chunk_statistics/chunk_statistics.hpp"  // NEEDEDINCLUDE
+#include "index/base_index.hpp"
+#include "resolve_type.hpp"
+#include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "storage/mvcc_data.hpp"
 
 namespace opossum {

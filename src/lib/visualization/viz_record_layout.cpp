@@ -1,4 +1,4 @@
-#include "viz_record_layout.hpp"  // NEEDEDINCLUDE
+#include "viz_record_layout.hpp"
 
 #include <sstream>
 

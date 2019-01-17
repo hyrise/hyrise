@@ -1,6 +1,6 @@
-#include "split_pos_list_by_chunk_id.hpp"  // NEEDEDINCLUDE
+#include "split_pos_list_by_chunk_id.hpp"
 
-#include "storage/pos_list.hpp"  // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"
 
 namespace opossum {
 

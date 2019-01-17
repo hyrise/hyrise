@@ -1,55 +1,55 @@
-#include "lqp_translator.hpp"  // NEEDEDINCLUDE
+#include "lqp_translator.hpp"
 
-#include "aggregate_node.hpp"                              // NEEDEDINCLUDE
-#include "alias_node.hpp"                                  // NEEDEDINCLUDE
-#include "create_prepared_plan_node.hpp"                   // NEEDEDINCLUDE
-#include "create_table_node.hpp"                           // NEEDEDINCLUDE
-#include "create_view_node.hpp"                            // NEEDEDINCLUDE
-#include "delete_node.hpp"                                 // NEEDEDINCLUDE
-#include "drop_table_node.hpp"                             // NEEDEDINCLUDE
-#include "drop_view_node.hpp"                              // NEEDEDINCLUDE
-#include "expression/binary_predicate_expression.hpp"      // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"                 // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/pqp_column_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/pqp_select_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/value_expression.hpp"                 // NEEDEDINCLUDE
-#include "insert_node.hpp"                                 // NEEDEDINCLUDE
-#include "join_node.hpp"                                   // NEEDEDINCLUDE
-#include "limit_node.hpp"                                  // NEEDEDINCLUDE
-#include "operators/aggregate.hpp"                         // NEEDEDINCLUDE
-#include "operators/alias_operator.hpp"                    // NEEDEDINCLUDE
-#include "operators/delete.hpp"                            // NEEDEDINCLUDE
-#include "operators/get_table.hpp"                         // NEEDEDINCLUDE
-#include "operators/index_scan.hpp"                        // NEEDEDINCLUDE
-#include "operators/insert.hpp"                            // NEEDEDINCLUDE
-#include "operators/join_hash.hpp"                         // NEEDEDINCLUDE
-#include "operators/join_sort_merge.hpp"                   // NEEDEDINCLUDE
-#include "operators/limit.hpp"                             // NEEDEDINCLUDE
-#include "operators/maintenance/create_prepared_plan.hpp"  // NEEDEDINCLUDE
-#include "operators/maintenance/create_table.hpp"          // NEEDEDINCLUDE
-#include "operators/maintenance/create_view.hpp"           // NEEDEDINCLUDE
-#include "operators/maintenance/drop_table.hpp"            // NEEDEDINCLUDE
-#include "operators/maintenance/drop_view.hpp"             // NEEDEDINCLUDE
-#include "operators/maintenance/show_columns.hpp"          // NEEDEDINCLUDE
-#include "operators/maintenance/show_tables.hpp"           // NEEDEDINCLUDE
-#include "operators/operator_join_predicate.hpp"           // NEEDEDINCLUDE
-#include "operators/product.hpp"                           // NEEDEDINCLUDE
-#include "operators/projection.hpp"                        // NEEDEDINCLUDE
-#include "operators/sort.hpp"                              // NEEDEDINCLUDE
-#include "operators/table_scan.hpp"                        // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp"                     // NEEDEDINCLUDE
-#include "operators/union_positions.hpp"                   // NEEDEDINCLUDE
-#include "operators/update.hpp"                            // NEEDEDINCLUDE
-#include "operators/validate.hpp"                          // NEEDEDINCLUDE
-#include "predicate_node.hpp"                              // NEEDEDINCLUDE
-#include "projection_node.hpp"                             // NEEDEDINCLUDE
-#include "show_columns_node.hpp"                           // NEEDEDINCLUDE
-#include "sort_node.hpp"                                   // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp"                     // NEEDEDINCLUDE
-#include "stored_table_node.hpp"                           // NEEDEDINCLUDE
-#include "union_node.hpp"                                  // NEEDEDINCLUDE
-#include "update_node.hpp"                                 // NEEDEDINCLUDE
+#include "aggregate_node.hpp"
+#include "alias_node.hpp"
+#include "create_prepared_plan_node.hpp"
+#include "create_table_node.hpp"
+#include "create_view_node.hpp"
+#include "delete_node.hpp"
+#include "drop_table_node.hpp"
+#include "drop_view_node.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "insert_node.hpp"
+#include "join_node.hpp"
+#include "limit_node.hpp"
+#include "operators/aggregate.hpp"
+#include "operators/alias_operator.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
+#include "operators/index_scan.hpp"
+#include "operators/insert.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
+#include "operators/limit.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/drop_view.hpp"
+#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_tables.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/product.hpp"
+#include "operators/projection.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/union_positions.hpp"
+#include "operators/update.hpp"
+#include "operators/validate.hpp"
+#include "predicate_node.hpp"
+#include "projection_node.hpp"
+#include "show_columns_node.hpp"
+#include "sort_node.hpp"
+#include "storage/storage_manager.hpp"
+#include "stored_table_node.hpp"
+#include "union_node.hpp"
+#include "update_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

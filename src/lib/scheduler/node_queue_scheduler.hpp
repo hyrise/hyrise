@@ -1,8 +1,8 @@
 #pragma once
 
-#include <atomic>  // NEEDEDINCLUDE
+#include <atomic>
 
-#include "abstract_scheduler.hpp"  // NEEDEDINCLUDE
+#include "abstract_scheduler.hpp"
 
 namespace opossum {
 

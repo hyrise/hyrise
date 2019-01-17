@@ -1,8 +1,8 @@
-#include "lqp_visualizer.hpp"  // NEEDEDINCLUDE
+#include "lqp_visualizer.hpp"
 
-#include "expression/expression_utils.hpp"       // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp"  // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp"       // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 

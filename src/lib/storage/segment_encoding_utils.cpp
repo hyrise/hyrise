@@ -2,9 +2,9 @@
 
 #include <map>
 
-#include "storage/dictionary_segment/dictionary_encoder.hpp"          // NEEDEDINCLUDE
-#include "storage/frame_of_reference/frame_of_reference_encoder.hpp"  // NEEDEDINCLUDE
-#include "storage/run_length_segment/run_length_encoder.hpp"          // NEEDEDINCLUDE
+#include "storage/dictionary_segment/dictionary_encoder.hpp"
+#include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
+#include "storage/run_length_segment/run_length_encoder.hpp"
 
 namespace opossum {
 

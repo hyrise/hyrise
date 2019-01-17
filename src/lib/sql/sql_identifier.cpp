@@ -1,6 +1,6 @@
-#include "sql_identifier.hpp"  // NEEDEDINCLUDE
+#include "sql_identifier.hpp"
 
-#include <sstream>  // NEEDEDINCLUDE
+#include <sstream>
 
 namespace opossum {
 

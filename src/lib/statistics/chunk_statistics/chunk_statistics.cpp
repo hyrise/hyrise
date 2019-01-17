@@ -1,6 +1,6 @@
-#include "chunk_statistics.hpp"  // NEEDEDINCLUDE
+#include "chunk_statistics.hpp"
 
-#include "segment_statistics.hpp"  // NEEDEDINCLUDE
+#include "segment_statistics.hpp"
 
 namespace opossum {
 

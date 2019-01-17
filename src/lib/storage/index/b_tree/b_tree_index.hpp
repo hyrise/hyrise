@@ -1,7 +1,7 @@
 #pragma once
 
-#include "b_tree_index_impl.hpp"         // NEEDEDINCLUDE
-#include "storage/index/base_index.hpp"  // NEEDEDINCLUDE
+#include "b_tree_index_impl.hpp"
+#include "storage/index/base_index.hpp"
 
 namespace opossum {
 

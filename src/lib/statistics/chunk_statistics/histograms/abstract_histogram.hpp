@@ -1,6 +1,6 @@
 #pragma once
 
-#include "statistics/chunk_statistics/abstract_filter.hpp"  // NEEDEDINCLUDE
+#include "statistics/chunk_statistics/abstract_filter.hpp"
 
 namespace opossum {
 

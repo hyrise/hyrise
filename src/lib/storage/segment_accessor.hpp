@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/base_segment_accessor.hpp"  // NEEDEDINCLUDE
+#include "storage/base_segment_accessor.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/table.hpp"
 

@@ -1,10 +1,10 @@
 #include "join_node.hpp"
 
-#include "constant_mappings.hpp"                  // NEEDEDINCLUDE
-#include "expression/abstract_expression.hpp"     // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"        // NEEDEDINCLUDE
-#include "operators/operator_join_predicate.hpp"  // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp"        // NEEDEDINCLUDE
+#include "constant_mappings.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 

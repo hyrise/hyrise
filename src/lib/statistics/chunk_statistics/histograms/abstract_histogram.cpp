@@ -1,8 +1,8 @@
-#include "abstract_histogram.hpp"  // NEEDEDINCLUDE
+#include "abstract_histogram.hpp"
 
-#include "expression/evaluation/like_matcher.hpp"  // NEEDEDINCLUDE
-#include "histogram_utils.hpp"                     // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp"             // NEEDEDINCLUDE
+#include "expression/evaluation/like_matcher.hpp"
+#include "histogram_utils.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 

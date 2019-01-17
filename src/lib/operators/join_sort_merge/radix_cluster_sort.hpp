@@ -1,4 +1,4 @@
-#include "column_materializer.hpp"  // NEEDEDINCLUDE
+#include "column_materializer.hpp"
 
 namespace opossum {
 

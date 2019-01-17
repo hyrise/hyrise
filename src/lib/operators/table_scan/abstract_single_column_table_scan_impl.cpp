@@ -1,9 +1,9 @@
-#include "abstract_single_column_table_scan_impl.hpp"  // NEEDEDINCLUDE
+#include "abstract_single_column_table_scan_impl.hpp"
 
-#include "storage/pos_list.hpp"                    // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp"           // NEEDEDINCLUDE
-#include "storage/split_pos_list_by_chunk_id.hpp"  // NEEDEDINCLUDE
-#include "storage/table.hpp"                       // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/split_pos_list_by_chunk_id.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

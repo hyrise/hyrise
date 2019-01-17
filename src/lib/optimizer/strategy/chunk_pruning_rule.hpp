@@ -1,10 +1,10 @@
 #pragma once
 
-#include <set>  // NEEDEDINCLUDE
+#include <set>
 
-#include "abstract_rule.hpp"  // NEEDEDINCLUDE
+#include "abstract_rule.hpp"
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

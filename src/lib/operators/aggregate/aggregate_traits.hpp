@@ -1,6 +1,6 @@
 #pragma once
 
-#include "resolve_type.hpp"  // NEEDEDINCLUDE
+#include "resolve_type.hpp"
 
 namespace opossum {
 

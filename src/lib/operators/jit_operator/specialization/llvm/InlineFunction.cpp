@@ -14,67 +14,67 @@
 
 // clang-format off
 
-#include "../llvm_extensions.hpp" // NEEDEDINCLUDE
+#include "../llvm_extensions.hpp"
 
-#include "llvm/ADT/DenseMap.h" // NEEDEDINCLUDE
-#include "llvm/ADT/None.h" // NEEDEDINCLUDE
-#include "llvm/ADT/Optional.h" // NEEDEDINCLUDE
-#include "llvm/ADT/STLExtras.h" // NEEDEDINCLUDE
-#include "llvm/ADT/SetVector.h" // NEEDEDINCLUDE
-#include "llvm/ADT/SmallPtrSet.h" // NEEDEDINCLUDE
-#include "llvm/ADT/SmallVector.h" // NEEDEDINCLUDE
-#include "llvm/ADT/StringExtras.h" // NEEDEDINCLUDE
-#include "llvm/ADT/iterator_range.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/AliasAnalysis.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/AssumptionCache.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/BlockFrequencyInfo.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/CallGraph.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/CaptureTracking.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/EHPersonalities.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/InstructionSimplify.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/ProfileSummaryInfo.h" // NEEDEDINCLUDE
-#include "llvm/Analysis/ValueTracking.h" // NEEDEDINCLUDE
-#include "llvm/IR/Argument.h" // NEEDEDINCLUDE
-#include "llvm/IR/BasicBlock.h" // NEEDEDINCLUDE
-#include "llvm/IR/CFG.h" // NEEDEDINCLUDE
-#include "llvm/IR/CallSite.h" // NEEDEDINCLUDE
-#include "llvm/IR/Constant.h" // NEEDEDINCLUDE
-#include "llvm/IR/Constants.h" // NEEDEDINCLUDE
-#include "llvm/IR/DIBuilder.h" // NEEDEDINCLUDE
-#include "llvm/IR/DataLayout.h" // NEEDEDINCLUDE
-#include "llvm/IR/DebugInfoMetadata.h" // NEEDEDINCLUDE
-#include "llvm/IR/DebugLoc.h" // NEEDEDINCLUDE
-#include "llvm/IR/DerivedTypes.h" // NEEDEDINCLUDE
-#include "llvm/IR/Dominators.h" // NEEDEDINCLUDE
-#include "llvm/IR/Function.h" // NEEDEDINCLUDE
-#include "llvm/IR/IRBuilder.h" // NEEDEDINCLUDE
-#include "llvm/IR/InstrTypes.h" // NEEDEDINCLUDE
-#include "llvm/IR/Instruction.h" // NEEDEDINCLUDE
-#include "llvm/IR/Instructions.h" // NEEDEDINCLUDE
-#include "llvm/IR/IntrinsicInst.h" // NEEDEDINCLUDE
-#include "llvm/IR/Intrinsics.h" // NEEDEDINCLUDE
-#include "llvm/IR/LLVMContext.h" // NEEDEDINCLUDE
-#include "llvm/IR/MDBuilder.h" // NEEDEDINCLUDE
-#include "llvm/IR/Metadata.h" // NEEDEDINCLUDE
-#include "llvm/IR/Module.h" // NEEDEDINCLUDE
-#include "llvm/IR/Type.h" // NEEDEDINCLUDE
-#include "llvm/IR/User.h" // NEEDEDINCLUDE
-#include "llvm/IR/Value.h" // NEEDEDINCLUDE
-#include "llvm/IR/ValueMap.h" // NEEDEDINCLUDE
-#include "llvm/Support/Casting.h" // NEEDEDINCLUDE
-#include "llvm/Support/CommandLine.h" // NEEDEDINCLUDE
-#include "llvm/Support/ErrorHandling.h" // NEEDEDINCLUDE
-#include "llvm/Transforms/Utils/Cloning.h" // NEEDEDINCLUDE
-#include "llvm/Transforms/Utils/Local.h" // NEEDEDINCLUDE
-#include "llvm/Transforms/Utils/ValueMapper.h" // NEEDEDINCLUDE
-#include <algorithm> // NEEDEDINCLUDE
-#include <cassert> // NEEDEDINCLUDE
-#include <cstdint> // NEEDEDINCLUDE
-#include <iterator> // NEEDEDINCLUDE
-#include <limits> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
-#include <utility> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <iterator>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 using namespace llvm;
 

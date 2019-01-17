@@ -1,44 +1,44 @@
-#include "expression_evaluator.hpp"  // NEEDEDINCLUDE
+#include "expression_evaluator.hpp"
 
-#include <iterator>     // NEEDEDINCLUDE
-#include <type_traits>  // NEEDEDINCLUDE
+#include <iterator>
+#include <type_traits>
 
-#include "boost/lexical_cast.hpp"           // NEEDEDINCLUDE
-#include "boost/variant/apply_visitor.hpp"  // NEEDEDINCLUDE
+#include "boost/lexical_cast.hpp"
+#include "boost/variant/apply_visitor.hpp"
 
-#include "all_parameter_variant.hpp"                       // NEEDEDINCLUDE
-#include "expression/abstract_expression.hpp"              // NEEDEDINCLUDE
-#include "expression/abstract_predicate_expression.hpp"    // NEEDEDINCLUDE
-#include "expression/arithmetic_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/between_expression.hpp"               // NEEDEDINCLUDE
-#include "expression/binary_predicate_expression.hpp"      // NEEDEDINCLUDE
-#include "expression/case_expression.hpp"                  // NEEDEDINCLUDE
-#include "expression/cast_expression.hpp"                  // NEEDEDINCLUDE
-#include "expression/correlated_parameter_expression.hpp"  // NEEDEDINCLUDE
-#include "expression/evaluation/expression_result.hpp"     // NEEDEDINCLUDE
-#include "expression/exists_expression.hpp"                // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp"            // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"                 // NEEDEDINCLUDE
-#include "expression/extract_expression.hpp"               // NEEDEDINCLUDE
-#include "expression/function_expression.hpp"              // NEEDEDINCLUDE
-#include "expression/in_expression.hpp"                    // NEEDEDINCLUDE
-#include "expression/is_null_expression.hpp"               // NEEDEDINCLUDE
-#include "expression/list_expression.hpp"                  // NEEDEDINCLUDE
-#include "expression/logical_expression.hpp"               // NEEDEDINCLUDE
-#include "expression/pqp_column_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/pqp_select_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/unary_minus_expression.hpp"           // NEEDEDINCLUDE
-#include "expression/value_expression.hpp"                 // NEEDEDINCLUDE
-#include "expression_functors.hpp"                         // NEEDEDINCLUDE
-#include "like_matcher.hpp"                                // NEEDEDINCLUDE
-#include "operators/abstract_operator.hpp"                 // NEEDEDINCLUDE
-#include "resolve_type.hpp"                                // NEEDEDINCLUDE
-#include "scheduler/current_scheduler.hpp"                 // NEEDEDINCLUDE
-#include "scheduler/operator_task.hpp"                     // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp"                     // NEEDEDINCLUDE
-#include "storage/value_segment.hpp"                       // NEEDEDINCLUDE
-#include "utils/assert.hpp"                                // NEEDEDINCLUDE
-#include "utils/performance_warning.hpp"                   // NEEDEDINCLUDE
+#include "all_parameter_variant.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/arithmetic_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/case_expression.hpp"
+#include "expression/cast_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/evaluation/expression_result.hpp"
+#include "expression/exists_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/extract_expression.hpp"
+#include "expression/function_expression.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/list_expression.hpp"
+#include "expression/logical_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
+#include "expression/unary_minus_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression_functors.hpp"
+#include "like_matcher.hpp"
+#include "operators/abstract_operator.hpp"
+#include "resolve_type.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
+#include "storage/segment_iterate.hpp"
+#include "storage/value_segment.hpp"
+#include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT

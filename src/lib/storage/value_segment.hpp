@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_value_segment.hpp"  // NEEDEDINCLUDE
+#include "base_value_segment.hpp"
 
 namespace opossum {
 

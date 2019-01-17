@@ -1,10 +1,10 @@
 #pragma once
 
-#include <memory>       // NEEDEDINCLUDE
-#include <type_traits>  // NEEDEDINCLUDE
-#include <vector>       // NEEDEDINCLUDE
+#include <memory>
+#include <type_traits>
+#include <vector>
 
-#include "abstract_filter.hpp"  // NEEDEDINCLUDE
+#include "abstract_filter.hpp"
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {

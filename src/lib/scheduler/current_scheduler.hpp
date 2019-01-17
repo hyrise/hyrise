@@ -1,7 +1,7 @@
 #pragma once
 
-#include "utils/tracing/probes.hpp"  // NEEDEDINCLUDE
-#include "worker.hpp"                // NEEDEDINCLUDE
+#include "utils/tracing/probes.hpp"
+#include "worker.hpp"
 
 namespace opossum {
 

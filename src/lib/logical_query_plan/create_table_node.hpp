@@ -1,8 +1,8 @@
 #pragma once
 
-#include "base_non_query_node.hpp"  // NEEDEDINCLUDE
+#include "base_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
-#include "storage/table_column_definition.hpp"  // NEEDEDINCLUDE
+#include "storage/table_column_definition.hpp"
 
 namespace opossum {
 

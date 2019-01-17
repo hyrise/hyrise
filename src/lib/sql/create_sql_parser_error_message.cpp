@@ -1,10 +1,10 @@
-#include "create_sql_parser_error_message.hpp"  // NEEDEDINCLUDE
+#include "create_sql_parser_error_message.hpp"
 
-#include <SQLParser.h>  // NEEDEDINCLUDE
+#include <SQLParser.h>
 #include <sstream>
 
-#include "boost/algorithm/string/classification.hpp"  // NEEDEDINCLUDE
-#include "boost/algorithm/string/split.hpp"           // NEEDEDINCLUDE
+#include "boost/algorithm/string/classification.hpp"
+#include "boost/algorithm/string/split.hpp"
 
 namespace opossum {
 

@@ -1,9 +1,9 @@
-#include "constant_calculation_rule.hpp"  // NEEDEDINCLUDE
+#include "constant_calculation_rule.hpp"
 
-#include "expression/evaluation/expression_evaluator.hpp"  // NEEDEDINCLUDE
+#include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/expression_result.hpp"
-#include "expression/value_expression.hpp"           // NEEDEDINCLUDE
-#include "logical_query_plan/abstract_lqp_node.hpp"  // NEEDEDINCLUDE
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {

@@ -1,6 +1,6 @@
-#include "lqp_view.hpp"  // NEEDEDINCLUDE
+#include "lqp_view.hpp"
 
-#include "logical_query_plan/abstract_lqp_node.hpp"  // NEEDEDINCLUDE
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace opossum {
 

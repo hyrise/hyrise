@@ -1,4 +1,4 @@
-#include "all_type_variant.hpp"  // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 
 #include <boost/functional/hash/hash.hpp>
 

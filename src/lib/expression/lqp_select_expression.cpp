@@ -1,8 +1,8 @@
-#include "lqp_select_expression.hpp"  // NEEDEDINCLUDE
+#include "lqp_select_expression.hpp"
 
 #include <sstream>
 
-#include "expression_utils.hpp"  // NEEDEDINCLUDE
+#include "expression_utils.hpp"
 
 namespace opossum {
 

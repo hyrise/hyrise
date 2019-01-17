@@ -1,4 +1,4 @@
-#include "segment_accessor.hpp"  // NEEDEDINCLUDE
+#include "segment_accessor.hpp"
 
 #include "storage/pos_list.hpp"
 #include "storage/table.hpp"

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "abstract_single_column_table_scan_impl.hpp"  // NEEDEDINCLUDE
-#include "all_type_variant.hpp"                        // NEEDEDINCLUDE
+#include "abstract_single_column_table_scan_impl.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 

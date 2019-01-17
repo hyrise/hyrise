@@ -1,7 +1,7 @@
-#include "join_nested_loop.hpp"  // NEEDEDINCLUDE
+#include "join_nested_loop.hpp"
 
-#include "storage/segment_iterate.hpp"  // NEEDEDINCLUDE
-#include "type_comparison.hpp"          // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp"
+#include "type_comparison.hpp"
 
 namespace {
 using namespace opossum;  // NOLINT

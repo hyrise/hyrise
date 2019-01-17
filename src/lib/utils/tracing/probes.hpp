@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/sdt.h>  // NEEDEDINCLUDE
+#include <sys/sdt.h>
 
 // Systemtap is not available on OS X. The alternative would be dtrace. Actually, systemtap probes are compatible
 // with dtrace probes and the other way round. However, Apple's dtrace implementation differs from the original solaris

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>  // NEEDEDINCLUDE
+#include <string>
 
-#include "base_dictionary_segment.hpp"  // NEEDEDINCLUDE
+#include "base_dictionary_segment.hpp"
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {

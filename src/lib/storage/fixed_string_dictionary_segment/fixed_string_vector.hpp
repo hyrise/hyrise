@@ -1,9 +1,9 @@
 #pragma once
 
-#include <string>  // NEEDEDINCLUDE
-#include <vector>  // NEEDEDINCLUDE
+#include <string>
+#include <vector>
 
-#include "fixed_string_vector_iterator.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "fixed_string_vector_iterator.hpp"
 
 namespace opossum {
 

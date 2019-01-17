@@ -1,13 +1,13 @@
 #pragma once
 
-#include <llvm/ExecutionEngine/ExecutionEngine.h>               // NEEDEDINCLUDE
-#include <llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h>      // NEEDEDINCLUDE
-#include <llvm/ExecutionEngine/Orc/CompileUtils.h>              // NEEDEDINCLUDE
-#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>            // NEEDEDINCLUDE
-#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>            // NEEDEDINCLUDE
-#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>  // NEEDEDINCLUDE
-#include <llvm/Support/DynamicLibrary.h>                        // NEEDEDINCLUDE
-#include <utils/assert.hpp>                                     // NEEDEDINCLUDE
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h>
+#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
+#include <llvm/Support/DynamicLibrary.h>
+#include <utils/assert.hpp>
 
 namespace opossum {
 

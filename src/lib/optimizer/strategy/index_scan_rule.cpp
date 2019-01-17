@@ -1,10 +1,10 @@
-#include "index_scan_rule.hpp"  // NEEDEDINCLUDE
+#include "index_scan_rule.hpp"
 
-#include "logical_query_plan/predicate_node.hpp"     // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp"  // NEEDEDINCLUDE
-#include "operators/operator_scan_predicate.hpp"     // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp"           // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp"               // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "operators/operator_scan_predicate.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

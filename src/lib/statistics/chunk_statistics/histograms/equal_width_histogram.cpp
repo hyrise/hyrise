@@ -1,4 +1,4 @@
-#include "equal_width_histogram.hpp"  // NEEDEDINCLUDE
+#include "equal_width_histogram.hpp"
 
 namespace opossum {
 

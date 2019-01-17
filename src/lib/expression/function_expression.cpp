@@ -1,7 +1,7 @@
 #include "function_expression.hpp"
 
-#include "constant_mappings.hpp"  // NEEDEDINCLUDE
-#include "expression_utils.hpp"   // NEEDEDINCLUDE
+#include "constant_mappings.hpp"
+#include "expression_utils.hpp"
 
 namespace opossum {
 

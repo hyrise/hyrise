@@ -5,12 +5,12 @@
 
 // Instead of adding includes here, try to add them to the caller first. That way, we only include files that are
 // needed and can rely on forward declarations for the rest
-#include "aggregate_expression.hpp"  // NEEDEDINCLUDE
+#include "aggregate_expression.hpp"
 #include "all_type_variant.hpp"
-#include "arithmetic_expression.hpp"  // NEEDEDINCLUDE
-#include "extract_expression.hpp"     // NEEDEDINCLUDE
+#include "arithmetic_expression.hpp"
+#include "extract_expression.hpp"
 #include "function_expression.hpp"
-#include "logical_expression.hpp"  // NEEDEDINCLUDE
+#include "logical_expression.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 
 /**

@@ -1,4 +1,4 @@
-#include "sql_identifier_resolver.hpp"  // NEEDEDINCLUDE
+#include "sql_identifier_resolver.hpp"
 
 #include <algorithm>
 

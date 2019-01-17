@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cmath>     // NEEDEDINCLUDE
-#include <optional>  // NEEDEDINCLUDE
+#include <cmath>
+#include <optional>
 #include <string>
 
 namespace opossum {

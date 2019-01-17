@@ -1,6 +1,6 @@
-#include "performance_warning.hpp"  // NEEDEDINCLUDE
+#include "performance_warning.hpp"
 
-#include <iostream>  // NEEDEDINCLUDE
+#include <iostream>
 
 namespace opossum {
 

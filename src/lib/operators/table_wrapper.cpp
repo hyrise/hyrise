@@ -1,4 +1,4 @@
-#include "table_wrapper.hpp"  // NEEDEDINCLUDE
+#include "table_wrapper.hpp"
 
 namespace opossum {
 

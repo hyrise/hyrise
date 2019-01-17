@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

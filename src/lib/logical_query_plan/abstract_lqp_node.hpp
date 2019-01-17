@@ -3,7 +3,7 @@
 #include <array>
 #include <unordered_map>
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

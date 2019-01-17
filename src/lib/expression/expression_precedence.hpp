@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>  // NEEDEDINCLUDE
+#include <stdint.h>
 
 namespace opossum {
 

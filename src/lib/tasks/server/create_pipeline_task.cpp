@@ -1,8 +1,8 @@
-#include "create_pipeline_task.hpp"  // NEEDEDINCLUDE
+#include "create_pipeline_task.hpp"
 
-#include <boost/algorithm/string.hpp>  // NEEDEDINCLUDE
+#include <boost/algorithm/string.hpp>
 
-#include "sql/sql_pipeline_builder.hpp"  // NEEDEDINCLUDE
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 

@@ -1,4 +1,4 @@
-#include "expression_evaluator_table_scan_impl.hpp"  // NEEDEDINCLUDE
+#include "expression_evaluator_table_scan_impl.hpp"
 
 namespace opossum {
 

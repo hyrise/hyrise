@@ -1,7 +1,7 @@
 #pragma once
 
-#include "abstract_jittable.hpp"  // NEEDEDINCLUDE
-#include "types.hpp"              // NEEDEDINCLUDE
+#include "abstract_jittable.hpp"
+#include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 
 namespace opossum {

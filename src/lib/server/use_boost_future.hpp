@@ -7,9 +7,9 @@
 // with boost::promise, respectively.
 // https://github.com/boostorg/asio/blob/master/include/boost/asio/use_future.hpp
 
-#include <boost/asio/detail/config.hpp>  // NEEDEDINCLUDE
+#include <boost/asio/detail/config.hpp>
 
-#include <memory>  // NEEDEDINCLUDE
+#include <memory>
 
 namespace boost {
 namespace asio {
@@ -60,4 +60,4 @@ constexpr use_boost_future_t<> use_boost_future;
 }  // namespace asio
 }  // namespace boost
 
-#include "use_boost_future_impl.hpp"  // NEEDEDINCLUDE
+#include "use_boost_future_impl.hpp"

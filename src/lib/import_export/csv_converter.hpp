@@ -2,11 +2,11 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <algorithm>  // NEEDEDINCLUDE
-#include <string>     // NEEDEDINCLUDE
+#include <algorithm>
+#include <string>
 
-#include "csv_meta.hpp"               // NEEDEDINCLUDE
-#include "storage/value_segment.hpp"  // NEEDEDINCLUDE
+#include "csv_meta.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

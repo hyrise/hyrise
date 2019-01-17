@@ -1,6 +1,6 @@
 #include "null_streambuf.hpp"
 
-#include <iostream>  // NEEDEDINCLUDE
+#include <iostream>
 
 namespace opossum {
 

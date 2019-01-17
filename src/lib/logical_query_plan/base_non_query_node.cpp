@@ -1,4 +1,4 @@
-#include "base_non_query_node.hpp"  // NEEDEDINCLUDE
+#include "base_non_query_node.hpp"
 
 namespace opossum {
 

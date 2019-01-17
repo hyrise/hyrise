@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/lexical_cast.hpp>  // NEEDEDINCLUDE
+#include <boost/lexical_cast.hpp>
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

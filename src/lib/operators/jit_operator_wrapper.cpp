@@ -1,9 +1,9 @@
-#include "jit_operator_wrapper.hpp"  // NEEDEDINCLUDE
+#include "jit_operator_wrapper.hpp"
 
 #include "concurrency/transaction_context.hpp"
-#include "operators/jit_operator/operators/jit_aggregate.hpp"    // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_read_tuples.hpp"  // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_validate.hpp"     // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_aggregate.hpp"
+#include "operators/jit_operator/operators/jit_read_tuples.hpp"
+#include "operators/jit_operator/operators/jit_validate.hpp"
 
 namespace opossum {
 

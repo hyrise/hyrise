@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_join_operator.hpp"  // NEEDEDINCLUDE
+#include "abstract_join_operator.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

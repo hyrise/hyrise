@@ -1,4 +1,4 @@
-#include "timer.hpp"  // NEEDEDINCLUDE
+#include "timer.hpp"
 
 namespace opossum {
 

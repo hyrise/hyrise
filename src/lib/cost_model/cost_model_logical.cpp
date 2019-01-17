@@ -1,12 +1,12 @@
-#include "cost_model_logical.hpp"  // NEEDEDINCLUDE
+#include "cost_model_logical.hpp"
 
 #include <cmath>
 
-#include "expression/abstract_expression.hpp"     // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"        // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp"  // NEEDEDINCLUDE
-#include "logical_query_plan/union_node.hpp"      // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp"        // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/union_node.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 

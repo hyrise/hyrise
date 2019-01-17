@@ -1,9 +1,9 @@
 #pragma once
 
-#include <mutex>  // NEEDEDINCLUDE
+#include <mutex>
 
-#include "gdfs_cache.hpp"       // NEEDEDINCLUDE
-#include "utils/singleton.hpp"  // NEEDEDINCLUDE
+#include "gdfs_cache.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 

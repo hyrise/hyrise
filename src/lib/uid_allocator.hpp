@@ -1,7 +1,7 @@
 #pragma once
 
-#include <atomic>   // NEEDEDINCLUDE
-#include <cstdint>  // NEEDEDINCLUDE
+#include <atomic>
+#include <cstdint>
 
 namespace opossum {
 

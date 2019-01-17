@@ -1,6 +1,6 @@
-#include "b_tree_index_impl.hpp"  // NEEDEDINCLUDE
+#include "b_tree_index_impl.hpp"
 
-#include "storage/segment_iterate.hpp"  // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 

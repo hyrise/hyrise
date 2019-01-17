@@ -1,6 +1,6 @@
-#include "current_scheduler.hpp"  // NEEDEDINCLUDE
+#include "current_scheduler.hpp"
 
-#include "abstract_scheduler.hpp"  // NEEDEDINCLUDE
+#include "abstract_scheduler.hpp"
 
 namespace opossum {
 

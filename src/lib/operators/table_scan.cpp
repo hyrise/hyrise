@@ -1,23 +1,23 @@
-#include "table_scan.hpp"  // NEEDEDINCLUDE
+#include "table_scan.hpp"
 
-#include "expression/between_expression.hpp"               // NEEDEDINCLUDE
-#include "expression/binary_predicate_expression.hpp"      // NEEDEDINCLUDE
-#include "expression/correlated_parameter_expression.hpp"  // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"                 // NEEDEDINCLUDE
-#include "expression/is_null_expression.hpp"               // NEEDEDINCLUDE
-#include "expression/pqp_column_expression.hpp"            // NEEDEDINCLUDE
-#include "expression/value_expression.hpp"                 // NEEDEDINCLUDE
-#include "scheduler/current_scheduler.hpp"                 // NEEDEDINCLUDE
-#include "scheduler/job_task.hpp"                          // NEEDEDINCLUDE
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_scan/abstract_table_scan_impl.hpp"              // NEEDEDINCLUDE
-#include "table_scan/column_between_table_scan_impl.hpp"        // NEEDEDINCLUDE
-#include "table_scan/column_is_null_table_scan_impl.hpp"        // NEEDEDINCLUDE
-#include "table_scan/column_like_table_scan_impl.hpp"           // NEEDEDINCLUDE
-#include "table_scan/column_vs_column_table_scan_impl.hpp"      // NEEDEDINCLUDE
-#include "table_scan/column_vs_value_table_scan_impl.hpp"       // NEEDEDINCLUDE
-#include "table_scan/expression_evaluator_table_scan_impl.hpp"  // NEEDEDINCLUDE
+#include "table_scan/abstract_table_scan_impl.hpp"
+#include "table_scan/column_between_table_scan_impl.hpp"
+#include "table_scan/column_is_null_table_scan_impl.hpp"
+#include "table_scan/column_like_table_scan_impl.hpp"
+#include "table_scan/column_vs_column_table_scan_impl.hpp"
+#include "table_scan/column_vs_value_table_scan_impl.hpp"
+#include "table_scan/expression_evaluator_table_scan_impl.hpp"
 
 namespace opossum {
 

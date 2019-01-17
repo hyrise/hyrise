@@ -1,4 +1,4 @@
-#include "union_all.hpp"  // NEEDEDINCLUDE
+#include "union_all.hpp"
 
 #include "storage/table.hpp"
 

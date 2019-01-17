@@ -1,7 +1,7 @@
 #pragma once
 
-#include "simd_bp128_decompressor.hpp"  // NEEDEDINCLUDE
-#include "simd_bp128_iterator.hpp"      // NEEDEDINCLUDE
+#include "simd_bp128_decompressor.hpp"
+#include "simd_bp128_iterator.hpp"
 
 namespace opossum {
 

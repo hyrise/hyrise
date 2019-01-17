@@ -1,14 +1,14 @@
-#include "abstract_lqp_node.hpp"  // NEEDEDINCLUDE
+#include "abstract_lqp_node.hpp"
 
-#include <algorithm>      // NEEDEDINCLUDE
+#include <algorithm>
 #include <iostream>
-#include <unordered_map>  // NEEDEDINCLUDE
+#include <unordered_map>
 
-#include "expression/abstract_expression.hpp"      // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"         // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp"    // NEEDEDINCLUDE
-#include "lqp_utils.hpp"                           // NEEDEDINCLUDE
-#include "utils/print_directed_acyclic_graph.hpp"  // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
+#include "lqp_utils.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -219,9 +219,7 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
   return left_input->get_statistics();
 }
 
-void AbstractLQPNode::print() const {
-  print(std::cout);
-}
+void AbstractLQPNode::print() const { print(std::cout); }
 
 void AbstractLQPNode::print(std::ostream& out) const {
   // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and

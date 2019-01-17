@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/table.hpp"  // NEEDEDINCLUDE
+#include "storage/table.hpp"
 
 class sqlite3_stmt;
 class sqlite3;

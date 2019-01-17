@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/blank.hpp>  // NEEDEDINCLUDE
+#include <boost/blank.hpp>
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

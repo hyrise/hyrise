@@ -1,6 +1,6 @@
-#include "jit_compiler.hpp"  // NEEDEDINCLUDE
+#include "jit_compiler.hpp"
 
-#include <llvm/ExecutionEngine/SectionMemoryManager.h>  // NEEDEDINCLUDE
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 
 namespace opossum {
 

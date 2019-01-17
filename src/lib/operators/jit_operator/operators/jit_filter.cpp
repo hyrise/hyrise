@@ -1,4 +1,4 @@
-#include "jit_filter.hpp"  // NEEDEDINCLUDE
+#include "jit_filter.hpp"
 
 namespace opossum {
 

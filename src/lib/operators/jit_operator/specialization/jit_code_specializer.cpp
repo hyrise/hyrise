@@ -1,8 +1,8 @@
-#include "jit_code_specializer.hpp"  // NEEDEDINCLUDE
+#include "jit_code_specializer.hpp"
 
-#include <llvm/Transforms/Scalar.h>              // NEEDEDINCLUDE
-#include <boost/algorithm/string/predicate.hpp>  // NEEDEDINCLUDE
-#include <queue>                                 // NEEDEDINCLUDE
+#include <llvm/Transforms/Scalar.h>
+#include <boost/algorithm/string/predicate.hpp>
+#include <queue>
 
 namespace opossum {
 

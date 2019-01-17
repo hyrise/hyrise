@@ -1,4 +1,4 @@
-#include "job_task.hpp"  // NEEDEDINCLUDE
+#include "job_task.hpp"
 
 namespace opossum {
 

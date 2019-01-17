@@ -2,8 +2,8 @@
 
 #include <unordered_map>
 
-#include "client_connection.hpp"  // NEEDEDINCLUDE
-#include "task_runner.hpp"        // NEEDEDINCLUDE
+#include "client_connection.hpp"
+#include "task_runner.hpp"
 
 namespace opossum {
 

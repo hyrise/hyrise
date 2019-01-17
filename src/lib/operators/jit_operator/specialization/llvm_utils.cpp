@@ -1,11 +1,11 @@
-#include "llvm_utils.hpp"  // NEEDEDINCLUDE
+#include "llvm_utils.hpp"
 
-#include <llvm/IR/Module.h>          // NEEDEDINCLUDE
-#include <llvm/IRReader/IRReader.h>  // NEEDEDINCLUDE
-#include <llvm/Support/Error.h>      // NEEDEDINCLUDE
-#include <llvm/Support/SourceMgr.h>  // NEEDEDINCLUDE
+#include <llvm/IR/Module.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/SourceMgr.h>
 
-#include "utils/assert.hpp"  // NEEDEDINCLUDE
+#include "utils/assert.hpp"
 
 namespace opossum {
 

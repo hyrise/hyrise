@@ -1,10 +1,10 @@
 #pragma once
 
-#include <iostream>  // NEEDEDINCLUDE
+#include <iostream>
 
-#include "boost/dynamic_bitset.hpp"  // NEEDEDINCLUDE
+#include "boost/dynamic_bitset.hpp"
 
-#include "utils/assert.hpp"  // NEEDEDINCLUDE
+#include "utils/assert.hpp"
 
 namespace opossum {
 

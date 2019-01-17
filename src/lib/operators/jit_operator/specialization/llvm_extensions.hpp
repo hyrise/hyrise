@@ -1,8 +1,8 @@
 #pragma once
 
-#include <llvm/Transforms/Utils/Cloning.h>  // NEEDEDINCLUDE
+#include <llvm/Transforms/Utils/Cloning.h>
 
-#include "jit_runtime_pointer.hpp"  // NEEDEDINCLUDE
+#include "jit_runtime_pointer.hpp"
 
 namespace opossum {
 

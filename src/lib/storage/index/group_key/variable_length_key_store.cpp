@@ -1,8 +1,8 @@
-#include "variable_length_key_store.hpp"  // NEEDEDINCLUDE
+#include "variable_length_key_store.hpp"
 
-#include <vector>  // NEEDEDINCLUDE
+#include <vector>
 
-#include "variable_length_key_proxy.hpp"  // NEEDEDINCLUDE
+#include "variable_length_key_proxy.hpp"
 
 namespace opossum {
 

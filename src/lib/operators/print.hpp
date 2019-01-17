@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_read_only_operator.hpp"  // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"
 
 namespace opossum {
 enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
@@ -18,8 +18,7 @@ class Print : public AbstractReadOnlyOperator {
   static void print(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
   static void print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out);
   static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags = 0);
-  static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags,
-                    std::ostream& out);
+  static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out);
 
  protected:
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max,

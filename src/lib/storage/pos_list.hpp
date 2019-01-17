@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {

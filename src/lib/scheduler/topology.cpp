@@ -1,13 +1,13 @@
-#include "topology.hpp"  // NEEDEDINCLUDE
+#include "topology.hpp"
 
 #if HYRISE_NUMA_SUPPORT
-#include <numa.h>  // NEEDEDINCLUDE
+#include <numa.h>
 #endif
 
-#include <iomanip>  // NEEDEDINCLUDE
+#include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <thread>  // NEEDEDINCLUDE
+#include <thread>
 
 namespace opossum {
 
@@ -19,9 +19,7 @@ const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 
 Topology::Topology() { _init_default_topology(); }
 
-void TopologyNode::print() const {
-  print(std::cout);
-}
+void TopologyNode::print() const { print(std::cout); }
 
 void TopologyNode::print(std::ostream& stream, size_t indent) const {
   for (size_t i = 0; i < indent; ++i) stream << " ";

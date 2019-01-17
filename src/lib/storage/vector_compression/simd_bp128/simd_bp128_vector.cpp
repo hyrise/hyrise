@@ -1,4 +1,4 @@
-#include "simd_bp128_vector.hpp"  // NEEDEDINCLUDE
+#include "simd_bp128_vector.hpp"
 
 namespace opossum {
 

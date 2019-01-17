@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>  // NEEDEDINCLUDE
+#include <boost/container/pmr/polymorphic_allocator.hpp>
 
 namespace opossum {
 

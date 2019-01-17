@@ -1,8 +1,8 @@
-#include "fixed_string.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "fixed_string.hpp"
 
 #include <algorithm>
 #include <cstring>
-#include <string>  // NEEDEDINCLUDE
+#include <string>
 
 namespace opossum {
 

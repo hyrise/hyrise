@@ -1,6 +1,6 @@
-#include "jit_aggregate.hpp"  // NEEDEDINCLUDE
+#include "jit_aggregate.hpp"
 
-#include "operators/jit_operator/jit_operations.hpp"  // NEEDEDINCLUDE
+#include "operators/jit_operator/jit_operations.hpp"
 
 namespace opossum {
 

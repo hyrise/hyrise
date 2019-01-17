@@ -1,8 +1,8 @@
 #pragma once
 
-#include <map>  // NEEDEDINCLUDE
+#include <map>
 
-#include "utils/singleton.hpp"  // NEEDEDINCLUDE
+#include "utils/singleton.hpp"
 
 namespace opossum {
 

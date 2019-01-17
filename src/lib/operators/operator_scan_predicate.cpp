@@ -1,10 +1,10 @@
-#include "operator_scan_predicate.hpp"  // NEEDEDINCLUDE
+#include "operator_scan_predicate.hpp"
 
-#include "expression/binary_predicate_expression.hpp"      // NEEDEDINCLUDE
-#include "expression/correlated_parameter_expression.hpp"  // NEEDEDINCLUDE
-#include "expression/expression_functional.hpp"            // NEEDEDINCLUDE
-#include "expression/value_expression.hpp"                 // NEEDEDINCLUDE
-#include "logical_query_plan/abstract_lqp_node.hpp"        // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/value_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/table.hpp"
 
 namespace {

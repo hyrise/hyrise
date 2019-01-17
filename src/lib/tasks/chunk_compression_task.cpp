@@ -1,9 +1,9 @@
-#include "chunk_compression_task.hpp"  // NEEDEDINCLUDE
+#include "chunk_compression_task.hpp"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/mvcc_data.hpp"        // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp"  // NEEDEDINCLUDE
-#include "storage/table.hpp"            // NEEDEDINCLUDE
+#include "storage/mvcc_data.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

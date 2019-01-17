@@ -1,4 +1,4 @@
-#include "numa_memory_resource.hpp"  // NEEDEDINCLUDE
+#include "numa_memory_resource.hpp"
 
 #if HYRISE_NUMA_SUPPORT
 #define NUMA_MEMORY_RESOURCE_ARENA_SIZE 1llu << 30u

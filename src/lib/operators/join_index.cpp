@@ -1,7 +1,7 @@
-#include "join_index.hpp"  // NEEDEDINCLUDE
+#include "join_index.hpp"
 
-#include "join_nested_loop.hpp"         // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp"  // NEEDEDINCLUDE
+#include "join_nested_loop.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 

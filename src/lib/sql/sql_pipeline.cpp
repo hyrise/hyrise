@@ -1,12 +1,12 @@
-#include "sql_pipeline.hpp"  // NEEDEDINCLUDE
+#include "sql_pipeline.hpp"
 
-#include <SQLParser.h>                          // NEEDEDINCLUDE
-#include <boost/algorithm/string.hpp>           // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp"  // NEEDEDINCLUDE
+#include <SQLParser.h>
+#include <boost/algorithm/string.hpp>
+#include "concurrency/transaction_context.hpp"
 
-#include "create_sql_parser_error_message.hpp"  // NEEDEDINCLUDE
-#include "utils/format_duration.hpp"            // NEEDEDINCLUDE
-#include "utils/tracing/probes.hpp"             // NEEDEDINCLUDE
+#include "create_sql_parser_error_message.hpp"
+#include "utils/format_duration.hpp"
+#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "join_graph_edge.hpp"  // NEEDEDINCLUDE
+#include "join_graph_edge.hpp"
 
 namespace opossum {
 

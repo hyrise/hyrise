@@ -1,12 +1,12 @@
-#include "column_pruning_rule.hpp"  // NEEDEDINCLUDE
+#include "column_pruning_rule.hpp"
 
-#include <unordered_map>  // NEEDEDINCLUDE
+#include <unordered_map>
 
-#include "expression/expression_functional.hpp"    // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"         // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp"        // NEEDEDINCLUDE
-#include "logical_query_plan/projection_node.hpp"  // NEEDEDINCLUDE
-#include "logical_query_plan/update_node.hpp"      // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 
 namespace opossum {
 

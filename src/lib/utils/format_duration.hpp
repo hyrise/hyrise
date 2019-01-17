@@ -1,7 +1,7 @@
 #pragma once
 
-#include <chrono>  // NEEDEDINCLUDE
-#include <string>  // NEEDEDINCLUDE
+#include <chrono>
+#include <string>
 
 namespace opossum {
 

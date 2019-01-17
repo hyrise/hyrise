@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/thread/future.hpp>  // NEEDEDINCLUDE
+#include <boost/thread/future.hpp>
 
 // This code is inspired by the code examples of user Yakk on StackExchange
 // https://codereview.stackexchange.com/q/23179

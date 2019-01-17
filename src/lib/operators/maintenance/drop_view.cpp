@@ -1,6 +1,6 @@
-#include "drop_view.hpp"  // NEEDEDINCLUDE
+#include "drop_view.hpp"
 
-#include "storage/storage_manager.hpp"  // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

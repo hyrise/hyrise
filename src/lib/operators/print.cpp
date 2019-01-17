@@ -1,9 +1,9 @@
-#include "print.hpp"  // NEEDEDINCLUDE
+#include "print.hpp"
 
-#include <iomanip>  // NEEDEDINCLUDE
+#include <iomanip>
 #include <iostream>
 
-#include "operators/table_wrapper.hpp"  // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 
@@ -25,9 +25,7 @@ std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags) {
-  print(table, flags, std::cout);
-}
+void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags) { print(table, flags, std::cout); }
 
 void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -35,9 +33,7 @@ void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std
   Print(table_wrapper, flags, out).execute();
 }
 
-void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags) {
-  print(in, flags, std::cout);
-}
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags) { print(in, flags, std::cout); }
 
 void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out) {
   Print(in, flags, out).execute();
@@ -139,7 +135,8 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        auto cell_length = static_cast<uint16_t>(type_cast_variant<std::string>((*chunk->get_segment(column_id))[chunk_offset]).size());
+        auto cell_length = static_cast<uint16_t>(
+            type_cast_variant<std::string>((*chunk->get_segment(column_id))[chunk_offset]).size());
         widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }

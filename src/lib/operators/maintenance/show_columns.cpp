@@ -1,8 +1,8 @@
-#include "show_columns.hpp"  // NEEDEDINCLUDE
+#include "show_columns.hpp"
 
-#include "storage/storage_manager.hpp"  // NEEDEDINCLUDE
-#include "storage/table.hpp"            // NEEDEDINCLUDE
-#include "storage/value_segment.hpp"    // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

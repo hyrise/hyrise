@@ -1,6 +1,6 @@
-#include "execute_server_query_task.hpp"  // NEEDEDINCLUDE
+#include "execute_server_query_task.hpp"
 
-#include "sql/sql_pipeline.hpp"  // NEEDEDINCLUDE
+#include "sql/sql_pipeline.hpp"
 
 namespace opossum {
 

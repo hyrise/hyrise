@@ -1,10 +1,10 @@
-#include "index_scan.hpp"  // NEEDEDINCLUDE
+#include "index_scan.hpp"
 
-#include "scheduler/current_scheduler.hpp"  // NEEDEDINCLUDE
-#include "scheduler/job_task.hpp"           // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 
-#include "storage/index/base_index.hpp"   // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp"  // NEEDEDINCLUDE
+#include "storage/index/base_index.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

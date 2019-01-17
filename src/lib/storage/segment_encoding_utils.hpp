@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/encoding_type.hpp"                          // NEEDEDINCLUDE
-#include "storage/vector_compression/vector_compression.hpp"  // NEEDEDINCLUDE
+#include "storage/encoding_type.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 

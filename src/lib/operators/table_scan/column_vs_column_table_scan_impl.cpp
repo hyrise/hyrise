@@ -1,7 +1,7 @@
-#include "column_vs_column_table_scan_impl.hpp"  // NEEDEDINCLUDE
+#include "column_vs_column_table_scan_impl.hpp"
 
-#include "storage/segment_iterate.hpp"  // NEEDEDINCLUDE
-#include "type_comparison.hpp"          // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp"
+#include "type_comparison.hpp"
 
 namespace opossum {
 

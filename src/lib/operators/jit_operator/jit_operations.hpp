@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/preprocessor/seq/for_each_product.hpp>  // NEEDEDINCLUDE
+#include <boost/preprocessor/seq/for_each_product.hpp>
 
-#include "jit_types.hpp"     // NEEDEDINCLUDE
-#include "resolve_type.hpp"  // NEEDEDINCLUDE
+#include "jit_types.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 

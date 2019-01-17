@@ -2,8 +2,8 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "base_vector_decompressor.hpp"  // NEEDEDINCLUDE
-#include "compressed_vector_type.hpp"    // NEEDEDINCLUDE
+#include "base_vector_decompressor.hpp"
+#include "compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/polymorphic_allocator.hpp"
 

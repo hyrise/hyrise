@@ -1,7 +1,7 @@
-#include "operator_join_predicate.hpp"  // NEEDEDINCLUDE
+#include "operator_join_predicate.hpp"
 
-#include "expression/abstract_predicate_expression.hpp"  // NEEDEDINCLUDE
-#include "logical_query_plan/abstract_lqp_node.hpp"      // NEEDEDINCLUDE
+#include "expression/abstract_predicate_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace opossum {
 

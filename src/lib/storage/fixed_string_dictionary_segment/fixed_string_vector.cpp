@@ -1,9 +1,9 @@
-#include "fixed_string_vector.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "fixed_string_vector.hpp"
 
-#include <string>  // NEEDEDINCLUDE
-#include <vector>  // NEEDEDINCLUDE
+#include <string>
+#include <vector>
 
-#include "utils/performance_warning.hpp"  // NEEDEDINCLUDE
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

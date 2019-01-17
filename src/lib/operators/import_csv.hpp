@@ -1,8 +1,8 @@
 #pragma once
 
-#include "abstract_read_only_operator.hpp"  // NEEDEDINCLUDE
-#include "import_export/csv_meta.hpp"       // NEEDEDINCLUDE
-#include "storage/table.hpp"                // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"
+#include "import_export/csv_meta.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 

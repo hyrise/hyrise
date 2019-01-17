@@ -1,4 +1,4 @@
-#include "create_table_node.hpp"  // NEEDEDINCLUDE
+#include "create_table_node.hpp"
 
 namespace opossum {
 

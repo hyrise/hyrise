@@ -1,12 +1,12 @@
 #pragma once
 
-#include <boost/container/small_vector.hpp>  // NEEDEDINCLUDE
+#include <boost/container/small_vector.hpp>
 
-#include "bytell_hash_map.hpp"              // NEEDEDINCLUDE
-#include "scheduler/current_scheduler.hpp"  // NEEDEDINCLUDE
-#include "scheduler/job_task.hpp"           // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp"      // NEEDEDINCLUDE
-#include "uninitialized_vector.hpp"         // NEEDEDINCLUDE
+#include "bytell_hash_map.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
+#include "storage/segment_iterate.hpp"
+#include "uninitialized_vector.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation

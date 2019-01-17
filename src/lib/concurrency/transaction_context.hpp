@@ -1,10 +1,10 @@
 #pragma once
 
-#include <atomic>              // NEEDEDINCLUDE
-#include <condition_variable>  // NEEDEDINCLUDE
+#include <atomic>
+#include <condition_variable>
 #include <functional>
 
-#include "types.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

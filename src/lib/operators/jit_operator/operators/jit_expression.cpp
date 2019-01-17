@@ -1,7 +1,7 @@
-#include "jit_compute.hpp"  // NEEDEDINCLUDE
+#include "jit_compute.hpp"
 
-#include "../jit_constant_mappings.hpp"  // NEEDEDINCLUDE
-#include "../jit_operations.hpp"         // NEEDEDINCLUDE
+#include "../jit_constant_mappings.hpp"
+#include "../jit_operations.hpp"
 
 namespace opossum {
 

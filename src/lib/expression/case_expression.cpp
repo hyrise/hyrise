@@ -1,8 +1,8 @@
-#include "case_expression.hpp"  // NEEDEDINCLUDE
+#include "case_expression.hpp"
 
 #include <sstream>
 
-#include "expression_utils.hpp"  // NEEDEDINCLUDE
+#include "expression_utils.hpp"
 
 namespace opossum {
 

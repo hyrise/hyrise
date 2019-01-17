@@ -1,4 +1,4 @@
-#include "jit_types.hpp"  // NEEDEDINCLUDE
+#include "jit_types.hpp"
 
 namespace opossum {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <arpa/inet.h>  // NEEDEDINCLUDE
+#include <arpa/inet.h>
 
-#include "all_type_variant.hpp"  // NEEDEDINCLUDE
-#include "types.hpp"                  // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

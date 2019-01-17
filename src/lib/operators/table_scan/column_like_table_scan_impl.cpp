@@ -1,9 +1,9 @@
-#include "column_like_table_scan_impl.hpp"  // NEEDEDINCLUDE
+#include "column_like_table_scan_impl.hpp"
 
-#include <vector>  // NEEDEDINCLUDE
+#include <vector>
 
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp"                                          // NEEDEDINCLUDE
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 

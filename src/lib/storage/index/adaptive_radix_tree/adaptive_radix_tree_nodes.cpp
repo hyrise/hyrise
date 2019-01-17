@@ -1,4 +1,4 @@
-#include "adaptive_radix_tree_nodes.hpp"  // NEEDEDINCLUDE
+#include "adaptive_radix_tree_nodes.hpp"
 
 namespace opossum {
 

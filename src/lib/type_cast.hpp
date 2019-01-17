@@ -1,13 +1,13 @@
 #pragma once
 
-#include <boost/hana/contains.hpp>          // NEEDEDINCLUDE
-#include <boost/hana/not_equal.hpp>         // NEEDEDINCLUDE
-#include <boost/hana/size.hpp>              // NEEDEDINCLUDE
-#include <boost/hana/take_while.hpp>        // NEEDEDINCLUDE
-#include <boost/lexical_cast.hpp>           // NEEDEDINCLUDE
-#include <boost/variant/apply_visitor.hpp>  // NEEDEDINCLUDE
+#include <boost/hana/contains.hpp>
+#include <boost/hana/not_equal.hpp>
+#include <boost/hana/size.hpp>
+#include <boost/hana/take_while.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/variant/apply_visitor.hpp>
 
-#include "all_type_variant.hpp"  // NEEDEDINCLUDE
+#include "all_type_variant.hpp"
 
 namespace opossum {
 

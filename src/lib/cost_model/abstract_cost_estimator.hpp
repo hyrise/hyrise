@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>  // NEEDEDINCLUDE
+#include <memory>
 
-#include "cost.hpp"  // NEEDEDINCLUDE
+#include "cost.hpp"
 
 namespace opossum {
 

@@ -1,9 +1,9 @@
 #include "predicate_node.hpp"
 
-#include "expression/abstract_expression.hpp"     // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp"        // NEEDEDINCLUDE
-#include "operators/operator_scan_predicate.hpp"  // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp"        // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "operators/operator_scan_predicate.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 

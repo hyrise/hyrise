@@ -3,7 +3,7 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "utils/singleton.hpp"  // NEEDEDINCLUDE
+#include "utils/singleton.hpp"
 
 namespace llvm {
 class Module;

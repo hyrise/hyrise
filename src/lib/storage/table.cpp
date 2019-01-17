@@ -1,6 +1,6 @@
 #include "table.hpp"
 
-#include "resolve_type.hpp"  // NEEDEDINCLUDE
+#include "resolve_type.hpp"
 #include "storage/mvcc_data.hpp"
 
 namespace opossum {

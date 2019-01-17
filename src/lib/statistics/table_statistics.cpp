@@ -1,6 +1,6 @@
-#include "table_statistics.hpp"  // NEEDEDINCLUDE
+#include "table_statistics.hpp"
 
-#include "base_column_statistics.hpp"  // NEEDEDINCLUDE
+#include "base_column_statistics.hpp"
 
 namespace opossum {
 

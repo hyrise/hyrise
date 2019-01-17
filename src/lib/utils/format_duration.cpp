@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "utils/assert.hpp"  // NEEDEDINCLUDE
+#include "utils/assert.hpp"
 
 namespace opossum {
 

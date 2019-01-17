@@ -1,7 +1,7 @@
-#include "join_hash.hpp"  // NEEDEDINCLUDE
+#include "join_hash.hpp"
 
-#include "join_hash/join_hash_steps.hpp"   // NEEDEDINCLUDE
-#include "join_hash/join_hash_traits.hpp"  // NEEDEDINCLUDE
+#include "join_hash/join_hash_steps.hpp"
+#include "join_hash/join_hash_traits.hpp"
 
 namespace opossum {
 

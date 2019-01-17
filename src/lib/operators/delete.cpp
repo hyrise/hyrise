@@ -1,13 +1,13 @@
-#include "delete.hpp"  // NEEDEDINCLUDE
+#include "delete.hpp"
 
-#include "concurrency/transaction_context.hpp"  // NEEDEDINCLUDE
-#include "concurrency/transaction_manager.hpp"  // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp"      // NEEDEDINCLUDE
-#include "storage/mvcc_data.hpp"                // NEEDEDINCLUDE
-#include "storage/pos_list.hpp"                 // NEEDEDINCLUDE
-#include "storage/reference_segment.hpp"        // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp"          // NEEDEDINCLUDE
-#include "storage/table.hpp"                    // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"
+#include "concurrency/transaction_manager.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/mvcc_data.hpp"
+#include "storage/pos_list.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
