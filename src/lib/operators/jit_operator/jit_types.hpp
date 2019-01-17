@@ -12,6 +12,7 @@ namespace opossum {
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
+// TODO update doc
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
 
 #define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \

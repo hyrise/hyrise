@@ -24,7 +24,8 @@ struct TopologyCpu final {
 struct TopologyNode final {
   explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
 
-  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
+  void print() const;
+  void print(std::ostream& stream, size_t indent = 0) const;
 
   std::vector<TopologyCpu> cpus;
 };
@@ -81,7 +82,8 @@ class Topology final : public Singleton<Topology> {
 
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
-  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
+  void print() const;
+  void print(std::ostream& stream, size_t indent = 0) const;
 
  private:
   Topology();

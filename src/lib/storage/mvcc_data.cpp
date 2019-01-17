@@ -1,5 +1,6 @@
 #include "mvcc_data.hpp"  // NEEDEDINCLUDE
 
+#include <iostream>
 #include <sstream>
 
 namespace opossum {
@@ -19,6 +20,10 @@ void MvccData::grow_by(size_t delta, CommitID begin_cid) {
   tids.grow_to_at_least(_size);
   begin_cids.grow_to_at_least(_size, begin_cid);
   end_cids.grow_to_at_least(_size, MAX_COMMIT_ID);
+}
+
+void MvccData::print() const {
+print(std::cout);
 }
 
 void MvccData::print(std::ostream& stream) const {

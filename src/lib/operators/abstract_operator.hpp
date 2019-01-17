@@ -1,6 +1,6 @@
 #pragma once
 
-#include "all_parameter_variant.hpp"      // NEEDEDINCLUDE
+#include "all_type_variant.hpp"      // NEEDEDINCLUDE
 #include "operator_performance_data.hpp"  // NEEDEDINCLUDE
 
 #include <unordered_map>

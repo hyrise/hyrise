@@ -20,7 +20,7 @@ const std::string Print::name() const { return "Print"; }
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Print>(copied_input_left, _out);
+  return std::make_shared<Print>(copied_input_left, _flags, _out);
 }
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -32,7 +32,7 @@ void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags) {
 void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-  Print(table_wrapper, out, flags).execute();
+  Print(table_wrapper, flags, out).execute();
 }
 
 void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags) {
@@ -40,7 +40,7 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t fl
 }
 
 void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out) {
-  Print(in, out, flags).execute();
+  Print(in, flags, out).execute();
 }
 
 std::shared_ptr<const Table> Print::_on_execute() {
@@ -139,7 +139,7 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(column_id))[chunk_offset]).size());
+        auto cell_length = static_cast<uint16_t>(type_cast_variant<std::string>((*chunk->get_segment(column_id))[chunk_offset]).size());
         widths[column_id] = std::max({min, widths[column_id], std::min(max, cell_length)});
       }
     }

@@ -2,7 +2,7 @@
 
 #include <arpa/inet.h>  // NEEDEDINCLUDE
 
-#include "all_parameter_variant.hpp"  // NEEDEDINCLUDE
+#include "all_type_variant.hpp"  // NEEDEDINCLUDE
 #include "types.hpp"                  // NEEDEDINCLUDE
 
 namespace opossum {

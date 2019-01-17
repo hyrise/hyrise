@@ -5,6 +5,7 @@
 #endif
 
 #include <iomanip>  // NEEDEDINCLUDE
+#include <iostream>
 #include <sstream>
 #include <thread>  // NEEDEDINCLUDE
 
@@ -17,6 +18,10 @@ const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 #endif
 
 Topology::Topology() { _init_default_topology(); }
+
+void TopologyNode::print() const {
+  print(std::cout);
+}
 
 void TopologyNode::print(std::ostream& stream, size_t indent) const {
   for (size_t i = 0; i < indent; ++i) stream << " ";

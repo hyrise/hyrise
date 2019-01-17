@@ -40,7 +40,8 @@ struct MvccData {
    */
   void grow_by(size_t delta, CommitID begin_cid);
 
-  void print(std::ostream& stream = std::cout) const;
+  void print() const;
+  void print(std::ostream& stream) const;
 
  private:
   /**

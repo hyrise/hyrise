@@ -11,14 +11,14 @@ enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
 class Print : public AbstractReadOnlyOperator {
  public:
   explicit Print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags = 0);
-  explicit Print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out, cout);
+  explicit Print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out);
 
   const std::string name() const override;
 
   static void print(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
-  static void print(const std::shared_ptr<const Table>& table, uint32_t flags = 0, std::ostream& out);
+  static void print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out);
   static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags = 0);
-  static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags = 0,
+  static void print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags,
                     std::ostream& out);
 
  protected:

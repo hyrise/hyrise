@@ -1,15 +1,20 @@
 #pragma once
 
+#include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/transform.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip.hpp>
-#include <boost/preprocessor/control/iif.hpp>
+
+#include <boost/mpl/push_front.hpp>
+
+#include <boost/preprocessor/seq/enum.hpp>
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
+
 #include <boost/variant.hpp>
 #include <cstdint>
 #include <string>
@@ -32,6 +37,8 @@ namespace hana = boost::hana;
 // TODO explain what's up with bool
 // TODO explain that we had weird macros before
 // TODO refer to types.hpp
+
+#define DATA_TYPES (int32_t)(int64_t)(float)(double)(std::string)
 
 static constexpr auto data_type_enum_values =
     hana::make_tuple(DataType::Int, DataType::Long, DataType::Float, DataType::Double, DataType::String);
