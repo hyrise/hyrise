@@ -28,7 +28,7 @@ class FileBasedQueryGenerator : public AbstractQueryGenerator {
   };
 
   // Get all queries from a given file
-  void _parse_query_file(const std::filesystem::path& query_file_path,
+  void _parse_query_file(const std::string& query_file_path,
                          const std::optional<std::unordered_set<std::string>>& query_subset);
 
   std::vector<Query> _queries;

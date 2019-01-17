@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fcntl.h> // NEEDEDINCLUDE
+#include <memory>
 #include <unistd.h> // NEEDEDINCLUDE
 
 #include "utils/assert.hpp" // NEEDEDINCLUDE

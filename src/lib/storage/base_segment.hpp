@@ -1,6 +1,7 @@
 #pragma once
 
 #include "all_type_variant.hpp"
+#include "utils/polymorphic_allocator.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

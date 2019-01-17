@@ -1,10 +1,8 @@
 #pragma once
 
-#include <boost/operators.hpp>
 #include <boost/type_traits/has_nothrow_assign.hpp>
 #include <boost/type_traits/has_nothrow_constructor.hpp> // NEEDEDINCLUDE
 #include <boost/type_traits/has_nothrow_copy.hpp> // NEEDEDINCLUDE
-#include <functional> // NEEDEDINCLUDE
 
 /*
  * This is an extension of boost's BOOST_STRONG_TYPEDEF.
@@ -16,7 +14,7 @@
 
 #define STRONG_TYPEDEF(T, D)                                                                                      \
   namespace opossum {                                                                                             \
-  struct D : boost::totally_ordered1<D, boost::totally_ordered2<D, T>> {                                          \
+  struct D {                                                                                                      \
     typedef T base_type;                                                                                          \
     T t;                                                                                                          \
     constexpr explicit D(const T& t_) BOOST_NOEXCEPT_IF(boost::has_nothrow_copy_constructor<T>::value) : t(t_) {} \
@@ -34,7 +32,7 @@
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \
-  struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
+  struct hash<::opossum::D> {                                                                                     \
     size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
   template <>                                                                                                     \

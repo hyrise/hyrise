@@ -2,6 +2,7 @@
 
 #if HYRISE_NUMA_SUPPORT
 
+#include "utils/pausable_loop_thread.hpp"
 #include "utils/singleton.hpp" // NEEDEDINCLUDE
 
 namespace boost {

@@ -87,11 +87,7 @@ void Worker::_set_affinity() {
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
   auto rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  if (rc != 0) {
-    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the DB
-    // unfunctional, but probably slower
-    std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
-  }
+  Assert(rc != 0, std::string{"Error calling pthread_setaffinity_np: "} + std::to_string(rc));
 #endif
 }
 

@@ -4,6 +4,7 @@
 
 #include "storage/vector_compression/base_compressed_vector.hpp" // NEEDEDINCLUDE
 #include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 
@@ -15,7 +16,6 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index = 0u);
   SimdBp128Iterator(const SimdBp128Iterator& other);
 
-  SimdBp128Iterator(SimdBp128Iterator&& other) = default;
   ~SimdBp128Iterator() = default;
 
  private:

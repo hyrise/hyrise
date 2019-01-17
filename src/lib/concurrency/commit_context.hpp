@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic> // NEEDEDINCLUDE
+#include <functional>
 
 #include "types.hpp" // NEEDEDINCLUDE
 

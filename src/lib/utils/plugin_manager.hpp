@@ -22,7 +22,7 @@ class PluginManager : public Singleton<PluginManager> {
   friend class SingletonTest;
 
  public:
-  void load_plugin(const filesystem::path& path);
+  void load_plugin(const std::string& path);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();

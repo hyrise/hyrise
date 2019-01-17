@@ -11,11 +11,7 @@ namespace opossum {
 NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (HYRISE_DEBUG && _active) {
-    // We cannot throw an exception because destructors are noexcept by default.
-    std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
-    std::exit(EXIT_FAILURE);
-  }
+  DebugAssert(_active, "NodeQueueScheduler::finish() wasn't called prior to destroying it");
 }
 
 void NodeQueueScheduler::begin() {

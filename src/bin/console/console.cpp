@@ -1,5 +1,6 @@
 #include "console.hpp"
 
+#include <filesystem>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
@@ -39,7 +40,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"

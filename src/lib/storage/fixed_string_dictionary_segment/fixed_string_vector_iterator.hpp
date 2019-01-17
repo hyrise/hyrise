@@ -5,6 +5,7 @@
 #include <string.h> // NEEDEDINCLUDE
 
 #include "fixed_string.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

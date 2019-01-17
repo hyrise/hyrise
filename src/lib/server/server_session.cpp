@@ -30,7 +30,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::start() {
         try {
           f.get();
         } catch (const std::exception& e) {
-          std::cerr << e.what() << std::endl;
+          Fail(e.what());
         }
       });
 }

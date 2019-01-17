@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_encoded_segment.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

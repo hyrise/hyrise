@@ -5,6 +5,7 @@
 #include <vector> // NEEDEDINCLUDE
 
 #include "abstract_filter.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

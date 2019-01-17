@@ -1,5 +1,6 @@
 #include "fixed_string.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
 
+#include <algorithm>
 #include <cstring>
 #include <string> // NEEDEDINCLUDE
 

@@ -3,6 +3,7 @@
 #include "base_encoded_segment.hpp" // NEEDEDINCLUDE
 #include "encoding_type.hpp"
 #include "utils/enum_constant.hpp"
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

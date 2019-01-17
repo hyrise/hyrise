@@ -10,6 +10,7 @@
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "types.hpp"
 
 namespace {

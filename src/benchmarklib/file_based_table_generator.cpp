@@ -1,11 +1,14 @@
 #include "file_based_table_generator.hpp"
 
 #include <boost/algorithm/string.hpp>
+#include <filesystem>
+#include <unordered_set>
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
+#include "storage/table.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
@@ -30,7 +33,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
    * binary version of a table.
    */
-  for (const auto& directory_entry : filesystem::recursive_directory_iterator(_path)) {
+  for (const auto& directory_entry : std::filesystem::recursive_directory_iterator(_path)) {
     if (!std::filesystem::is_regular_file(directory_entry)) continue;
 
     const auto extension = directory_entry.path().extension();
@@ -82,18 +85,20 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
     _benchmark_config->out << "- Loading table '" << table_name << "' ";
 
+    auto text_file_path = std::filesystem::path{*table_info.text_file_path};
+
     // Pick a source file to load a table from, prefer the binary version
     if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
       _benchmark_config->out << "from " << *table_info.binary_file_path << std::flush;
       table_info.table = ImportBinary::read_binary(*table_info.binary_file_path);
       table_info.loaded_from_binary = true;
     } else {
-      _benchmark_config->out << "from " << *table_info.text_file_path << std::flush;
-      const auto extension = table_info.text_file_path->extension();
+      _benchmark_config->out << "from " << text_file_path << std::flush;
+      const auto extension = text_file_path.extension();
       if (extension == ".tbl") {
-        table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
+        table_info.table = load_table(text_file_path, _benchmark_config->chunk_size);
       } else if (extension == ".csv") {
-        table_info.table = CsvParser{}.parse(*table_info.text_file_path, std::nullopt, _benchmark_config->chunk_size);
+        table_info.table = CsvParser{}.parse(text_file_path, std::nullopt, _benchmark_config->chunk_size);
       } else {
         Fail("Unknown textual file format. This should have been caught earlier.");
       }

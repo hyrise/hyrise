@@ -3,6 +3,7 @@
 #include <string> // NEEDEDINCLUDE
 
 #include "base_dictionary_segment.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

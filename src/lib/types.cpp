@@ -1,5 +1,7 @@
 #include "types.hpp" // NEEDEDINCLUDE
 
+#include <iostream>
+
 namespace opossum {
 
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition) {
@@ -70,5 +72,10 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
       Fail("Can't inverse the specified PredicateCondition");
   }
 }
+
+ std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
+    o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
+    return o;
+  }
 
 }  // namespace opossum

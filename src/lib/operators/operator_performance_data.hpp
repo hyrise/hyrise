@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utils/pmr_vector.hpp"
 #include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
@@ -60,8 +61,11 @@ struct PosList final : private pmr_vector<RowID> {
           [&]() {
             if (size() == 0) return true;
             const auto& common_chunk_id = (*this)[0].chunk_id;
-            return std::all_of(cbegin(), cend(),
-                               [&](const auto& row_id) { return row_id.chunk_id == common_chunk_id; });
+            bool all_same_chunk = true;
+            for (const auto& row_id : *this) {
+              if (row_id.chunk_id != common_chunk_id) all_same_chunk = false;
+            }
+            return all_same_chunk;
           }(),
           "Chunk was marked as referencing only a single chunk, but references more");
     }

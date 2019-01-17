@@ -9,6 +9,7 @@
 #include "benchmark_state.hpp"
 #include "constant_mappings.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"

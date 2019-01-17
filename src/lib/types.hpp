@@ -1,12 +1,15 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp> // NEEDEDINCLUDE
-
-#include <iostream> // NEEDEDINCLUDE
+#include <iosfwd>
+#include <memory>
 #include <vector> // NEEDEDINCLUDE
 
 #include "strong_typedef.hpp" // NEEDEDINCLUDE
 #include "utils/assert.hpp" // NEEDEDINCLUDE
+
+namespace std {
+  extern std::ostream cout;
+}
 
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
@@ -39,19 +42,6 @@ STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
 
-/** We use vectors with custom allocators, e.g, to bind the data object to
- * specific NUMA nodes. This is mainly used in the data objects, i.e.,
- * Chunk, ValueSegment, DictionarySegment, ReferenceSegment and attribute vectors.
- * The PolymorphicAllocator provides an abstraction over several allocation
- * methods by adapting to subclasses of boost::container::pmr::memory_resource.
- */
-
-template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
-
-template <typename T>
-using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
-
 using ChunkOffset = uint32_t;
 
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
@@ -74,17 +64,12 @@ struct RowID {
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) < std::tie(other.chunk_id, other.chunk_offset);
+    return chunk_id < other.chunk_id || chunk_offset < other.chunk_offset;
   }
 
   // Useful when comparing a row ID to NULL_ROW_ID
   bool operator==(const RowID& other) const {
-    return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
-  }
-
-  friend std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
-    o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
-    return o;
+    return chunk_id == other.chunk_id && chunk_offset == other.chunk_offset;
   }
 };
 

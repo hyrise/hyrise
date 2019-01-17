@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string/split.hpp> // NEEDEDINCLUDE
 #include <boost/algorithm/string/trim_all.hpp> // NEEDEDINCLUDE
+#include <filesystem>
 
 namespace opossum {
 
@@ -27,8 +28,8 @@ std::vector<std::string> split_string_by_delimiter(const std::string& str, char 
   return internal;
 }
 
-const std::string plugin_name_from_path(const filesystem::path& path) {
-  const auto filename = path.stem().string();
+const std::string plugin_name_from_path(const std::string& path) {
+  const auto filename = std::filesystem::path{path}.stem().string();
 
   // Remove "lib" prefix of shared library file
   const auto plugin_name = filename.substr(3);

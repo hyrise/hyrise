@@ -2,6 +2,8 @@
 
 #include <tbb/concurrent_vector.h> // NEEDEDINCLUDE
 
+#include "polymorphic_allocator.hpp"
+
 namespace opossum {
 
 // We are not using PMR here because of the problems described in #281.

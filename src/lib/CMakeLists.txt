@@ -541,7 +541,6 @@ dummy.cpp
     utils/ignore_unused_variable.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
-    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
@@ -550,6 +549,8 @@ dummy.cpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/make_bimap.hpp
+    utils/null_streambuf.cpp
+    utils/null_streambuf.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp
@@ -558,6 +559,8 @@ dummy.cpp
     utils/performance_warning.hpp
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
+    utils/pmr_concurrent_vector.hpp
+    utils/pmr_vector.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/singleton.hpp

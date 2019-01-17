@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <iterator> // NEEDEDINCLUDE
 
 #include "storage/segment_iterables.hpp" // NEEDEDINCLUDE

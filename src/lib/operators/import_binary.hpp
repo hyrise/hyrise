@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
   class BaseSegment;

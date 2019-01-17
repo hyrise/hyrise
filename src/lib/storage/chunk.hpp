@@ -2,6 +2,7 @@
 
 #include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp" // NEEDEDINCLUDE
 #include "utils/scoped_locking_ptr.hpp" // NEEDEDINCLUDE
 
 namespace opossum {

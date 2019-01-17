@@ -1,6 +1,5 @@
 #pragma once
 
-#include <filesystem>
 #include <string>
 
 #include "abstract_table_generator.hpp"

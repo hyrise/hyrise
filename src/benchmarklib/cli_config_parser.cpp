@@ -1,5 +1,6 @@
 #include "cli_config_parser.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -22,7 +23,7 @@ bool CLIConfigParser::cli_has_json_config(const int argc, char** argv) {
 }
 
 nlohmann::json CLIConfigParser::parse_json_config_file(const std::string& json_file_str) {
-  Assert(filesystem::is_regular_file(json_file_str), "No such file: " + json_file_str);
+  Assert(std::filesystem::is_regular_file(json_file_str), "No such file: " + json_file_str);
 
   nlohmann::json json_config;
   std::ifstream json_file{json_file_str};
@@ -180,7 +181,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
-  Assert(filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
+  Assert(std::filesystem::is_regular_file(encoding_file_str), "No such file: " + encoding_file_str);
 
   nlohmann::json encoding_config_json;
   std::ifstream json_file{encoding_file_str};

@@ -1,5 +1,7 @@
 #include "abstract_table_generator.hpp"
 
+#include <filesystem>
+
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "operators/export_binary.hpp"

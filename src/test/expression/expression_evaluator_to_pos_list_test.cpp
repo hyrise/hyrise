@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/arithmetic_expression.hpp"
+#include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"

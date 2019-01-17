@@ -4,6 +4,7 @@
 
 #include "fixed_size_byte_aligned_decompressor.hpp" // NEEDEDINCLUDE
 #include "storage/vector_compression/base_compressed_vector.hpp" // NEEDEDINCLUDE
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

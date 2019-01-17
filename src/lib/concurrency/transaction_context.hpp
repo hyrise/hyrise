@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic> // NEEDEDINCLUDE
+#include <functional>
 #include <condition_variable> // NEEDEDINCLUDE
 
 #include "types.hpp" // NEEDEDINCLUDE

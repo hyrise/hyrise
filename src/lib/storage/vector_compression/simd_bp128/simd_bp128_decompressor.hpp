@@ -6,6 +6,7 @@
 #include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
 #include "storage/vector_compression/base_vector_decompressor.hpp" // NEEDEDINCLUDE
 #include "types.hpp"
+#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 
@@ -26,7 +27,6 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   explicit SimdBp128Decompressor(const SimdBp128Vector& vector);
   SimdBp128Decompressor(const SimdBp128Decompressor& other);
 
-  SimdBp128Decompressor(SimdBp128Decompressor&& other) = default;
   ~SimdBp128Decompressor() = default;
 
   uint32_t get(size_t i) final {

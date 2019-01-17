@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO move the segment stuff to its own file
+
 #include <boost/hana/for_each.hpp> // NEEDEDINCLUDE
 
 #include "storage/reference_segment.hpp" // NEEDEDINCLUDE

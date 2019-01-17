@@ -1,5 +1,7 @@
 #include "fixed_size_byte_aligned_compressor.hpp" // NEEDEDINCLUDE
 
+#include <functional>
+
 #include "fixed_size_byte_aligned_vector.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
