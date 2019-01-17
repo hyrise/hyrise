@@ -42,8 +42,8 @@ class PrintWrapper : public Print {
 
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out, uint32_t flags)
-      : Print(in, out, flags), tab(in->get_output()) {}
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, uint32_t flags, std::ostream& out)
+      : Print(in, flags, out), tab(in->get_output()) {}
 
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return _column_string_widths(min, max, tab);
@@ -61,7 +61,7 @@ class PrintWrapper : public Print {
 };
 
 TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
-  auto pr = std::make_shared<Print>(_gt, output);
+  auto pr = std::make_shared<Print>(_gt, 0, output);
   pr->execute();
 
   // check if table is correctly passed
@@ -84,7 +84,7 @@ TEST_F(OperatorsPrintTest, FilledTable) {
     tab->append({static_cast<int>(i % _chunk_size), std::string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
   }
 
-  auto pr = std::make_shared<Print>(_gt, output);
+  auto pr = std::make_shared<Print>(_gt, 0, output);
   pr->execute();
 
   // check if table is correctly passed
@@ -133,7 +133,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {
-  auto pr = std::make_shared<opossum::Print>(_gt, output);
+  auto pr = std::make_shared<opossum::Print>(_gt, 0, output);
 
   EXPECT_EQ(pr->name(), "Print");
 }
@@ -173,7 +173,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
 
-  auto printer = std::make_shared<Print>(wrap, output);
+  auto printer = std::make_shared<Print>(wrap, 0, output);
   printer->execute();
 
   auto output_string = output.str();
@@ -195,7 +195,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
 
   // Flags = 0 is the default. As such, empty chunks will be printed.
   std::ostringstream output_withempty;
-  auto print_wrap_withempty = PrintWrapper(wrap, output_withempty, 0);
+  auto print_wrap_withempty = PrintWrapper(wrap, 0, output_withempty);
   print_wrap_withempty.execute();
 
   auto expected_output_withempty =
@@ -212,7 +212,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
 
   // And now skip empty chunks.
   std::ostringstream output_noempty;
-  auto print_wrap_noempty = PrintWrapper(wrap, output_noempty, 1);
+  auto print_wrap_noempty = PrintWrapper(wrap, 1, output_noempty);
   print_wrap_noempty.execute();
 
   auto expected_output_noempty =
@@ -227,7 +227,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
 }
 
 TEST_F(OperatorsPrintTest, MVCCFlag) {
-  auto print_wrap = PrintWrapper(_gt, output, 2);
+  auto print_wrap = PrintWrapper(_gt, 2, output);
   print_wrap.execute();
 
   auto expected_output =
@@ -242,7 +242,7 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
 }
 
 TEST_F(OperatorsPrintTest, AllFlags) {
-  auto print_wrap = PrintWrapper(_gt, output, 3);
+  auto print_wrap = PrintWrapper(_gt, 3, output);
   print_wrap.execute();
 
   EXPECT_FALSE(print_wrap.is_printing_empty_chunks());

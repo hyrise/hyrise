@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "../micro_benchmark_basic_fixture.hpp"
+#include "all_parameter_variant.hpp"
 #include "benchmark/benchmark.h"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"

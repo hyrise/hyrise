@@ -1,5 +1,7 @@
 #include "sql_identifier_resolver.hpp"  // NEEDEDINCLUDE
 
+#include <algorithm>
+
 #include "expression/abstract_expression.hpp"
 
 using namespace std::string_literals;  // NOLINT
