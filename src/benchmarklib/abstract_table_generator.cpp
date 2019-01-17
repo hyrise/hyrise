@@ -24,12 +24,12 @@ void AbstractTableGenerator::generate_and_store() {
    */
   std::cout << "- Encoding tables if necessary" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
-    std::cout << "-  Encoding '" << table_name << "' " << std::flush;
+    std::cout << "-  Encoding '" << table_name << "' - " << std::flush;
     Timer per_table_timer;
     table_info.re_encoded =
         BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
-    std::cout << (table_info.re_encoded ? " - no encoding necessary " : " - encoding applied ");
-    std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
+    std::cout << (table_info.re_encoded ? "encoding applied" : "no encoding necessary");
+    std::cout << " (" << per_table_timer.lap_formatted() << ")" << std::endl;
   }
   std::cout << "- Encoding tables done (" << timer.lap_formatted() << ")" << std::endl;
 
