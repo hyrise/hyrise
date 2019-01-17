@@ -352,7 +352,12 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
     pipeline.get_result_table();
   } else {
     const auto hyrise_result = pipeline.get_result_table();
+
+    std::cout << "- Running query with SQLite " << std::flush;
+    Timer timer;
     const auto sqlite_result = _sqlite_wrapper->execute_query(sql);
+    std::cout << "(" << timer.lap_as_string() << ")." << std::endl;
+    std::cout << "- Comparing Hyrise and SQLite result tables" << std::endl;
 
     // check_table_equal does not handle empty tables well
     if (hyrise_result->row_count() > 0) {
