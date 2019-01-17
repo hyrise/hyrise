@@ -5,6 +5,7 @@
 
 namespace opossum {
 
+
 bool constraint_valid_for(const Table& table, const TableConstraintDefinition& constraint,
                           const CommitID& snapshot_commit_id, const TransactionID& our_tid) {
   std::set<boost::container::small_vector<AllTypeVariant, 3>> unique_values;
@@ -37,7 +38,7 @@ bool constraint_valid_for(const Table& table, const TableConstraintDefinition& c
           return false;
         }
       }
-    continue_with_next_row:;
+{continue_with_next_row:;}
     }
   }
   return true;

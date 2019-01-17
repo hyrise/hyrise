@@ -17,7 +17,7 @@
 #include "storage/table.hpp"
 
 namespace opossum {
-class ConstraintsConcurrentTest : public BaseTest {
+class ConstraintsTest : public BaseTest {
  protected:
   void SetUp() override {
     column_definitions.emplace_back("column0", DataType::Int, false);
@@ -72,20 +72,44 @@ class ConstraintsConcurrentTest : public BaseTest {
   TableColumnDefinitions nullable_column_definitions;
 };
 
-TEST_F(ConstraintsConcurrentTest, InvalidConstraintAdd) {
+TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
 
+  // invalid because column id is out of range
   EXPECT_THROW(table->add_unique_constraint({ColumnID{5}}), std::exception);
-  // invalid because column must be non nullable for primary constrain
+
+  // invalid because column must be non nullable for primary constraint
   EXPECT_THROW(table->add_unique_constraint({ColumnID{1}}, true), std::exception);
+
   // invalid because there is still a nullable column
   EXPECT_THROW(table->add_unique_constraint({ColumnID{0}, ColumnID{1}}, true), std::exception);
+
   // invalid because the column contains duplicated values.
   EXPECT_THROW(table->add_unique_constraint({ColumnID{1}}), std::exception);
+
+  table->add_unique_constraint({ColumnID{2}}, true);
+  // invalid because a primary key already exists.
+  EXPECT_THROW({
+      try {
+          table->add_unique_constraint({ColumnID{2}}, true);
+      } catch( const std::exception& e ) {
+          // and this tests that it has the correct message
+          EXPECT_TRUE(
+            std::string(e.what()).find("Another primary key already exists for this table.") != std::string::npos);
+          throw;
+      }
+  }, std::exception);
+
+  // invalid because a constraint on the same column already exists.
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}}), std::exception);
+
+  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+  // invalid because a constraint on the same columns already exists.
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}, ColumnID{2}}), std::exception);
 }
 
-TEST_F(ConstraintsConcurrentTest, ValidInsert) {
+TEST_F(ConstraintsTest, ValidInsert) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -105,7 +129,7 @@ TEST_F(ConstraintsConcurrentTest, ValidInsert) {
   EXPECT_TRUE(context->commit());
 }
 
-TEST_F(ConstraintsConcurrentTest, InvalidInsert) {
+TEST_F(ConstraintsTest, InvalidInsert) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -125,7 +149,7 @@ TEST_F(ConstraintsConcurrentTest, InvalidInsert) {
   EXPECT_TRUE(context->rollback());
 }
 
-TEST_F(ConstraintsConcurrentTest, ValidInsertNullable) {
+TEST_F(ConstraintsTest, ValidInsertNullable) {
   auto& manager = StorageManager::get();
   auto table_nullable = manager.get_table("table_nullable");
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -147,7 +171,7 @@ TEST_F(ConstraintsConcurrentTest, ValidInsertNullable) {
   EXPECT_TRUE(context->commit());
 }
 
-TEST_F(ConstraintsConcurrentTest, InvalidInsertNullable) {
+TEST_F(ConstraintsTest, InvalidInsertNullable) {
   auto& manager = StorageManager::get();
   auto table_nullable = manager.get_table("table_nullable");
   auto new_values = std::make_shared<Table>(nullable_column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -168,7 +192,7 @@ TEST_F(ConstraintsConcurrentTest, InvalidInsertNullable) {
   EXPECT_TRUE(context->rollback());
 }
 
-TEST_F(ConstraintsConcurrentTest, ValidInsertConcatenated) {
+TEST_F(ConstraintsTest, ValidInsertConcatenated) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
@@ -189,7 +213,7 @@ TEST_F(ConstraintsConcurrentTest, ValidInsertConcatenated) {
   EXPECT_TRUE(context->commit());
 }
 
-TEST_F(ConstraintsConcurrentTest, InvalidInsertConcatenated) {
+TEST_F(ConstraintsTest, InvalidInsertConcatenated) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
@@ -210,7 +234,7 @@ TEST_F(ConstraintsConcurrentTest, InvalidInsertConcatenated) {
   EXPECT_TRUE(context->rollback());
 }
 
-TEST_F(ConstraintsConcurrentTest, ValidInsertNullableConcatenated) {
+TEST_F(ConstraintsTest, ValidInsertNullableConcatenated) {
   auto& manager = StorageManager::get();
   auto table_nullable = manager.get_table("table_nullable");
   table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
@@ -233,7 +257,7 @@ TEST_F(ConstraintsConcurrentTest, ValidInsertNullableConcatenated) {
   EXPECT_TRUE(context->commit());
 }
 
-TEST_F(ConstraintsConcurrentTest, InvalidInsertNullableConcatenated) {
+TEST_F(ConstraintsTest, InvalidInsertNullableConcatenated) {
   auto& manager = StorageManager::get();
   auto table_nullable = manager.get_table("table_nullable");
   table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{2}});
@@ -255,7 +279,7 @@ TEST_F(ConstraintsConcurrentTest, InvalidInsertNullableConcatenated) {
   EXPECT_TRUE(context->rollback());
 }
 
-TEST_F(ConstraintsConcurrentTest, InvalidInsertDeleteRace) {
+TEST_F(ConstraintsTest, InvalidInsertDeleteRace) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -289,7 +313,7 @@ TEST_F(ConstraintsConcurrentTest, InvalidInsertDeleteRace) {
   EXPECT_TRUE(del_transaction_context->commit());
 }
 
-TEST_F(ConstraintsConcurrentTest, ValidInsertDeleteRace) {
+TEST_F(ConstraintsTest, ValidInsertDeleteRace) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
@@ -323,7 +347,7 @@ TEST_F(ConstraintsConcurrentTest, ValidInsertDeleteRace) {
   EXPECT_TRUE(insert_context->commit());
 }
 
-TEST_F(ConstraintsConcurrentTest, InsertInsertRace) {
+TEST_F(ConstraintsTest, InsertInsertRace) {
   auto& manager = StorageManager::get();
   auto table = manager.get_table("table");
   auto new_values = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
