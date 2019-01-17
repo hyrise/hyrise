@@ -158,7 +158,8 @@ externalproject_add(
 
     PREFIX ${CMAKE_CURRENT_SOURCE_DIR}/jemalloc
     URL https://github.com/jemalloc/jemalloc/releases/download/5.1.0/jemalloc-5.1.0.tar.bz2
-    CONFIGURE_COMMAND cd <SOURCE_DIR> && ./configure
+    # Executing the configure script with suppressed output, only printing it in case of non-zero return
+    CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && output=`./configure 2>&1` || printf \"$output\\n\""
     BUILD_COMMAND ${CMAKE_BUILD_TOOL}
     BUILD_IN_SOURCE 1
     STEP_TARGETS build
