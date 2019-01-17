@@ -21,12 +21,13 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Encode the Tables
    */
-  std::cout << "- Encoding tables " << std::endl;
+  std::cout << "- Encoding tables if necessary" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {
     timer.lap();
-    std::cout << "- Encoding '" << table_name << "' " << std::flush;
+    std::cout << "-  Encoding '" << table_name << "' " << std::flush;
     table_info.re_encoded =
         BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
+    std::cout << (table_info.re_encoded ? " - no encoding necessary " : " - encoding applied ");
     std::cout << "(" << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(timer.lap())) << ")"
               << std::endl;
   }
@@ -56,7 +57,6 @@ void AbstractTableGenerator::generate_and_store() {
                 << std::endl;
     }
   }
-
 
   /**
    * Add the Tables to the StorageManager

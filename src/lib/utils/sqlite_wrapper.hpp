@@ -50,7 +50,7 @@ class SQLiteWrapper final {
   /*
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
-  void _copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table> &table, sqlite3_stmt *result_row, int column_count);
+  void _copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
 
   /**
    * Execute an SQL statement on the wrapped sqlite db

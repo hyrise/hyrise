@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "types.hpp"
 #include "operators/print.hpp"
+#include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

@@ -17,8 +17,8 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
-#include "utils/sqlite_wrapper.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -359,7 +359,7 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::function
       if (sqlite_result->row_count() == 0) {
         std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
       } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                               FloatComparisonMode::RelativeDifference)) {
+                                    FloatComparisonMode::RelativeDifference)) {
         std::cout << "- Verification failed." << std::endl;
       } else {
         std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows)" << std::endl;

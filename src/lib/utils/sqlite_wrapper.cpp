@@ -20,7 +20,6 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-
 }  // namespace
 
 namespace opossum {
@@ -82,8 +81,9 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   insert_into_stream << ");";
   const auto insert_into_str = insert_into_stream.str();
 
-  sqlite3_stmt * insert_into_statement;
-  const auto sqlite3_prepare_return_code = sqlite3_prepare_v2(_db, insert_into_str.c_str(), -1, &insert_into_statement, nullptr);
+  sqlite3_stmt* insert_into_statement;
+  const auto sqlite3_prepare_return_code =
+      sqlite3_prepare_v2(_db, insert_into_str.c_str(), -1, &insert_into_statement, nullptr);
   Assert(sqlite3_prepare_return_code == SQLITE_OK, "Failed to prepare statement: " + std::string(sqlite3_errmsg(_db)));
 
   // Insert
@@ -103,21 +103,25 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
         } else {
           switch (table.column_data_type(column_id)) {
             case DataType::Int: {
-              sqlite3_bind_return_code = sqlite3_bind_int(insert_into_statement, sqlite_column_id,
-                                            boost::get<int32_t>(value));
+              sqlite3_bind_return_code =
+                  sqlite3_bind_int(insert_into_statement, sqlite_column_id, boost::get<int32_t>(value));
             } break;
             case DataType::Long:
-              sqlite3_bind_return_code = sqlite3_bind_int64(insert_into_statement, sqlite_column_id, boost::get<int64_t>(value));
+              sqlite3_bind_return_code =
+                  sqlite3_bind_int64(insert_into_statement, sqlite_column_id, boost::get<int64_t>(value));
               break;
             case DataType::Float:
-              sqlite3_bind_return_code = sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<float>(value));
+              sqlite3_bind_return_code =
+                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<float>(value));
               break;
             case DataType::Double:
-              sqlite3_bind_return_code = sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<double>(value));
+              sqlite3_bind_return_code =
+                  sqlite3_bind_double(insert_into_statement, sqlite_column_id, boost::get<double>(value));
               break;
             case DataType::String: {
               const auto& string_value = boost::get<std::string>(value);
-              sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id, string_value.c_str(), -1, SQLITE_TRANSIENT);
+              sqlite3_bind_return_code = sqlite3_bind_text(insert_into_statement, sqlite_column_id,
+                                                           string_value.c_str(), -1, SQLITE_TRANSIENT);
             } break;
             case DataType::Null:
             case DataType::Bool:
@@ -135,7 +139,6 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
       const auto sqlite3_reset_return_code = sqlite3_reset(insert_into_statement);
       Assert(sqlite3_reset_return_code == SQLITE_OK, "Failed to reset statement: " + std::string(sqlite3_errmsg(_db)));
     }
-
   }
 
   sqlite3_finalize(insert_into_statement);
@@ -258,7 +261,7 @@ void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset
   _exec_sql(command_ss.str());
 }
 
-void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table> &table, sqlite3_stmt *result_row,
+void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row,
                                                     int column_count) {
   std::vector<AllTypeVariant> row;
 
