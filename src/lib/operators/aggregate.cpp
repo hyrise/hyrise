@@ -24,29 +24,30 @@
 #include "utils/performance_warning.hpp"
 
 namespace {
-  using namespace opossum;
+using namespace opossum;
 
-  // Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
-  // AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
-  // This is important so that we can reconstruct the original values later. In any case, a reference to the result is
-  // returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
-  template <typename ResultIds, typename Results, typename AggregateKey>
-  typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key, const RowID& row_id) {
-    // Get the result id for the current key or add it to the id map
-    auto it = result_ids.find(key);
-    if (it != result_ids.end()) return results[it->second];
+// Given an AggregateKey key, and a RowId row_id where this AggregateKey was encountered, this first checks if the
+// AggregateKey was seen before. If not, a new aggregate result is inserted into results and connected to the row id.
+// This is important so that we can reconstruct the original values later. In any case, a reference to the result is
+// returned so that result information, such as the aggregate's count or sum, can be modified by the caller.
+template <typename ResultIds, typename Results, typename AggregateKey>
+typename Results::reference get_or_add_result(ResultIds& result_ids, Results& results, const AggregateKey& key,
+                                              const RowID& row_id) {
+  // Get the result id for the current key or add it to the id map
+  auto it = result_ids.find(key);
+  if (it != result_ids.end()) return results[it->second];
 
-    auto result_id = results.size();
+  auto result_id = results.size();
 
-    result_ids.emplace_hint(it, key, result_id);
+  result_ids.emplace_hint(it, key, result_id);
 
-    // If it was added to the id map, add the current row id to the result list so that we can revert the
-    // value(s) -> key mapping
-    results.emplace_back();
-    results[result_id].row_id = row_id;
+  // If it was added to the id map, add the current row id to the result list so that we can revert the
+  // value(s) -> key mapping
+  results.emplace_back();
+  results[result_id].row_id = row_id;
 
-    return results[result_id];
-  }
+  return results[result_id];
+}
 }  // namespace
 
 namespace opossum {
@@ -112,9 +113,7 @@ template <typename ColumnDataType, typename AggregateType>
 struct AggregateResultContext : SegmentVisitorContext {
   using AggregateResultAllocator = PolymorphicAllocator<AggregateResults<ColumnDataType, AggregateType>>;
 
-  AggregateResultContext() : results(
-    AggregateResultAllocator{&buffer}
-  ) {}
+  AggregateResultContext() : results(AggregateResultAllocator{&buffer}) {}
 
   boost::container::pmr::monotonic_buffer_resource buffer;
   AggregateResults<ColumnDataType, AggregateType> results;
