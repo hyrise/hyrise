@@ -147,10 +147,18 @@ int BenchmarkRunner::run() {
     }
   }
 
-  return std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
-    Assert(result.verification_passed, "Verification result should have been set");
-    return *result.verification_passed;
-  });
+  // Return non-zero if verification against SQLite failed
+  if (_config.verify) {
+    const auto any_verification_failed =
+        std::any_of(_query_results.begin(), _query_results.end(), [&](const QueryBenchmarkResult& result) {
+          Assert(result.verification_passed, "Verification result should have been set");
+          return !*result.verification_passed;
+        });
+
+    return any_verification_failed ? 1 : 0;
+  } else {
+    return 0;
+  }
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {

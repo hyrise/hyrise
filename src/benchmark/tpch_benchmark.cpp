@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   return opossum::BenchmarkRunner(
-      *config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, scale_factor, query_ids),
-      std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+             *config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, scale_factor, query_ids),
+             std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }
