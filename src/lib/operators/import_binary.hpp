@@ -1,15 +1,15 @@
 #pragma once
 
-#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"  // NEEDEDINCLUDE
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {
-  class BaseSegment;
-  template <typename T>
-  class DictionarySegment;
-  template <typename T>
-  class ValueSegment;
-  class BaseCompressedVector;
+class BaseSegment;
+template <typename T>
+class DictionarySegment;
+template <typename T>
+class ValueSegment;
+class BaseCompressedVector;
 
 /*
  * This operator reads a Opossum binary file and creates a table from that input.

@@ -1,6 +1,6 @@
-#include "pausable_loop_thread.hpp" // NEEDEDINCLUDE
+#include "pausable_loop_thread.hpp"  // NEEDEDINCLUDE
 
-#include <thread> // NEEDEDINCLUDE
+#include <thread>  // NEEDEDINCLUDE
 
 namespace opossum {
 

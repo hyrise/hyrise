@@ -10,8 +10,8 @@
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
-#include "optimizer/optimizer.hpp"
 #include "operators/validate.hpp"
+#include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"

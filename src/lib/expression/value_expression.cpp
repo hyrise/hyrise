@@ -1,6 +1,6 @@
-#include "value_expression.hpp" // NEEDEDINCLUDE
+#include "value_expression.hpp"  // NEEDEDINCLUDE
 
-#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

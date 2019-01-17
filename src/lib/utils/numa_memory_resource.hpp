@@ -1,10 +1,10 @@
 #pragma once
 
-#include <boost/container/pmr/memory_resource.hpp> // NEEDEDINCLUDE
-#include <boost/integer/common_factor_rt.hpp> // NEEDEDINCLUDE
+#include <boost/container/pmr/memory_resource.hpp>  // NEEDEDINCLUDE
+#include <boost/integer/common_factor_rt.hpp>       // NEEDEDINCLUDE
 
 #if HYRISE_NUMA_SUPPORT
-#include <PGASUS/msource/msource.hpp> // NEEDEDINCLUDE
+#include <PGASUS/msource/msource.hpp>  // NEEDEDINCLUDE
 #endif
 
 namespace opossum {

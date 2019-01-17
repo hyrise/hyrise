@@ -1,13 +1,13 @@
-#include "storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage_manager.hpp"  // NEEDEDINCLUDE
 
-#include "operators/export_csv.hpp" // NEEDEDINCLUDE
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
-#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
-#include "scheduler/job_task.hpp" // NEEDEDINCLUDE
-#include "statistics/generate_table_statistics.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "lqp_view.hpp"                              // NEEDEDINCLUDE
+#include "operators/export_csv.hpp"                  // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"               // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp"           // NEEDEDINCLUDE
+#include "scheduler/job_task.hpp"                    // NEEDEDINCLUDE
+#include "statistics/generate_table_statistics.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp"           // NEEDEDINCLUDE
 #include "table.hpp"
-#include "lqp_view.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -106,6 +106,10 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
   Assert(iter != _prepared_plans.end(), "No such prepared plan named '" + name + "'");
 
   _prepared_plans.erase(iter);
+}
+
+void StorageManager::print() const {
+  print(std::cout);
 }
 
 void StorageManager::print(std::ostream& out) const {

@@ -1,6 +1,5 @@
 #include "console.hpp"
 
-#include <filesystem>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
@@ -9,6 +8,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <memory>

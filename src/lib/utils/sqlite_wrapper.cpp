@@ -1,10 +1,10 @@
-#include "sqlite_wrapper.hpp" // NEEDEDINCLUDE
+#include "sqlite_wrapper.hpp"  // NEEDEDINCLUDE
 
-#include <fstream> // NEEDEDINCLUDE
-#include <iomanip> // NEEDEDINCLUDE
-#include <sqlite3.h> // NEEDEDINCLUDE
+#include <sqlite3.h>  // NEEDEDINCLUDE
+#include <fstream>    // NEEDEDINCLUDE
+#include <iomanip>    // NEEDEDINCLUDE
 
-#include "sql/sql_pipeline_builder.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline_builder.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory> // NEEDEDINCLUDE
-#include <vector> // NEEDEDINCLUDE
+#include <memory>  // NEEDEDINCLUDE
+#include <vector>  // NEEDEDINCLUDE
 
-#include "sql_identifier.hpp" // NEEDEDINCLUDE
+#include "sql_identifier.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

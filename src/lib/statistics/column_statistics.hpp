@@ -1,7 +1,7 @@
 #pragma once
 
-#include "base_column_statistics.hpp" // NEEDEDINCLUDE
-#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "base_column_statistics.hpp"  // NEEDEDINCLUDE
+#include "resolve_type.hpp"            // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "abstract_jittable.hpp" // NEEDEDINCLUDE
+#include "abstract_jittable.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"              // NEEDEDINCLUDE
 #include "utils/copyable_atomic.hpp"
-#include "types.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

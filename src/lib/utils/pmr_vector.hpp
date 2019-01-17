@@ -19,5 +19,4 @@ using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 template <typename T>
 using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
-
-}
+}  // namespace opossum

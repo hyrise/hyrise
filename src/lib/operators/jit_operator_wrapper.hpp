@@ -1,7 +1,7 @@
 #pragma once
 
-#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/specialization/jit_code_specializer.hpp" // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"                                 // NEEDEDINCLUDE
+#include "operators/jit_operator/specialization/jit_code_specializer.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

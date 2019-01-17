@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp> // NEEDEDINCLUDE
+#include <boost/container/pmr/polymorphic_allocator.hpp>  // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -14,4 +14,4 @@ namespace opossum {
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
-}
+}  // namespace opossum

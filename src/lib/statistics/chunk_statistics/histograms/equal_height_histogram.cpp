@@ -1,8 +1,8 @@
-#include "equal_height_histogram.hpp" // NEEDEDINCLUDE
+#include "equal_height_histogram.hpp"  // NEEDEDINCLUDE
 
-#include <numeric> // NEEDEDINCLUDE
+#include <numeric>  // NEEDEDINCLUDE
 
-#include "histogram_utils.hpp" // NEEDEDINCLUDE
+#include "histogram_utils.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "all_parameter_variant.hpp" // NEEDEDINCLUDE
-#include "operator_performance_data.hpp" // NEEDEDINCLUDE
+#include "all_parameter_variant.hpp"      // NEEDEDINCLUDE
+#include "operator_performance_data.hpp"  // NEEDEDINCLUDE
 
 #include <unordered_map>
 
@@ -120,7 +120,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
   const OperatorPerformanceData& performance_data() const;
 
-  void print(std::ostream& stream = std::cout) const;
+  void print() const;
+  void print(std::ostream& stream) const;
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);

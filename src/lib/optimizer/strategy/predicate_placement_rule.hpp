@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "abstract_rule.hpp" // NEEDEDINCLUDE
+#include "abstract_rule.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

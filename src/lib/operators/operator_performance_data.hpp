@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-#include "types.hpp" // NEEDEDINCLUDE
+#include "types.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

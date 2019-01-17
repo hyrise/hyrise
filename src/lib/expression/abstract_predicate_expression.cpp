@@ -1,8 +1,8 @@
-#include "abstract_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "abstract_predicate_expression.hpp"  // NEEDEDINCLUDE
 
 #include <boost/functional/hash/hash.hpp>
 
-#include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
+#include "expression/evaluation/expression_evaluator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

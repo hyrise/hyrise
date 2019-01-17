@@ -2,9 +2,9 @@
 
 #include <mutex>
 
-#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"  // NEEDEDINCLUDE
 
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

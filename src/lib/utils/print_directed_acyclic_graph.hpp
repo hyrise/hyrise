@@ -1,9 +1,9 @@
 #pragma once
 
-#include <functional> // NEEDEDINCLUDE
-#include <iostream> // NEEDEDINCLUDE
-#include <memory> // NEEDEDINCLUDE
-#include <ostream> // NEEDEDINCLUDE
+#include <functional>  // NEEDEDINCLUDE
+#include <iostream>      // NEEDEDINCLUDE
+#include <memory>      // NEEDEDINCLUDE
+#include <ostream>     // NEEDEDINCLUDE
 
 namespace opossum {
 

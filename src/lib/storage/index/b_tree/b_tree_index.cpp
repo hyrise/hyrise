@@ -1,6 +1,6 @@
-#include "b_tree_index.hpp" // NEEDEDINCLUDE
+#include "b_tree_index.hpp"  // NEEDEDINCLUDE
 
-#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <iosfwd> // NEEDEDINCLUDE
+#include <iosfwd>  // NEEDEDINCLUDE
 
 namespace opossum {
 

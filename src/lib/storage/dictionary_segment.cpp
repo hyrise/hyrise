@@ -1,6 +1,6 @@
 #include "dictionary_segment.hpp"
 
-#include "resolve_type.hpp" // NEEDEDINCLUDE
+#include "resolve_type.hpp"  // NEEDEDINCLUDE
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "type_cast.hpp"

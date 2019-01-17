@@ -3,13 +3,13 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "utils/singleton.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp"  // NEEDEDINCLUDE
 
 namespace llvm {
-  class Module;
-  class Function;
-  class LLVMContext;
-}
+class Module;
+class Function;
+class LLVMContext;
+}  // namespace llvm
 
 namespace opossum {
 

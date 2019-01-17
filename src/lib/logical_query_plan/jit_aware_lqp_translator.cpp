@@ -1,30 +1,30 @@
-#include "jit_aware_lqp_translator.hpp" // NEEDEDINCLUDE
+#include "jit_aware_lqp_translator.hpp"  // NEEDEDINCLUDE
 
 #if HYRISE_JIT_SUPPORT
-#include <queue> // NEEDEDINCLUDE
-#include <unordered_set> // NEEDEDINCLUDE
+#include <queue>          // NEEDEDINCLUDE
+#include <unordered_set>  // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp" // NEEDEDINCLUDE
-#include "expression/abstract_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "expression/arithmetic_expression.hpp" // NEEDEDINCLUDE
-#include "expression/logical_expression.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "expression/value_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/aggregate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/projection_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_aggregate.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_compute.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_filter.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_read_tuples.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_validate.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator/operators/jit_write_tuples.hpp" // NEEDEDINCLUDE
-#include "operators/jit_operator_wrapper.hpp" // NEEDEDINCLUDE
-#include "operators/operator_scan_predicate.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "types.hpp" // NEEDEDINCLUDE
+#include "constant_mappings.hpp"                                  // NEEDEDINCLUDE
+#include "expression/abstract_predicate_expression.hpp"           // NEEDEDINCLUDE
+#include "expression/arithmetic_expression.hpp"                   // NEEDEDINCLUDE
+#include "expression/logical_expression.hpp"                      // NEEDEDINCLUDE
+#include "expression/lqp_column_expression.hpp"                   // NEEDEDINCLUDE
+#include "expression/value_expression.hpp"                        // NEEDEDINCLUDE
+#include "logical_query_plan/aggregate_node.hpp"                  // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"                       // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"                  // NEEDEDINCLUDE
+#include "logical_query_plan/projection_node.hpp"                 // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp"               // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_aggregate.hpp"     // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_compute.hpp"       // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_filter.hpp"        // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_read_tuples.hpp"   // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_validate.hpp"      // NEEDEDINCLUDE
+#include "operators/jit_operator/operators/jit_write_tuples.hpp"  // NEEDEDINCLUDE
+#include "operators/jit_operator_wrapper.hpp"                     // NEEDEDINCLUDE
+#include "operators/operator_scan_predicate.hpp"                  // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"                            // NEEDEDINCLUDE
+#include "types.hpp"                                              // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 

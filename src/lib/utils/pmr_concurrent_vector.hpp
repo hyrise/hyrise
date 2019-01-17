@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tbb/concurrent_vector.h> // NEEDEDINCLUDE
+#include <tbb/concurrent_vector.h>  // NEEDEDINCLUDE
 
 #include "polymorphic_allocator.hpp"
 
@@ -38,4 +38,4 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
   PolymorphicAllocator<T> _alloc;
 };
 
-}
+}  // namespace opossum

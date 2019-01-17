@@ -1,9 +1,9 @@
-#include "difference.hpp" // NEEDEDINCLUDE
+#include "difference.hpp"  // NEEDEDINCLUDE
 
 #include <unordered_set>
 
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/pos_list.hpp"
+#include "storage/reference_segment.hpp"  // NEEDEDINCLUDE
 #include "storage/table.hpp"
 
 namespace opossum {

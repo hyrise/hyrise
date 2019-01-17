@@ -2,8 +2,8 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterables/segment_positions.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"                             // NEEDEDINCLUDE
+#include "storage/segment_iterables/segment_positions.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

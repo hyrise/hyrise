@@ -1,14 +1,18 @@
-#include "print.hpp" // NEEDEDINCLUDE
+#include "print.hpp"  // NEEDEDINCLUDE
 
-#include <iomanip> // NEEDEDINCLUDE
+#include <iomanip>  // NEEDEDINCLUDE
+#include <iostream>
 
-#include "operators/table_wrapper.hpp" // NEEDEDINCLUDE
+#include "operators/table_wrapper.hpp"  // NEEDEDINCLUDE
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, uint32_t flags)
+Print::Print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags)
+    : AbstractReadOnlyOperator(OperatorType::Print, in), _out(std::cout), _flags(flags) {}
+
+Print::Print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out)
     : AbstractReadOnlyOperator(OperatorType::Print, in), _out(out), _flags(flags) {}
 
 const std::string Print::name() const { return "Print"; }
@@ -21,10 +25,18 @@ std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags) {
+  print(table, flags, std::cout);
+}
+
 void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   Print(table_wrapper, out, flags).execute();
+}
+
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags) {
+  print(in, flags, std::cout);
 }
 
 void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out) {

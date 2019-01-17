@@ -1,8 +1,8 @@
-#include "equal_distinct_count_histogram.hpp" // NEEDEDINCLUDE
+#include "equal_distinct_count_histogram.hpp"  // NEEDEDINCLUDE
 
-#include <numeric> // NEEDEDINCLUDE
+#include <numeric>  // NEEDEDINCLUDE
 
-#include "histogram_utils.hpp" // NEEDEDINCLUDE
+#include "histogram_utils.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

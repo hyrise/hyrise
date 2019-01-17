@@ -1,4 +1,4 @@
-#include "column_materializer_numa.hpp" // NEEDEDINCLUDE
+#include "column_materializer_numa.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

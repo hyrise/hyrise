@@ -1,10 +1,9 @@
 #include "load_table.hpp"
 
-#include <fstream> // NEEDEDINCLUDE
+#include <fstream>  // NEEDEDINCLUDE
 
-#include "storage/mvcc_data.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
-
+#include "storage/mvcc_data.hpp"  // NEEDEDINCLUDE
+#include "storage/table.hpp"      // NEEDEDINCLUDE
 
 namespace opossum {
 

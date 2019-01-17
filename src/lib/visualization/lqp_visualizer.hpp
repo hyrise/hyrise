@@ -1,7 +1,7 @@
 #pragma once
 
 #include "expression/abstract_expression.hpp"
-#include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
+#include "visualization/abstract_visualizer.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

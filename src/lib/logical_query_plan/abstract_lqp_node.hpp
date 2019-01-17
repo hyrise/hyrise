@@ -3,7 +3,7 @@
 #include <array>
 #include <unordered_map>
 
-#include "types.hpp" // NEEDEDINCLUDE
+#include "types.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -155,7 +155,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   /**
    * Prints this node and all its descendants (including all Subqueries) formatted as a tree
    */
-  void print(std::ostream& out = std::cout) const;
+  void print() const;
+  void print(std::ostream& out) const;
 
   /**
    * Perform a deep equality check

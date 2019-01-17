@@ -1,9 +1,18 @@
 #pragma once
 
-#include <boost/hana/at_key.hpp> // NEEDEDINCLUDE
+#include <boost/hana/ext/boost/mpl/vector.hpp>
+#include <boost/hana/map.hpp>
+#include <boost/hana/prepend.hpp>
+#include <boost/hana/transform.hpp>
+#include <boost/hana/zip.hpp>
+#include <boost/preprocessor/control/iif.hpp>
+#include <boost/preprocessor/seq/for_each.hpp>
+#include <boost/preprocessor/seq/size.hpp>
+#include <boost/preprocessor/seq/transform.hpp>
+#include <boost/variant.hpp>
 
-#include "all_type_variant.hpp" // NEEDEDINCLUDE
-#include "utils/enum_constant.hpp" // NEEDEDINCLUDE
+#include "types.hpp"     // NEEDEDINCLUDE
+#include "utils/enum_constant.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

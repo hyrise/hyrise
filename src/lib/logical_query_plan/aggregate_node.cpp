@@ -1,9 +1,9 @@
 #include "aggregate_node.hpp"
 
-#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "statistics/column_statistics.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"  // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp"     // NEEDEDINCLUDE
+#include "statistics/column_statistics.hpp"    // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp"     // NEEDEDINCLUDE
 
 namespace opossum {
 

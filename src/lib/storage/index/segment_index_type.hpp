@@ -1,8 +1,8 @@
 #pragma once
 
 #include <boost/hana/map.hpp>
-#include <boost/hana/pair.hpp> // NEEDEDINCLUDE
-#include <boost/hana/type.hpp> // NEEDEDINCLUDE
+#include <boost/hana/pair.hpp>  // NEEDEDINCLUDE
+#include <boost/hana/type.hpp>  // NEEDEDINCLUDE
 #include <cstdint>
 
 namespace opossum {

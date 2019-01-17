@@ -1,12 +1,12 @@
 #pragma once
 
-#include "cqf16.hpp" // NEEDEDINCLUDE
-#include "cqf2.hpp" // NEEDEDINCLUDE
-#include "cqf32.hpp" // NEEDEDINCLUDE
-#include "cqf4.hpp" // NEEDEDINCLUDE
-#include "cqf8.hpp" // NEEDEDINCLUDE
+#include "cqf16.hpp"  // NEEDEDINCLUDE
+#include "cqf2.hpp"   // NEEDEDINCLUDE
+#include "cqf32.hpp"  // NEEDEDINCLUDE
+#include "cqf4.hpp"   // NEEDEDINCLUDE
+#include "cqf8.hpp"   // NEEDEDINCLUDE
 
-#include "abstract_filter.hpp" // NEEDEDINCLUDE
+#include "abstract_filter.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

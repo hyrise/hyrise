@@ -2,9 +2,9 @@
 
 #include <boost/asio/io_service.hpp>
 
-#include "scheduler/current_scheduler.hpp" // NEEDEDINCLUDE
-#include "then_operator.hpp" // NEEDEDINCLUDE
-#include "use_boost_future.hpp" // NEEDEDINCLUDE
+#include "scheduler/current_scheduler.hpp"  // NEEDEDINCLUDE
+#include "then_operator.hpp"                // NEEDEDINCLUDE
+#include "use_boost_future.hpp"             // NEEDEDINCLUDE
 
 namespace opossum {
 

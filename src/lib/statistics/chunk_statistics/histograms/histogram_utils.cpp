@@ -1,12 +1,12 @@
-#include "histogram_utils.hpp" // NEEDEDINCLUDE
+#include "histogram_utils.hpp"  // NEEDEDINCLUDE
 
-#include <algorithm> // NEEDEDINCLUDE
-#include <cmath> // NEEDEDINCLUDE
-#include <limits> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
-#include <utility> // NEEDEDINCLUDE
+#include <algorithm>  // NEEDEDINCLUDE
+#include <cmath>      // NEEDEDINCLUDE
+#include <limits>     // NEEDEDINCLUDE
+#include <string>     // NEEDEDINCLUDE
+#include <utility>    // NEEDEDINCLUDE
 
-#include "utils/assert.hpp" // NEEDEDINCLUDE
+#include "utils/assert.hpp"  // NEEDEDINCLUDE
 
 using namespace opossum::histogram;  // NOLINT
 

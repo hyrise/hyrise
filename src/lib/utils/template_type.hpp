@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/hana/type.hpp> // NEEDEDINCLUDE
+#include <boost/hana/type.hpp>  // NEEDEDINCLUDE
 
 namespace opossum {
 

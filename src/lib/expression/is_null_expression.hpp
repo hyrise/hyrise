@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_predicate_expression.hpp" // NEEDEDINCLUDE
+#include "abstract_predicate_expression.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

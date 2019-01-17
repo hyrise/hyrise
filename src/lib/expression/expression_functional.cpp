@@ -1,9 +1,9 @@
-#include "expression_functional.hpp" // NEEDEDINCLUDE
+#include "expression_functional.hpp"  // NEEDEDINCLUDE
 
-#include "exists_expression.hpp" // NEEDEDINCLUDE
-#include "lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "placeholder_expression.hpp" // NEEDEDINCLUDE
-#include "pqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "exists_expression.hpp"       // NEEDEDINCLUDE
+#include "lqp_column_expression.hpp"   // NEEDEDINCLUDE
+#include "placeholder_expression.hpp"  // NEEDEDINCLUDE
+#include "pqp_column_expression.hpp"   // NEEDEDINCLUDE
 #include "value_expression.hpp"
 
 namespace opossum {

@@ -3,15 +3,15 @@
 #include <functional>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "logical_query_plan/lqp_translator.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_translator.hpp"  // NEEDEDINCLUDE
 
 #if HYRISE_JIT_SUPPORT
 
 namespace opossum {
-  class JitExpression;
-  enum class JitExpressionType;
-  class JitOperatorWrapper;
-  class JitReadTuples;
+class JitExpression;
+enum class JitExpressionType;
+class JitOperatorWrapper;
+class JitReadTuples;
 
 /* This class can be used as a drop-in specialization for the LQPTranslator.
  * The JitAwareLQPTranslator will try to translate multiple AbstractLQPNodes into a single JitOperatorWrapper, whenever

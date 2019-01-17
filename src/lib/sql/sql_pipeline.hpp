@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sql/sql_pipeline_statement.hpp" // NEEDEDINCLUDE
+#include "sql/sql_pipeline_statement.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

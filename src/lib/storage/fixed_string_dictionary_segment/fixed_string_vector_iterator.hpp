@@ -1,10 +1,10 @@
 #pragma once
 
+#include <string.h>  // NEEDEDINCLUDE
 #include <boost/iterator/iterator_facade.hpp>
-#include <string> // NEEDEDINCLUDE
-#include <string.h> // NEEDEDINCLUDE
+#include <string>  // NEEDEDINCLUDE
 
-#include "fixed_string.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "fixed_string.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {

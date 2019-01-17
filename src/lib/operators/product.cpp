@@ -1,8 +1,8 @@
-#include "product.hpp" // NEEDEDINCLUDE
+#include "product.hpp"  // NEEDEDINCLUDE
 
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"           // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp"  // NEEDEDINCLUDE
+#include "storage/table.hpp"              // NEEDEDINCLUDE
 
 namespace opossum {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,

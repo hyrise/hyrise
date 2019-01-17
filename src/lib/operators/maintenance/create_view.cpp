@@ -1,8 +1,8 @@
-#include "create_view.hpp" // NEEDEDINCLUDE
+#include "create_view.hpp"  // NEEDEDINCLUDE
 
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "storage/lqp_view.hpp"         // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"  // NEEDEDINCLUDE
 #include "storage/table.hpp"
-#include "storage/lqp_view.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 

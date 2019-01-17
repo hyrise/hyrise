@@ -1,9 +1,9 @@
-#include "lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "lqp_column_expression.hpp"  // NEEDEDINCLUDE
 
-#include "logical_query_plan/mock_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/mock_node.hpp"          // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp"  // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"               // NEEDEDINCLUDE
+#include "storage/table.hpp"                         // NEEDEDINCLUDE
 
 namespace opossum {
 

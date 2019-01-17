@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp" // NEEDEDINCLUDE
-#include "variable_length_key_base.hpp" // NEEDEDINCLUDE
+#include "types.hpp"                     // NEEDEDINCLUDE
+#include "variable_length_key_base.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

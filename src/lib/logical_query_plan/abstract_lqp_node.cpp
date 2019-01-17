@@ -1,13 +1,14 @@
-#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
+#include "abstract_lqp_node.hpp"  // NEEDEDINCLUDE
 
-#include <algorithm> // NEEDEDINCLUDE
-#include <unordered_map> // NEEDEDINCLUDE
+#include <algorithm>      // NEEDEDINCLUDE
+#include <iostream>
+#include <unordered_map>  // NEEDEDINCLUDE
 
-#include "expression/abstract_expression.hpp" // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "lqp_utils.hpp" // NEEDEDINCLUDE
-#include "utils/print_directed_acyclic_graph.hpp" // NEEDEDINCLUDE
+#include "expression/abstract_expression.hpp"      // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp"         // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp"    // NEEDEDINCLUDE
+#include "lqp_utils.hpp"                           // NEEDEDINCLUDE
+#include "utils/print_directed_acyclic_graph.hpp"  // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 
@@ -216,6 +217,10 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
   DebugAssert(!right_input, "Default implementation of derive_statistics_from() cannot have a right_input");
 
   return left_input->get_statistics();
+}
+
+void AbstractLQPNode::print() const {
+  print(std::cout);
 }
 
 void AbstractLQPNode::print(std::ostream& out) const {

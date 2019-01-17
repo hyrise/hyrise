@@ -2,7 +2,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
-#include "join_graph_builder.hpp" // NEEDEDINCLUDE
+#include "join_graph_builder.hpp"  // NEEDEDINCLUDE
 
 namespace {
 

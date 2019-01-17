@@ -1,13 +1,12 @@
-#include "topology.hpp" // NEEDEDINCLUDE
+#include "topology.hpp"  // NEEDEDINCLUDE
 
 #if HYRISE_NUMA_SUPPORT
-#include <numa.h> // NEEDEDINCLUDE
+#include <numa.h>  // NEEDEDINCLUDE
 #endif
 
-#include <iomanip> // NEEDEDINCLUDE
+#include <iomanip>  // NEEDEDINCLUDE
 #include <sstream>
-#include <thread> // NEEDEDINCLUDE
-
+#include <thread>  // NEEDEDINCLUDE
 
 namespace opossum {
 

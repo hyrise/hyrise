@@ -1,9 +1,9 @@
 #pragma once
 
-#include "storage/dictionary_segment.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterables.hpp" // NEEDEDINCLUDE
-#include "storage/fixed_string_dictionary_segment.hpp" // NEEDEDINCLUDE
-#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/dictionary_segment.hpp"                                   // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment.hpp"                      // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/segment_iterables.hpp"                                    // NEEDEDINCLUDE
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {

@@ -2,8 +2,8 @@
 
 #include <array>
 
-#include "storage/vector_compression/base_vector_compressor.hpp" // NEEDEDINCLUDE
-#include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
+#include "simd_bp128_packing.hpp"                                 // NEEDEDINCLUDE
+#include "storage/vector_compression/base_vector_compressor.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,4 +1,4 @@
-#include "dummy_table_node.hpp" // NEEDEDINCLUDE
+#include "dummy_table_node.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

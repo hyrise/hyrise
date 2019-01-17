@@ -3,9 +3,9 @@
 #include <memory>
 
 namespace llvm {
-	class Module;
-	class LLVMContext;
-}
+class Module;
+class LLVMContext;
+}  // namespace llvm
 
 namespace opossum {
 

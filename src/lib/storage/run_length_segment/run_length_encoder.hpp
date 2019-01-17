@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/base_segment_encoder.hpp" // NEEDEDINCLUDE
-#include "storage/value_segment/value_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/base_segment_encoder.hpp"                  // NEEDEDINCLUDE
+#include "storage/value_segment/value_segment_iterable.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

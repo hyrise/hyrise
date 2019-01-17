@@ -1,9 +1,9 @@
-#include "abstract_cost_estimator.hpp" // NEEDEDINCLUDE
+#include "abstract_cost_estimator.hpp"  // NEEDEDINCLUDE
 
-#include <queue> // NEEDEDINCLUDE
-#include <unordered_set> // NEEDEDINCLUDE
+#include <queue>          // NEEDEDINCLUDE
+#include <unordered_set>  // NEEDEDINCLUDE
 
-#include "logical_query_plan/abstract_lqp_node.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/abstract_lqp_node.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

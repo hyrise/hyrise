@@ -1,8 +1,8 @@
 #pragma once
 
-#include <map> // NEEDEDINCLUDE
+#include <map>  // NEEDEDINCLUDE
 
-#include "utils/singleton.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -49,7 +49,8 @@ class StorageManager : public Singleton<StorageManager> {
   /** @} */
 
   // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
-  void print(std::ostream& out = std::cout) const;
+  void print() const;
+  void print(std::ostream& out) const;
 
   // deletes the entire StorageManager and creates a new one, used especially in tests
   // This can lead to a lot of issues if there are still running tasks / threads that

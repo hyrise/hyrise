@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/dictionary_segment/attribute_vector_iterable.hpp" // NEEDEDINCLUDE
-#include "storage/base_dictionary_segment.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterables/any_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/base_dictionary_segment.hpp"                       // NEEDEDINCLUDE
+#include "storage/dictionary_segment/attribute_vector_iterable.hpp"  // NEEDEDINCLUDE
+#include "storage/segment_iterables/any_segment_iterable.hpp"        // NEEDEDINCLUDE
 
 namespace opossum {
 

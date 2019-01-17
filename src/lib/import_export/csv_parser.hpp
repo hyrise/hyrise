@@ -1,6 +1,6 @@
 #pragma once
 
-#include "import_export/csv_meta.hpp" // NEEDEDINCLUDE
+#include "import_export/csv_meta.hpp"  // NEEDEDINCLUDE
 #include "storage/chunk.hpp"
 
 namespace opossum {

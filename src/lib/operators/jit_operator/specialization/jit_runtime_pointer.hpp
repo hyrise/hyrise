@@ -1,10 +1,10 @@
 #pragma once
 
-#include <fcntl.h> // NEEDEDINCLUDE
+#include <fcntl.h>   // NEEDEDINCLUDE
+#include <unistd.h>  // NEEDEDINCLUDE
 #include <memory>
-#include <unistd.h> // NEEDEDINCLUDE
 
-#include "utils/assert.hpp" // NEEDEDINCLUDE
+#include "utils/assert.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

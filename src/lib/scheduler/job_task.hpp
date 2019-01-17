@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_task.hpp" // NEEDEDINCLUDE
+#include "abstract_task.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

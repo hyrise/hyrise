@@ -1,10 +1,10 @@
 #include "vector_compression.hpp"
 
-#include <map> // NEEDEDINCLUDE
+#include <map>  // NEEDEDINCLUDE
 
 #include "base_compressed_vector.hpp"
-#include "fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp" // NEEDEDINCLUDE
-#include "simd_bp128/simd_bp128_compressor.hpp" // NEEDEDINCLUDE
+#include "fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp"  // NEEDEDINCLUDE
+#include "simd_bp128/simd_bp128_compressor.hpp"                            // NEEDEDINCLUDE
 
 namespace opossum {
 

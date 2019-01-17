@@ -1,10 +1,10 @@
-#include "counting_quotient_filter.hpp" // NEEDEDINCLUDE
+#include "counting_quotient_filter.hpp"  // NEEDEDINCLUDE
 
-#include <cmath> // NEEDEDINCLUDE
-#include <iostream> // NEEDEDINCLUDE
-#include <string> // NEEDEDINCLUDE
+#include <cmath>     // NEEDEDINCLUDE
+#include <iostream>  // NEEDEDINCLUDE
+#include <string>    // NEEDEDINCLUDE
 
-#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp"  // NEEDEDINCLUDE
 
 using namespace gqf2;   // NOLINT
 using namespace gqf4;   // NOLINT

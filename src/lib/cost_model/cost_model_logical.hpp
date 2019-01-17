@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_cost_estimator.hpp" // NEEDEDINCLUDE
+#include "abstract_cost_estimator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

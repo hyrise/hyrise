@@ -1,10 +1,10 @@
 #include "transaction_context.hpp"
 
-#include <future> // NEEDEDINCLUDE
+#include <future>  // NEEDEDINCLUDE
 
-#include "commit_context.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_read_write_operator.hpp" // NEEDEDINCLUDE
-#include "transaction_manager.hpp" // NEEDEDINCLUDE
+#include "commit_context.hpp"                          // NEEDEDINCLUDE
+#include "operators/abstract_read_write_operator.hpp"  // NEEDEDINCLUDE
+#include "transaction_manager.hpp"                     // NEEDEDINCLUDE
 
 namespace opossum {
 

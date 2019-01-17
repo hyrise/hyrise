@@ -1,6 +1,6 @@
 #pragma once
 
-#include <atomic> // NEEDEDINCLUDE
+#include <atomic>  // NEEDEDINCLUDE
 
 namespace opossum {
 

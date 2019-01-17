@@ -1,7 +1,7 @@
 #pragma once
 
-#include "operators/abstract_read_only_operator.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "operators/abstract_read_only_operator.hpp"  // NEEDEDINCLUDE
+#include "storage/table.hpp"                          // NEEDEDINCLUDE
 
 namespace opossum {
 

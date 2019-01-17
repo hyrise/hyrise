@@ -1,10 +1,10 @@
 #if HYRISE_NUMA_SUPPORT
 
-#include "scheduler/topology.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "tasks/chunk_metrics_collection_task.hpp" // NEEDEDINCLUDE
-#include "tasks/migration_preparation_task.hpp" // NEEDEDINCLUDE
-#include "utils/pausable_loop_thread.hpp" // NEEDEDINCLUDE
+#include "scheduler/topology.hpp"                   // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"              // NEEDEDINCLUDE
+#include "tasks/chunk_metrics_collection_task.hpp"  // NEEDEDINCLUDE
+#include "tasks/migration_preparation_task.hpp"     // NEEDEDINCLUDE
+#include "utils/pausable_loop_thread.hpp"           // NEEDEDINCLUDE
 
 namespace opossum {
 

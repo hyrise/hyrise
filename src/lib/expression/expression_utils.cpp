@@ -1,18 +1,18 @@
-#include "expression_utils.hpp" // NEEDEDINCLUDE
+#include "expression_utils.hpp"  // NEEDEDINCLUDE
 
-#include <algorithm> // NEEDEDINCLUDE
-#include <queue> // NEEDEDINCLUDE
-#include <sstream> // NEEDEDINCLUDE
+#include <algorithm>  // NEEDEDINCLUDE
+#include <queue>      // NEEDEDINCLUDE
+#include <sstream>    // NEEDEDINCLUDE
 
-#include "correlated_parameter_expression.hpp" // NEEDEDINCLUDE
-#include "expression_functional.hpp" // NEEDEDINCLUDE
-#include "logical_expression.hpp" // NEEDEDINCLUDE
-#include "lqp_column_expression.hpp" // NEEDEDINCLUDE
-#include "lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "operators/abstract_operator.hpp" // NEEDEDINCLUDE
-#include "placeholder_expression.hpp" // NEEDEDINCLUDE
-#include "pqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "value_expression.hpp" // NEEDEDINCLUDE
+#include "correlated_parameter_expression.hpp"  // NEEDEDINCLUDE
+#include "expression_functional.hpp"            // NEEDEDINCLUDE
+#include "logical_expression.hpp"               // NEEDEDINCLUDE
+#include "lqp_column_expression.hpp"            // NEEDEDINCLUDE
+#include "lqp_select_expression.hpp"            // NEEDEDINCLUDE
+#include "operators/abstract_operator.hpp"      // NEEDEDINCLUDE
+#include "placeholder_expression.hpp"           // NEEDEDINCLUDE
+#include "pqp_select_expression.hpp"            // NEEDEDINCLUDE
+#include "value_expression.hpp"                 // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

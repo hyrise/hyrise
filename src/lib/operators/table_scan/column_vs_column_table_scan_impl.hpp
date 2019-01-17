@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
+#include "abstract_table_scan_impl.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,6 +1,6 @@
-#include "mock_node.hpp" // NEEDEDINCLUDE
+#include "mock_node.hpp"  // NEEDEDINCLUDE
 
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "expression/lqp_column_expression.hpp"  // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 

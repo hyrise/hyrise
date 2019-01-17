@@ -3,7 +3,7 @@
 #include <string>
 
 namespace hsql {
-	class SQLParserResult;
+class SQLParserResult;
 }
 
 namespace opossum {

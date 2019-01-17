@@ -1,10 +1,10 @@
 #pragma once
 
-#include <tbb/concurrent_queue.h> // NEEDEDINCLUDE
+#include <tbb/concurrent_queue.h>  // NEEDEDINCLUDE
 #include <array>
-#include <atomic> // NEEDEDINCLUDE
+#include <atomic>  // NEEDEDINCLUDE
 
-#include "types.hpp" // NEEDEDINCLUDE
+#include "types.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

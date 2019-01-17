@@ -1,4 +1,4 @@
-#include "table_column_definition.hpp" // NEEDEDINCLUDE
+#include "table_column_definition.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

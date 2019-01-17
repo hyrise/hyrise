@@ -1,8 +1,8 @@
 #pragma once
 
 #include <boost/type_traits/has_nothrow_assign.hpp>
-#include <boost/type_traits/has_nothrow_constructor.hpp> // NEEDEDINCLUDE
-#include <boost/type_traits/has_nothrow_copy.hpp> // NEEDEDINCLUDE
+#include <boost/type_traits/has_nothrow_constructor.hpp>  // NEEDEDINCLUDE
+#include <boost/type_traits/has_nothrow_copy.hpp>         // NEEDEDINCLUDE
 
 /*
  * This is an extension of boost's BOOST_STRONG_TYPEDEF.

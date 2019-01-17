@@ -1,8 +1,8 @@
-#include "greedy_operator_ordering.hpp" // NEEDEDINCLUDE
+#include "greedy_operator_ordering.hpp"  // NEEDEDINCLUDE
 
-#include "join_graph.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "statistics/table_statistics.hpp" // NEEDEDINCLUDE
+#include "join_graph.hpp"                    // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp"  // NEEDEDINCLUDE
+#include "statistics/table_statistics.hpp"   // NEEDEDINCLUDE
 
 namespace opossum {
 

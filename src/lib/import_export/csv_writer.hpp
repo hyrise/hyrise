@@ -1,9 +1,9 @@
 #pragma once
 
-#include <fstream> // NEEDEDINCLUDE
+#include <fstream>  // NEEDEDINCLUDE
 
-#include "all_type_variant.hpp" // NEEDEDINCLUDE
-#include "csv_meta.hpp" // NEEDEDINCLUDE
+#include "all_type_variant.hpp"  // NEEDEDINCLUDE
+#include "csv_meta.hpp"          // NEEDEDINCLUDE
 
 namespace opossum {
 

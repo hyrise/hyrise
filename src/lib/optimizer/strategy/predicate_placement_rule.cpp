@@ -1,11 +1,11 @@
-#include "predicate_placement_rule.hpp" // NEEDEDINCLUDE
+#include "predicate_placement_rule.hpp"  // NEEDEDINCLUDE
 
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/logical_plan_root_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp"                // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp"           // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp"               // NEEDEDINCLUDE
+#include "logical_query_plan/logical_plan_root_node.hpp"  // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"               // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"          // NEEDEDINCLUDE
 
 namespace opossum {
 

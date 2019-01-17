@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "expression_result_views.hpp" // NEEDEDINCLUDE
+#include "expression_result_views.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -5,13 +5,13 @@
 
 // Instead of adding includes here, try to add them to the caller first. That way, we only include files that are
 // needed and can rely on forward declarations for the rest
+#include "aggregate_expression.hpp"  // NEEDEDINCLUDE
 #include "all_type_variant.hpp"
-#include "aggregate_expression.hpp" // NEEDEDINCLUDE
-#include "arithmetic_expression.hpp" // NEEDEDINCLUDE
-#include "extract_expression.hpp" // NEEDEDINCLUDE
+#include "arithmetic_expression.hpp"  // NEEDEDINCLUDE
+#include "extract_expression.hpp"     // NEEDEDINCLUDE
 #include "function_expression.hpp"
+#include "logical_expression.hpp"  // NEEDEDINCLUDE
 #include "logical_query_plan/lqp_column_reference.hpp"
-#include "logical_expression.hpp" // NEEDEDINCLUDE
 
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate.

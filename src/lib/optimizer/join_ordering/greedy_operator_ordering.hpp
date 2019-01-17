@@ -2,8 +2,8 @@
 
 #include <map>
 
-#include "abstract_join_ordering_algorithm.hpp" // NEEDEDINCLUDE
-#include "join_graph_edge.hpp" // NEEDEDINCLUDE
+#include "abstract_join_ordering_algorithm.hpp"  // NEEDEDINCLUDE
+#include "join_graph_edge.hpp"                   // NEEDEDINCLUDE
 
 namespace opossum {
 

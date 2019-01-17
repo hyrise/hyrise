@@ -1,6 +1,8 @@
-#include "in_expression.hpp" // NEEDEDINCLUDE
+#include "in_expression.hpp"  // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp" // NEEDEDINCLUDE
+#include <sstream>
+
+#include "constant_mappings.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

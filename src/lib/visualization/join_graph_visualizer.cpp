@@ -1,11 +1,11 @@
-#include "join_graph_visualizer.hpp" // NEEDEDINCLUDE
+#include "join_graph_visualizer.hpp"  // NEEDEDINCLUDE
 
 #include "expression/abstract_expression.hpp"
-#include "optimizer/join_ordering/join_graph.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/abstract_lqp_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/stored_table_node.hpp" // NEEDEDINCLUDE
-#include "viz_record_layout.hpp" // NEEDEDINCLUDE
+#include "logical_query_plan/abstract_lqp_node.hpp"  // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"          // NEEDEDINCLUDE
+#include "logical_query_plan/stored_table_node.hpp"  // NEEDEDINCLUDE
+#include "optimizer/join_ordering/join_graph.hpp"    // NEEDEDINCLUDE
+#include "viz_record_layout.hpp"                     // NEEDEDINCLUDE
 
 namespace opossum {
 

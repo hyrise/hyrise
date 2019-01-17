@@ -2,9 +2,9 @@
 
 #include <iosfwd>  // for std::basic_ostream forward declare // NEEDEDINCLUDE
 
-#include "boost/detail/templated_streams.hpp" // NEEDEDINCLUDE
-#include "boost/mpl/bool.hpp" // NEEDEDINCLUDE
-#include "boost/type_traits/is_stateless.hpp" // NEEDEDINCLUDE
+#include "boost/detail/templated_streams.hpp"  // NEEDEDINCLUDE
+#include "boost/mpl/bool.hpp"                  // NEEDEDINCLUDE
+#include "boost/type_traits/is_stateless.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

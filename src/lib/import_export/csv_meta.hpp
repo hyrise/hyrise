@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <json.hpp> // NEEDEDINCLUDE  // TODO <>?
+#include <json.hpp>  // NEEDEDINCLUDE  // TODO <>?
 #include "types.hpp"
 
 namespace opossum {

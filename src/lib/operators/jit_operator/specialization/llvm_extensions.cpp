@@ -1,10 +1,9 @@
-#include "llvm_extensions.hpp" // NEEDEDINCLUDE
+#include "llvm_extensions.hpp"  // NEEDEDINCLUDE
 
-#include <llvm/Analysis/ConstantFolding.h> // NEEDEDINCLUDE
-#include <llvm/IR/Constants.h> // NEEDEDINCLUDE
+#include <llvm/Analysis/ConstantFolding.h>  // NEEDEDINCLUDE
+#include <llvm/IR/Constants.h>              // NEEDEDINCLUDE
 
-#include <unordered_set> // NEEDEDINCLUDE
-
+#include <unordered_set>  // NEEDEDINCLUDE
 
 #pragma clang diagnostic ignored "-Wshadow-all"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"

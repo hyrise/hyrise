@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdexcept> // NEEDEDINCLUDE
+#include <stdexcept>  // NEEDEDINCLUDE
 
 namespace opossum {
 

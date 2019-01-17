@@ -1,4 +1,4 @@
-#include "types.hpp" // NEEDEDINCLUDE
+#include "types.hpp"  // NEEDEDINCLUDE
 
 #include <iostream>
 
@@ -73,9 +73,9 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
   }
 }
 
- std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
-    o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
-    return o;
-  }
+std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
+  o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
+  return o;
+}
 
 }  // namespace opossum

@@ -1,13 +1,13 @@
-#include "jit_repository.hpp" // NEEDEDINCLUDE
+#include "jit_repository.hpp"  // NEEDEDINCLUDE
 
-#include <boost/algorithm/string/predicate.hpp> // NEEDEDINCLUDE
+#include <boost/algorithm/string/predicate.hpp>  // NEEDEDINCLUDE
 
-#include <llvm/IR/Constants.h> // NEEDEDINCLUDE
-#include <llvm/IR/DebugInfo.h> // NEEDEDINCLUDE
-#include <llvm/IR/Module.h> // NEEDEDINCLUDE
-#include <llvm/Support/TargetSelect.h> // NEEDEDINCLUDE
+#include <llvm/IR/Constants.h>          // NEEDEDINCLUDE
+#include <llvm/IR/DebugInfo.h>          // NEEDEDINCLUDE
+#include <llvm/IR/Module.h>             // NEEDEDINCLUDE
+#include <llvm/Support/TargetSelect.h>  // NEEDEDINCLUDE
 
-#include "llvm_utils.hpp" // NEEDEDINCLUDE
+#include "llvm_utils.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

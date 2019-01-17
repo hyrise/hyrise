@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/create_iterable_from_segment.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterables/any_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/create_iterable_from_segment.hpp"            // NEEDEDINCLUDE
+#include "storage/segment_iterables/any_segment_iterable.hpp"  // NEEDEDINCLUDE
 
 /**
  * This file provides the main entry points to read Segment data, irrespective of the underlying encoding.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/vector_compression/base_vector_compressor.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/base_vector_compressor.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

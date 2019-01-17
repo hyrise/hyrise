@@ -1,7 +1,7 @@
-#include "column_between_table_scan_impl.hpp" // NEEDEDINCLUDE
+#include "column_between_table_scan_impl.hpp"  // NEEDEDINCLUDE
 
-#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"  // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp"                                          // NEEDEDINCLUDE
 
 namespace opossum {
 

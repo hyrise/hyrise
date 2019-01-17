@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/pos_list.hpp" // NEEDEDINCLUDE
-#include "storage/segment_accessor.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterables.hpp" // NEEDEDINCLUDE
+#include "storage/pos_list.hpp"           // NEEDEDINCLUDE
+#include "storage/segment_accessor.hpp"   // NEEDEDINCLUDE
+#include "storage/segment_iterables.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

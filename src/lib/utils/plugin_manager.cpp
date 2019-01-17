@@ -1,10 +1,10 @@
-#include "plugin_manager.hpp" // NEEDEDINCLUDE
+#include "plugin_manager.hpp"  // NEEDEDINCLUDE
 
-#include <dlfcn.h> // NEEDEDINCLUDE
+#include <dlfcn.h>  // NEEDEDINCLUDE
 #include <filesystem>
 
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
-#include "abstract_plugin.hpp" // NEEDEDINCLUDE
+#include "abstract_plugin.hpp"          // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

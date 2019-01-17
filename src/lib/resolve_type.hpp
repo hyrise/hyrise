@@ -2,11 +2,11 @@
 
 // TODO move the segment stuff to its own file
 
-#include <boost/hana/for_each.hpp> // NEEDEDINCLUDE
+#include <boost/hana/for_each.hpp>  // NEEDEDINCLUDE
 
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
-#include "storage/resolve_encoded_segment_type.hpp" // NEEDEDINCLUDE
-#include "storage/value_segment.hpp" // NEEDEDINCLUDE
+#include "storage/reference_segment.hpp"             // NEEDEDINCLUDE
+#include "storage/resolve_encoded_segment_type.hpp"  // NEEDEDINCLUDE
+#include "storage/value_segment.hpp"                 // NEEDEDINCLUDE
 
 namespace opossum {
 

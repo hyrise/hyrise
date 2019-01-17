@@ -7,8 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/lqp_view.hpp"
+#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

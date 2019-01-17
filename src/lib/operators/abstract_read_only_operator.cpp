@@ -1,4 +1,4 @@
-#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <atomic> // NEEDEDINCLUDE
-#include <condition_variable> // NEEDEDINCLUDE
-#include <functional> // NEEDEDINCLUDE
-#include <thread> // NEEDEDINCLUDE
+#include <atomic>              // NEEDEDINCLUDE
+#include <condition_variable>  // NEEDEDINCLUDE
+#include <functional>          // NEEDEDINCLUDE
+#include <thread>              // NEEDEDINCLUDE
 
 namespace opossum {
 

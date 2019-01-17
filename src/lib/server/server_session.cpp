@@ -1,20 +1,20 @@
-#include "server_session.hpp" // NEEDEDINCLUDE
+#include "server_session.hpp"  // NEEDEDINCLUDE
 
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_manager.hpp" // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"  // NEEDEDINCLUDE
+#include "concurrency/transaction_manager.hpp"  // NEEDEDINCLUDE
 #include "operators/abstract_operator.hpp"
-#include "postgres_wire_handler.hpp" // NEEDEDINCLUDE
-#include "storage/prepared_plan.hpp" // NEEDEDINCLUDE
-#include "storage/storage_manager.hpp" // NEEDEDINCLUDE
+#include "postgres_wire_handler.hpp"  // NEEDEDINCLUDE
 #include "sql/sql_pipeline.hpp"
-#include "tasks/server/bind_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
-#include "tasks/server/create_pipeline_task.hpp" // NEEDEDINCLUDE
-#include "tasks/server/execute_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
-#include "tasks/server/execute_server_query_task.hpp" // NEEDEDINCLUDE
-#include "tasks/server/load_server_file_task.hpp" // NEEDEDINCLUDE
-#include "tasks/server/parse_server_prepared_statement_task.hpp" // NEEDEDINCLUDE
+#include "storage/prepared_plan.hpp"                                // NEEDEDINCLUDE
+#include "storage/storage_manager.hpp"                              // NEEDEDINCLUDE
+#include "tasks/server/bind_server_prepared_statement_task.hpp"     // NEEDEDINCLUDE
+#include "tasks/server/create_pipeline_task.hpp"                    // NEEDEDINCLUDE
+#include "tasks/server/execute_server_prepared_statement_task.hpp"  // NEEDEDINCLUDE
+#include "tasks/server/execute_server_query_task.hpp"               // NEEDEDINCLUDE
+#include "tasks/server/load_server_file_task.hpp"                   // NEEDEDINCLUDE
+#include "tasks/server/parse_server_prepared_statement_task.hpp"    // NEEDEDINCLUDE
 
-#include "query_response_builder.hpp" // NEEDEDINCLUDE
+#include "query_response_builder.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

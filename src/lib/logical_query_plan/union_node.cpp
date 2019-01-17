@@ -1,7 +1,7 @@
-#include "union_node.hpp" // NEEDEDINCLUDE
+#include "union_node.hpp"  // NEEDEDINCLUDE
 
-#include "constant_mappings.hpp" // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
+#include "constant_mappings.hpp"            // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

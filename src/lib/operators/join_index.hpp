@@ -1,12 +1,12 @@
 #pragma once
 
-#include "abstract_join_operator.hpp" // NEEDEDINCLUDE
-#include "storage/index/base_index.hpp" // NEEDEDINCLUDE
+#include "abstract_join_operator.hpp"    // NEEDEDINCLUDE
+#include "storage/index/base_index.hpp"  // NEEDEDINCLUDE
 #include "storage/table.hpp"
 
 namespace opossum {
-  class BaseIndex;
-  struct PosList;
+class BaseIndex;
+struct PosList;
 
 /**
    * This operator joins two tables using one column of each table.

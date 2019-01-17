@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_read_write_operator.hpp" // NEEDEDINCLUDE
+#include "abstract_read_write_operator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

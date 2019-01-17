@@ -1,9 +1,9 @@
-#include "show_columns_node.hpp" // NEEDEDINCLUDE
+#include "show_columns_node.hpp"  // NEEDEDINCLUDE
 
-#include <string> // NEEDEDINCLUDE
+#include <string>  // NEEDEDINCLUDE
 
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_column_expression.hpp" // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp"  // NEEDEDINCLUDE
+#include "expression/lqp_column_expression.hpp"  // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

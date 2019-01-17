@@ -1,15 +1,13 @@
 #pragma once
 
+#include <boost/hana/tuple.hpp>
+#include <boost/hana/type.hpp>
 #include <iosfwd>
 #include <memory>
-#include <vector> // NEEDEDINCLUDE
+#include <vector>  // NEEDEDINCLUDE
 
-#include "strong_typedef.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
-
-namespace std {
-  extern std::ostream cout;
-}
+#include "strong_typedef.hpp"  // NEEDEDINCLUDE
+#include "utils/assert.hpp"    // NEEDEDINCLUDE
 
 /**
  * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
@@ -42,6 +40,13 @@ STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
 
+namespace hana = boost::hana;
+
+static constexpr auto data_types = hana::make_tuple(hana::type_c<int32_t>, hana::type_c<int64_t>, hana::type_c<float>,
+                                                    hana::type_c<double>, hana::type_c<std::string>);
+
+enum class DataType : uint8_t { Null, Int, Long, Float, Double, String, Bool };
+
 using ChunkOffset = uint32_t;
 
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
@@ -63,14 +68,10 @@ struct RowID {
   bool is_null() const { return chunk_offset == INVALID_CHUNK_OFFSET; }
 
   // Joins need to use RowIDs as keys for maps.
-  bool operator<(const RowID& other) const {
-    return chunk_id < other.chunk_id || chunk_offset < other.chunk_offset;
-  }
+  bool operator<(const RowID& other) const { return chunk_id < other.chunk_id || chunk_offset < other.chunk_offset; }
 
   // Useful when comparing a row ID to NULL_ROW_ID
-  bool operator==(const RowID& other) const {
-    return chunk_id == other.chunk_id && chunk_offset == other.chunk_offset;
-  }
+  bool operator==(const RowID& other) const { return chunk_id == other.chunk_id && chunk_offset == other.chunk_offset; }
 };
 
 using WorkerID = uint32_t;

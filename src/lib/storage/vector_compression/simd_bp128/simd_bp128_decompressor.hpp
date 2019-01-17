@@ -1,10 +1,10 @@
 #pragma once
 
 #include <array>
-#include <numeric> // NEEDEDINCLUDE
+#include <numeric>  // NEEDEDINCLUDE
 
-#include "simd_bp128_packing.hpp" // NEEDEDINCLUDE
-#include "storage/vector_compression/base_vector_decompressor.hpp" // NEEDEDINCLUDE
+#include "simd_bp128_packing.hpp"                                   // NEEDEDINCLUDE
+#include "storage/vector_compression/base_vector_decompressor.hpp"  // NEEDEDINCLUDE
 #include "types.hpp"
 #include "utils/pmr_vector.hpp"
 

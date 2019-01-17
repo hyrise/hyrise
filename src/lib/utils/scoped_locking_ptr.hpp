@@ -1,8 +1,8 @@
 #pragma once
 
-#include <shared_mutex> // NEEDEDINCLUDE
+#include <shared_mutex>  // NEEDEDINCLUDE
 
-#include "types.hpp" // NEEDEDINCLUDE
+#include "types.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

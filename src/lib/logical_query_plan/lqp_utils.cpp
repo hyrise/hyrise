@@ -1,14 +1,14 @@
-#include "lqp_utils.hpp" // NEEDEDINCLUDE
+#include "lqp_utils.hpp"  // NEEDEDINCLUDE
 
-#include "expression/expression_functional.hpp" // NEEDEDINCLUDE
-#include "expression/expression_utils.hpp" // NEEDEDINCLUDE
-#include "expression/lqp_select_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/delete_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/insert_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/union_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/update_node.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
+#include "expression/expression_functional.hpp"   // NEEDEDINCLUDE
+#include "expression/expression_utils.hpp"        // NEEDEDINCLUDE
+#include "expression/lqp_select_expression.hpp"   // NEEDEDINCLUDE
+#include "logical_query_plan/delete_node.hpp"     // NEEDEDINCLUDE
+#include "logical_query_plan/insert_node.hpp"     // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"  // NEEDEDINCLUDE
+#include "logical_query_plan/union_node.hpp"      // NEEDEDINCLUDE
+#include "logical_query_plan/update_node.hpp"     // NEEDEDINCLUDE
+#include "utils/assert.hpp"                       // NEEDEDINCLUDE
 
 using namespace opossum::expression_functional;  // NOLINT
 

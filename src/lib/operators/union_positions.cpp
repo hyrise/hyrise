@@ -1,9 +1,9 @@
-#include "union_positions.hpp" // NEEDEDINCLUDE
+#include "union_positions.hpp"  // NEEDEDINCLUDE
 
-#include <numeric> // NEEDEDINCLUDE
+#include <numeric>  // NEEDEDINCLUDE
 
-#include "storage/reference_segment.hpp" // NEEDEDINCLUDE
 #include "storage/pos_list.hpp"
+#include "storage/reference_segment.hpp"  // NEEDEDINCLUDE
 #include "storage/table.hpp"
 
 /**

@@ -1,7 +1,8 @@
-#include "exists_expression.hpp" // NEEDEDINCLUDE
+#include "exists_expression.hpp"  // NEEDEDINCLUDE
 
+#include <sstream>
 
-#include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
+#include "expression/evaluation/expression_evaluator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

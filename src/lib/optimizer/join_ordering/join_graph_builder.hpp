@@ -1,6 +1,6 @@
 #pragma once
 
-#include "join_graph.hpp" // NEEDEDINCLUDE
+#include "join_graph.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sys/sdt.h> // NEEDEDINCLUDE
+#include <sys/sdt.h>  // NEEDEDINCLUDE
 
 // Systemtap is not available on OS X. The alternative would be dtrace. Actually, systemtap probes are compatible
 // with dtrace probes and the other way round. However, Apple's dtrace implementation differs from the original solaris
@@ -26,7 +26,7 @@ constexpr bool is_valid_name(const char* name) {
 #if defined(__has_feature)
 #if !__has_feature(thread_sanitizer)
 // TODO reenable
-#define BUILD_PROBE_NAME(provider, probe, ...) 
+#define BUILD_PROBE_NAME(provider, probe, ...)
 #else
 #define BUILD_PROBE_NAME(provider, probe, ...)
 #endif

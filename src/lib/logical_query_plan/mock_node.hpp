@@ -1,9 +1,8 @@
 #pragma once
 
-#include "abstract_lqp_node.hpp" // NEEDEDINCLUDE
-#include "all_type_variant.hpp" // NEEDEDINCLUDE
+#include "abstract_lqp_node.hpp"  // NEEDEDINCLUDE
 #include "enable_make_for_lqp_node.hpp"
-#include "lqp_column_reference.hpp" // NEEDEDINCLUDE
+#include "lqp_column_reference.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

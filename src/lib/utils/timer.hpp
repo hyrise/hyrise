@@ -1,6 +1,6 @@
 #pragma once
 
-#include <chrono> // NEEDEDINCLUDE
+#include <chrono>  // NEEDEDINCLUDE
 
 namespace opossum {
 

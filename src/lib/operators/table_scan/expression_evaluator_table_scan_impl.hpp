@@ -1,7 +1,7 @@
 #pragma once
 
-#include "abstract_table_scan_impl.hpp" // NEEDEDINCLUDE
-#include "expression/evaluation/expression_evaluator.hpp" // NEEDEDINCLUDE
+#include "abstract_table_scan_impl.hpp"                    // NEEDEDINCLUDE
+#include "expression/evaluation/expression_evaluator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

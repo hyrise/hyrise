@@ -1,10 +1,10 @@
-#include "segment_statistics.hpp" // NEEDEDINCLUDE
+#include "segment_statistics.hpp"  // NEEDEDINCLUDE
 
 #include <unordered_set>
 
-#include "min_max_filter.hpp" // NEEDEDINCLUDE
-#include "range_filter.hpp" // NEEDEDINCLUDE
-#include "storage/segment_iterate.hpp" // NEEDEDINCLUDE
+#include "min_max_filter.hpp"           // NEEDEDINCLUDE
+#include "range_filter.hpp"             // NEEDEDINCLUDE
+#include "storage/segment_iterate.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

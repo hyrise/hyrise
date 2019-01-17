@@ -5,7 +5,7 @@
 #include "types.hpp"
 
 namespace hsql {
-  class SQLParserResult;
+class SQLParserResult;
 }
 
 namespace opossum {

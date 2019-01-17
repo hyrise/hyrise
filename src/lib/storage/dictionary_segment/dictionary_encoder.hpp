@@ -1,8 +1,8 @@
 #pragma once
 
-#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp" // NEEDEDINCLUDE // NEEDEDINCLUDE
-#include "storage/vector_compression/base_compressed_vector.hpp" // NEEDEDINCLUDE
-#include "storage/base_segment_encoder.hpp" // NEEDEDINCLUDE
+#include "storage/base_segment_encoder.hpp"                                 // NEEDEDINCLUDE
+#include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"  // NEEDEDINCLUDE // NEEDEDINCLUDE
+#include "storage/vector_compression/base_compressed_vector.hpp"            // NEEDEDINCLUDE
 
 namespace opossum {
 

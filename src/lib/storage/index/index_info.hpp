@@ -1,7 +1,7 @@
 #pragma once
 
-#include "segment_index_type.hpp" // NEEDEDINCLUDE
-#include "types.hpp" // NEEDEDINCLUDE
+#include "segment_index_type.hpp"  // NEEDEDINCLUDE
+#include "types.hpp"               // NEEDEDINCLUDE
 
 namespace opossum {
 

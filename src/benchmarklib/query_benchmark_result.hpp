@@ -1,7 +1,7 @@
 #pragma once
 
+#include <tbb/concurrent_vector.h>  // NEEDEDINCLUDE
 #include <atomic>
-#include <tbb/concurrent_vector.h> // NEEDEDINCLUDE
 
 #include "benchmark_config.hpp"
 

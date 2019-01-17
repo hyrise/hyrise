@@ -1,6 +1,6 @@
 #pragma once
 
-#include "visualization/abstract_visualizer.hpp" // NEEDEDINCLUDE
+#include "visualization/abstract_visualizer.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

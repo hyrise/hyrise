@@ -1,10 +1,10 @@
-#include "greedy_operator_ordering.hpp" // NEEDEDINCLUDE
+#include "greedy_operator_ordering.hpp"  // NEEDEDINCLUDE
 
-#include "cost_model/abstract_cost_estimator.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "operators/operator_join_predicate.hpp" // NEEDEDINCLUDE
+#include "cost_model/abstract_cost_estimator.hpp"  // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp"        // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"        // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"   // NEEDEDINCLUDE
+#include "operators/operator_join_predicate.hpp"   // NEEDEDINCLUDE
 
 namespace opossum {
 

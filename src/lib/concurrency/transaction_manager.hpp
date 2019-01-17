@@ -1,8 +1,8 @@
 #pragma once
 
-#include <atomic> // NEEDEDINCLUDE
+#include <atomic>  // NEEDEDINCLUDE
 
-#include "utils/singleton.hpp" // NEEDEDINCLUDE
+#include "utils/singleton.hpp"  // NEEDEDINCLUDE
 
 /**
  * MVCC overview

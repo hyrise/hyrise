@@ -1,9 +1,9 @@
-#include "join_detection_rule.hpp" // NEEDEDINCLUDE
+#include "join_detection_rule.hpp"  // NEEDEDINCLUDE
 
-#include "expression/binary_predicate_expression.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/join_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/predicate_node.hpp" // NEEDEDINCLUDE
-#include "logical_query_plan/lqp_utils.hpp" // NEEDEDINCLUDE
+#include "expression/binary_predicate_expression.hpp"  // NEEDEDINCLUDE
+#include "logical_query_plan/join_node.hpp"            // NEEDEDINCLUDE
+#include "logical_query_plan/lqp_utils.hpp"            // NEEDEDINCLUDE
+#include "logical_query_plan/predicate_node.hpp"       // NEEDEDINCLUDE
 
 namespace opossum {
 

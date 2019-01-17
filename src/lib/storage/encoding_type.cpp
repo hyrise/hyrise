@@ -1,6 +1,6 @@
-#include "encoding_type.hpp" // NEEDEDINCLUDE
+#include "encoding_type.hpp"  // NEEDEDINCLUDE
 
-#include <boost/hana/for_each.hpp> // NEEDEDINCLUDE
+#include <boost/hana/for_each.hpp>  // NEEDEDINCLUDE
 
 namespace opossum {
 

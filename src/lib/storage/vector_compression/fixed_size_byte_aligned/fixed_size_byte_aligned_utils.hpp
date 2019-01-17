@@ -1,7 +1,7 @@
 #pragma once
 
-#include "storage/vector_compression/compressed_vector_type.hpp" // NEEDEDINCLUDE
-#include "utils/assert.hpp" // NEEDEDINCLUDE
+#include "storage/vector_compression/compressed_vector_type.hpp"  // NEEDEDINCLUDE
+#include "utils/assert.hpp"                                       // NEEDEDINCLUDE
 
 namespace opossum {
 

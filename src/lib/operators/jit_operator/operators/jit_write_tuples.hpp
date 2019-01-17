@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_jittable_sink.hpp" // NEEDEDINCLUDE
+#include "abstract_jittable_sink.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <unordered_set> // NEEDEDINCLUDE
+#include <unordered_set>  // NEEDEDINCLUDE
 
-#include "join_graph_edge.hpp" // NEEDEDINCLUDE
+#include "join_graph_edge.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

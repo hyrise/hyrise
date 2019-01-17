@@ -1,12 +1,12 @@
 #include "abstract_operator.hpp"
 
-#include "abstract_read_only_operator.hpp" // NEEDEDINCLUDE
-#include "concurrency/transaction_context.hpp" // NEEDEDINCLUDE
+#include "abstract_read_only_operator.hpp"      // NEEDEDINCLUDE
+#include "concurrency/transaction_context.hpp"  // NEEDEDINCLUDE
 #include "storage/table.hpp"
-#include "utils/format_bytes.hpp" // NEEDEDINCLUDE
-#include "utils/print_directed_acyclic_graph.hpp" // NEEDEDINCLUDE
-#include "utils/timer.hpp" // NEEDEDINCLUDE
-#include "utils/tracing/probes.hpp" // NEEDEDINCLUDE
+#include "utils/format_bytes.hpp"                  // NEEDEDINCLUDE
+#include "utils/print_directed_acyclic_graph.hpp"  // NEEDEDINCLUDE
+#include "utils/timer.hpp"                         // NEEDEDINCLUDE
+#include "utils/tracing/probes.hpp"                // NEEDEDINCLUDE
 
 namespace opossum {
 
@@ -118,6 +118,10 @@ const OperatorPerformanceData& AbstractOperator::performance_data() const { retu
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
+
+void AbstractOperator::print() const {
+  print(std::cout);
+}
 
 void AbstractOperator::print(std::ostream& stream) const {
   const auto get_children_fn = [](const auto& op) {

@@ -1,9 +1,9 @@
-#include "alias_operator.hpp" // NEEDEDINCLUDE
+#include "alias_operator.hpp"  // NEEDEDINCLUDE
 
-#include <sstream> // NEEDEDINCLUDE
+#include <sstream>  // NEEDEDINCLUDE
 
-#include "boost/algorithm/string/join.hpp" // NEEDEDINCLUDE
-#include "storage/table.hpp" // NEEDEDINCLUDE
+#include "boost/algorithm/string/join.hpp"  // NEEDEDINCLUDE
+#include "storage/table.hpp"                // NEEDEDINCLUDE
 
 using namespace std::string_literals;  // NOLINT
 

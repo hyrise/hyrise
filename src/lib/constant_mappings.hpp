@@ -1,8 +1,9 @@
-#include <boost/bimap.hpp> // NEEDEDINCLUDE
+#include <boost/bimap.hpp>  // NEEDEDINCLUDE
+#include <string>
 #include <unordered_map>
 
-#include "sql/SelectStatement.h" // NEEDEDINCLUDE
-#include "all_type_variant.hpp"
+#include "sql/SelectStatement.h"  // NEEDEDINCLUDE
+#include "types.hpp"
 
 namespace opossum {
 

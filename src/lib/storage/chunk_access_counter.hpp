@@ -1,10 +1,10 @@
 #pragma once
 
-#include <atomic> // NEEDEDINCLUDE
-#include <boost/circular_buffer.hpp> // NEEDEDINCLUDE
+#include <atomic>                     // NEEDEDINCLUDE
+#include <boost/circular_buffer.hpp>  // NEEDEDINCLUDE
 
-#include "types.hpp" // NEEDEDINCLUDE
-#include "utils/polymorphic_allocator.hpp" // NEEDEDINCLUDE
+#include "types.hpp"                        // NEEDEDINCLUDE
+#include "utils/polymorphic_allocator.hpp"  // NEEDEDINCLUDE
 
 namespace opossum {
 

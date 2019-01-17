@@ -1,4 +1,6 @@
-#include "mvcc_data.hpp" // NEEDEDINCLUDE
+#include "mvcc_data.hpp"  // NEEDEDINCLUDE
+
+#include <sstream>
 
 namespace opossum {
 
