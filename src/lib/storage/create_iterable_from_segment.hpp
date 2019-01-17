@@ -3,8 +3,8 @@
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/run_length_segment/run_length_segment_iterable.hpp"
-#include "storage/value_segment/value_segment_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace opossum {
 
