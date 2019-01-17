@@ -4,7 +4,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
-
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
@@ -847,7 +846,7 @@ int Console::_print_transaction_info(const std::string& input) {
 }
 
 int Console::_print_current_working_directory(const std::string&) {
-  out(filesystem::current_path().string() + "\n");
+  out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -862,7 +861,7 @@ int Console::_load_plugin(const std::string& args) {
 
   const std::string& plugin_path_str = arguments[0];
 
-  const filesystem::path plugin_path(plugin_path_str);
+  const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   PluginManager::get().load_plugin(plugin_path);

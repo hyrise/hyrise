@@ -10,6 +10,7 @@
 
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
+#include "optimizer/optimizer.hpp"
 #include "operators/validate.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"

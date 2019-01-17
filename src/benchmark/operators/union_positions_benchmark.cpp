@@ -7,6 +7,7 @@
 
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

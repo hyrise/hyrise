@@ -4,6 +4,7 @@
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp" // NEEDEDINCLUDE
 #include "storage/run_length_segment/run_length_segment_iterable.hpp" // NEEDEDINCLUDE
 #include "storage/value_segment/value_segment_iterable.hpp" // NEEDEDINCLUDE
+#include "storage/segment_iterables/any_segment_iterable.hpp" // NEEDEDINCLUDE
 
 namespace opossum {
 
