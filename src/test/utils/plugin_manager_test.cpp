@@ -2,6 +2,7 @@
 #include "gtest/gtest.h"
 
 #include "storage/storage_manager.hpp"
+#include "utils/abstract_plugin.hpp"
 #include "utils/plugin_manager.hpp"
 
 #include "./plugin_test_utils.hpp"

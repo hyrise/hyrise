@@ -4,8 +4,7 @@
 #include <vector>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
-
+#include "concurrency/transaction_context.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"

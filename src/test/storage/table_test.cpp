@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "resolve_type.hpp"
+#include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
