@@ -347,7 +347,7 @@ std::string lqp_to_cpp(const std::shared_ptr<AbstractLQPNode>& lqp) {
 
   for (const auto& [column_expression, column_expression_name] : column_expression_names) {
     const auto stored_table_node_name = referenced_node_names.at(column_expression->column_reference.original_node());
-    cpp_stream << "const auto " << column_expression_name << " = lqp_column_(" << stored_table_node_name << ", ColumnID{" << column_expression->column_reference.original_column_id() << "})" << std::endl;
+    cpp_stream << "const auto " << column_expression_name << " = lqp_column_({" << stored_table_node_name << ", ColumnID{" << column_expression->column_reference.original_column_id() << "}});" << std::endl;
   }
   cpp_stream << std::endl;
 
