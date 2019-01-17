@@ -38,6 +38,8 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "Ascending"},
     {OrderByMode::Descending, "Descending"},
+    {OrderByMode::DescendingNullsLast, "DescendingNullsLast"},
+    {OrderByMode::AscendingNullsLast, "AscendingNullsLast"},
 };
 
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
