@@ -57,13 +57,6 @@ class JoinEquiTest : public JoinTest {};
 using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
-  EXPECT_THROW(std::make_shared<JoinHash>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::GreaterThan),
-               std::logic_error);
-}
-
 TYPED_TEST(JoinEquiTest, LeftJoin) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, ColumnIDPair(ColumnID{0}, ColumnID{0}),

@@ -35,34 +35,30 @@ nlohmann::json CLIConfigParser::parse_json_config_file(const std::string& json_f
 BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann::json& json_config) {
   const auto default_config = BenchmarkConfig::get_default_config();
 
-  // Should the benchmark be run in verbose mode
-  const auto verbose = json_config.value("verbose", default_config.verbose);
-  auto& out = verbose ? std::cout : get_null_streambuf();
-
   // Display info about output destination
   std::optional<std::string> output_file_path;
   const auto output_file_string = json_config.value("output", "");
   if (!output_file_string.empty()) {
     output_file_path = output_file_string;
-    out << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
+    std::cout << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
   } else {
-    out << "- Writing benchmark results to stdout" << std::endl;
+    std::cout << "- Writing benchmark results to stdout" << std::endl;
   }
 
   // Display info about MVCC being enabled or not
   const auto enable_mvcc = json_config.value("mvcc", default_config.use_mvcc == UseMvcc::Yes);
   const auto use_mvcc = enable_mvcc ? UseMvcc::Yes : UseMvcc::No;
-  out << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
+  std::cout << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
   const auto cores = json_config.value("cores", default_config.cores);
   const auto number_of_cores_str = (cores == 0) ? "all available" : std::to_string(cores);
   const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
-  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
-      << std::endl;
+  std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
+            << std::endl;
 
   const auto clients = json_config.value("clients", default_config.clients);
-  out << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
+  std::cout << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
@@ -80,10 +76,10 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   } else {
     throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
   }
-  out << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
+  std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
 
   const auto enable_visualization = json_config.value("visualize", default_config.enable_visualization);
-  out << "- Visualization is " << (enable_visualization ? "on" : "off") << std::endl;
+  std::cout << "- Visualization is " << (enable_visualization ? "on" : "off") << std::endl;
 
   // Get the specified encoding type
   std::unique_ptr<EncodingConfig> encoding_config{};
@@ -92,65 +88,53 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   if (boost::algorithm::ends_with(encoding_type_str, ".json")) {
     // Use encoding file instead of default type
     encoding_config = std::make_unique<EncodingConfig>(parse_encoding_config(encoding_type_str));
-    out << "- Encoding is custom from " << encoding_type_str << "" << std::endl;
+    std::cout << "- Encoding is custom from " << encoding_type_str << "" << std::endl;
 
     Assert(compression_type_str.empty(), "Specified both compression type and an encoding file. Invalid combination.");
   } else {
     encoding_config = std::make_unique<EncodingConfig>(
         EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
-    out << "- Encoding is '" << encoding_type_str << "'" << std::endl;
+    std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
   // Get all other variables
   const auto chunk_size = json_config.value("chunk_size", default_config.chunk_size);
-  out << "- Chunk size is " << chunk_size << std::endl;
+  std::cout << "- Chunk size is " << chunk_size << std::endl;
 
   const auto max_runs = json_config.value("runs", default_config.max_num_query_runs);
-  out << "- Max runs per query is " << max_runs << std::endl;
+  std::cout << "- Max runs per query is " << max_runs << std::endl;
 
   const auto default_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.max_duration);
   const auto max_duration = json_config.value("time", default_duration_seconds.count());
-  out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
+  std::cout << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
   const auto default_warmup_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.warmup_duration);
   const auto warmup = json_config.value("warmup", default_warmup_seconds.count());
   if (warmup > 0) {
-    out << "- Warmup duration per query is " << warmup << " seconds" << std::endl;
+    std::cout << "- Warmup duration per query is " << warmup << " seconds" << std::endl;
   } else {
-    out << "- No warmup runs are performed" << std::endl;
+    std::cout << "- No warmup runs are performed" << std::endl;
   }
   const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
 
   const auto verify = json_config.value("verify", default_config.verify);
   if (verify) {
-    out << "- Automatically verifying results with SQLite. This will make the performance numbers invalid."
-        << std::endl;
+    std::cout << "- Automatically verifying results with SQLite. This will make the performance numbers invalid."
+              << std::endl;
   }
 
   const auto cache_binary_tables = json_config.value("cache_binary_tables", false);
   if (cache_binary_tables) {
-    out << "- Caching tables as binary files" << std::endl;
+    std::cout << "- Caching tables as binary files" << std::endl;
   } else {
-    out << "- Not caching tables as binary files" << std::endl;
+    std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
-  return BenchmarkConfig{benchmark_mode,
-                         verbose,
-                         chunk_size,
-                         *encoding_config,
-                         max_runs,
-                         timeout_duration,
-                         warmup_duration,
-                         use_mvcc,
-                         output_file_path,
-                         enable_scheduler,
-                         cores,
-                         clients,
-                         enable_visualization,
-                         verify,
-                         cache_binary_tables,
-                         out};
+  return BenchmarkConfig{
+      benchmark_mode, chunk_size,         *encoding_config, max_runs, timeout_duration, warmup_duration,
+      use_mvcc,       output_file_path,   enable_scheduler, cores,    clients,          enable_visualization,
+      verify,         cache_binary_tables};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -160,7 +144,6 @@ BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseRes
 nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseResult& parse_result) {
   nlohmann::json json_config;
 
-  json_config.emplace("verbose", parse_result["verbose"].as<bool>());
   json_config.emplace("runs", parse_result["runs"].as<size_t>());
   json_config.emplace("chunk_size", parse_result["chunk_size"].as<ChunkOffset>());
   json_config.emplace("time", parse_result["time"].as<size_t>());
@@ -243,8 +226,22 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   return EncodingConfig{default_spec, std::move(type_encoding_mapping), std::move(custom_encoding_mapping)};
 }
 
-std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
-  return options.help() + BenchmarkConfig::description + EncodingConfig::description;
+bool CLIConfigParser::print_help_if_requested(const cxxopts::Options& options,
+                                              const cxxopts::ParseResult& parse_result) {
+  if (!parse_result.count("help") && !parse_result.count("full_help")) {
+    return false;
+  }
+
+  std::cout << options.help() << std::endl;
+
+  if (parse_result.count("full_help")) {
+    std::cout << BenchmarkConfig::description << std::endl;
+    std::cout << EncodingConfig::description << std::endl;
+  } else {
+    std::cout << "Use --full_help for more configuration options" << std::endl << std::endl;
+  }
+
+  return true;
 }
 
 }  // namespace opossum

@@ -24,7 +24,8 @@ class CLIConfigParser {
 
   static EncodingConfig parse_encoding_config(const std::string& encoding_file_str);
 
-  static std::string detailed_help(const cxxopts::Options& options);
+  // Returns whether --help or --full_help was requested - used to stop execution of the benchmark
+  static bool print_help_if_requested(const cxxopts::Options& options, const cxxopts::ParseResult& parse_result);
 };
 
 }  // namespace opossum

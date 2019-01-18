@@ -27,36 +27,56 @@ class ReferenceSegmentIterable;
  * @{
  */
 
-template <typename T>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const ValueSegment<T>& segment) {
-  return erase_type_from_iterable_if_debug(ValueSegmentIterable<T>{segment});
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return ValueSegmentIterable<T>{segment};
+  }
 }
 
-template <typename T>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
-  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, pmr_vector<T>>{segment});
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return DictionarySegmentIterable<T, pmr_vector<T>>{segment};
+  }
 }
 
-template <typename T>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
-  return erase_type_from_iterable_if_debug(RunLengthSegmentIterable<T>{segment});
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return RunLengthSegmentIterable<T>{segment};
+  }
 }
 
-template <typename T>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
-  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, FixedStringVector>{segment});
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return DictionarySegmentIterable<T, FixedStringVector>{segment};
+  }
 }
 
-template <typename T>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
-  return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{segment});
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return FrameOfReferenceIterable<T>{segment};
+  }
 }
 
 /**
  * This function must be forward-declared because ReferenceSegmentIterable
  * includes this file leading to a circular dependency
  */
-template <typename T>
+template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 /**@}*/

@@ -50,9 +50,9 @@ void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);
-  if (plugin != _plugins.cend()) {
-    _unload_erase_plugin(plugin);
-  }
+  Assert(plugin != _plugins.cend(), "Unloading plugin failed: A plugin with name  " + name + " does not exist.");
+
+  _unload_erase_plugin(plugin);
 }
 
 const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
