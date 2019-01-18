@@ -3,12 +3,15 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptors.hpp>
 
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <memory>
@@ -19,6 +22,7 @@
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "constant_mappings.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
@@ -36,6 +40,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -351,14 +356,28 @@ void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
 int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
+  auto encoding_options = std::string{"                                               Encoding options: "};
+  encoding_options += boost::algorithm::join(
+      encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
+  // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
+  // and replaces the following space(s) with a new line. `(?: +|$)` is a non-capturing group that matches either
+  // a non-zero number of spaces or the end of the line.
+  auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
+  encoding_options =
+      regex_replace(encoding_options, line_wrap, "$1\n                                                 ");
+  // Remove the 49 spaces and the new line added at the end
+  encoding_options.resize(encoding_options.size() - 50);
+
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
   out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  load FILEPATH TABLENAME                 - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
   out("                                               The import type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
+  out("                                               If no table name is specified, the filename without extension is used\n");  // NOLINT
+  out(encoding_options + "\n");  // NOLINT
   out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
   out("                                               The export type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv'\n");
@@ -455,20 +474,18 @@ int Console::_generate_tpch(const std::string& args) {
 int Console::_load_table(const std::string& args) {
   std::vector<std::string> arguments = trim_and_split(args);
 
-  if (arguments.size() != 2) {
+  if (arguments.empty() || arguments.size() > 3) {
     out("Usage:\n");
-    out("  load FILEPATH TABLENAME\n");
+    out("  load FILEPATH [TABLENAME [ENCODING]]\n");
     return ReturnCode::Error;
   }
 
-  const std::string& filepath = arguments[0];
-  const std::string& tablename = arguments[1];
+  const auto filepath = std::filesystem::path{arguments[0]};
+  const auto extension = std::string{filepath.extension()};
 
-  std::vector<std::string> file_parts;
-  boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
-  const std::string& extension = file_parts.back();
+  const auto tablename = arguments.size() >= 2 ? arguments[1] : std::string{filepath.stem()};
 
-  out("Loading " + filepath + " into table \"" + tablename + "\" ...\n");
+  out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
   auto& storage_manager = StorageManager::get();
   if (storage_manager.has_table(tablename)) {
@@ -476,34 +493,60 @@ int Console::_load_table(const std::string& args) {
     out("Table " + tablename + " already existed. Replacing it.\n");
   }
 
-  if (extension == "csv") {
+  if (extension == ".csv") {
     auto importer = std::make_shared<ImportCsv>(filepath, Chunk::DEFAULT_SIZE, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
-      out("Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
+      out("Error: Exception thrown while importing CSV:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
-  } else if (extension == "tbl") {
+  } else if (extension == ".tbl") {
     try {
       auto table = load_table(filepath);
 
       StorageManager::get().add_table(tablename, table);
     } catch (const std::exception& exception) {
-      out("Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
+      out("Error: Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
-  } else if (extension == "bin") {
+  } else if (extension == ".bin") {
     auto importer = std::make_shared<ImportBinary>(filepath, tablename);
     try {
       importer->execute();
     } catch (const std::exception& exception) {
-      out("Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
+      out("Error: Exception thrown while importing binary file:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
     }
   } else {
     out("Error: Unsupported file extension '" + extension + "'\n");
     return ReturnCode::Error;
+  }
+
+  const std::string encoding = arguments.size() == 3 ? arguments[2] : "Unencoded";
+
+  const auto encoding_type = encoding_type_to_string.right.find(encoding);
+  if (encoding_type == encoding_type_to_string.right.end()) {
+    const auto encoding_options = boost::algorithm::join(
+        encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
+    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + encoding_options + "\n");
+    return ReturnCode::Error;
+  }
+
+  // Check if the specified encoding can be used
+  const auto& table = StorageManager::get().get_table(tablename);
+  bool supported = true;
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    if (!encoding_supports_data_type(encoding_type->second, table->column_data_type(column_id))) {
+      out("Encoding \"" + encoding + "\" not supported for column \"" + table->column_name(column_id) +
+          "\", table left unencoded\n");
+      supported = false;
+    }
+  }
+
+  if (supported) {
+    out("Encoding \"" + tablename + "\" using " + encoding + "\n");
+    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table(tablename), encoding_type->second);
   }
 
   return ReturnCode::Ok;
@@ -523,7 +566,7 @@ int Console::_export_table(const std::string& args) {
 
   auto& storage_manager = StorageManager::get();
   if (!storage_manager.has_table(tablename)) {
-    out("Table does not exist in StorageManager");
+    out("Error: Table does not exist in StorageManager");
     return ReturnCode::Error;
   }
 
@@ -547,7 +590,7 @@ int Console::_export_table(const std::string& args) {
       return ReturnCode::Error;
     }
   } catch (const std::exception& exception) {
-    out("Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
+    out("Error: Exception thrown while exporting:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
@@ -569,7 +612,7 @@ int Console::_print_table(const std::string& args) {
   try {
     gt->execute();
   } catch (const std::exception& exception) {
-    out("Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
+    out("Error: Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
@@ -632,12 +675,12 @@ int Console::_visualize(const std::string& input) {
   // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
   // nor was there a previous execution), return an error
   if (!_sql_pipeline) {
-    out("Nothing to visualize.\n");
+    out("Error: Nothing to visualize.\n");
     return ReturnCode::Error;
   }
 
   if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
-    out("We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
+    out("Error: We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
     return ReturnCode::Error;
   }
 
@@ -736,7 +779,7 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   }
 
-  out("Unknown property\n");
+  out("Error: Unknown property\n");
   return 1;
 }
 
@@ -791,7 +834,7 @@ void Console::handle_signal(int sig) {
 int Console::_begin_transaction(const std::string& input) {
   if (_explicitly_created_transaction_context != nullptr) {
     const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
-    out("There is already an active transaction (" + transaction_id + "). ");
+    out("Error: There is already an active transaction (" + transaction_id + "). ");
     out("Type `rollback` or `commit` before beginning a new transaction.\n");
     return ReturnCode::Error;
   }

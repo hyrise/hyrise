@@ -35,7 +35,9 @@ ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_
                               const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()),
       _values(std::move(values), alloc),
-      _null_values({std::move(null_values), alloc}) {}
+      _null_values({std::move(null_values), alloc}) {
+  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
+}
 
 template <typename T>
 ValueSegment<T>::ValueSegment(const std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
@@ -50,14 +52,18 @@ ValueSegment<T>::ValueSegment(const std::vector<T>& values, std::vector<bool>& n
                               const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()),
       _values(values, alloc),
-      _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {}
+      _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {
+  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
+}
 
 template <typename T>
 ValueSegment<T>::ValueSegment(std::vector<T>&& values, std::vector<bool>&& null_values,
                               const PolymorphicAllocator<T>& alloc)
     : BaseValueSegment(data_type_from_type<T>()),
       _values(std::move(values), alloc),
-      _null_values(pmr_concurrent_vector<bool>(std::move(null_values), alloc)) {}
+      _null_values(pmr_concurrent_vector<bool>(std::move(null_values), alloc)) {
+  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
+}
 
 template <typename T>
 const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
