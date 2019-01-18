@@ -4,7 +4,7 @@
 #include <string>
 #include <type_traits>
 
-#include "resolve_type.hpp"
+#include "resolve_segment_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"

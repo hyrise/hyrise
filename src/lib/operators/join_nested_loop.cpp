@@ -87,8 +87,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
    * and the outer loop, the JoinNestedLoop becomes the most expensive-to-compile file in all of Hyrise by a margin
    */
 
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(*segment_left, [&](auto left_it, const auto left_end) {
-    segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(*segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {
+    segment_with_iterators(*segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {
       using LeftType = typename decltype(left_it)::ValueType;
       using RightType = typename decltype(right_it)::ValueType;
 
@@ -114,10 +114,6 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
                                   chunk_id_left_copy, chunk_id_right_copy, params_copy);
         });
       } else {
-        // gcc complains without these
-        ignore_unused_variable(right_end);
-        ignore_unused_variable(left_end);
-
         Fail("Cannot join String with non-String column");
       }
     });
