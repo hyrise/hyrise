@@ -59,7 +59,7 @@ class RadixClusterSort {
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
     DebugAssert(cluster_count > 0, "cluster_count must be > 0");
-    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two, i.e. 1, 2, 4, 8...");
+    DebugAssert((cluster_count & (cluster_count - 1)) == 0, "cluster_count must be a power of two");
     DebugAssert(left != nullptr, "left input operator is null");
     DebugAssert(right != nullptr, "right input operator is null");
   }
@@ -171,7 +171,7 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  std::unique_ptr<MaterializedSegmentList<T>> _cluster(std::unique_ptr<MaterializedSegmentList<T>>& input_chunks,
+  std::unique_ptr<MaterializedSegmentList<T>> _cluster(const std::unique_ptr<MaterializedSegmentList<T>>& input_chunks,
                                                        std::function<size_t(const T&)> clusterer) {
     auto output_table = std::make_unique<MaterializedSegmentList<T>>(_cluster_count);
     TableInformation table_information(input_chunks->size(), _cluster_count);
@@ -250,20 +250,19 @@ class RadixClusterSort {
   * Picks sample values from a materialized table that are used to determine cluster range bounds.
   **/
   void _pick_sample_values(std::vector<std::map<T, size_t>>& sample_values,
-                           std::unique_ptr<MaterializedSegmentList<T>>& materialized_segments) {
+                           const std::unique_ptr<MaterializedSegmentList<T>>& materialized_segments) {
     // Note:
     // - The materialized chunks are sorted.
-    // - In between the chunks there is no order
-    // - Every chunk can contain values for every cluster
-    // - To sample for range border values we look at the position where the values for each cluster
-    //   would start if every chunk had an even values distribution for every cluster.
-    // - Later, these values are aggregated to determine the actual cluster borders
+    // - In between the chunks there is no order.
+    // - Every chunk can contain values for every cluster.
+    // - To sample the min and max of each range, we look at the position where the values
+    //   for each cluster would start assuming an even values distribution for every cluster.
+    // - Later, these values are aggregated to determine the actual cluster borders.
     for (size_t chunk_number = 0; chunk_number < materialized_segments->size(); ++chunk_number) {
-      auto chunk_values = (*materialized_segments)[chunk_number];
+      const auto chunk_values = (*materialized_segments)[chunk_number];
       for (size_t cluster_id = 0; cluster_id < _cluster_count - 1; ++cluster_id) {
-        auto pos = chunk_values->size() * (cluster_id + 1) / static_cast<float>(_cluster_count);
-        auto index = static_cast<size_t>(pos);
-        ++sample_values[cluster_id][(*chunk_values)[index].value];
+        const auto position = chunk_values->size() * (cluster_id + 1) / static_cast<float>(_cluster_count);
+        ++sample_values[cluster_id][(*chunk_values)[static_cast<size_t>(position)].value];
       }
     }
   }
@@ -274,11 +273,18 @@ class RadixClusterSort {
   * right table in a pair.
   **/
   std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<MaterializedSegmentList<T>>> _range_cluster(
-      std::unique_ptr<MaterializedSegmentList<T>>& input_left,
-      std::unique_ptr<MaterializedSegmentList<T>>& input_right) {
-    std::vector<std::map<T, size_t>> sample_values(_cluster_count - 1);
+      const std::unique_ptr<MaterializedSegmentList<T>>& input_left,
+      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, const std::vector<T> sample_values2) {
+    std::vector<std::map<T, size_t>> sample_values(_cluster_count);
 
     _pick_sample_values(sample_values, input_left);
+    for (size_t i = 0; i < sample_values.size(); ++i) {
+      const auto& v = sample_values[i];
+      std::cout << "Cluster " << i << ":" << std::endl;
+      for (const auto& [k, v] : v) {
+        std::cout << k << " >> " << v << std::endl;
+      }
+    }
     _pick_sample_values(sample_values, input_right);
 
     // Pick the most common sample values for each cluster for the split values.
@@ -297,19 +303,48 @@ class RadixClusterSort {
       split_values[cluster_id] = std::max_element(sample_values[cluster_id].begin(), sample_values[cluster_id].end(),
                                                   // second is the count of the value
                                                   [](auto& a, auto& b) { return a.second < b.second; })
-                                     ->second;
+                                     ->first;
     }
 
 #pragma clang diagnostic pop
 
+    std::cout << "Split values: " << std::endl;
+    for (const auto& v : split_values) {
+      std::cout << v << " - ";
+    }
+    std::cout << std::endl;
+
+    auto sample_values3 = std::vector<T>();
+    auto widthi = sample_values2.size() / _cluster_count;
+    for (auto i = size_t{0}; i < _cluster_count - 1; ++i) {
+      sample_values3.push_back(sample_values2[static_cast<size_t>((i + 1) * widthi)]);
+    }
+
+    const auto last_element_iter = std::unique(sample_values3.begin(), sample_values3.end());
+    sample_values3.erase(last_element_iter, sample_values3.end());
+
+    std::cout << "Split values - new: " << std::endl;
+    for (const auto& v : sample_values2) {
+      std::cout << v << " - ";
+    }
+    std::cout << std::endl;
+
+    std::cout << "Split values - newnew (cluster count " << _cluster_count << "):" << std::endl;
+    for (const auto& v : sample_values3) {
+      std::cout << v << " - ";
+    }
+    std::cout << std::endl;
+
+    // TODO: pretty dump implementation when rows are sorted.
+
     // Implements range clustering
     auto cluster_count = _cluster_count;
-    auto clusterer = [cluster_count, &split_values](const T& value) {
+    auto clusterer = [cluster_count, &sample_values3](const T& value) {
       // Find the first split value that is greater or equal to the entry.
       // The split values are sorted in ascending order.
       // Note: can we do this faster? (binary search?)
       for (size_t cluster_id = 0; cluster_id < cluster_count - 1; ++cluster_id) {
-        if (value <= split_values[cluster_id]) {
+        if (value <= sample_values3[cluster_id]) {
           return cluster_id;
         }
       }
@@ -345,10 +380,21 @@ class RadixClusterSort {
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
-    auto materialized_left_segments = std::move(materialization_left.first);
-    auto materialized_right_segments = std::move(materialization_right.first);
-    output.null_rows_left = std::move(materialization_left.second);
-    output.null_rows_right = std::move(materialization_right.second);
+    auto materialized_left_segments = std::move(std::get<0>(materialization_left));
+    auto materialized_right_segments = std::move(std::get<0>(materialization_right));
+    output.null_rows_left = std::move(std::get<1>(materialization_left));
+    output.null_rows_right = std::move(std::get<1>(materialization_right));
+    auto samples_left = std::get<2>(materialization_left);
+    auto samples_right = std::get<2>(materialization_right);
+
+    samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
+    std::sort(samples_left.begin(), samples_left.end());
+
+    // std::cout << "Samples after materialization:" << std::endl;
+    // for (auto v : samples_left) {
+    //   std::cout << v << " - ";
+    // }
+    // std::cout << std::endl;
 
     if (_cluster_count == 1) {
       output.clusters_left = _concatenate_chunks(materialized_left_segments);
@@ -357,7 +403,7 @@ class RadixClusterSort {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
     } else {
-      auto result = _range_cluster(materialized_left_segments, materialized_right_segments);
+      auto result = _range_cluster(materialized_left_segments, materialized_right_segments, samples_left);
       output.clusters_left = std::move(result.first);
       output.clusters_right = std::move(result.second);
     }
