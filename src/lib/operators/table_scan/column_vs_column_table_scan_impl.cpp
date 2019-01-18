@@ -55,14 +55,13 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
 
       if constexpr (!HYRISE_DEBUG && std::is_same_v<decltype(left_typed_segment), decltype(right_typed_segment)>) {
         // Same segment types - do not erase types
-        result = _typed_scan_chunk<SegmentIterationTypeErasure::OnlyInDebug>(
+        result = _typed_scan_chunk<EraseTypes::OnlyInDebug>(
             chunk_id, create_iterable_from_segment<LeftType>(left_typed_segment),
             create_iterable_from_segment<RightType>(right_typed_segment));
       } else {
         PerformanceWarning("ColumnVsColumnTableScan using type-erased iterators");
-        result = _typed_scan_chunk<SegmentIterationTypeErasure::Always>(
-            chunk_id, create_any_segment_iterable<LeftType>(left_segment),
-            create_any_segment_iterable<RightType>(right_segment));
+        result = _typed_scan_chunk<EraseTypes::Always>(chunk_id, create_any_segment_iterable<LeftType>(left_segment),
+                                                       create_any_segment_iterable<RightType>(right_segment));
       }
     });
   });
@@ -70,7 +69,7 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_i
   return result;
 }
 
-template <SegmentIterationTypeErasure type_erasure, typename LeftIterable, typename RightIterable>
+template <EraseTypes erase_comparator_type, typename LeftIterable, typename RightIterable>
 std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID chunk_id,
                                                                         const LeftIterable& left_iterable,
                                                                         const RightIterable& right_iterable) const {
@@ -83,15 +82,16 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
 
   // C++ cannot compare strings and non-strings out of the box:
   if constexpr (std::is_same_v<LeftType, std::string> == std::is_same_v<RightType, std::string>) {
-    bool flipped = false;
-    auto condition = _predicate_condition;
-    if (condition == PredicateCondition::GreaterThan || condition == PredicateCondition::GreaterThanEquals) {
-      condition = flip_predicate_condition(condition);
-      flipped = true;
+    bool condition_was_flipped = false;
+    auto maybe_flipped_condition = _predicate_condition;
+    if (maybe_flipped_condition == PredicateCondition::GreaterThan ||
+        maybe_flipped_condition == PredicateCondition::GreaterThanEquals) {
+      maybe_flipped_condition = flip_predicate_condition(maybe_flipped_condition);
+      condition_was_flipped = true;
     }
 
     auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
-      if constexpr (type_erasure == SegmentIterationTypeErasure::OnlyInDebug) {
+      if constexpr (erase_comparator_type == EraseTypes::OnlyInDebug) {
         return comparator;
       } else {
         return std::function<bool(const AbstractSegmentPosition<std::decay_t<decltype(it1->value())>>&,
@@ -105,12 +105,12 @@ std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::_typed_scan_chunk(ChunkID 
 
     left_iterable.with_iterators([&](auto left_it, const auto left_end) {
       right_iterable.with_iterators([&](auto right_it, const auto right_end) {
-        with_comparator_light(condition, [&](auto predicate_comparator) {
+        with_comparator_light(maybe_flipped_condition, [&](auto predicate_comparator) {
           const auto comparator = [predicate_comparator](const auto& left, const auto& right) {
             return predicate_comparator(left.value(), right.value());
           };
 
-          if (flipped) {
+          if (condition_was_flipped) {
             const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
             AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id_copy,
                                                               *matches_out_ref, left_it);
