@@ -212,7 +212,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
                  AND l_commitdate < l_receiptdate
              )
  */
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH4WithExistsSubquery)(benchmark::State& state) {
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmark::State& state) {
   // clang-format off
   const auto parameter = correlated_parameter_(ParameterID{0}, _orders_orderkey);
   const auto subselect_lqp = PredicateNode::make(equals_(parameter, _lineitem_orderkey),
@@ -234,7 +234,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH4WithExistsSubquery)(benchmark
   }
 }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH4WithUnnestedSemiJoin)(benchmark::State& state) {
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchmark::State& state) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(_orders_orderpriority),
