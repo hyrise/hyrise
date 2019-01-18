@@ -3,10 +3,18 @@
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/storage_manager.hpp"
@@ -70,6 +78,16 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
                                          lineitem_table->column_is_nullable(ColumnID{13}), "");
     _string_predicate =
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, _lshipinstruct_operand, value_("a"));
+
+    _orders_table_node = StoredTableNode::make("orders");
+    _orders_orderpriority = _orders_table_node->get_column("o_orderpriority");
+    _orders_orderdate = _orders_table_node->get_column("o_orderdate");
+    _orders_orderkey = _orders_table_node->get_column("o_orderkey");
+
+    _lineitem_table_node = StoredTableNode::make("lineitem");
+    _lineitem_orderkey = _lineitem_table_node->get_column("l_orderkey");
+    _lineitem_commitdate = _lineitem_table_node->get_column("l_commitdate");
+    _lineitem_receiptdate = _lineitem_table_node->get_column("l_receiptdate");
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
@@ -103,6 +121,10 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<BinaryPredicateExpression> _tpchq6_shipdate_less_predicate;
   std::shared_ptr<PQPColumnExpression> _tpchq6_quantity_operand;
   std::shared_ptr<BinaryPredicateExpression> _tpchq6_quantity_predicate;
+
+  std::shared_ptr<StoredTableNode> _orders_table_node, _lineitem_table_node;
+  LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
+  LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
@@ -168,6 +190,65 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(b
   for (auto _ : state) {
     auto reference_table_scan = std::make_shared<TableScan>(table_scan, _int_predicate);
     reference_table_scan->execute();
+  }
+}
+
+/** TPC-H Q4 Benchmarks:
+  - the following two benchmarks use a static and slightly simplified TPC-H Query 4
+  - objective is to compare the performance of unnesting the EXISTS subquery
+
+  - The LQPs translate roughly to this query:
+      SELECT
+         o_orderpriority
+      FROM orders
+      WHERE
+         o_orderdate >= date '1993-07-01'
+         AND o_orderdate < date '1993-10-01'
+         AND exists (
+             SELECT *
+             FROM lineitem
+             WHERE
+                 l_orderkey = o_orderkey
+                 AND l_commitdate < l_receiptdate
+             )
+ */
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH4WithExistsSubquery)(benchmark::State& state) {
+  // clang-format off
+  const auto parameter = correlated_parameter_(ParameterID{0}, _orders_orderkey);
+  const auto subselect_lqp = PredicateNode::make(equals_(parameter, _lineitem_orderkey),
+      PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node));
+  const auto subselect = lqp_select_(subselect_lqp, std::make_pair(ParameterID{0}, _orders_orderkey));
+
+  const auto lqp =
+  ProjectionNode::make(expression_vector(_orders_orderpriority),
+    PredicateNode::make(equals_(exists_(subselect), 1),
+      PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
+        PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
+         _orders_table_node))));
+  // clang-format on
+
+  for (auto _ : state) {
+    const auto pqp = LQPTranslator{}.translate_node(lqp);
+    const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCH4WithUnnestedSemiJoin)(benchmark::State& state) {
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(_orders_orderpriority),
+    JoinNode::make(JoinMode::Semi, equals_(_lineitem_orderkey, _orders_orderkey),
+      PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
+        PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
+         _orders_table_node)),
+      PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node)));
+  // clang-format on
+
+  for (auto _ : state) {
+    const auto pqp = LQPTranslator{}.translate_node(lqp);
+    const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
+    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
   }
 }
 
