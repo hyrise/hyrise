@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "all_type_variant.hpp"
 #include "expression_result_views.hpp"
 
 namespace opossum {

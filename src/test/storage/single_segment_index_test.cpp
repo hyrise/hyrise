@@ -13,7 +13,7 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "types.hpp"
 
 namespace opossum {

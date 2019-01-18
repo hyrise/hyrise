@@ -3,6 +3,7 @@
 #include "abstract_read_only_operator.hpp"
 
 namespace opossum {
+class BaseSegment;
 enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
 
 /**

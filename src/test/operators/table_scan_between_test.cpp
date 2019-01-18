@@ -26,7 +26,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "typed_operator_base_test.hpp"

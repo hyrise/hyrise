@@ -4,7 +4,7 @@
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 
 namespace opossum {
 

@@ -24,7 +24,7 @@
 #include "expression/value_expression.hpp"
 #include "operators/join_hash/join_hash_steps.hpp"
 #include "operators/table_wrapper.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 
 namespace opossum {
 

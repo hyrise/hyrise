@@ -5,7 +5,7 @@
 
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"

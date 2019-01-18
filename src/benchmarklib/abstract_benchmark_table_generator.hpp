@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"

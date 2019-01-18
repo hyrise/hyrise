@@ -5,9 +5,11 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 namespace opossum {

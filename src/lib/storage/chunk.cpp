@@ -1,8 +1,10 @@
 #include "chunk.hpp"
 
 #include "index/base_index.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/mvcc_data.hpp"
 
 namespace opossum {

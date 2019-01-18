@@ -2,6 +2,9 @@
 
 #include "storage/base_segment_encoder.hpp"
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
 namespace opossum {

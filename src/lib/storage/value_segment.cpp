@@ -1,6 +1,6 @@
 #include "value_segment.hpp"
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 

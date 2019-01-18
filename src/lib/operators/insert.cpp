@@ -1,10 +1,11 @@
 #include "insert.hpp"
 
 #include "concurrency/transaction_context.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "type_cast.hpp"
 
 namespace opossum {

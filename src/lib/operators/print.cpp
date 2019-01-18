@@ -10,6 +10,7 @@
 #include "storage/base_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 

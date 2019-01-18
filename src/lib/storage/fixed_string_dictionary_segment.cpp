@@ -1,7 +1,7 @@
 #include "fixed_string_dictionary_segment.hpp"
 
 #include "fixed_string_dictionary_segment/fixed_string_vector.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "type_cast.hpp"

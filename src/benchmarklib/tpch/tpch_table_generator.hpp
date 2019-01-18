@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_table_generator.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"

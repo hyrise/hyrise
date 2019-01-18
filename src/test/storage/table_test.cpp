@@ -7,7 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/mvcc_data.hpp"
 #include "storage/table.hpp"
 

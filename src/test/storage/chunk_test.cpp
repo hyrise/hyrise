@@ -3,7 +3,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"

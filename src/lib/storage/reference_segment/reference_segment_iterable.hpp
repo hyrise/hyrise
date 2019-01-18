@@ -1,5 +1,6 @@
 #pragma once
 
+#include "resolve_segment_type.hpp"
 #include "storage/pos_list.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables.hpp"

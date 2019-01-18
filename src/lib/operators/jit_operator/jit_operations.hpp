@@ -3,7 +3,7 @@
 #include <boost/preprocessor/seq/for_each_product.hpp>
 
 #include "jit_types.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 
 namespace opossum {
 

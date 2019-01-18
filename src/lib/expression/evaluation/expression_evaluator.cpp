@@ -32,7 +32,7 @@
 #include "expression_functors.hpp"
 #include "like_matcher.hpp"
 #include "operators/abstract_operator.hpp"
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"

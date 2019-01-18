@@ -1,6 +1,6 @@
 #include "b_tree_index.hpp"
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 
 namespace opossum {
 

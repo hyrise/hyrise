@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/hana/at_key.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/type.hpp>

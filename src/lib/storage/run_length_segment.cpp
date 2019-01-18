@@ -1,6 +1,6 @@
 #include "run_length_segment.hpp"
 
-#include "resolve_type.hpp"
+#include "resolve_data_type.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
