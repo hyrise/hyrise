@@ -72,6 +72,9 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
         std::make_shared<BinaryPredicateExpression>(PredicateCondition::NotEquals, _lshipinstruct_operand, value_("a"));
   }
 
+  // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
+  void TearDown(::benchmark::State&) {}
+
   std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
     for (const auto& table_name : sm.table_names()) {
