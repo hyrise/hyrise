@@ -1,5 +1,7 @@
 #include "table_scan.hpp"
 
+#include <map>
+
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <numeric>
 
 #include "simd_bp128_packing.hpp"

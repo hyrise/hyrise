@@ -25,7 +25,7 @@ add_library(
 target_compile_options(
     benchmark
     PRIVATE
-    -O3 -std=c++11 -DHAVE_STD_REGEX -DNDEBUG
+    -O3 -std=c++11 -DHAVE_STD_REGEX -DNDEBUG -Wno-deprecated-declarations
 )
 
 target_include_directories(
