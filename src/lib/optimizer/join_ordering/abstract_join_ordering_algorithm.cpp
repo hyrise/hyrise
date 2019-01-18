@@ -2,7 +2,6 @@
 
 #include "cost_model/abstract_cost_estimator.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 

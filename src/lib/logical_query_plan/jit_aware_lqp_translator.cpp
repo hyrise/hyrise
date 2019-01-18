@@ -5,14 +5,10 @@
 #include <unordered_set>
 
 #include "constant_mappings.hpp"
-#include "expression/abstract_predicate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/logical_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
@@ -22,7 +18,6 @@
 #include "operators/jit_operator/operators/jit_validate.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/jit_operator_wrapper.hpp"
-#include "operators/operator_scan_predicate.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 

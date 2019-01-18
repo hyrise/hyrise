@@ -5,7 +5,6 @@
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/variant/apply_visitor.hpp>
 
 #include "all_type_variant.hpp"
 

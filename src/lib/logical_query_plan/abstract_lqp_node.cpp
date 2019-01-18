@@ -4,7 +4,6 @@
 #include <iostream>
 #include <unordered_map>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
 #include "lqp_utils.hpp"

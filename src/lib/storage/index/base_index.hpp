@@ -2,7 +2,6 @@
 
 #include "all_type_variant.hpp"
 #include "segment_index_type.hpp"
-#include "types.hpp"
 
 namespace opossum {
 

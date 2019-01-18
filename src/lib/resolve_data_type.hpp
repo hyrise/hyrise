@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/hana/contains.hpp>
 #include <boost/hana/for_each.hpp>
 
 #include "all_type_variant.hpp"

@@ -4,7 +4,6 @@
 #include <boost/graph/graphviz.hpp>
 #include <string>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

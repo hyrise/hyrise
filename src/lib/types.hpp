@@ -1,10 +1,7 @@
 #pragma once
 
 #include <boost/hana/tuple.hpp>
-#include <boost/hana/type.hpp>
-#include <iosfwd>
 #include <memory>
-#include <vector>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"

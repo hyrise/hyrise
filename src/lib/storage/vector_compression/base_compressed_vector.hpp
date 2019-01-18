@@ -4,7 +4,6 @@
 
 #include "base_vector_decompressor.hpp"
 #include "compressed_vector_type.hpp"
-#include "types.hpp"
 #include "utils/polymorphic_allocator.hpp"
 
 namespace opossum {

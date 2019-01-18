@@ -12,7 +12,6 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
-#include "storage/table.hpp"
 
 namespace opossum {
 

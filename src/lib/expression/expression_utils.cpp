@@ -6,9 +6,7 @@
 
 #include "correlated_parameter_expression.hpp"
 #include "expression_functional.hpp"
-#include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
-#include "lqp_select_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "placeholder_expression.hpp"
 #include "pqp_select_expression.hpp"

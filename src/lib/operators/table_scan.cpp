@@ -14,7 +14,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "table_scan/abstract_table_scan_impl.hpp"
 #include "table_scan/column_between_table_scan_impl.hpp"
 #include "table_scan/column_is_null_table_scan_impl.hpp"
 #include "table_scan/column_like_table_scan_impl.hpp"

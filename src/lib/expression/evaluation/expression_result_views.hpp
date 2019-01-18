@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "utils/assert.hpp"
 
 namespace opossum {
 

@@ -2,7 +2,6 @@
 
 #include "resolve_segment_type.hpp"
 #include "storage/pos_list.hpp"
-#include "storage/table.hpp"
 
 namespace opossum {
 

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <array>
 #include <numeric>
 
 #include "simd_bp128_packing.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
-#include "types.hpp"
 #include "utils/pmr_vector.hpp"
 
 namespace opossum {

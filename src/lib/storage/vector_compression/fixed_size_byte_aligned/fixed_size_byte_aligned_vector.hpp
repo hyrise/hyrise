@@ -1,10 +1,8 @@
 #pragma once
 
-#include <boost/hana/tuple.hpp>
 
 #include "fixed_size_byte_aligned_decompressor.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-#include "utils/pmr_vector.hpp"
 
 namespace opossum {
 

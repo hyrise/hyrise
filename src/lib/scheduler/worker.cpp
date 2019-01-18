@@ -1,4 +1,3 @@
-#include "worker.hpp"
 
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"

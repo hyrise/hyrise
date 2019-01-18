@@ -1,6 +1,5 @@
 #include "all_type_variant.hpp"
 
-#include <boost/functional/hash/hash.hpp>
 
 namespace opossum {
 

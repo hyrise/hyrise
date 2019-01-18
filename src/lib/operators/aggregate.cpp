@@ -2,7 +2,6 @@
 
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/scoped_allocator.hpp>
-#include <boost/none.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
 #include "scheduler/current_scheduler.hpp"

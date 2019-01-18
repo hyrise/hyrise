@@ -1,17 +1,7 @@
 #pragma once
 
 #include <boost/hana/at_key.hpp>
-#include <boost/hana/contains.hpp>
-#include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/map.hpp>
-#include <boost/hana/prepend.hpp>
-#include <boost/hana/transform.hpp>
-#include <boost/hana/zip.hpp>
-#include <boost/preprocessor/control/iif.hpp>
-#include <boost/preprocessor/seq/for_each.hpp>
-#include <boost/preprocessor/seq/size.hpp>
-#include <boost/preprocessor/seq/transform.hpp>
-#include <boost/variant.hpp>
 
 #include "types.hpp"
 #include "utils/enum_constant.hpp"

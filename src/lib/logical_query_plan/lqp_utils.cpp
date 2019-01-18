@@ -8,7 +8,6 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
-#include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

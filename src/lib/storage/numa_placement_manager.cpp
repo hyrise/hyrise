@@ -4,7 +4,6 @@
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
-#include "utils/pausable_loop_thread.hpp"
 
 namespace opossum {
 
