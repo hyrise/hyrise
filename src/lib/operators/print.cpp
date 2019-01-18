@@ -9,7 +9,10 @@
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/base_encoded_segment.hpp"
 #include "storage/base_segment.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/reference_segment.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -83,6 +86,15 @@ std::shared_ptr<const Table> Print::_on_execute() {
       continue;
     }
 
+    // print the encoding information
+    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+      const auto column_width = widths[column_id];
+      const auto& segment = chunk->get_segment(column_id);
+      _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
+    }
+    if (_flags & PrintMvcc) _out << "|";
+    _out << "|" << std::endl;
+
     // print the rows in the chunk
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       _out << "|";
@@ -150,6 +162,64 @@ std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width
     return cell_string.substr(0, max_width - 3) + "...";
   }
   return cell_string;
+}
+
+std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) const {
+  std::string segment_type;
+  segment_type.reserve(8);
+  segment_type += "<";
+
+  if (std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
+    segment_type += "ValueS";
+  } else if (std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
+    segment_type += "ReferS";
+  } else if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
+    switch (encoded_segment->encoding_type()) {
+      case EncodingType::Unencoded: {
+        Fail("An actual segment should never have this type");
+      }
+      case EncodingType::Dictionary: {
+        segment_type += "Dic";
+        break;
+      }
+      case EncodingType::RunLength: {
+        segment_type += "RLE";
+        break;
+      }
+      case EncodingType::FixedStringDictionary: {
+        segment_type += "FSD";
+        break;
+      }
+      case EncodingType::FrameOfReference: {
+        segment_type += "FoR";
+        break;
+      }
+    }
+    if (encoded_segment->compressed_vector_type()) {
+      switch (*encoded_segment->compressed_vector_type()) {
+        case CompressedVectorType::FixedSize4ByteAligned: {
+          segment_type += ":4B";
+          break;
+        }
+        case CompressedVectorType::FixedSize2ByteAligned: {
+          segment_type += ":2B";
+          break;
+        }
+        case CompressedVectorType::FixedSize1ByteAligned: {
+          segment_type += ":1B";
+          break;
+        }
+        case CompressedVectorType::SimdBp128: {
+          segment_type += ":BP";
+          break;
+        }
+      }
+    }
+  } else {
+    Fail("Unknown segment type");
+  }
+  segment_type += ">";
+  return segment_type;
 }
 
 }  // namespace opossum

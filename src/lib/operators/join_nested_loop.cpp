@@ -96,47 +96,45 @@ void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const Base
   /**
    * The nested loops.
    *
-   * The value in the outer loop is retrieved via virtual function calls ("SegmentIterationTypeErasure::Always") and
-   * only the inner loop gets inlined. This is to keep the compile time of the JoinNestedLoop *somewhat* at bay, if we
-   * inline both the inner and the outer loop, the JoinNestedLoop becomes the most expensive-to-compile file in all of
-   * Hyrise by a margin
+   * The value in the outer loop is retrieved via virtual function calls ("EraseTypes::Always") and only the inner loop
+   * gets inlined. This is to keep the compile time of the JoinNestedLoop *somewhat* at bay, if we inline both the inner
+   * and the outer loop, the JoinNestedLoop becomes the most expensive-to-compile file in all of Hyrise by a margin
    */
-  segment_with_iterators<ResolveDataTypeTag, SegmentIterationTypeErasure::Always>(
-      *segment_left, [&](auto left_it, const auto left_end) {
-        segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
-          using LeftType = typename decltype(left_it)::ValueType;
-          using RightType = typename decltype(right_it)::ValueType;
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(*segment_left, [&](auto left_it, const auto left_end) {
+    segment_with_iterators(*segment_right, [&](auto right_it, const auto right_end) {
+      using LeftType = typename decltype(left_it)::ValueType;
+      using RightType = typename decltype(right_it)::ValueType;
 
-          // make sure that we do not compile invalid versions of these lambdas
-          constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
-          constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
+      // make sure that we do not compile invalid versions of these lambdas
+      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
+      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
 
-          constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
-          constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
+      constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
+      constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-          if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
-            // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-            const auto left_it_copy = left_it;
-            const auto left_end_copy = left_end;
-            const auto right_it_copy = right_it;
-            const auto right_end_copy = right_end;
-            const auto params_copy = params;
-            const auto chunk_id_left_copy = chunk_id_left;
-            const auto chunk_id_right_copy = chunk_id_right;
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
+        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto left_it_copy = left_it;
+        const auto left_end_copy = left_end;
+        const auto right_it_copy = right_it;
+        const auto right_end_copy = right_end;
+        const auto params_copy = params;
+        const auto chunk_id_left_copy = chunk_id_left;
+        const auto chunk_id_right_copy = chunk_id_right;
 
-            with_comparator(params_copy.predicate_condition, [&](auto comparator) {
-              join_two_typed_segments(comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
-                                      chunk_id_left_copy, chunk_id_right_copy, params_copy);
-            });
-          } else {
-            // gcc complains without these
-            ignore_unused_variable(right_end);
-            ignore_unused_variable(left_end);
-
-            Fail("Cannot join String with non-String column");
-          }
+        with_comparator(params_copy.predicate_condition, [&](auto comparator) {
+          join_two_typed_segments(comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
+                                  chunk_id_left_copy, chunk_id_right_copy, params_copy);
         });
-      });
+      } else {
+        // gcc complains without these
+        ignore_unused_variable(right_end);
+        ignore_unused_variable(left_end);
+
+        Fail("Cannot join String with non-String column");
+      }
+    });
+  });
 }
 
 void JoinNestedLoop::_perform_join() {

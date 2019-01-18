@@ -4,9 +4,13 @@
 
 namespace opossum {
 
-template <typename T>
+template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const ReferenceSegment& segment) {
-  return erase_type_from_iterable_if_debug(ReferenceSegmentIterable<T>{segment});
+  if constexpr (EraseSegmentType) {
+    return create_any_segment_iterable<T>(segment);
+  } else {
+    return ReferenceSegmentIterable<T>{segment};
+  }
 }
 
 }  // namespace opossum

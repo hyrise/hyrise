@@ -16,6 +16,8 @@ struct QueryBenchmarkResult : public Noncopyable {
   std::atomic<size_t> num_iterations = 0;
   Duration duration = Duration{};
   tbb::concurrent_vector<Duration> iteration_durations;
+
+  std::optional<bool> verification_passed;
 };
 
 }  // namespace opossum
