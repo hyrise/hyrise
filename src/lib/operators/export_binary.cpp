@@ -6,6 +6,7 @@
 #include "import_export/binary.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
+#include "type_cast.hpp"
 
 namespace {
 

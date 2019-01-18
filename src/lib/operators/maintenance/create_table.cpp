@@ -1,5 +1,7 @@
 #include "create_table.hpp"
 
+#include <sstream>
+
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 

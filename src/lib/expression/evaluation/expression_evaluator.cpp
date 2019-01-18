@@ -1,5 +1,7 @@
 #include "expression_evaluator.hpp"
 
+#include <boost/lexical_cast.hpp>
+
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"

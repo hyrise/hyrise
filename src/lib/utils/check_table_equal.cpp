@@ -1,9 +1,12 @@
 #include "check_table_equal.hpp"
 
+#include <boost/lexical_cast.hpp>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #include "storage/table.hpp"
+#include "type_cast.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"

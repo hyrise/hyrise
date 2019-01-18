@@ -5,7 +5,6 @@
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
-#include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -125,7 +124,7 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>(
+        return std::get<T>(
             (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)]);
       }
     }

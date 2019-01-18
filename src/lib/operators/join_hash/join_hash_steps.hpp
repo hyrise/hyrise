@@ -7,6 +7,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 #include "uninitialized_vector.hpp"
 
 /*

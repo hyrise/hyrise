@@ -1,10 +1,12 @@
 #include "abstract_histogram.hpp"
 
 #include <map>
+#include <sstream>
 
 #include "expression/evaluation/like_matcher.hpp"
 #include "histogram_utils.hpp"
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

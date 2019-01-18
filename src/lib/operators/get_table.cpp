@@ -1,5 +1,6 @@
 #include "get_table.hpp"
 
+#include <sstream>
 #include <unordered_set>
 
 #include "storage/storage_manager.hpp"

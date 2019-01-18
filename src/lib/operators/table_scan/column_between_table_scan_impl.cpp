@@ -2,6 +2,7 @@
 
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

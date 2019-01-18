@@ -3,6 +3,7 @@
 #include <sqlite3.h>
 #include <fstream>
 #include <iomanip>
+#include <sstream>
 
 #include "sql/sql_pipeline_builder.hpp"
 

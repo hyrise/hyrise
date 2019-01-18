@@ -1,5 +1,7 @@
 #include "operator_scan_predicate.hpp"
 
+#include <sstream>
+
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "expression/expression_functional.hpp"

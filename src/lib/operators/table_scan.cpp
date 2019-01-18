@@ -1,6 +1,7 @@
 #include "table_scan.hpp"
 
 #include <map>
+#include <sstream>
 
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -22,6 +23,7 @@
 #include "table_scan/column_vs_column_table_scan_impl.hpp"
 #include "table_scan/column_vs_value_table_scan_impl.hpp"
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

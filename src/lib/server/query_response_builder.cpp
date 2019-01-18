@@ -3,6 +3,7 @@
 #include "operators/abstract_operator.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "then_operator.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 

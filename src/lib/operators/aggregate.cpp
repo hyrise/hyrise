@@ -1,7 +1,9 @@
 #include "aggregate.hpp"
 
+#include <array>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/scoped_allocator.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -828,5 +830,22 @@ std::shared_ptr<SegmentVisitorContext> Aggregate::_create_aggregate_context(cons
   });
   return context;
 }
+
+namespace std {
+template <>
+struct hash<opossum::pmr_vector<opossum::AggregateKeyEntry>> {
+  size_t operator()(const opossum::pmr_vector<opossum::AggregateKeyEntry>& key) const {
+    return boost::hash_range(key.begin(), key.end());
+  }
+};
+
+template <>
+struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
+  // gcc7 doesn't support templating by `int N` here.
+  size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
+    return boost::hash_range(key.begin(), key.end());
+  }
+};
+}  // namespace std
 
 }  // namespace opossum

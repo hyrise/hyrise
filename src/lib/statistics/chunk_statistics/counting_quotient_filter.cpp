@@ -5,6 +5,7 @@
 #include <string>
 
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 
 using namespace gqf2;   // NOLINT
 using namespace gqf4;   // NOLINT

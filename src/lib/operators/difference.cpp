@@ -1,10 +1,12 @@
 #include "difference.hpp"
 
+#include <sstream>
 #include <unordered_set>
 
 #include "storage/pos_list.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 Difference::Difference(const std::shared_ptr<const AbstractOperator>& left_in,

@@ -1,6 +1,7 @@
 #include "b_tree_index_impl.hpp"
 
 #include "storage/segment_iterate.hpp"
+#include "type_cast.hpp"
 
 namespace opossum {
 
