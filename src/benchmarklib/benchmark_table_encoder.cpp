@@ -1,14 +1,16 @@
 #include "benchmark_table_encoder.hpp"
 
 #include <atomic>
+#include <iostream>
 #include <thread>
 
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
-#include "resolve_data_type.hpp"
+#include "resolve_segment_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "types.hpp"

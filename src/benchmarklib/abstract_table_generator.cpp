@@ -1,6 +1,7 @@
 #include "abstract_table_generator.hpp"
 
 #include <filesystem>
+#include <iostream>
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"

@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <filesystem>
+#include <iostream>
 #include <unordered_set>
 
 #include "benchmark_config.hpp"
@@ -93,7 +94,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       table_info.table = ImportBinary::read_binary(*table_info.binary_file_path);
       table_info.loaded_from_binary = true;
     } else {
-      std::out << "from " << text_file_path << std::flush;
+      std::cout << "from " << text_file_path << std::flush;
       const auto extension = text_file_path.extension();
       if (extension == ".tbl") {
         table_info.table = load_table(text_file_path, _benchmark_config->chunk_size);
